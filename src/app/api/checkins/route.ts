@@ -18,15 +18,37 @@ export async function POST(req: NextRequest) {
   try {
     const { date, entries, requestingUserId } = await req.json();
 
-    if (!date || !entries) {
+    if (!date || !entries || typeof entries !== "object" || Array.isArray(entries)) {
       return NextResponse.json(
-        { error: "Date and entries are required" },
+        { error: "Date and entries object are required" },
+        { status: 400 }
+      );
+    }
+
+    // Validate date format
+    if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}/.test(date)) {
+      return NextResponse.json(
+        { error: "Invalid date format" },
+        { status: 400 }
+      );
+    }
+
+    const dateObj = new Date(date);
+    if (isNaN(dateObj.getTime())) {
+      return NextResponse.json(
+        { error: "Invalid date" },
         { status: 400 }
       );
     }
 
     // Validate that the requesting user is only modifying their own entries
     if (requestingUserId) {
+      if (typeof requestingUserId !== "string") {
+        return NextResponse.json(
+          { error: "Invalid requestingUserId" },
+          { status: 400 }
+        );
+      }
       const entryUserIds = Object.keys(entries);
       const unauthorisedIds = entryUserIds.filter(id => id !== requestingUserId);
       if (unauthorisedIds.length > 0) {
@@ -37,12 +59,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const dateObj = new Date(date);
-
-    // Upsert each entry
-    const operations = Object.entries(entries).map(
-      ([userId, data]: [string, any]) =>
-        prisma.checkIn.upsert({
+    // Upsert each entry with validation
+    const operations = Object.entries(entries as Record<string, { present?: boolean; weight?: number; comment?: string }>).map(
+      ([userId, data]) => {
+        const weight = data.weight ? parseFloat(String(data.weight)) : null;
+        const comment = data.comment ? String(data.comment).slice(0, 500) : null;
+        return prisma.checkIn.upsert({
           where: {
             date_userId: { date: dateObj, userId },
           },
@@ -50,15 +72,16 @@ export async function POST(req: NextRequest) {
             date: dateObj,
             userId,
             present: data.present || false,
-            weight: data.weight ? parseFloat(data.weight) : null,
-            comment: data.comment || null,
+            weight: weight !== null && !isNaN(weight) && weight >= 0 && weight <= 1000 ? weight : null,
+            comment,
           },
           update: {
             present: data.present || false,
-            weight: data.weight ? parseFloat(data.weight) : null,
-            comment: data.comment || null,
+            weight: weight !== null && !isNaN(weight) && weight >= 0 && weight <= 1000 ? weight : null,
+            comment,
           },
-        })
+        });
+      }
     );
 
     await Promise.all(operations);

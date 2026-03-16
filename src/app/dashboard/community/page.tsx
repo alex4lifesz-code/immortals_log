@@ -137,7 +137,7 @@ export default function SectHallPage() {
         const realms = ["Mortal", "Foundation", "Core", "Nascent", "Soul Splitting", "Tribulation", "Immortal"];
         const xpThresholds = [0, 100, 300, 600, 1200, 2000, 3500];
 
-        const cultivatorsWithRealm = users.map((u: any, idx: number) => {
+        const cultivatorsWithRealm = users.map((u: Cultivator, idx: number) => {
           let realm = "Mortal";
           for (let i = xpThresholds.length - 1; i >= 0; i--) {
             if (u.experience >= xpThresholds[i]) {
@@ -260,7 +260,7 @@ export default function SectHallPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredCultivators.map((cultivator, idx) => (
+                {filteredCultivators.map((cultivator) => (
                   <CultivatorCard
                     key={cultivator.id}
                     cultivator={cultivator}

@@ -12,6 +12,7 @@ import { useAppContext } from "@/context/AppContext";
 interface Exercise {
   id: string;
   name: string;
+  wuxiaName?: string;
   difficulty: string;
   type: string;
   targetGroup?: string;
@@ -20,7 +21,7 @@ interface Exercise {
 }
 
 export default function TrainingGrounds() {
-  const { isMobile, isNativeApp, registerDrawerClose } = useAppContext();
+  const { isMobile, registerDrawerClose } = useAppContext();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [selectedTechniques, setSelectedTechniques] = useState<string[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);

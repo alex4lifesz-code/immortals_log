@@ -13,14 +13,10 @@ import FloatingMobileSidebar from "@/components/navigation/FloatingMobileSidebar
 import SetupWizard, { SETUP_WIZARD_COMPLETED_KEY } from "@/components/ui/SetupWizard";
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
-  const [showWizard, setShowWizard] = useState(false);
-
-  useEffect(() => {
-    const completed = localStorage.getItem(SETUP_WIZARD_COMPLETED_KEY);
-    if (!completed) {
-      setShowWizard(true);
-    }
-  }, []);
+  const [showWizard, setShowWizard] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !localStorage.getItem(SETUP_WIZARD_COMPLETED_KEY);
+  });
 
   return (
     <>

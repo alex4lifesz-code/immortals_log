@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ReactNode, useState, useEffect, useCallback, useRef, memo } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
+import { useAuth } from "@/context/AuthContext";
+import { getCurrentRealm, getExperiencePercentage } from "@/lib/experience";
 
 interface PageLayoutProps {
   children: ReactNode;
@@ -22,12 +24,52 @@ function PageLayout({
 }: PageLayoutProps) {
   const { panelPosition, isMobile, isNativeApp, viewportMode, mobileSidebarOpen, setMobileSidebarOpen, topPanelExpanded, setTopPanelExpanded } = useAppContext();
   const { settings, updateSettings } = useDisplaySettings();
+  const { user } = useAuth();
   const effectivePosition = isMobile ? "top" : panelPosition;
   const mobileMode = isMobile && (isNativeApp || viewportMode === "mobile");
   const [mobileQuickViewOpen, setMobileQuickViewOpen] = useState(false);
   const sidebarPosition = settings.sidebarPosition || "left";
   const sidebarWidth = settings.sidebarWidth || 320;
   const gamificationVisible = settings.gamificationVisible ?? true;
+
+  // Live data for mobile QuickView
+  const [quickStats, setQuickStats] = useState({ xp: 0, todaySessions: 0, todayExercises: 0, recentWorkouts: [] as { name: string; date: string }[] });
+  const quickViewAbortRef = useRef<AbortController | null>(null);
+
+  const fetchQuickStats = useCallback(async () => {
+    if (!user) return;
+    if (quickViewAbortRef.current) quickViewAbortRef.current.abort();
+    const controller = new AbortController();
+    quickViewAbortRef.current = controller;
+    try {
+      const [expRes, workoutRes] = await Promise.all([
+        fetch(`/api/users/experience?userId=${encodeURIComponent(user.id)}`, { signal: controller.signal }),
+        fetch(`/api/workouts?userId=${encodeURIComponent(user.id)}`, { signal: controller.signal }),
+      ]);
+      const [expData, workoutData] = await Promise.all([expRes.json(), workoutRes.json()]);
+      const userExp = expData.user?.experience || 0;
+      const workouts: { name: string; date: string }[] = (workoutData.workouts || []);
+      const todayStr = new Date().toISOString().split("T")[0];
+      const todayWorkouts = workouts.filter(w => w.date && w.date.split("T")[0] === todayStr);
+      setQuickStats({
+        xp: userExp,
+        todaySessions: todayWorkouts.length,
+        todayExercises: todayWorkouts.length,
+        recentWorkouts: workouts.slice(0, 3).map(w => ({ name: w.name, date: w.date })),
+      });
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+    }
+  }, [user]);
+
+  // Fetch stats when QuickView opens on mobile
+  useEffect(() => {
+    if (mobileQuickViewOpen && mobileMode) {
+      fetchQuickStats();
+    }
+    return () => { if (quickViewAbortRef.current) quickViewAbortRef.current.abort(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetch when panel opens
+  }, [mobileQuickViewOpen, mobileMode]);
 
   // Resize state
   const [isResizing, setIsResizing] = useState(false);
@@ -79,7 +121,7 @@ function PageLayout({
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [mobileSidebarOpen, mobileQuickViewOpen]);
+  }, [mobileSidebarOpen, mobileQuickViewOpen, setMobileSidebarOpen]);
 
   // Lock body scroll when mobile panels open
   useEffect(() => {
@@ -91,13 +133,20 @@ function PageLayout({
     return () => { document.body.style.overflow = ""; };
   }, [mobileSidebarOpen, mobileQuickViewOpen]);
 
+  // Mutual exclusion: close QuickView when sidebar opens
+  useEffect(() => {
+    if (mobileSidebarOpen && mobileQuickViewOpen) {
+      setMobileQuickViewOpen(false);
+    }
+  }, [mobileSidebarOpen, mobileQuickViewOpen]);
+
   // Close sidebars when switching away from mobile
   useEffect(() => {
     if (!isMobile) {
       setMobileSidebarOpen(false);
       setMobileQuickViewOpen(false);
     }
-  }, [isMobile]);
+  }, [isMobile, setMobileSidebarOpen]);
 
   // Resize handle element
   const resizeHandle = sidebar && !isMobile && effectivePosition !== "top" ? (
@@ -323,15 +372,15 @@ function PageLayout({
                   <div className="space-y-2">
                     <div className="flex justify-between text-xs">
                       <span className="text-mist-light">Sessions</span>
-                      <span className="text-cloud-white font-medium">0</span>
+                      <span className="text-cloud-white font-medium">{quickStats.todaySessions}</span>
                     </div>
                     <div className="flex justify-between text-xs">
                       <span className="text-mist-light">Exercises</span>
-                      <span className="text-cloud-white font-medium">0</span>
+                      <span className="text-cloud-white font-medium">{quickStats.todayExercises}</span>
                     </div>
                     <div className="flex justify-between text-xs">
-                      <span className="text-mist-light">Duration</span>
-                      <span className="text-cloud-white font-medium">0 min</span>
+                      <span className="text-mist-light">Total XP</span>
+                      <span className="text-cloud-white font-medium">{quickStats.xp.toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
@@ -339,17 +388,30 @@ function PageLayout({
                 <div className="rounded-xl p-3.5 bg-ink-mid/60 border border-ink-light/30">
                   <h3 className="text-xs text-gold mb-2 font-medium">Cultivation Realm</h3>
                   <div className="text-center py-2">
-                    <span className="text-lg text-gold-glow">Mortal</span>
+                    <span className="text-lg text-gold-glow">{getCurrentRealm(quickStats.xp).name}</span>
                     <div className="mt-2 w-full bg-ink-dark rounded-full h-1.5">
-                      <div className="bg-jade-glow h-1.5 rounded-full transition-all" style={{ width: "10%" }} />
+                      <div className="bg-jade-glow h-1.5 rounded-full transition-all" style={{ width: `${getExperiencePercentage(quickStats.xp)}%` }} />
                     </div>
-                    <p className="text-[10px] text-mist-dark mt-1">10% to Foundation Establishment</p>
+                    <p className="text-[10px] text-mist-dark mt-1">{getExperiencePercentage(quickStats.xp)}% progress</p>
                   </div>
                 </div>
                 {/* Recent Activity */}
                 <div className="rounded-xl p-3.5 bg-ink-mid/60 border border-ink-light/30">
                   <h3 className="text-xs text-mountain-blue-glow mb-2 font-medium">Recent Activity</h3>
-                  <p className="text-xs text-mist-dark italic">No recent cultivation records</p>
+                  {quickStats.recentWorkouts.length === 0 ? (
+                    <p className="text-xs text-mist-dark italic">No recent cultivation records</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {quickStats.recentWorkouts.map((w, i) => (
+                        <div key={i} className="flex justify-between text-xs">
+                          <span className="text-mist-light truncate mr-2">{w.name}</span>
+                          <span className="text-mist-dark whitespace-nowrap text-[10px]">
+                            {new Date(w.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </motion.div>

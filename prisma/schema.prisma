@@ -47,12 +47,13 @@ model CheckIn {
   createdAt DateTime @default(now())
 
   @@unique([date, userId])
+  @@index([userId])
 }
 
 model Exercise {
   id          String  @id @default(cuid())
   name        String
-  originalName String?
+  wuxiaName   String?
   difficulty  String
   type        String
   story       String?
@@ -77,6 +78,8 @@ model Workout {
 
   simplifiedExercises SimplifiedWorkoutExercise[]
   detailedExercises   DetailedWorkoutExercise[]
+
+  @@index([userId])
 }
 
 model SimplifiedWorkoutExercise {
@@ -84,7 +87,7 @@ model SimplifiedWorkoutExercise {
   workoutId  String
   workout    Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
   exerciseId String
-  exercise   Exercise @relation(fields: [exerciseId], references: [id])
+  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
   weight1    Float?
   reps1      Int?
   weight2    Float?
@@ -94,6 +97,9 @@ model SimplifiedWorkoutExercise {
   notes      String?
   order      Int      @default(0)
   createdAt  DateTime @default(now())
+
+  @@index([workoutId])
+  @@index([exerciseId])
 }
 
 model DetailedWorkoutExercise {
@@ -101,7 +107,7 @@ model DetailedWorkoutExercise {
   workoutId  String
   workout    Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
   exerciseId String
-  exercise   Exercise @relation(fields: [exerciseId], references: [id])
+  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
   weight1    Float?
   reps1      Int?
   weight2    Float?
@@ -111,6 +117,9 @@ model DetailedWorkoutExercise {
   notes      String?
   order      Int      @default(0)
   createdAt  DateTime @default(now())
+
+  @@index([workoutId])
+  @@index([exerciseId])
 }
 
 model CheckInNote {
@@ -122,4 +131,6 @@ model CheckInNote {
   pinned    Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }

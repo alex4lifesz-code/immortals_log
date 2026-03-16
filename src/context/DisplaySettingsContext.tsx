@@ -200,18 +200,14 @@ function saveActivePresetIndex(index: number | null) {
 }
 
 export function DisplaySettingsProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState<DisplaySettings>(DEFAULT_SETTINGS);
-  const [presets, setPresets] = useState<PresetSlots>(Array(PRESET_SLOT_COUNT).fill(null));
-  const [activePresetIndex, setActivePresetIndex] = useState<number | null>(null);
-  const [hydrated, setHydrated] = useState(false);
+  const [settings, setSettings] = useState<DisplaySettings>(() => loadSettings());
+  const [presets, setPresets] = useState<PresetSlots>(() => loadPresets());
+  const [activePresetIndex, setActivePresetIndex] = useState<number | null>(() => loadActivePresetIndex());
+  const [hydrated] = useState(() => typeof window !== "undefined");
 
-  // Hydrate from localStorage on mount
-  useEffect(() => {
-    setSettings(loadSettings());
-    setPresets(loadPresets());
-    setActivePresetIndex(loadActivePresetIndex());
-    setHydrated(true);
-  }, []);
+  // Hydrate flag for SSR — on the server loadSettings/loadPresets return
+  // defaults so the first client render matches. The flag is already true on
+  // the client (via the initializer) so persistence effects fire immediately.
 
   // Persist whenever settings change (after hydration)
   useEffect(() => {

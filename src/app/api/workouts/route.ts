@@ -8,8 +8,6 @@ export async function GET(req: NextRequest) {
     const showAll = searchParams.get("showAll") === "true";
     const daysParam = searchParams.get("days");
     
-    console.log("GET /api/workouts - userId:", userId, "showAll:", showAll, "days:", daysParam);
-
     if (!userId && !showAll) {
       console.error("Missing userId parameter - unauthenticated request");
       return NextResponse.json(
@@ -36,6 +34,10 @@ export async function GET(req: NextRequest) {
           include: { exercise: true },
           orderBy: { order: "asc" },
         },
+        detailedExercises: {
+          include: { exercise: true },
+          orderBy: { order: "asc" },
+        },
       },
       orderBy: { date: "desc" },
       ...(!showAll && !days ? { take: 10 } : {}),
@@ -43,16 +45,36 @@ export async function GET(req: NextRequest) {
 
     // Auto-derive targetGroups from exercises for workouts that don't have them yet
     const enrichedWorkouts = workouts.map(w => {
-      if (w.targetGroups) return w;
+      const normalizedExercises =
+        w.simplifiedExercises.length > 0
+          ? w.simplifiedExercises
+          : w.detailedExercises.map(de => ({
+              id: de.id,
+              workoutId: de.workoutId,
+              exerciseId: de.exerciseId,
+              weight1: de.weight1,
+              reps1: de.reps1,
+              weight2: de.weight2,
+              reps2: de.reps2,
+              weight3: de.weight3,
+              reps3: de.reps3,
+              notes: de.notes,
+              order: de.order,
+              createdAt: de.createdAt,
+              exercise: de.exercise,
+            }));
+
+      const withNormalized = { ...w, simplifiedExercises: normalizedExercises };
+      if (w.targetGroups) return withNormalized;
       const groups = new Set<string>();
-      for (const se of w.simplifiedExercises) {
+      for (const se of normalizedExercises) {
         if (se.exercise.targetGroup) groups.add(se.exercise.targetGroup);
       }
-      return groups.size > 0 ? { ...w, targetGroups: Array.from(groups).join(",") } : w;
+      return groups.size > 0
+        ? { ...withNormalized, targetGroups: Array.from(groups).join(",") }
+        : withNormalized;
     });
     
-    console.log(`Found ${workouts.length} workouts${userId ? ` for user ${userId}` : ' (all users)'}`);
-
     return NextResponse.json({ workouts: enrichedWorkouts });
   } catch (error) {
     console.error("Workouts fetch error:", error);
@@ -64,20 +86,33 @@ export async function POST(req: NextRequest) {
   try {
     const { userId, exerciseId, weight1, reps1, weight2, reps2, weight3, reps3, notes } = await req.json();
 
-    console.log("POST /api/workouts - Creating workout:", { userId, exerciseId, weight1, reps1 });
-
     // Validation
-    if (!userId || !exerciseId) {
-      console.error("Missing userId or exerciseId");
+    if (!userId || typeof userId !== "string" || !exerciseId || typeof exerciseId !== "string") {
       return NextResponse.json(
         { error: "User ID and exercise ID are required" },
         { status: 400 }
       );
     }
 
+    // Verify user exists
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
+    }
+
+    // Validate notes length
+    if (notes && typeof notes === "string" && notes.length > 1000) {
+      return NextResponse.json(
+        { error: "Notes must be 1000 characters or less" },
+        { status: 400 }
+      );
+    }
+
     // At least one set must have reps
     if (!reps1 && !reps2 && !reps3) {
-      console.error("No reps provided");
       return NextResponse.json(
         { error: "At least one set with reps is required" },
         { status: 400 }
@@ -85,10 +120,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate reps values
-    const validateReps = (reps: any) => {
+    const validateReps = (reps: number | string | undefined | null) => {
       if (reps !== undefined && reps !== null) {
-        const repsNum = parseInt(reps);
-        if (repsNum <= 0 || repsNum > 500) {
+        const repsNum = parseInt(String(reps), 10);
+        if (isNaN(repsNum) || repsNum <= 0 || repsNum > 500) {
           return false;
         }
       }
@@ -96,7 +131,6 @@ export async function POST(req: NextRequest) {
     };
 
     if (!validateReps(reps1) || !validateReps(reps2) || !validateReps(reps3)) {
-      console.error("Invalid reps range");
       return NextResponse.json(
         { error: "Reps must be between 1 and 500" },
         { status: 400 }
@@ -104,10 +138,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate weight values
-    const validateWeight = (weight: any) => {
+    const validateWeight = (weight: number | string | undefined | null) => {
       if (weight !== undefined && weight !== null) {
-        const weightNum = parseFloat(weight);
-        if (weightNum < 0 || weightNum > 10000) {
+        const weightNum = parseFloat(String(weight));
+        if (isNaN(weightNum) || weightNum < 0 || weightNum > 10000) {
           return false;
         }
       }
@@ -115,7 +149,6 @@ export async function POST(req: NextRequest) {
     };
 
     if (!validateWeight(weight1) || !validateWeight(weight2) || !validateWeight(weight3)) {
-      console.error("Invalid weight range");
       return NextResponse.json(
         { error: "Weight must be between 0 and 10000" },
         { status: 400 }
@@ -128,7 +161,6 @@ export async function POST(req: NextRequest) {
     });
 
     if (!exercise) {
-      console.error("Exercise not found:", exerciseId);
       return NextResponse.json(
         { error: "Exercise not found" },
         { status: 404 }
@@ -162,8 +194,6 @@ export async function POST(req: NextRequest) {
         },
       },
     });
-
-    console.log("Workout created successfully:", workout.id);
 
     return NextResponse.json({ 
       success: true, 

@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    console.log("DATABASE_URL env:", process.env.DATABASE_URL);
     const exercises = await prisma.exercise.findMany({
       orderBy: { createdAt: "desc" },
     });
@@ -16,7 +15,13 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { name, difficulty, type, story, targetGroup } = await req.json();
+    const body = await req.json();
+    const name = String(body.name || body.originalName || "").trim().slice(0, 200);
+    const wuxiaName = String(body.wuxiaName || body.name || "").trim().slice(0, 200);
+    const difficulty = String(body.difficulty || "").trim();
+    const type = String(body.type || "").trim();
+    const story = body.story ? String(body.story).trim().slice(0, 2000) : undefined;
+    const targetGroup = body.targetGroup ? String(body.targetGroup).trim().slice(0, 100) : undefined;
 
     if (!name || !difficulty || !type) {
       return NextResponse.json(
@@ -25,8 +30,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const validDifficulties = ["mortal", "foundation establishment", "core formation", "nascent soul", "soul splitting", "tribulation transcendence", "immortal"];
+    if (!validDifficulties.includes(difficulty.toLowerCase())) {
+      return NextResponse.json(
+        { error: `Difficulty must be one of: ${validDifficulties.join(", ")}` },
+        { status: 400 }
+      );
+    }
+
+    const validTypes = ["upper heaven", "lower realms", "heart meridian", "unified realm"];
+    if (!validTypes.includes(type.toLowerCase())) {
+      return NextResponse.json(
+        { error: `Type must be one of: ${validTypes.join(", ")}` },
+        { status: 400 }
+      );
+    }
+
     const exercise = await prisma.exercise.create({
-      data: { name, difficulty, type, story, targetGroup },
+      data: { name, wuxiaName: wuxiaName || null, difficulty, type, story, targetGroup },
     });
 
     return NextResponse.json({ exercise });

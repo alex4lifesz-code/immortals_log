@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useState, useEffect, useCallback, useRef } from "react";
 import GlowCard from "@/components/ui/GlowCard";
 import GlowButton from "@/components/ui/GlowButton";
@@ -15,15 +15,6 @@ interface User {
   id: string;
   name: string;
   username: string;
-}
-
-interface CheckIn {
-  id: string;
-  date: string;
-  present: boolean;
-  weight?: number;
-  comment?: string;
-  userId: string;
 }
 
 interface CheckInRow {
@@ -49,16 +40,6 @@ function formatDateLocal(date: Date): string {
 
 import { awardCheckInXP } from "@/lib/experience";
 
-function formatDateDisplay(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00');
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  return dayNames[date.getDay()];
-}
-
-function formatSectDate(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00');
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
 
 const quickActions = [
   { label: "Start Training", icon: "⚔️", path: "/dashboard/workout", glow: "jade" as const },
@@ -332,11 +313,7 @@ export default function DaoHallPage() {
   const [stats, setStats] = useState({ sessions: 0, techniques: 0, streak: 0, realm: "Mortal" });
   const [loading, setLoading] = useState(true);
   const [dayNotes, setDayNotes] = useState<Map<string, string>>(new Map());
-  const [editingNote, setEditingNote] = useState<{ date: string; note: string } | null>(null);
-  const [communityNotes, setCommunityNotes] = useState<CommunityNote[]>([]);
   const [futureNotes, setFutureNotes] = useState<CommunityNote[]>([]);
-  const [newCommunityNote, setNewCommunityNote] = useState("");
-  const [showAddNote, setShowAddNote] = useState(false);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [checkInRows, setCheckInRows] = useState<CheckInRow[]>([]);
   const [xpFeedback, setXpFeedback] = useState<{ show: boolean; xp: number }>({ show: false, xp: 0 });
@@ -350,6 +327,12 @@ export default function DaoHallPage() {
   // Weight prompt modal state
   const [showWeightPrompt, setShowWeightPrompt] = useState(false);
   const [weightPromptValue, setWeightPromptValue] = useState("");
+
+  const broadcastNotesUpdated = useCallback(() => {
+    if (typeof window === "undefined") return;
+    window.dispatchEvent(new Event("checkin-notes-updated"));
+    localStorage.setItem("checkin-notes-updated-at", String(Date.now()));
+  }, []);
 
   // Sect Register filter and inline edit state
   const [sectFilterDays, setSectFilterDays] = useState<7 | 14 | 30>(14);
@@ -387,33 +370,6 @@ export default function DaoHallPage() {
     } catch { /* ignore */ }
   }, []);
 
-  const saveDayNote = (date: string, note: string) => {
-    setDayNotes(prev => {
-      const updated = new Map(prev);
-      if (note.trim()) {
-        updated.set(date, note.trim());
-      } else {
-        updated.delete(date);
-      }
-      // Persist to localStorage (same format as checkin page uses)
-      const arr = Array.from(updated.entries()).map(([d, n]) => ({ date: d, note: n }));
-      arr.sort((a, b) => b.date.localeCompare(a.date));
-      localStorage.setItem("cultivation-day-notes", JSON.stringify(arr));
-      return updated;
-    });
-    setEditingNote(null);
-  };
-
-  const fetchCommunityNotesForDate = useCallback(async (dateStr: string) => {
-    try {
-      const res = await fetch(`/api/checkins/notes?date=${dateStr}`);
-      const data = await res.json();
-      setCommunityNotes(data.notes || []);
-    } catch (err) {
-      console.error("Failed to fetch community notes:", err);
-    }
-  }, []);
-
   const refreshFutureNotes = useCallback(async () => {
     try {
       const todayStr = formatDateLocal(new Date());
@@ -424,64 +380,6 @@ export default function DaoHallPage() {
       console.error("Failed to fetch future notes:", err);
     }
   }, []);
-
-  const handleAddCommunityNote = async () => {
-    if (!user || !editingNote || !newCommunityNote.trim()) return;
-    try {
-      const res = await fetch("/api/checkins/notes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date: editingNote.date, userId: user.id, content: newCommunityNote.trim() }),
-      });
-      if (res.ok) {
-        setNewCommunityNote("");
-        setShowAddNote(false);
-        fetchCommunityNotesForDate(editingNote.date);
-        refreshFutureNotes();
-      }
-    } catch (err) {
-      console.error("Failed to add community note:", err);
-    }
-  };
-
-  const handleDeleteCommunityNote = async (noteId: string) => {
-    if (!user) return;
-    try {
-      const res = await fetch("/api/checkins/notes", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ noteId, userId: user.id }),
-      });
-      if (res.ok) {
-        setCommunityNotes(prev => prev.filter(n => n.id !== noteId));
-        refreshFutureNotes();
-      }
-    } catch (err) {
-      console.error("Failed to delete community note:", err);
-    }
-  };
-
-  const handleTogglePinNote = async (noteId: string, pinned: boolean) => {
-    if (!user) return;
-    try {
-      const res = await fetch("/api/checkins/notes", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ noteId, userId: user.id, pinned }),
-      });
-      if (res.ok) {
-        setCommunityNotes(prev =>
-          prev.map(n => n.id === noteId ? { ...n, pinned } : n)
-            .sort((a, b) => {
-              if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-              return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-            })
-        );
-      }
-    } catch (err) {
-      console.error("Failed to toggle pin:", err);
-    }
-  };
 
   const handleDayClick = (dateStr: string) => {
     // Open check-in modal for the selected day
@@ -544,13 +442,26 @@ export default function DaoHallPage() {
       // For far-future dates, save the comment as a community note so it appears in Upcoming Notes
       // The shared comment is stored under the first user's entry in the modal
       const sharedComment = (allUsers[0] && checkInModal.entries[allUsers[0].id]?.comment?.trim()) || "";
-      if (isFarFuture && sharedComment) {
-        await fetch("/api/checkins/notes", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ date: checkInModal.date, userId: user.id, content: sharedComment }),
-        });
+      if (isFarFuture) {
+        if (sharedComment) {
+          await fetch("/api/checkins/notes", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ date: checkInModal.date, userId: user.id, content: sharedComment }),
+          });
+        } else {
+          // Note was cleared — delete the existing CheckInNote if one exists
+          const existingNote = futureNotes.find(n => n.date === checkInModal.date && n.user.id === user.id);
+          if (existingNote) {
+            await fetch("/api/checkins/notes", {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ noteId: existingNote.id, userId: user.id }),
+            });
+          }
+        }
         refreshFutureNotes();
+        broadcastNotesUpdated();
       }
 
       await fetch("/api/checkins", {
@@ -893,7 +804,7 @@ export default function DaoHallPage() {
         setCheckInRows(sortedRows);
 
         const userExp = expData.user?.experience || 0;
-        const userWorkouts = (workoutData.workouts || []).filter((w: any) => w.userId === user.id);
+        const userWorkouts = (workoutData.workouts || []).filter((w: { userId: string }) => w.userId === user.id);
 
         // Calculate streak using current user's dates
         const today = new Date();
@@ -935,6 +846,25 @@ export default function DaoHallPage() {
 
     fetchData();
   }, [user]);
+
+  useEffect(() => {
+    const handleNotesUpdated = () => {
+      refreshFutureNotes();
+    };
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === "checkin-notes-updated-at") {
+        handleNotesUpdated();
+      }
+    };
+
+    window.addEventListener("checkin-notes-updated", handleNotesUpdated);
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.removeEventListener("checkin-notes-updated", handleNotesUpdated);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, [refreshFutureNotes]);
 
   if (!user) return null;
 
@@ -1103,135 +1033,134 @@ export default function DaoHallPage() {
               )}
 
               <div className="overflow-x-auto -mx-4 px-4" style={{ WebkitOverflowScrolling: 'touch' }}>
-                <table className="text-xs border-collapse" style={{ whiteSpace: 'nowrap', minWidth: isSectEditMode ? '720px' : '600px' }}>
-                  <thead>
-                    <tr className="border-b-2 border-jade-glow/50 bg-ink-mid/40 text-mist-light">
-                      <th className="px-1.5 py-2 text-left font-semibold uppercase tracking-wider text-mist-glow text-[11px] align-middle">
-                        Date
-                      </th>
-                      <th className="px-1.5 py-2 text-center font-semibold uppercase tracking-wider text-mist-glow text-[11px] align-middle">
-                        Day
-                      </th>
-                      {allUsers.map((u) => (
-                        <th
-                          key={`header-check-${u.id}`}
-                          className="px-1 py-2 text-center font-semibold uppercase tracking-wider text-mist-glow text-[11px] align-middle"
-                        >
-                          {u.name}
-                        </th>
-                      ))}
-                      {allUsers.map((u) => (
-                        <th
-                          key={`header-weight-${u.id}`}
-                          className="px-1 py-2 text-center font-semibold uppercase tracking-wider text-mist-glow text-[11px] align-middle"
-                        >
-                          {u.name.charAt(0)}.Wt
-                        </th>
-                      ))}
-                      <th className="px-1.5 py-2 text-left font-semibold uppercase tracking-wider text-mist-glow text-[11px] align-middle w-[1%]">
-                        Notes
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredCheckInRows.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={3 + allUsers.length * 2}
-                          className="py-12 text-center text-mist-dark italic"
-                        >
-                          No records in the last {sectFilterDays} days. Click a calendar day to begin.
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredCheckInRows.map((row, rowIdx) => (
-                        <motion.tr
-                          key={row.date}
-                          initial={{ opacity: 0, y: -5 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: rowIdx * 0.02 }}
-                          className={`border-b transition-all duration-200 ${
-                            isSectEditMode
-                              ? "border-jade-glow/20 bg-jade-deep/10 hover:bg-jade-deep/15"
-                              : "border-ink-light hover:bg-ink-mid/15"
-                          }`}
-                        >
-                          <td className="px-1.5 py-1.5 text-mist-light text-xs tracking-normal align-middle whitespace-nowrap">
-                            <button
-                              onClick={() => handleDayClick(row.date)}
-                              className="hover:text-jade-glow transition-colors text-left"
-                              title="Click to edit check-in"
-                            >
-                              {formatDateWithPreference(row.date, dateFormat)}
-                            </button>
-                          </td>
-                          <td className="px-1.5 py-1.5 text-center text-mist-light text-xs align-middle">
-                            {formatDateDisplay(row.date)}
-                          </td>
-                          {allUsers.map((u) => (
-                            <td
-                              key={`check-${row.date}-${u.id}`}
-                              className="px-1 py-1.5 text-center align-middle"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={row.entries[u.id]?.present || false}
-                                onChange={(e) => handleCheckInToggle(row.date, u.id, e.target.checked)}
-                                disabled={u.id !== user.id}
-                                className={`w-4 h-4 accent-jade-glow ${u.id === user.id ? 'cursor-pointer' : 'cursor-default opacity-60'}`}
-                              />
-                            </td>
-                          ))}
-                          {allUsers.map((u) => (
-                            <td
-                              key={`weight-${row.date}-${u.id}`}
-                              className="px-1 py-1.5 text-center align-middle"
-                            >
-                              {isSectEditMode && u.id === user.id ? (
+                <div className="min-w-[480px]">
+                  {/* Grid header */}
+                  <div
+                    className="grid gap-0 text-[10px] uppercase tracking-wider font-semibold text-mist-dark border-b border-jade-glow/30 pb-1.5 mb-1"
+                    style={{ gridTemplateColumns: `80px repeat(${allUsers.length}, 44px) repeat(${allUsers.length}, 48px) 1fr` }}
+                  >
+                    <div className="px-1">Date</div>
+                    {allUsers.map((u) => (
+                      <div key={`h-c-${u.id}`} className="text-center px-0.5">{u.name}</div>
+                    ))}
+                    {allUsers.map((u) => (
+                      <div key={`h-w-${u.id}`} className="text-center px-0.5">{u.name.charAt(0)}.Wt</div>
+                    ))}
+                    <div className="px-1">Comments</div>
+                  </div>
+
+                  {/* Rows */}
+                  {filteredCheckInRows.length === 0 ? (
+                    <div className="py-10 text-center text-mist-dark italic text-xs">
+                      No records in the last {sectFilterDays} days. Click a calendar day to begin.
+                    </div>
+                  ) : (
+                    <div className="space-y-0">
+                      {filteredCheckInRows.map((row) => {
+                        const rowDateObj = new Date(row.date + 'T00:00:00');
+                        const dayName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][rowDateObj.getDay()];
+                        const isWeekend = rowDateObj.getDay() === 0 || rowDateObj.getDay() === 6;
+                        return (
+                          <div
+                            key={row.date}
+                            className={`grid gap-0 items-center py-1 border-b text-xs transition-colors duration-100 ${
+                              isSectEditMode
+                                ? "border-jade-glow/15 bg-jade-deep/5 hover:bg-jade-deep/10"
+                                : `border-ink-light/50 hover:bg-ink-mid/10 ${isWeekend ? "bg-ink-dark/20" : ""}`
+                            }`}
+                            style={{ gridTemplateColumns: `80px repeat(${allUsers.length}, 44px) repeat(${allUsers.length}, 48px) 1fr` }}
+                          >
+                            {/* Date + Day */}
+                            <div className="px-1">
+                              <button
+                                onClick={() => handleDayClick(row.date)}
+                                className="text-mist-light hover:text-jade-glow transition-colors text-left leading-tight"
+                                title="Click to edit"
+                              >
+                                <span className="text-[11px]">{formatDateWithPreference(row.date, dateFormat)}</span>
+                                <span className={`text-[9px] ml-1 ${isWeekend ? "text-amber-400/60" : "text-mist-dark"}`}>{dayName}</span>
+                              </button>
+                            </div>
+
+                            {/* Check-in toggles */}
+                            {allUsers.map((u) => {
+                              const isPresent = row.entries[u.id]?.present || false;
+                              const isOwn = u.id === user.id;
+                              return (
+                                <div key={`c-${row.date}-${u.id}`} className="flex justify-center">
+                                  {isOwn ? (
+                                    <button
+                                      onClick={() => handleCheckInToggle(row.date, u.id, !isPresent)}
+                                      className={`w-5 h-5 rounded text-[10px] font-bold transition-all duration-150 ${
+                                        isPresent
+                                          ? "bg-jade-glow/20 text-jade-glow border border-jade-glow/40 shadow-[0_0_6px_rgba(58,143,143,0.3)]"
+                                          : "text-mist-dark border border-ink-light/40 hover:border-mist-dark/60"
+                                      }`}
+                                    >
+                                      {isPresent ? "✓" : ""}
+                                    </button>
+                                  ) : (
+                                    <span className={`w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold ${
+                                      isPresent
+                                        ? "bg-jade-glow/15 text-jade-glow/70 border border-jade-glow/20"
+                                        : "text-mist-dark/40"
+                                    }`}>
+                                      {isPresent ? "✓" : "·"}
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })}
+
+                            {/* Weight columns */}
+                            {allUsers.map((u) => (
+                              <div key={`w-${row.date}-${u.id}`} className="text-center px-0.5">
+                                {isSectEditMode && u.id === user.id ? (
+                                  <input
+                                    type="number"
+                                    step="0.1"
+                                    value={sectEditData[row.date]?.[u.id]?.weight ?? row.entries[u.id]?.weight ?? ""}
+                                    onChange={(e) => handleSectEditChange(row.date, u.id, "weight", e.target.value)}
+                                    placeholder="—"
+                                    className="w-full bg-ink-deep border border-jade-glow/30 rounded px-1 py-0.5 text-cloud-white
+                                               text-center text-[11px] outline-none focus:border-jade-glow"
+                                  />
+                                ) : (
+                                  <span className={`text-[11px] ${row.entries[u.id]?.weight ? "text-cloud-white" : "text-mist-dark/50"}`}>
+                                    {row.entries[u.id]?.weight || "—"}
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+
+                            {/* Comments */}
+                            <div className="px-1 min-w-0">
+                              {isSectEditMode ? (
                                 <input
-                                  type="number"
-                                  step="0.1"
-                                  value={sectEditData[row.date]?.[u.id]?.weight ?? row.entries[u.id]?.weight ?? ""}
-                                  onChange={(e) => handleSectEditChange(row.date, u.id, "weight", e.target.value)}
-                                  placeholder="—"
-                                  className="w-full bg-ink-deep border border-jade-glow/30 rounded px-1 py-1 text-cloud-white
-                                             text-center text-xs outline-none transition-all duration-200
-                                             focus:border-jade-glow focus:shadow-[0_0_8px_rgba(58,143,143,0.4)]"
+                                  type="text"
+                                  value={sectEditData[row.date]?.[allUsers[0]?.id]?.comment ?? row.entries[allUsers[0]?.id]?.comment ?? ""}
+                                  onChange={(e) => {
+                                    if (allUsers[0]) handleSectEditChange(row.date, allUsers[0].id, "comment", e.target.value);
+                                  }}
+                                  placeholder="Add notes..."
+                                  className="w-full bg-ink-deep border border-jade-glow/30 rounded px-2 py-0.5 text-cloud-white text-[11px]
+                                             placeholder:text-mist-dark/40 outline-none focus:border-jade-glow"
                                 />
                               ) : (
-                                <span className="text-cloud-white text-xs">
-                                  {row.entries[u.id]?.weight || "—"}
+                                <span
+                                  className="text-mist-light/80 text-[11px] truncate block cursor-help hover:text-mist-glow transition-colors"
+                                  title={row.entries[allUsers[0]?.id]?.comment || "No notes"}
+                                >
+                                  {row.entries[allUsers[0]?.id]?.comment || "—"}
                                 </span>
                               )}
-                            </td>
-                          ))}
-                          <td className="px-1.5 py-1.5 align-middle">
-                            {isSectEditMode ? (
-                              <input
-                                type="text"
-                                value={sectEditData[row.date]?.[allUsers[0]?.id]?.comment ?? row.entries[allUsers[0]?.id]?.comment ?? ""}
-                                onChange={(e) => {
-                                  if (allUsers[0]) handleSectEditChange(row.date, allUsers[0].id, "comment", e.target.value);
-                                }}
-                                placeholder="Add notes..."
-                                className="w-full bg-ink-deep border border-jade-glow/30 rounded px-2 py-1 text-cloud-white text-xs
-                                           placeholder:text-mist-dark outline-none transition-all duration-200
-                                           focus:border-jade-glow focus:shadow-[0_0_8px_rgba(58,143,143,0.4)]"
-                              />
-                            ) : (
-                              <span
-                                className="text-mist-light text-xs truncate max-w-[180px] cursor-help hover:text-mist-glow transition-colors whitespace-nowrap block"
-                                title={row.entries[allUsers[0]?.id]?.comment || "No notes"}
-                              >
-                                {row.entries[allUsers[0]?.id]?.comment || "—"}
-                              </span>
-                            )}
-                          </td>
-                        </motion.tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {isSectEditMode && filteredCheckInRows.length > 0 && (
@@ -1382,15 +1311,51 @@ export default function DaoHallPage() {
                   />
                 </div>
 
-                <GlowButton
-                  variant="jade"
-                  glow
-                  className="w-full mt-4"
-                  onClick={handleSaveCheckIn}
-                  size="sm"
-                >
-                  {isFarFuture ? "💾 Save Note" : "✓ Save Check-In"}
-                </GlowButton>
+                {isFarFuture ? (
+                  <div className="flex gap-2 mt-4">
+                    <GlowButton
+                      variant="jade"
+                      glow
+                      className="flex-1"
+                      onClick={handleSaveCheckIn}
+                      size="sm"
+                    >
+                      💾 Save Note
+                    </GlowButton>
+                    {futureNotes.some(n => n.date === checkInModal.date && n.user.id === user.id) && (
+                      <GlowButton
+                        variant="crimson"
+                        className="flex-1"
+                        onClick={async () => {
+                          const existingNote = futureNotes.find(n => n.date === checkInModal.date && n.user.id === user.id);
+                          if (existingNote) {
+                            await fetch("/api/checkins/notes", {
+                              method: "DELETE",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ noteId: existingNote.id, userId: user.id }),
+                            });
+                            refreshFutureNotes();
+                            broadcastNotesUpdated();
+                            if (allUsers[0]) updateCheckInModalEntry(allUsers[0].id, "comment", "");
+                          }
+                        }}
+                        size="sm"
+                      >
+                        🗑 Clear Note
+                      </GlowButton>
+                    )}
+                  </div>
+                ) : (
+                  <GlowButton
+                    variant="jade"
+                    glow
+                    className="w-full mt-4"
+                    onClick={handleSaveCheckIn}
+                    size="sm"
+                  >
+                    ✓ Save Check-In
+                  </GlowButton>
+                )}
             </>
             );
           })()}

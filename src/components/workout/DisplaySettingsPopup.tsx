@@ -380,11 +380,6 @@ function DisplaySettingsModal({ onClose }: { onClose: () => void }) {
 
 export default function DisplaySettingsPopup() {
   const [isOpen, setIsOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const handleClose = useCallback(() => setIsOpen(false), []);
 
@@ -401,7 +396,7 @@ export default function DisplaySettingsPopup() {
         <span className="text-[10px] font-semibold uppercase tracking-wider hidden sm:inline">Display</span>
       </button>
 
-      {isOpen && mounted && createPortal(
+      {isOpen && createPortal(
         <DisplaySettingsModal onClose={handleClose} />,
         document.body
       )}

@@ -6,11 +6,14 @@ import GlowCard from "@/components/ui/GlowCard";
 import GlowInput from "@/components/ui/GlowInput";
 import GlowButton from "@/components/ui/GlowButton";
 import { useAuth } from "@/context/AuthContext";
+import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { getDifficultyColorClass, getDifficultyGlowStyle } from "@/lib/difficulty-styles";
+import { getExerciseDisplayName } from "@/lib/exercise-name";
 
 interface Exercise {
   id: string;
   name: string;
+  wuxiaName?: string;
   difficulty: string;
   type: string;
   targetGroup?: string;
@@ -23,6 +26,7 @@ interface WorkoutSubmissionProps {
 
 export default function WorkoutSubmission({ onSubmissionSuccess, preSelectedExerciseId }: WorkoutSubmissionProps) {
   const { user } = useAuth();
+  const { settings } = useDisplaySettings();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [selectedExercise, setSelectedExercise] = useState<string>("");
   const [weight1, setWeight1] = useState<string>("");
@@ -180,7 +184,7 @@ export default function WorkoutSubmission({ onSubmissionSuccess, preSelectedExer
               </option>
               {exercises.map((exercise) => (
                 <option key={exercise.id} value={exercise.id}>
-                  {exercise.name}
+                  {getExerciseDisplayName(exercise, settings.terminologyMode)}
                 </option>
               ))}
             </select>
@@ -340,7 +344,7 @@ export default function WorkoutSubmission({ onSubmissionSuccess, preSelectedExer
             className="p-2 rounded border text-xs"
           >
             <div className="flex items-center justify-between">
-              <span className="font-medium">{selectedExerciseData.name}</span>
+              <span className="font-medium">{getExerciseDisplayName(selectedExerciseData, settings.terminologyMode)}</span>
               <div className="flex items-center gap-2 text-mist-light">
                 <span className={getDifficultyColorClass(selectedExerciseData.difficulty)}>
                   {selectedExerciseData.difficulty}

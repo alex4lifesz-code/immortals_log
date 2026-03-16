@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
       include: {
         user: { select: { id: true, name: true, username: true } },
       },
-      orderBy: [{ pinned: "desc" }, { createdAt: "desc" }],
+      orderBy: [{ pinned: "desc" }, { updatedAt: "desc" }],
     });
 
     return NextResponse.json({ notes });
@@ -50,18 +50,48 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const note = await prisma.checkInNote.create({
-      data: {
-        date,
-        userId,
-        content: content.trim(),
-      },
-      include: {
-        user: { select: { id: true, name: true, username: true } },
-      },
+    // Validate date format
+    if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return NextResponse.json(
+        { error: "Invalid date format (expected YYYY-MM-DD)" },
+        { status: 400 }
+      );
+    }
+
+    // Validate userId type
+    if (typeof userId !== "string") {
+      return NextResponse.json(
+        { error: "Invalid userId" },
+        { status: 400 }
+      );
+    }
+
+    const trimmedContent = String(content).trim().slice(0, 2000);
+
+    const existing = await prisma.checkInNote.findFirst({
+      where: { date, userId },
     });
 
-    return NextResponse.json({ note });
+    const note = existing
+      ? await prisma.checkInNote.update({
+          where: { id: existing.id },
+          data: { content: trimmedContent },
+          include: {
+            user: { select: { id: true, name: true, username: true } },
+          },
+        })
+      : await prisma.checkInNote.create({
+          data: {
+            date,
+            userId,
+            content: trimmedContent,
+          },
+          include: {
+            user: { select: { id: true, name: true, username: true } },
+          },
+        });
+
+    return NextResponse.json({ note, updated: Boolean(existing) });
   } catch (error) {
     console.error("CheckInNote create error:", error);
     return NextResponse.json(

@@ -9,8 +9,25 @@ import { useAppContext } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings, TechniqueDisplayMode, RecentSessionsCompactMode, DateFormatOption, ActiveCardStyle } from "@/context/DisplaySettingsContext";
 import PresetSlots from "@/components/ui/PresetSlots";
-import SetupWizard, { SETUP_WIZARD_COMPLETED_KEY } from "@/components/ui/SetupWizard";
+import SetupWizard from "@/components/ui/SetupWizard";
 import { t } from "@/lib/terminology";
+
+function SettingRow({
+  label,
+  value,
+  color = "text-jade-glow",
+}: {
+  label: string;
+  value: string;
+  color?: string;
+}) {
+  return (
+    <div className="flex items-center justify-between py-1">
+      <span className="text-[10px] text-mist-dark">{label}</span>
+      <span className={`text-[10px] font-medium ${color}`}>{value}</span>
+    </div>
+  );
+}
 
 function SettingsSidebar({ onLogout }: { onLogout: () => void }) {
   const { themeStyle } = useAppContext();
@@ -42,13 +59,6 @@ function SettingsSidebar({ onLogout }: { onLogout: () => void }) {
     "dd-mm-yy": "DD-MM-YY",
     "dd-mmm-yy": "DD-MMM-YY",
   };
-
-  const SettingRow = ({ label, value, color = "text-jade-glow" }: { label: string; value: string; color?: string }) => (
-    <div className="flex items-center justify-between py-1">
-      <span className="text-[10px] text-mist-dark">{label}</span>
-      <span className={`text-[10px] font-medium ${color}`}>{value}</span>
-    </div>
-  );
 
   return (
     <div className="space-y-3">

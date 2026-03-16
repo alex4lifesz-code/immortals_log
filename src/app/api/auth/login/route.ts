@@ -6,14 +6,14 @@ export async function POST(req: NextRequest) {
   try {
     const { username, password } = await req.json();
 
-    if (!username || !password) {
+    if (!username || !password || typeof username !== "string" || typeof password !== "string") {
       return NextResponse.json(
         { error: "Dao name and secret art are required" },
         { status: 400 }
       );
     }
 
-    const user = await prisma.user.findUnique({ where: { username } });
+    const user = await prisma.user.findUnique({ where: { username: username.trim() } });
     if (!user) {
       return NextResponse.json(
         { error: "Cultivator not found in the sect records" },

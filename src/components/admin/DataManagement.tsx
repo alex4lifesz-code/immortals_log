@@ -11,6 +11,10 @@ interface UserOption {
   id: string;
   username: string;
   name: string;
+  _count?: {
+    workouts: number;
+    checkIns: number;
+  };
 }
 
 export default function DataManagement() {
@@ -37,7 +41,9 @@ export default function DataManagement() {
 
   // The effective user ID for user-specific operations
   const targetUserId = selectedUserId || user?.id || "";
-  const targetUserName = allUsers.find(u => u.id === targetUserId)?.name || user?.name || "Unknown";
+  const targetUser = allUsers.find(u => u.id === targetUserId);
+  const targetUserName = targetUser?.name || user?.name || "Unknown";
+  const targetUserSessionCount = targetUser?._count?.workouts ?? 0;
 
   // Training sessions state
   const xlsxInputRef = useRef<HTMLInputElement>(null);
@@ -74,7 +80,7 @@ export default function DataManagement() {
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data, { type: "array" });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows: Record<string, any>[] = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+      const rows: Record<string, unknown>[] = XLSX.utils.sheet_to_json(sheet, { defval: "" });
 
       if (rows.length === 0) {
         setImportStatus({ type: "error", message: "Spreadsheet is empty" });
@@ -158,8 +164,8 @@ export default function DataManagement() {
       } else {
         setImportStatus({ type: "error", message: result.error || "Import failed" });
       }
-    } catch (err: any) {
-      setImportStatus({ type: "error", message: err.message || "Failed to parse file" });
+    } catch (err: unknown) {
+      setImportStatus({ type: "error", message: err instanceof Error ? err.message : "Failed to parse file" });
     } finally {
       if (xlsxInputRef.current) xlsxInputRef.current.value = "";
     }
@@ -185,8 +191,8 @@ export default function DataManagement() {
       } else {
         setRemoveStatus({ type: "error", message: result.error || "Failed to remove sessions" });
       }
-    } catch (err: any) {
-      setRemoveStatus({ type: "error", message: err.message || "An error occurred" });
+    } catch (err: unknown) {
+      setRemoveStatus({ type: "error", message: err instanceof Error ? err.message : "An error occurred" });
     }
   };
 
@@ -205,8 +211,8 @@ export default function DataManagement() {
       }
 
       // Build flat rows for XLSX
-      const rows = workouts.flatMap((w: any) =>
-        (w.simplifiedExercises || []).map((se: any) => ({
+      const rows = workouts.flatMap((w: { date?: string; simplifiedExercises?: { exercise?: { name?: string }; weight1?: number | null; reps1?: number | null; weight2?: number | null; reps2?: number | null; weight3?: number | null; reps3?: number | null; notes?: string | null }[] }) =>
+        (w.simplifiedExercises || []).map((se) => ({
           Date: w.date ? new Date(w.date).toISOString().split("T")[0] : "",
           Exercise: se.exercise?.name || "Unknown",
           W1: se.weight1 ?? "",
@@ -224,8 +230,8 @@ export default function DataManagement() {
       XLSX.utils.book_append_sheet(wb, ws, "Training Sessions");
       XLSX.writeFile(wb, `training-sessions-${new Date().toISOString().split("T")[0]}.xlsx`);
       setSessionExportStatus({ type: "success", message: `Exported ${rows.length} record(s)` });
-    } catch (err: any) {
-      setSessionExportStatus({ type: "error", message: err.message || "Export failed" });
+    } catch (err: unknown) {
+      setSessionExportStatus({ type: "error", message: err instanceof Error ? err.message : "Export failed" });
     }
   };
 
@@ -247,6 +253,10 @@ export default function DataManagement() {
         const result = await res.json();
         const msg = `Imported ${result.imported} technique(s)${result.errors?.length ? `, ${result.errors.length} warning(s)` : ""}`;
         setTechniqueImportStatus({ type: "success", message: msg });
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("exercises-library-updated"));
+          localStorage.setItem("exercises-library-updated-at", String(Date.now()));
+        }
         setShowTechniqueImportModal(false);
         setTechniqueImportText("");
       } else {
@@ -284,9 +294,9 @@ export default function DataManagement() {
         return;
       }
 
-      const exportData = exercises.map((ex: any) => ({
+      const exportData = exercises.map((ex: { name: string; wuxiaName?: string | null; difficulty: string; type: string; story?: string | null; targetGroup?: string | null }) => ({
         name: ex.name,
-        ...(ex.originalName ? { originalName: ex.originalName } : {}),
+        ...(ex.wuxiaName ? { wuxiaName: ex.wuxiaName } : {}),
         difficulty: ex.difficulty,
         type: ex.type,
         ...(ex.story ? { story: ex.story } : {}),
@@ -304,8 +314,8 @@ export default function DataManagement() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
       setTechniqueExportStatus({ type: "success", message: `Exported ${exercises.length} technique(s)` });
-    } catch (err: any) {
-      setTechniqueExportStatus({ type: "error", message: err.message || "Export failed" });
+    } catch (err: unknown) {
+      setTechniqueExportStatus({ type: "error", message: err instanceof Error ? err.message : "Export failed" });
     }
   };
 
@@ -321,8 +331,8 @@ export default function DataManagement() {
       } else {
         setRemoveTechniqueStatus({ type: "error", message: result.error || "Failed to remove techniques" });
       }
-    } catch (err: any) {
-      setRemoveTechniqueStatus({ type: "error", message: err.message || "An error occurred" });
+    } catch (err: unknown) {
+      setRemoveTechniqueStatus({ type: "error", message: err instanceof Error ? err.message : "An error occurred" });
     }
   };
 
@@ -337,7 +347,7 @@ export default function DataManagement() {
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data, { type: "array" });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows: Record<string, any>[] = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+      const rows: Record<string, unknown>[] = XLSX.utils.sheet_to_json(sheet, { defval: "" });
 
       if (rows.length === 0) {
         setCheckinImportStatus({ type: "error", message: "Spreadsheet is empty" });
@@ -408,7 +418,7 @@ export default function DataManagement() {
       }
 
       // Helper to get column value case-insensitively
-      const getCol = (row: Record<string, any>, keys: string[]) => {
+      const getCol = (row: Record<string, unknown>, keys: string[]) => {
         for (const k of keys) {
           for (const rk of Object.keys(row)) {
             if (rk.toLowerCase().trim() === k.toLowerCase()) return row[rk];
@@ -431,13 +441,16 @@ export default function DataManagement() {
           dateRaw = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
         } else {
           dateRaw = String(dateRaw).trim();
-          // Try to parse various date formats
-          if (dateRaw.includes("/")) {
-            const parts = dateRaw.split("/");
-            if (parts.length === 3) {
-              const [m, d, y] = parts;
-              dateRaw = `${y.length === 2 ? "20" + y : y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
-            }
+        }
+        // dateRaw is now a string after the above conversion
+        const dateStr = dateRaw as string;
+        // Try to parse various date formats
+        let parsedDate = dateStr;
+        if (dateStr.includes("/")) {
+          const parts = dateStr.split("/");
+          if (parts.length === 3) {
+            const [m, d, y] = parts;
+            parsedDate = `${y.length === 2 ? "20" + y : y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
           }
         }
 
@@ -466,7 +479,7 @@ export default function DataManagement() {
           await fetch("/api/checkins", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ date: dateRaw, entries }),
+            body: JSON.stringify({ date: parsedDate, entries }),
           });
           imported++;
         } catch {
@@ -476,8 +489,8 @@ export default function DataManagement() {
 
       const msg = `Imported ${imported} check-in record(s)${skipped ? `, ${skipped} skipped` : ""}`;
       setCheckinImportStatus({ type: "success", message: msg });
-    } catch (err: any) {
-      setCheckinImportStatus({ type: "error", message: err.message || "Failed to parse file" });
+    } catch (err: unknown) {
+      setCheckinImportStatus({ type: "error", message: err instanceof Error ? err.message : "Failed to parse file" });
     } finally {
       if (checkinXlsxInputRef.current) checkinXlsxInputRef.current.value = "";
     }
@@ -518,7 +531,7 @@ export default function DataManagement() {
 
       const exportRows = sortedDates.map(date => {
         const d = new Date(date + 'T00:00:00');
-        const row: Record<string, any> = {
+        const row: Record<string, unknown> = {
           Date: date,
           Day: dayNames[d.getDay()],
         };
@@ -541,8 +554,8 @@ export default function DataManagement() {
       XLSX.utils.book_append_sheet(wb, ws, "Check-In Records");
       XLSX.writeFile(wb, `checkin-records-${new Date().toISOString().split("T")[0]}.xlsx`);
       setCheckinExportStatus({ type: "success", message: `Exported ${exportRows.length} record(s)` });
-    } catch (err: any) {
-      setCheckinExportStatus({ type: "error", message: err.message || "Export failed" });
+    } catch (err: unknown) {
+      setCheckinExportStatus({ type: "error", message: err instanceof Error ? err.message : "Export failed" });
     }
   };
 
@@ -558,8 +571,8 @@ export default function DataManagement() {
       } else {
         setRemoveCheckinStatus({ type: "error", message: result.error || "Failed to remove check-in records" });
       }
-    } catch (err: any) {
-      setRemoveCheckinStatus({ type: "error", message: err.message || "An error occurred" });
+    } catch (err: unknown) {
+      setRemoveCheckinStatus({ type: "error", message: err instanceof Error ? err.message : "An error occurred" });
     }
   };
 
@@ -584,10 +597,13 @@ export default function DataManagement() {
             >
               {allUsers.map((u) => (
                 <option key={u.id} value={u.id}>
-                  {u.name} ({u.username}){u.id === user?.id ? " — You" : ""}
+                  {u.name} ({u.username}) - {u._count?.workouts ?? 0} sessions{u.id === user?.id ? " - You" : ""}
                 </option>
               ))}
             </select>
+            <p className="text-[10px] text-mist-dark mt-2">
+              Current selection: <span className="text-mist-light">{targetUserName}</span> with <span className="text-jade-light">{targetUserSessionCount}</span> recorded training session(s).
+            </p>
           </div>
         )}
 
@@ -898,17 +914,17 @@ export default function DataManagement() {
           </p>
           <pre className="text-[10px] text-mist-dark bg-ink-dark p-3 rounded-lg overflow-x-auto">
             {`[{
-  "name": "Technique Name",
+  "name": "Conventional Exercise Name",
+  "wuxiaName": "Optional Wuxia Technique Name",
   "difficulty": "Core Formation",
   "type": "Upper Heaven",
-  "originalName": "Optional original name",
   "story": "Optional description...",
   "targetGroup": "Optional target group"
 }]`}
           </pre>
           <p className="text-[10px] text-mist-dark">
             <span className="text-mist-light">Required:</span> name, difficulty, type.{" "}
-            <span className="text-mist-light">Optional:</span> originalName, story, targetGroup.
+            <span className="text-mist-light">Optional:</span> wuxiaName, story, targetGroup.
           </p>
 
           <div className="flex gap-2">

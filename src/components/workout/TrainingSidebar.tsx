@@ -1,16 +1,18 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import GlowButton from "@/components/ui/GlowButton";
 import { getDifficultyColorClass, getDifficultyGlowStyleScaled } from "@/lib/difficulty-styles";
 import { getTypeColor, getDifficultyColor, getDifficultyGlow, getTargetGroupColor, parseDayAssignments } from "@/lib/constants";
 import { DAY_ABBREVIATIONS } from "@/lib/constants";
 import { useDisplaySettings, TechniqueDisplayMode, ActiveCardStyle } from "@/context/DisplaySettingsContext";
+import { getExerciseDisplayName, getExerciseSearchText } from "@/lib/exercise-name";
 
 interface Exercise {
   id: string;
   name: string;
+  wuxiaName?: string;
   difficulty: string;
   type: string;
   targetGroup?: string;
@@ -41,9 +43,26 @@ interface TechniqueCardExtendedProps extends TechniqueCardProps {
 }
 
 function TechniqueCard({ exercise, isSelected, onSelect, delay, displayMode, compact = false, cardStyle = "default" }: TechniqueCardExtendedProps) {
+  const [showConventionalName, setShowConventionalName] = useState(false);
+  const compactRef = useRef<HTMLDivElement>(null);
+
+  const handleClickOutside = useCallback((e: MouseEvent) => {
+    if (compactRef.current && !compactRef.current.contains(e.target as Node)) {
+      setShowConventionalName(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (showConventionalName) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showConventionalName, handleClickOutside]);
+
   const difficultyColorClass = getDifficultyColorClass(exercise.difficulty);
   const typeColor = getTypeColor(exercise.type);
   const { settings: dsSettings } = useDisplaySettings();
+  const displayName = getExerciseDisplayName(exercise, dsSettings.terminologyMode);
   const glowIntensity = dsSettings.glowIntensitySidebar ?? 100;
   const loreVisible = dsSettings.sidebarLoreVisible ?? true;
   const glowStyle = getDifficultyGlowStyleScaled(exercise.difficulty, glowIntensity);
@@ -61,41 +80,62 @@ function TechniqueCard({ exercise, isSelected, onSelect, delay, displayMode, com
 
   if (compact) {
     return (
-      <div
-        className={`
-          relative flex items-center gap-2 px-2.5 py-1.5 rounded-md border cursor-pointer transition-all duration-150
-          hover:brightness-110 group
-          ${isSelected
-            ? 'bg-jade-deep/30 border-jade-glow/50'
-            : 'bg-ink-dark border-ink-light/60 hover:border-jade/30 hover:bg-ink-mid/40'
-          }
-        `}
-        style={showIllumination ? glowStyle as React.CSSProperties : undefined}
-        onClick={() => onSelect(exercise.id)}
-      >
-        {/* Selected check */}
-        {isSelected && (
-          <div className="w-4 h-4 shrink-0 bg-jade-glow rounded-full flex items-center justify-center">
-            <svg className="w-2.5 h-2.5 text-ink-deep" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-            </svg>
+      <div ref={compactRef} className="relative">
+        <div
+          className={`
+            relative flex items-center gap-2 px-2.5 py-1.5 rounded-md border cursor-pointer transition-all duration-150
+            hover:brightness-110 group
+            ${showConventionalName ? 'rounded-b-none' : ''}
+            ${isSelected
+              ? 'bg-jade-deep/30 border-jade-glow/50'
+              : 'bg-ink-dark border-ink-light/60 hover:border-jade/30 hover:bg-ink-mid/40'
+            }
+          `}
+          style={showIllumination ? glowStyle as React.CSSProperties : undefined}
+          onClick={() => onSelect(exercise.id)}
+        >
+          {/* Selected check */}
+          {isSelected && (
+            <div className="w-4 h-4 shrink-0 bg-jade-glow rounded-full flex items-center justify-center">
+              <svg className="w-2.5 h-2.5 text-ink-deep" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+          )}
+          {isScrollStyle && <span className="text-sm opacity-80 shrink-0">{typeEmoji}</span>}
+          {/* Name */}
+          <span className={`text-xs font-normal truncate flex-1 ${showIllumination ? difficultyColorClass : 'text-cloud-white'}`}>
+            {displayName}
+          </span>
+          {dsSettings.terminologyMode === "fantasy" && exercise.name && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowConventionalName(!showConventionalName); }}
+              className={`shrink-0 w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-bold transition-all duration-200 ${showConventionalName ? 'bg-jade-glow/20 text-jade-glow border border-jade-glow/40' : 'bg-ink-light/30 text-mist-dark hover:text-mist-light hover:bg-ink-light/50 border border-ink-light/40'}`}
+              title={showConventionalName ? exercise.name : "Show conventional name"}
+            >
+              i
+            </button>
+          )}
+          {/* Inline badges */}
+          {showRealm && (
+            <span className={`shrink-0 text-[9px] font-normal ${difficultyColorClass} opacity-70`}>
+              {exercise.difficulty}
+            </span>
+          )}
+          {showPath && (
+            <span className={`shrink-0 text-[9px] font-normal ${typeColor} opacity-60`}>
+              {exercise.type}
+            </span>
+          )}
+        </div>
+        {showConventionalName && dsSettings.terminologyMode === "fantasy" && exercise.name && (
+          <div
+            className={`px-2.5 py-1 rounded-b-md border border-t-0 text-[9px] text-mist-mid truncate ${
+              isSelected ? 'bg-jade-deep/20 border-jade-glow/50' : 'bg-ink-dark/80 border-ink-light/60'
+            }`}
+          >
+            Conventional: {exercise.name}
           </div>
-        )}
-        {isScrollStyle && <span className="text-sm opacity-80 shrink-0">{typeEmoji}</span>}
-        {/* Name */}
-        <span className={`text-xs font-normal truncate flex-1 ${showIllumination ? difficultyColorClass : 'text-cloud-white'}`}>
-          {exercise.name}
-        </span>
-        {/* Inline badges */}
-        {showRealm && (
-          <span className={`shrink-0 text-[9px] font-normal ${difficultyColorClass} opacity-70`}>
-            {exercise.difficulty}
-          </span>
-        )}
-        {showPath && (
-          <span className={`shrink-0 text-[9px] font-normal ${typeColor} opacity-60`}>
-            {exercise.type}
-          </span>
         )}
       </div>
     );
@@ -105,6 +145,7 @@ function TechniqueCard({ exercise, isSelected, onSelect, delay, displayMode, com
   if (isScrollStyle) {
     return (
       <motion.div
+        ref={compactRef}
         initial={{ opacity: 0, x: -10 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay }}
@@ -114,6 +155,7 @@ function TechniqueCard({ exercise, isSelected, onSelect, delay, displayMode, com
           className={`
             relative p-3 rounded-xl border cursor-pointer transition-all duration-300
             hover:scale-[1.02] hover:shadow-2xl group shadow-[0_0_12px_rgba(58,143,143,0.2)]
+            ${showConventionalName ? 'rounded-b-none' : ''}
             ${isSelected
               ? 'bg-jade-deep/30 border-jade-glow/50 shadow-lg shadow-jade-glow/10'
               : `bg-ink-dark border-ink-light hover:border-jade/30 hover:shadow-[0_0_20px_rgba(58,143,143,0.4)] ${showIllumination && glowIntensity >= 100 ? getDifficultyGlow(exercise.difficulty) : ''}`
@@ -125,9 +167,20 @@ function TechniqueCard({ exercise, isSelected, onSelect, delay, displayMode, com
           <div className="flex items-start gap-2.5">
             <span className="text-lg pt-0.5 opacity-80 shrink-0">{typeEmoji}</span>
             <div className="flex flex-col min-w-0 flex-1">
-              <h3 className={`text-xs font-normal ${showIllumination ? difficultyColorClass : 'text-cloud-white'} truncate leading-snug tracking-wide`}>
-                {exercise.name}
-              </h3>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <h3 className={`text-xs font-normal ${showIllumination ? difficultyColorClass : 'text-cloud-white'} truncate leading-snug tracking-wide flex-1`}>
+                  {displayName}
+                </h3>
+                {dsSettings.terminologyMode === "fantasy" && exercise.name && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowConventionalName(!showConventionalName); }}
+                    className={`shrink-0 w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-bold transition-all duration-200 ${showConventionalName ? 'bg-jade-glow/20 text-jade-glow border border-jade-glow/40' : 'bg-ink-light/30 text-mist-dark hover:text-mist-light hover:bg-ink-light/50 border border-ink-light/40'}`}
+                    title={showConventionalName ? exercise.name : "Show conventional name"}
+                  >
+                    i
+                  </button>
+                )}
+              </div>
               {(showRealm || showPath) && (
                 <div className="mt-1 flex items-center gap-1.5 flex-wrap">
                   {showRealm && (
@@ -164,6 +217,15 @@ function TechniqueCard({ exercise, isSelected, onSelect, delay, displayMode, com
             </div>
           )}
         </div>
+        {showConventionalName && dsSettings.terminologyMode === "fantasy" && exercise.name && (
+          <div
+            className={`px-3 py-1 rounded-b-xl border border-t-0 text-[9px] text-mist-mid truncate ${
+              isSelected ? 'bg-jade-deep/20 border-jade-glow/50' : 'bg-ink-dark/80 border-ink-light'
+            }`}
+          >
+            Conventional: {exercise.name}
+          </div>
+        )}
       </motion.div>
     );
   }
@@ -171,6 +233,7 @@ function TechniqueCard({ exercise, isSelected, onSelect, delay, displayMode, com
   /* ═══════════════ Default Style (expanded) ═══════════════ */
   return (
     <motion.div
+      ref={compactRef}
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay }}
@@ -180,6 +243,7 @@ function TechniqueCard({ exercise, isSelected, onSelect, delay, displayMode, com
         className={`
           relative p-2.5 rounded-lg border cursor-pointer transition-all duration-200
           hover:scale-[1.02] hover:shadow-2xl group
+          ${showConventionalName ? 'rounded-b-none' : ''}
           ${isSelected 
             ? 'bg-jade-deep/30 border-jade-glow/50 shadow-lg shadow-jade-glow/10' 
             : 'bg-ink-dark border-ink-light hover:border-jade/30 hover:bg-ink-mid/40'
@@ -189,8 +253,19 @@ function TechniqueCard({ exercise, isSelected, onSelect, delay, displayMode, com
         onClick={() => onSelect(exercise.id)}
       >
         {/* Technique Name */}
-        <div className={`text-xs font-normal ${showIllumination ? difficultyColorClass : 'text-cloud-white'} transition-all duration-200 truncate`}>
-          {exercise.name}
+        <div className="flex items-center gap-1.5">
+          <div className={`text-xs font-normal ${showIllumination ? difficultyColorClass : 'text-cloud-white'} transition-all duration-200 truncate flex-1`}>
+            {displayName}
+          </div>
+          {dsSettings.terminologyMode === "fantasy" && exercise.name && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowConventionalName(!showConventionalName); }}
+              className={`shrink-0 w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-bold transition-all duration-200 ${showConventionalName ? 'bg-jade-glow/20 text-jade-glow border border-jade-glow/40' : 'bg-ink-light/30 text-mist-dark hover:text-mist-light hover:bg-ink-light/50 border border-ink-light/40'}`}
+              title={showConventionalName ? exercise.name : "Show conventional name"}
+            >
+              i
+            </button>
+          )}
         </div>
         
         {/* Badges row */}
@@ -245,6 +320,15 @@ function TechniqueCard({ exercise, isSelected, onSelect, delay, displayMode, com
           </div>
         )}
       </div>
+      {showConventionalName && dsSettings.terminologyMode === "fantasy" && exercise.name && (
+        <div
+          className={`px-2.5 py-1 rounded-b-lg border border-t-0 text-[9px] text-mist-mid truncate ${
+            isSelected ? 'bg-jade-deep/20 border-jade-glow/50' : 'bg-ink-dark/80 border-ink-light'
+          }`}
+        >
+          Conventional: {exercise.name}
+        </div>
+      )}
     </motion.div>
   );
 }
@@ -254,7 +338,7 @@ export default function TrainingSidebar({
   selectedTechniques,
   onSelectTechnique, 
   isLoadingExercises, 
-  isMobile,
+  isMobile: _isMobile,
   onDrawerOpen 
 }: TrainingSidebarProps) {
   const [selectedDayFilter, setSelectedDayFilter] = useState<number | null>(null);
@@ -296,7 +380,7 @@ export default function TrainingSidebar({
   // Apply search filter on top of day filter
   const searchFilteredExercises = filteredExercises.filter(exercise => {
     if (!searchQuery.trim()) return true;
-    return exercise.name.toLowerCase().includes(searchQuery.trim().toLowerCase());
+    return getExerciseSearchText(exercise).includes(searchQuery.trim().toLowerCase());
   });
 
   return (

@@ -7,11 +7,12 @@ import GlowCard from "@/components/ui/GlowCard";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { formatDateWithPreference } from "@/lib/constants";
+import { getExerciseDisplayName } from "@/lib/exercise-name";
 import ExerciseHistoryModal from "@/components/workout/ExerciseHistoryModal";
 
 interface WorkoutExercise {
   id: string;
-  exercise: { id: string; name: string; difficulty: string };
+  exercise: { id: string; name: string; wuxiaName?: string | null; difficulty: string };
   sets?: number;
   reps?: number;
   weight?: number;
@@ -35,15 +36,24 @@ interface Workout {
 }
 
 interface ExerciseStats {
+  id: string;
   name: string;
+  wuxiaName?: string | null;
   count: number;
   totalWeight: number;
   difficulty: string;
 }
 
-function HistorySidebar({ stats, exerciseStats }: { stats: { total: number; thisWeek: number; thisMonth: number }; exerciseStats: ExerciseStats[] }) {
+function HistorySidebar({
+  stats,
+  exerciseStats,
+  terminologyMode,
+}: {
+  stats: { total: number; thisWeek: number; thisMonth: number };
+  exerciseStats: ExerciseStats[];
+  terminologyMode: "fantasy" | "normal";
+}) {
   const topExercise = exerciseStats[0];
-  const totalXP = exerciseStats.reduce((sum, e) => sum * 1, 0);
   
   return (
     <div className="space-y-3">
@@ -69,7 +79,7 @@ function HistorySidebar({ stats, exerciseStats }: { stats: { total: number; this
         <div className="ink-border rounded-lg p-3 bg-jade-deep/20 border-jade-glow/50">
           <h3 className="text-xs text-jade-glow uppercase font-semibold mb-2">🏆 Favorite Technique</h3>
           <div className="space-y-1">
-            <p className="text-sm font-bold text-cloud-white">{topExercise.name}</p>
+            <p className="text-sm font-bold text-cloud-white">{getExerciseDisplayName(topExercise, terminologyMode)}</p>
             <p className="text-xs text-jade-glow">{topExercise.count} repetitions</p>
             {topExercise.totalWeight > 0 && (
               <p className="text-xs text-mist-dark">{topExercise.totalWeight.toLocaleString()} kg total</p>
@@ -122,8 +132,8 @@ export default function HistoryPage() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showDatePopup, setShowDatePopup] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [allCheckIns, setAllCheckIns] = useState<any[]>([]);
-  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [allCheckIns, setAllCheckIns] = useState<{ id: string; date: string; present: boolean; weight?: number; userId: string }[]>([]);
+  const [allUsers, setAllUsers] = useState<{ id: string; name: string }[]>([]);
   const [currentCheckIn, setCurrentCheckIn] = useState<{ present: boolean; weight: string }>({ present: false, weight: "" });
   const [historyModal, setHistoryModal] = useState<{ exerciseId: string; exerciseName: string } | null>(null);
 
@@ -164,7 +174,9 @@ export default function HistoryPage() {
             const key = ex.exercise.name;
             if (!exerciseMap.has(key)) {
               exerciseMap.set(key, {
+                id: ex.exercise.id,
                 name: ex.exercise.name,
+                wuxiaName: ex.exercise.wuxiaName,
                 count: 0,
                 totalWeight: 0,
                 difficulty: ex.exercise.difficulty,
@@ -180,7 +192,9 @@ export default function HistoryPage() {
             const key = ex.exercise.name;
             if (!exerciseMap.has(key)) {
               exerciseMap.set(key, {
+                id: ex.exercise.id,
                 name: ex.exercise.name,
+                wuxiaName: ex.exercise.wuxiaName,
                 count: 0,
                 totalWeight: 0,
                 difficulty: ex.exercise.difficulty,
@@ -199,10 +213,9 @@ export default function HistoryPage() {
 
         // Create chart data for top exercises
         const topExercises = sortedExercises.slice(0, 5);
-        const maxCount = topExercises.length > 0 ? topExercises[0].count : 1;
         setChartData(
           topExercises.map((ex) => ({
-            label: ex.name,
+            label: getExerciseDisplayName(ex, settings.terminologyMode),
             value: ex.count,
             color: "from-jade-glow to-jade-light",
           }))
@@ -210,7 +223,6 @@ export default function HistoryPage() {
 
         // Create XP progression data (last 7 workouts)
         const last7 = userWorkouts.slice(-7);
-        const maxXP = last7.length > 0 ? Math.max(...last7.map((w: Workout) => w.totalXP)) : 100;
         setXpData(
           last7.map((w: Workout) => ({
             label: formatDateWithPreference(new Date(w.date), dateFormat),
@@ -228,7 +240,7 @@ export default function HistoryPage() {
     if (user) {
       fetchWorkouts();
     }
-  }, [user]);
+  }, [user, dateFormat, settings.terminologyMode]);
 
   // Fetch check-ins and users
   useEffect(() => {
@@ -305,7 +317,7 @@ export default function HistoryPage() {
     <PageLayout
       title="Ancient Records"
       subtitle="Review your past cultivation sessions"
-      sidebar={<HistorySidebar stats={stats} exerciseStats={exerciseStats} />}
+      sidebar={<HistorySidebar stats={stats} exerciseStats={exerciseStats} terminologyMode={settings.terminologyMode} />}
       sidebarLabel="Stats"
     >
       {loading ? (
@@ -541,10 +553,6 @@ export default function HistoryPage() {
                         new Date(w.date).toISOString().split('T')[0] === dateString
                       );
                       const totalXP = dayWorkouts.reduce((sum, w) => sum + w.totalXP, 0);
-                      const allExercises = dayWorkouts.flatMap(workout => [
-                        ...(workout.simplifiedExercises || []).map(ex => ({ ...ex, mode: "simplified" as const, workout })),
-                        ...(workout.detailedExercises || []).map(ex => ({ ...ex, mode: "detailed" as const, workout }))
-                      ]);
 
                       return (
                         <div className="p-8">
@@ -812,9 +820,9 @@ export default function HistoryPage() {
                                     <div
                                       key={ex.id}
                                       className="flex items-center justify-between text-xs bg-ink-dark/50 px-3 py-2 rounded border border-ink-light/30 cursor-pointer hover:border-jade-glow/30 hover:bg-jade-deep/10 transition-all"
-                                      onClick={() => setHistoryModal({ exerciseId: ex.exercise.id || ex.id, exerciseName: ex.exercise.name })}
+                                      onClick={() => setHistoryModal({ exerciseId: ex.exercise.id || ex.id, exerciseName: getExerciseDisplayName(ex.exercise, settings.terminologyMode) })}
                                     >
-                                      <span className="text-jade-light font-medium">{ex.exercise.name}</span>
+                                      <span className="text-jade-light font-medium">{getExerciseDisplayName(ex.exercise, settings.terminologyMode)}</span>
                                       <div className="flex items-center gap-3 text-mist-mid flex-wrap">
                                         {ex.mode === "simplified" ? (
                                           <>
@@ -914,10 +922,10 @@ export default function HistoryPage() {
                           <div
                             key={ex.id}
                             className="text-xs bg-ink-dark px-2 py-1 rounded text-cloud-white flex items-center gap-1 cursor-pointer hover:bg-jade-deep/20 hover:ring-1 hover:ring-jade-glow/30 transition-all"
-                            title={`Tap to view history for ${ex.exercise.name}`}
-                            onClick={() => setHistoryModal({ exerciseId: ex.exercise.id || ex.id, exerciseName: ex.exercise.name })}
+                            title={`Tap to view history for ${getExerciseDisplayName(ex.exercise, settings.terminologyMode)}`}
+                            onClick={() => setHistoryModal({ exerciseId: ex.exercise.id || ex.id, exerciseName: getExerciseDisplayName(ex.exercise, settings.terminologyMode) })}
                           >
-                            <span>{ex.exercise.name}</span>
+                            <span>{getExerciseDisplayName(ex.exercise, settings.terminologyMode)}</span>
                             <span className={`text-[9px] px-1 py-0.5 rounded ${
                               ex.mode === "simplified"
                                 ? "bg-blue-500/30 text-blue-300"

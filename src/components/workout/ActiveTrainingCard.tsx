@@ -2,17 +2,18 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import GlowCard from "@/components/ui/GlowCard";
 import GlowButton from "@/components/ui/GlowButton";
 import { getDifficultyColorClass, getDifficultyGlowStyleScaled } from "@/lib/difficulty-styles";
 import { getTypeColor, getDifficultyColor, getDifficultyGlow, getTargetGroupColor, formatDateWithPreference } from "@/lib/constants";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { useAppContext } from "@/context/AppContext";
+import { getExerciseDisplayName } from "@/lib/exercise-name";
 
 interface Exercise {
   id: string;
   name: string;
+  wuxiaName?: string;
   difficulty: string;
   type: string;
   targetGroup?: string;
@@ -49,10 +50,12 @@ export default function ActiveTrainingCard({
   const [submitMessage, setSubmitMessage] = useState<{ type: "success" | "error", text: string } | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, boolean>>({});
   const [showHistory, setShowHistory] = useState(false);
-  const [historyData, setHistoryData] = useState<any[]>([]);
+  const [showConventionalName, setShowConventionalName] = useState(false);
+  const [historyData, setHistoryData] = useState<{ id: string; date: string; weight1: number | null; reps1: number | null; weight2: number | null; reps2: number | null; weight3: number | null; reps3: number | null; notes: string | null }[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
   const difficultyColorClass = getDifficultyColorClass(exercise.difficulty);
+  const exerciseDisplayName = getExerciseDisplayName(exercise, settings.terminologyMode);
   const typeColor = getTypeColor(exercise.type);
   const glowIntensity = settings.glowIntensityActiveCards ?? 100;
   const loreVisible = settings.activeCardLoreVisible ?? true;
@@ -74,10 +77,6 @@ export default function ActiveTrainingCard({
     : exercise.type === "Lower Realms" ? "🔥"
     : exercise.type === "Heart Meridian" ? "💚"
     : "⭐";
-  const scrollGlowVariant: "jade" | "crimson" | "gold" =
-    exercise.difficulty === "Immortal" ? "gold"
-    : exercise.difficulty.includes("Tribulation") ? "crimson"
-    : "jade";
 
   // Sync showNotes with the always-visible setting
   useEffect(() => {
@@ -202,11 +201,11 @@ export default function ActiveTrainingCard({
         const error = await response.json();
         throw new Error(error.error || "Failed to record training session");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error recording training session:", error);
       setSubmitMessage({ 
         type: "error", 
-        text: error.message || "Failed to record training session" 
+        text: error instanceof Error ? error.message : "Failed to record training session" 
       });
     } finally {
       setIsSubmitting(false);
@@ -270,9 +269,23 @@ export default function ActiveTrainingCard({
               <div className={`flex items-start ${isCompact ? 'gap-2' : 'gap-3'} min-w-0 flex-1`}>
                 <span className={`${isCompact ? 'text-sm' : 'text-lg'} pt-0.5 opacity-80 shrink-0`}>{typeEmoji}</span>
                 <div className="flex flex-col min-w-0">
-                  <h3 className={`${isCompact ? 'text-xs' : 'text-sm'} font-semibold ${showIllumination ? difficultyColorClass : 'text-cloud-white'} truncate leading-snug tracking-wide`}>
-                    {exercise.name}
-                  </h3>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <h3 className={`${isCompact ? 'text-xs' : 'text-sm'} font-semibold ${showIllumination ? difficultyColorClass : 'text-cloud-white'} truncate leading-snug tracking-wide`}>
+                      {exerciseDisplayName}
+                    </h3>
+                    {settings.terminologyMode === "fantasy" && exercise.name && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setShowConventionalName(!showConventionalName); }}
+                        className={`shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold transition-all duration-200 ${showConventionalName ? 'bg-jade-glow/20 text-jade-glow border border-jade-glow/40' : 'bg-ink-light/30 text-mist-dark hover:text-mist-light hover:bg-ink-light/50 border border-ink-light/40'}`}
+                        title="Show conventional name"
+                      >
+                        i
+                      </button>
+                    )}
+                  </div>
+                  {showConventionalName && settings.terminologyMode === "fantasy" && exercise.name && (
+                    <p className="text-[10px] text-mist-mid mt-0.5 truncate">Conventional: {exercise.name}</p>
+                  )}
                   {!isCompact && (showRealm || showPath) && (
                     <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
                       {showRealm && (
@@ -429,7 +442,7 @@ export default function ActiveTrainingCard({
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.25 }} className="overflow-hidden">
                   <div className="pt-3 border-t border-ink-light/20">
                     <div className="flex items-center justify-between mb-2">
-                      <h4 className="text-[11px] font-semibold text-jade-glow uppercase tracking-wider">Training History — {exercise.name}</h4>
+                      <h4 className="text-[11px] font-semibold text-jade-glow uppercase tracking-wider">Training History — {exerciseDisplayName}</h4>
                       <button onClick={() => setShowHistory(false)} className="p-0.5 text-mist-dark hover:text-cloud-white transition-colors">
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                       </button>
@@ -441,16 +454,19 @@ export default function ActiveTrainingCard({
                     ) : (
                       <div className="max-h-[200px] overflow-y-auto overflow-x-auto sidebar-scroll">
                         <table className="w-full text-[10px] min-w-[400px]">
-                          <thead className="sticky top-0 bg-ink-dark"><tr className="border-b border-ink-light/40 text-mist-dark"><th className="text-left py-1 px-1 font-semibold">Date</th>{(settings.columnOrderGrouped ? ["W1","W2","W3","R1","R2","R3"] : ["W1","R1","W2","R2","W3","R3"]).map(h => <th key={h} className="text-center py-1 px-0.5 font-semibold">{h}</th>)}<th className="text-left py-1 px-1 font-semibold">Notes</th></tr></thead>
+                          <thead className="sticky top-0 bg-ink-dark"><tr className="border-b border-ink-light/40 text-mist-dark"><th className="text-left py-1 px-1 font-semibold">Date</th>{(settings.columnOrderGrouped ? ["W1","W2","W3","R1","R2","R3"] : ["W1","R1","W2","R2","W3","R3"]).map(h => <th key={h} className="text-center py-1 px-0.5 font-semibold" style={(settings.columnColorsEnabled ?? true) && h.startsWith('W') ? { color: 'var(--col-weight)' } : (settings.columnColorsEnabled ?? true) && h.startsWith('R') ? { color: 'var(--col-reps)' } : undefined}>{h}</th>)}<th className="text-left py-1 px-1 font-semibold">Notes</th></tr></thead>
                           <tbody>
-                            {historyData.map((entry: any) => {
+                            {historyData.map((entry) => {
+                              const colTypes = settings.columnOrderGrouped
+                                ? ['weight','weight','weight','reps','reps','reps'] as const
+                                : ['weight','reps','weight','reps','weight','reps'] as const;
                               const fields = settings.columnOrderGrouped
                                 ? [entry.weight1, entry.weight2, entry.weight3, entry.reps1, entry.reps2, entry.reps3]
                                 : [entry.weight1, entry.reps1, entry.weight2, entry.reps2, entry.weight3, entry.reps3];
                               return (
                               <tr key={entry.id} className="border-b border-ink-light/20 hover:bg-ink-mid/10">
                                 <td className="py-1 px-1 text-mist-light whitespace-nowrap">{formatDateWithPreference(new Date(entry.date), settings.dateFormat || "dd-mmm-yyyy")}</td>
-                                {fields.map((v, i) => <td key={i} className="py-1 px-0.5 text-center text-cloud-white">{v != null ? v : "—"}</td>)}
+                                {fields.map((v, i) => <td key={i} className="py-1 px-0.5 text-center text-cloud-white" style={(settings.columnColorsEnabled ?? true) && colTypes[i] === 'weight' ? { backgroundColor: 'var(--col-weight-bg)' } : (settings.columnColorsEnabled ?? true) && colTypes[i] === 'reps' ? { backgroundColor: 'var(--col-reps-bg)' } : undefined}>{v != null ? v : "—"}</td>)}
                                 <td className="py-1 px-1 text-mist-dark truncate max-w-[80px]" title={entry.notes || ""}>{entry.notes || "—"}</td>
                               </tr>
                               );
@@ -502,8 +518,17 @@ export default function ActiveTrainingCard({
             <div className={`flex-1 ${isCompact ? 'space-y-0.5' : 'space-y-1.5'} min-w-0`}>
               <div className="flex items-center gap-1.5">
                 <h3 className={`${isCompact ? 'text-xs' : 'text-sm'} font-semibold ${showIllumination ? difficultyColorClass : 'text-cloud-white'} truncate transition-colors duration-200 group-hover:brightness-110`}>
-                  {exercise.name}
+                  {exerciseDisplayName}
                 </h3>
+                {settings.terminologyMode === "fantasy" && exercise.name && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowConventionalName(!showConventionalName); }}
+                    className={`shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold transition-all duration-200 ${showConventionalName ? 'bg-jade-glow/20 text-jade-glow border border-jade-glow/40' : 'bg-ink-light/30 text-mist-dark hover:text-mist-light hover:bg-ink-light/50 border border-ink-light/40'}`}
+                    title="Show conventional name"
+                  >
+                    i
+                  </button>
+                )}
                 {!isCompact && (
                   <button
                     onClick={(e) => { e.stopPropagation(); handleHistoryToggle(); }}
@@ -517,6 +542,9 @@ export default function ActiveTrainingCard({
                   </button>
                 )}
               </div>
+              {showConventionalName && settings.terminologyMode === "fantasy" && exercise.name && (
+                <p className="text-[10px] text-mist-mid truncate">Conventional: {exercise.name}</p>
+              )}
               {/* Realm + Path badges */}
               {!isCompact && (showRealm || showPath) && (
                 <div className="flex items-center gap-2 flex-wrap">
@@ -747,7 +775,7 @@ export default function ActiveTrainingCard({
                 <div className="pt-3 border-t border-ink-light/20">
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="text-[11px] font-semibold text-jade-glow uppercase tracking-wider">
-                      Training History — {exercise.name}
+                      Training History — {exerciseDisplayName}
                     </h4>
                     <button
                       onClick={() => setShowHistory(false)}
@@ -776,44 +804,54 @@ export default function ActiveTrainingCard({
                         <thead className="sticky top-0 bg-ink-dark">
                           <tr className="border-b border-ink-light/40 text-mist-dark">
                             <th className="text-left py-1 px-1 font-semibold">Date</th>
-                            <th className="text-center py-1 px-0.5 font-semibold">W1</th>
-                            <th className="text-center py-1 px-0.5 font-semibold">R1</th>
-                            <th className="text-center py-1 px-0.5 font-semibold">W2</th>
-                            <th className="text-center py-1 px-0.5 font-semibold">R2</th>
-                            <th className="text-center py-1 px-0.5 font-semibold">W3</th>
-                            <th className="text-center py-1 px-0.5 font-semibold">R3</th>
+                            {(settings.columnOrderGrouped ? ["W1","W2","W3","R1","R2","R3"] : ["W1","R1","W2","R2","W3","R3"]).map(h => (
+                              <th
+                                key={h}
+                                className="text-center py-1 px-0.5 font-semibold"
+                                style={
+                                  (settings.columnColorsEnabled ?? true) && h.startsWith('W')
+                                    ? { color: 'var(--col-weight)' }
+                                    : (settings.columnColorsEnabled ?? true) && h.startsWith('R')
+                                      ? { color: 'var(--col-reps)' }
+                                      : undefined
+                                }
+                              >{h}</th>
+                            ))}
                             <th className="text-left py-1 px-1 font-semibold">Notes</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {historyData.map((entry: any) => (
+                          {historyData.map((entry) => {
+                            const colTypes = settings.columnOrderGrouped
+                              ? ['weight','weight','weight','reps','reps','reps'] as const
+                              : ['weight','reps','weight','reps','weight','reps'] as const;
+                            const fields = settings.columnOrderGrouped
+                              ? [entry.weight1, entry.weight2, entry.weight3, entry.reps1, entry.reps2, entry.reps3]
+                              : [entry.weight1, entry.reps1, entry.weight2, entry.reps2, entry.weight3, entry.reps3];
+                            return (
                             <tr key={entry.id} className="border-b border-ink-light/20 hover:bg-ink-mid/10">
                               <td className="py-1 px-1 text-mist-light whitespace-nowrap">
                                 {formatDateWithPreference(new Date(entry.date), settings.dateFormat || "dd-mmm-yyyy")}
                               </td>
-                              <td className="py-1 px-0.5 text-center text-cloud-white">
-                                {entry.weight1 != null ? entry.weight1 : "—"}
-                              </td>
-                              <td className="py-1 px-0.5 text-center text-cloud-white">
-                                {entry.reps1 != null ? entry.reps1 : "—"}
-                              </td>
-                              <td className="py-1 px-0.5 text-center text-cloud-white">
-                                {entry.weight2 != null ? entry.weight2 : "—"}
-                              </td>
-                              <td className="py-1 px-0.5 text-center text-cloud-white">
-                                {entry.reps2 != null ? entry.reps2 : "—"}
-                              </td>
-                              <td className="py-1 px-0.5 text-center text-cloud-white">
-                                {entry.weight3 != null ? entry.weight3 : "—"}
-                              </td>
-                              <td className="py-1 px-0.5 text-center text-cloud-white">
-                                {entry.reps3 != null ? entry.reps3 : "—"}
-                              </td>
+                              {fields.map((v, i) => (
+                                <td
+                                  key={i}
+                                  className="py-1 px-0.5 text-center text-cloud-white"
+                                  style={
+                                    (settings.columnColorsEnabled ?? true) && colTypes[i] === 'weight'
+                                      ? { backgroundColor: 'var(--col-weight-bg)' }
+                                      : (settings.columnColorsEnabled ?? true) && colTypes[i] === 'reps'
+                                        ? { backgroundColor: 'var(--col-reps-bg)' }
+                                        : undefined
+                                  }
+                                >{v != null ? v : "—"}</td>
+                              ))}
                               <td className="py-1 px-1 text-mist-dark truncate max-w-[80px]" title={entry.notes || ""}>
                                 {entry.notes || "—"}
                               </td>
                             </tr>
-                          ))}
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>

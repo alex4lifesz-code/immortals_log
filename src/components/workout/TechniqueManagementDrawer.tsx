@@ -4,6 +4,8 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { motion, AnimatePresence, Reorder, useDragControls } from "framer-motion";
 import { getDifficultyColorClass, getDifficultyGlowStyle } from "@/lib/difficulty-styles";
 import { getTypeColor } from "@/lib/constants";
+import { useDisplaySettings } from "@/context/DisplaySettingsContext";
+import { getExerciseDisplayName, getExerciseSearchText } from "@/lib/exercise-name";
 import {
   DAYS_OF_WEEK,
   DAY_ABBREVIATIONS,
@@ -18,6 +20,7 @@ import {
 interface Exercise {
   id: string;
   name: string;
+  wuxiaName?: string;
   difficulty: string;
   type: string;
   targetGroup?: string;
@@ -46,6 +49,8 @@ interface TechniqueRowProps {
 function TechniqueRow({ exercise, onUpdateDayAssignments, focusedDay, isCompact = false }: TechniqueRowProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [showTip, setShowTip] = useState(false);
+  const { settings } = useDisplaySettings();
+  const displayName = getExerciseDisplayName(exercise, settings.terminologyMode);
   const difficultyColorClass = getDifficultyColorClass(exercise.difficulty);
   const typeColor = getTypeColor(exercise.type);
   const glowStyle = getDifficultyGlowStyle(exercise.difficulty);
@@ -110,7 +115,7 @@ function TechniqueRow({ exercise, onUpdateDayAssignments, focusedDay, isCompact 
         <div className="flex items-start justify-between pr-8">
           <div className={`flex-1 ${isCompact ? 'space-y-0.5' : 'space-y-1.5'}`}>
             <h4 className={`${isCompact ? 'text-xs' : 'text-sm'} font-semibold ${difficultyColorClass} group-hover:brightness-110 transition-all duration-200`}>
-              {exercise.name}
+              {displayName}
             </h4>
             
             {/* Realm + Path badges (realm first, then path) */}
@@ -280,9 +285,7 @@ export default function TechniqueManagementDrawer({
 
   // Enhanced filter logic
   const filteredExercises = exercises.filter((exercise) => {
-    const matchesSearch = exercise.name
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
+    const matchesSearch = getExerciseSearchText(exercise).includes(searchTerm.toLowerCase());
     const matchesDay = dayFilter === null || isDayAssigned(exercise.assignedDays || "", dayFilter);
     const matchesPath = !pathFilter || exercise.type === pathFilter;
     const matchesRealm = !realmFilter || exercise.difficulty === realmFilter;

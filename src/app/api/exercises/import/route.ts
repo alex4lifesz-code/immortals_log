@@ -34,7 +34,10 @@ export async function POST(req: NextRequest) {
 
     for (let i = 0; i < exercises.length; i++) {
       const ex = exercises[i];
-      if (!ex.name) {
+      const conventionalName = String(ex.name || ex.originalName || "").trim();
+      const wuxiaName = String(ex.wuxiaName || ex.name || "").trim();
+
+      if (!conventionalName) {
         errors.push(`Exercise ${i + 1}: missing name`);
         continue;
       }
@@ -48,8 +51,8 @@ export async function POST(req: NextRequest) {
       }
 
       validExercises.push({
-        name: ex.name,
-        originalName: ex.originalName || null,
+        name: conventionalName,
+        wuxiaName: wuxiaName || null,
         difficulty: ex.difficulty || "Mortal",
         type: ex.type || "Unified Realm",
         story: ex.story || null,

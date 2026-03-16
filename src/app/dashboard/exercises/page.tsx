@@ -1,7 +1,7 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect, useCallback, CSSProperties } from "react";
+import { motion } from "framer-motion";
+import { useState, useEffect, useCallback } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import GlowButton from "@/components/ui/GlowButton";
 import GlowInput from "@/components/ui/GlowInput";
@@ -9,6 +9,8 @@ import { GlowSelect } from "@/components/ui/GlowInput";
 import GlowCard from "@/components/ui/GlowCard";
 import { GlowModal } from "@/components/ui/GlowCard";
 import { useAppContext } from "@/context/AppContext";
+import { useDisplaySettings } from "@/context/DisplaySettingsContext";
+import { getExerciseDisplayName, getExerciseSearchText } from "@/lib/exercise-name";
 import {
   DIFFICULTY_LEVELS,
   EXERCISE_TYPES,
@@ -24,7 +26,7 @@ const FAVOURITES_KEY = "cultivateos-favourite-techniques";
 interface Exercise {
   id: string;
   name: string;
-  originalName?: string;
+  wuxiaName?: string;
   difficulty: string;
   type: string;
   story?: string;
@@ -41,9 +43,9 @@ function ExercisesSidebar({
   setFilterType,
   total,
   isMobile,
-  exercises,
+  exercises: _exercises,
   favouriteIds,
-  onToggleFavourite,
+  onToggleFavourite: _onToggleFavourite,
   filterFavourites,
   setFilterFavourites,
   onDismissSidebar,
@@ -180,6 +182,7 @@ function ExercisesSidebar({
 
 export default function ExercisesPage() {
   const { isMobile, setMobileSidebarOpen } = useAppContext();
+  const { settings } = useDisplaySettings();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -188,12 +191,14 @@ export default function ExercisesPage() {
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState<Exercise | null>(null);
+  const [showConventionalInDetail, setShowConventionalInDetail] = useState(false);
   const [hoveredExercise, setHoveredExercise] = useState<string | null>(null);
   const [favouriteIds, setFavouriteIds] = useState<Set<string>>(new Set());
   const [filterFavourites, setFilterFavourites] = useState(false);
 
   // New exercise form
   const [newName, setNewName] = useState("");
+  const [newWuxiaName, setNewWuxiaName] = useState("");
   const [newDifficulty, setNewDifficulty] = useState<string>(DIFFICULTY_LEVELS[0]);
   const [newType, setNewType] = useState<string>(EXERCISE_TYPES[0]);
   const [newStory, setNewStory] = useState("");
@@ -242,9 +247,36 @@ export default function ExercisesPage() {
     fetchExercises();
   }, [fetchExercises]);
 
+  useEffect(() => {
+    const handleExercisesUpdated = () => {
+      fetchExercises();
+    };
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === "exercises-library-updated-at") {
+        fetchExercises();
+      }
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        fetchExercises();
+      }
+    };
+
+    window.addEventListener("exercises-library-updated", handleExercisesUpdated);
+    window.addEventListener("storage", handleStorage);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      window.removeEventListener("exercises-library-updated", handleExercisesUpdated);
+      window.removeEventListener("storage", handleStorage);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [fetchExercises]);
+
   const filteredExercises = exercises.filter((e) => {
     const matchSearch =
-      e.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      getExerciseSearchText(e).includes(searchTerm.toLowerCase()) ||
       (e.story || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (e.targetGroup || "").toLowerCase().includes(searchTerm.toLowerCase());
     const matchDifficulty = !filterDifficulty || e.difficulty === filterDifficulty;
@@ -261,6 +293,7 @@ export default function ExercisesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: newName,
+          wuxiaName: newWuxiaName,
           difficulty: newDifficulty,
           type: newType,
           story: newStory,
@@ -270,6 +303,7 @@ export default function ExercisesPage() {
       if (res.ok) {
         setShowAddModal(false);
         setNewName("");
+        setNewWuxiaName("");
         setNewStory("");
         setNewTarget("");
         fetchExercises();
@@ -284,6 +318,7 @@ export default function ExercisesPage() {
       await fetch(`/api/exercises/${id}`, { method: "DELETE" });
       fetchExercises();
       setShowDetailModal(null);
+      setShowConventionalInDetail(false);
     } catch (err) {
       console.error("Failed to delete exercise:", err);
     }
@@ -410,7 +445,7 @@ export default function ExercisesPage() {
                     </span>
                     <div className="flex flex-col min-w-0 h-full">
                       <h3 className="text-sm font-semibold text-cloud-white truncate leading-snug tracking-wide">
-                        {exercise.name}
+                        {getExerciseDisplayName(exercise, settings.terminologyMode)}
                       </h3>
                       <div className="mt-1.5 flex items-center gap-1.5 flex-nowrap overflow-hidden">
                         <span
@@ -463,10 +498,16 @@ export default function ExercisesPage() {
       >
         <div className="space-y-3">
           <GlowInput
-            label="Technique Name"
-            placeholder="Name of the technique..."
+            label="Exercise Name (Conventional)"
+            placeholder="Name of the exercise..."
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
+          />
+          <GlowInput
+            label="Technique Name (Wuxia, Optional)"
+            placeholder="Wuxia-themed name..."
+            value={newWuxiaName}
+            onChange={(e) => setNewWuxiaName(e.target.value)}
           />
           <GlowSelect
             label="Cultivation Realm"
@@ -516,7 +557,7 @@ export default function ExercisesPage() {
       {/* Detail Modal */}
       <GlowModal
         isOpen={!!showDetailModal}
-        onClose={() => setShowDetailModal(null)}
+        onClose={() => { setShowDetailModal(null); setShowConventionalInDetail(false); }}
         title=""
         hideHeader
         panelClassName="max-w-2xl max-h-[90vh] min-h-[40vh] overflow-y-auto sidebar-scroll"
@@ -540,7 +581,7 @@ export default function ExercisesPage() {
                 <motion.button
                   whileHover={{ scale: 1.15, rotate: 90 }}
                   whileTap={{ scale: 0.9 }}
-                  onClick={() => setShowDetailModal(null)}
+                  onClick={() => { setShowDetailModal(null); setShowConventionalInDetail(false); }}
                   className="w-8 h-8 flex items-center justify-center rounded-full bg-ink-dark/80 backdrop-blur-sm border border-ink-light/50 text-mist-dark hover:text-cloud-white hover:border-mist-mid transition-all duration-200"
                   aria-label="Close technique details"
                 >
@@ -567,8 +608,25 @@ export default function ExercisesPage() {
                     letterSpacing: '0.04em',
                   }}
                 >
-                  {showDetailModal.name}
+                  {getExerciseDisplayName(showDetailModal, settings.terminologyMode)}
                 </h2>
+                {showDetailModal.wuxiaName && settings.terminologyMode === "normal" && (
+                  <p className="mt-2 text-xs text-mist-mid">Wuxia title: {showDetailModal.wuxiaName}</p>
+                )}
+                {showDetailModal.wuxiaName && settings.terminologyMode === "fantasy" && (
+                  <div className="mt-2 flex items-center justify-center gap-2">
+                    <button
+                      onClick={() => setShowConventionalInDetail(!showConventionalInDetail)}
+                      className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-all duration-200 ${showConventionalInDetail ? 'bg-jade-glow/20 text-jade-glow border border-jade-glow/40' : 'bg-ink-light/30 text-mist-dark hover:text-mist-light hover:bg-ink-light/50 border border-ink-light/40'}`}
+                      title="Show conventional name"
+                    >
+                      i
+                    </button>
+                    {showConventionalInDetail && (
+                      <p className="text-xs text-mist-mid">Conventional name: {showDetailModal.name}</p>
+                    )}
+                  </div>
+                )}
 
                 {/* Decorative bottom rule */}
                 <div

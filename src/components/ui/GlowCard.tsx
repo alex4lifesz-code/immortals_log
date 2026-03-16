@@ -1,7 +1,8 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { ReactNode, useState, useEffect } from "react";
+import { ReactNode, useEffect } from "react";
+import { createPortal } from "react-dom";
 
 interface GlowCardProps {
   children: ReactNode;
@@ -78,7 +79,9 @@ export function GlowModal({
     return () => document.removeEventListener('keydown', handleKeyPress);
   }, [isOpen, onClose]);
 
-  return (
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <>
@@ -126,6 +129,7 @@ export function GlowModal({
           </motion.div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Exercise ID is required" }, { status: 400 });
     }
 
-    const whereClause: any = { exerciseId };
+    const whereClause: { exerciseId: string; workout?: { userId: string } } = { exerciseId };
     if (userId) {
       whereClause.workout = { userId };
     }

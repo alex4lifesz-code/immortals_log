@@ -7,8 +7,9 @@ import GlowButton from "@/components/ui/GlowButton";
 import { useAuth } from "@/context/AuthContext";
 import { getDifficultyColorClass, getDifficultyGlowStyleScaled } from "@/lib/difficulty-styles";
 import { getTypeColor, getTargetGroupColor, formatDateWithPreference } from "@/lib/constants";
-import { useDisplaySettings, TechniqueDisplayMode } from "@/context/DisplaySettingsContext";
+import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { useAppContext } from "@/context/AppContext";
+import { getExerciseDisplayName } from "@/lib/exercise-name";
 import ExerciseHistoryModal from "@/components/workout/ExerciseHistoryModal";
 // DisplaySettingsPopup moved to TopBar
 
@@ -41,6 +42,7 @@ interface WorkoutSession {
     exercise: {
       id: string;
       name: string;
+      wuxiaName?: string | null;
       difficulty: string;
       type: string;
       targetGroup: string | null;
@@ -102,7 +104,6 @@ export default function RecentSessionsDisplay({ refreshTrigger }: RecentSessions
 
   const fetchSessions = async () => {
     if (!user?.id) {
-      console.warn("Cannot fetch sessions: user ID not available");
       setError("User not authenticated");
       return;
     }
@@ -118,27 +119,20 @@ export default function RecentSessionsDisplay({ refreshTrigger }: RecentSessions
       } else if (days > 0) {
         url += `&days=${days}`;
       }
-      console.log("Fetching sessions from URL:", url);
       
       const response = await fetch(url, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
       });
       
-      console.log("Fetch response status:", response.status, response.statusText);
-      
       const data = await response.json();
-      console.log("API response data:", data);
       
       if (response.ok) {
-        console.log("Sessions fetched successfully:", data.workouts?.length || 0, "workouts");
         setSessions(data.workouts || []);
       } else {
-        console.error("API error response:", data);
         setError(data.error || "Failed to load training sessions");
       }
     } catch (error) {
-      console.error("Failed to fetch sessions - Network error:", error);
       setError(`Network error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
@@ -148,19 +142,17 @@ export default function RecentSessionsDisplay({ refreshTrigger }: RecentSessions
   // Initial load
   useEffect(() => {
     if (user?.id) {
-      console.log("Initial load: user ID available, fetching sessions");
       fetchSessions();
-    } else {
-      console.log("Initial load: waiting for user ID");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchSessions is stable, runs on user change
   }, [user?.id]);
 
   // Refresh when trigger changes (after new submission)
   useEffect(() => {
     if (refreshTrigger && refreshTrigger > 0 && user?.id) {
-      console.log("Refresh trigger activated, fetching sessions");
       fetchSessions();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchSessions is stable
   }, [refreshTrigger, user?.id]);
 
   // Re-fetch when duration filter or showAllSessions toggle changes
@@ -168,6 +160,7 @@ export default function RecentSessionsDisplay({ refreshTrigger }: RecentSessions
     if (user?.id) {
       fetchSessions();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchSessions is stable
   }, [settings.showAllSessions, settings.recentSessionsDays]);
 
   // Clear save message after 5 seconds
@@ -244,7 +237,7 @@ export default function RecentSessionsDisplay({ refreshTrigger }: RecentSessions
     setIsEditMode(!isEditMode);
   };
 
-  const handleEditChange = (exerciseId: string, field: keyof EditingExercise, value: any) => {
+  const handleEditChange = (exerciseId: string, field: keyof EditingExercise, value: string | number | null) => {
     setEditingData(prev => ({
       ...prev,
       [exerciseId]: {
@@ -519,6 +512,7 @@ export default function RecentSessionsDisplay({ refreshTrigger }: RecentSessions
                   formatSet(exercise.weight2, exercise.reps2),
                   formatSet(exercise.weight3, exercise.reps3),
                 ].filter(Boolean);
+                const exerciseDisplayName = getExerciseDisplayName(exercise.exercise, settings.terminologyMode);
 
                 return (
                   <motion.div
@@ -526,19 +520,19 @@ export default function RecentSessionsDisplay({ refreshTrigger }: RecentSessions
                     initial={{ opacity: 0, y: -3 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="flex items-center gap-2 px-2 py-1.5 rounded-md border border-ink-light/40 bg-ink-dark/30 hover:bg-ink-mid/15 transition-colors cursor-pointer"
-                    onClick={() => setHistoryModal({ exerciseId: exercise.exercise.id, exerciseName: exercise.exercise.name })}
+                    onClick={() => setHistoryModal({ exerciseId: exercise.exercise.id, exerciseName: exerciseDisplayName })}
                   >
                     <span className="text-[10px] text-mist-dark shrink-0 w-14">{formatDate(session.date)}</span>
                     {settings.recentSessionsMode === "name-only" ? (
-                      <span className="text-xs font-normal text-cloud-white flex-1 min-w-0 break-words" title={exercise.exercise.name}>
-                        {exercise.exercise.name}
+                      <span className="text-xs font-normal text-cloud-white flex-1 min-w-0 break-words" title={exerciseDisplayName}>
+                        {exerciseDisplayName}
                       </span>
                     ) : (
                       <span
                         className={`text-xs font-normal flex-1 min-w-0 break-words ${getDifficultyColorClass(exercise.exercise.difficulty)}`}
-                        title={exercise.exercise.name}
+                        title={exerciseDisplayName}
                       >
-                        {exercise.exercise.name}
+                        {exerciseDisplayName}
                       </span>
                     )}
                     <span className="text-[11px] text-mist-light shrink-0 font-mono">
@@ -592,7 +586,8 @@ export default function RecentSessionsDisplay({ refreshTrigger }: RecentSessions
                   {sessions.flatMap((session, sessionIndex) =>
                     session.simplifiedExercises.map((exercise, exerciseIndex) => {
                       const editData = editingData[exercise.id];
-                      const exerciseName = truncateExerciseName(exercise.exercise.name);
+                      const renderedName = getExerciseDisplayName(exercise.exercise, settings.terminologyMode);
+                      const exerciseName = truncateExerciseName(renderedName);
 
                       return (
                         <motion.tr
@@ -616,7 +611,7 @@ export default function RecentSessionsDisplay({ refreshTrigger }: RecentSessions
                           <td
                             className="px-1.5 py-1.5 align-middle whitespace-normal cursor-pointer hover:bg-jade-deep/10 rounded transition-colors"
                             style={{ minWidth: '120px', maxWidth: '260px', wordBreak: 'break-word' }}
-                            onClick={() => !isEditMode && setHistoryModal({ exerciseId: exercise.exercise.id, exerciseName: exercise.exercise.name })}
+                            onClick={() => !isEditMode && setHistoryModal({ exerciseId: exercise.exercise.id, exerciseName: renderedName })}
                           >
                             {settings.recentSessionsMode === "name-only" ? (
                               <span className="text-xs text-cloud-white" title={exerciseName.full}>
@@ -750,7 +745,7 @@ export default function RecentSessionsDisplay({ refreshTrigger }: RecentSessions
                                 onClick={() => {
                                   setDeleteConfirm({
                                     exerciseId: exercise.id,
-                                    exerciseName: exercise.exercise.name,
+                                    exerciseName: renderedName,
                                   });
                                 }}
                                 className="text-crimson-light hover:text-crimson-glow transition-colors text-lg"

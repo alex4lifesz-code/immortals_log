@@ -5,9 +5,17 @@ export async function POST(req: NextRequest) {
   try {
     const { userId, xp, source, difficulty } = await req.json();
     
-    if (!userId || xp === undefined) {
+    if (!userId || typeof userId !== "string" || xp === undefined) {
       return NextResponse.json(
         { error: "User ID and XP amount are required" },
+        { status: 400 }
+      );
+    }
+
+    const xpNum = Number(xp);
+    if (isNaN(xpNum) || xpNum < 0 || xpNum > 1000) {
+      return NextResponse.json(
+        { error: "XP must be a number between 0 and 1000" },
         { status: 400 }
       );
     }
@@ -17,14 +25,14 @@ export async function POST(req: NextRequest) {
       where: { id: userId },
       data: {
         experience: {
-          increment: xp,
+          increment: xpNum,
         },
       },
     });
 
     return NextResponse.json({ 
       newExperience: user.experience,
-      xpAwarded: xp,
+      xpAwarded: xpNum,
       source,
       difficulty 
     });

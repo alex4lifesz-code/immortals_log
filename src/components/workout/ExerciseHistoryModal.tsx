@@ -14,21 +14,35 @@ interface ExerciseHistoryModalProps {
   onClose: () => void;
 }
 
+interface HistoryEntry {
+  id: string;
+  date: string;
+  weight1: number | null;
+  reps1: number | null;
+  weight2: number | null;
+  reps2: number | null;
+  weight3: number | null;
+  reps3: number | null;
+  notes: string | null;
+}
+
 export default function ExerciseHistoryModal({ exerciseId, exerciseName, isOpen, onClose }: ExerciseHistoryModalProps) {
   const { user } = useAuth();
   const { settings } = useDisplaySettings();
-  const [historyData, setHistoryData] = useState<any[]>([]);
+  const [historyData, setHistoryData] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (isOpen && user?.id && exerciseId) {
-      setLoading(true);
-      fetch(`/api/exercises/history?exerciseId=${encodeURIComponent(exerciseId)}&userId=${encodeURIComponent(user.id)}`)
-        .then(res => res.ok ? res.json() : Promise.reject())
-        .then(data => setHistoryData(data.history || []))
-        .catch(() => setHistoryData([]))
-        .finally(() => setLoading(false));
-    }
+    if (!isOpen || !user?.id || !exerciseId) return;
+    let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- loading state before async fetch
+    setLoading(true);
+    fetch(`/api/exercises/history?exerciseId=${encodeURIComponent(exerciseId)}&userId=${encodeURIComponent(user.id)}`)
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then(data => { if (!cancelled) setHistoryData(data.history || []); })
+      .catch(() => { if (!cancelled) setHistoryData([]); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [isOpen, exerciseId, user?.id]);
 
   return (
@@ -54,13 +68,26 @@ export default function ExerciseHistoryModal({ exerciseId, exerciseName, isOpen,
               <tr className="border-b border-ink-light/40 text-mist-dark">
                 <th className="text-left py-1.5 px-1.5 font-semibold">Date</th>
                 {(settings.columnOrderGrouped ? ["W1","W2","W3","R1","R2","R3"] : ["W1","R1","W2","R2","W3","R3"]).map(h => (
-                  <th key={h} className="text-center py-1.5 px-1 font-semibold">{h}</th>
+                  <th
+                    key={h}
+                    className="text-center py-1.5 px-1 font-semibold"
+                    style={
+                      (settings.columnColorsEnabled ?? true) && h.startsWith('W')
+                        ? { color: 'var(--col-weight)' }
+                        : (settings.columnColorsEnabled ?? true) && h.startsWith('R')
+                          ? { color: 'var(--col-reps)' }
+                          : undefined
+                    }
+                  >{h}</th>
                 ))}
                 <th className="text-left py-1.5 px-1.5 font-semibold">Notes</th>
               </tr>
             </thead>
             <tbody>
-              {historyData.map((entry: any) => {
+              {historyData.map((entry) => {
+                const colTypes = settings.columnOrderGrouped
+                  ? ['weight','weight','weight','reps','reps','reps'] as const
+                  : ['weight','reps','weight','reps','weight','reps'] as const;
                 const fields = settings.columnOrderGrouped
                   ? [entry.weight1, entry.weight2, entry.weight3, entry.reps1, entry.reps2, entry.reps3]
                   : [entry.weight1, entry.reps1, entry.weight2, entry.reps2, entry.weight3, entry.reps3];
@@ -70,7 +97,17 @@ export default function ExerciseHistoryModal({ exerciseId, exerciseName, isOpen,
                     {formatDateWithPreference(new Date(entry.date), settings.dateFormat || "dd-mmm-yyyy")}
                   </td>
                   {fields.map((v, i) => (
-                    <td key={i} className="py-1.5 px-1 text-center text-cloud-white">{v != null ? v : "—"}</td>
+                    <td
+                      key={i}
+                      className="py-1.5 px-1 text-center text-cloud-white"
+                      style={
+                        (settings.columnColorsEnabled ?? true) && colTypes[i] === 'weight'
+                          ? { backgroundColor: 'var(--col-weight-bg)' }
+                          : (settings.columnColorsEnabled ?? true) && colTypes[i] === 'reps'
+                            ? { backgroundColor: 'var(--col-reps-bg)' }
+                            : undefined
+                      }
+                    >{v != null ? v : "—"}</td>
                   ))}
                   <td className="py-1.5 px-1.5 text-mist-dark truncate max-w-[100px]" title={entry.notes || ""}>{entry.notes || "—"}</td>
                 </tr>

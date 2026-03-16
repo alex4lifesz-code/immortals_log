@@ -20,13 +20,13 @@ export async function POST(req: NextRequest) {
     }
 
     // Fetch all exercises to resolve names -> ids
-    // Build lookup map keyed by both fantasy name AND originalName for flexible matching
+    // Build lookup map keyed by both conventional and wuxia names for flexible matching
     const exercises = await prisma.exercise.findMany();
     const exerciseMap = new Map<string, { id: string; name: string; difficulty: string }>();
     for (const ex of exercises) {
       exerciseMap.set(ex.name.toLowerCase().trim(), ex);
-      if (ex.originalName) {
-        exerciseMap.set(ex.originalName.toLowerCase().trim(), ex);
+      if (ex.wuxiaName) {
+        exerciseMap.set(ex.wuxiaName.toLowerCase().trim(), ex);
       }
     }
 

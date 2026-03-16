@@ -41,7 +41,7 @@ function AdminSidebar() {
 }
 
 export default function AdminPanelPage() {
-  const { user, logout, login } = useAuth();
+  const { user, login } = useAuth();
   const router = useRouter();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [stats, setStats] = useState<SystemStats>({

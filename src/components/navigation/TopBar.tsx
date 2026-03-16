@@ -17,7 +17,7 @@ interface Stats {
 }
 
 function TopBar() {
-  const { getSortedNavItems, collapsed, isMobile, topPanelExpanded, setTopPanelExpanded, setCollapsed, panelPosition, isNativeApp } = useAppContext();
+  const { getSortedNavItems, collapsed, isMobile, topPanelExpanded, setTopPanelExpanded } = useAppContext();
   const { user } = useAuth();
   const { settings } = useDisplaySettings();
   const gamificationVisible = settings.gamificationVisible ?? true;
@@ -26,7 +26,7 @@ function TopBar() {
   const items = getSortedNavItems();
   const [stats, setStats] = useState<Stats>({ xp: 0, streak: 0, realm: "Mortal", sessions: 0 });
   const [loading, setLoading] = useState(true);
-  const [elevated, setElevated] = useState(false);
+  const [elevated] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   const fetchStats = useCallback(async () => {
@@ -73,8 +73,8 @@ function TopBar() {
         }
       }
 
-      const realms = ["Mortal", "Nascent Soul", "Soul Splitting", "Tribulation Transcendence", "Immortal"];
-      const xpThresholds = [0, 200, 1000, 2500, 5000];
+      const realms = ["Mortal", "Foundation Establishment", "Core Formation", "Nascent Soul", "Soul Splitting", "Tribulation Transcendence", "Immortal"];
+      const xpThresholds = [0, 100, 300, 600, 1200, 2000, 3500];
       let currentRealm = "Mortal";
       for (let i = xpThresholds.length - 1; i >= 0; i--) {
         if (userExp >= xpThresholds[i]) {

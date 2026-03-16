@@ -6,7 +6,7 @@ import GlowButton from "@/components/ui/GlowButton";
 import { useAppContext } from "@/context/AppContext";
 import { useDisplaySettings, ActiveCardStyle, DateFormatOption, PRESET_SLOT_COUNT } from "@/context/DisplaySettingsContext";
 import { getDifficultyGlowStyleScaled, getDifficultyColorClass } from "@/lib/difficulty-styles";
-import { DIFFICULTY_LEVELS } from "@/lib/constants";
+
 import { t } from "@/lib/terminology";
 
 const PREVIEW_EXERCISES = [

@@ -1,10 +1,9 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useState, useEffect, useCallback, useRef } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import GlowButton from "@/components/ui/GlowButton";
-import GlowInput from "@/components/ui/GlowInput";
 import { GlowModal } from "@/components/ui/GlowCard";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
@@ -132,14 +131,26 @@ export default function CheckInPage() {
   const [editingNote, setEditingNote] = useState<{ date: string; note: string } | null>(null);
   const [showNotesPanel, setShowNotesPanel] = useState(false);
   const [communityNotes, setCommunityNotes] = useState<CommunityNote[]>([]);
-  const [dateRange, setDateRange] = useState<"all" | "7" | "14" | "30" | "90" | "custom">("all");
-  const [customRangeStart, setCustomRangeStart] = useState("");
-  const [customRangeEnd, setCustomRangeEnd] = useState("");
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [preEditSnapshot, setPreEditSnapshot] = useState<CheckInRow[]>([]);
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("checkin-sort-order");
+      if (saved === "oldest" || saved === "newest") return saved;
+    }
+    return "newest";
+  });
 
   // Weight prompt state
   const [showWeightPrompt, setShowWeightPrompt] = useState(false);
   const [weightPromptValue, setWeightPromptValue] = useState("");
   const weightPromptDismissedRef = useRef(false);
+
+  const broadcastNotesUpdated = useCallback(() => {
+    if (typeof window === "undefined") return;
+    window.dispatchEvent(new Event("checkin-notes-updated"));
+    localStorage.setItem("checkin-notes-updated-at", String(Date.now()));
+  }, []);
 
   const fetchCommunityNotes = useCallback(async () => {
     try {
@@ -151,23 +162,7 @@ export default function CheckInPage() {
     }
   }, []);
 
-  const handleAddCommunityNote = async (date: string, content: string) => {
-    if (!user || !content.trim()) return;
-    try {
-      const res = await fetch("/api/checkins/notes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date, userId: user.id, content }),
-      });
-      if (res.ok) {
-        fetchCommunityNotes();
-      }
-    } catch (err) {
-      console.error("Failed to add community note:", err);
-    }
-  };
-
-  const handleDeleteCommunityNote = async (noteId: string) => {
+  const handleDeleteCommunityNote = useCallback(async (noteId: string) => {
     if (!user) return;
     try {
       const res = await fetch("/api/checkins/notes", {
@@ -177,13 +172,14 @@ export default function CheckInPage() {
       });
       if (res.ok) {
         setCommunityNotes(prev => prev.filter(n => n.id !== noteId));
+        broadcastNotesUpdated();
       }
     } catch (err) {
       console.error("Failed to delete community note:", err);
     }
-  };
+  }, [broadcastNotesUpdated, user]);
 
-  const handleTogglePinNote = async (noteId: string, pinned: boolean) => {
+  const handleTogglePinNote = useCallback(async (noteId: string, pinned: boolean) => {
     if (!user) return;
     try {
       const res = await fetch("/api/checkins/notes", {
@@ -199,11 +195,12 @@ export default function CheckInPage() {
               return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
             })
         );
+        broadcastNotesUpdated();
       }
     } catch (err) {
       console.error("Failed to toggle pin:", err);
     }
-  };
+  }, [broadcastNotesUpdated, user]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -244,6 +241,25 @@ export default function CheckInPage() {
     fetchCommunityNotes();
   }, [fetchData, fetchCommunityNotes]);
 
+  useEffect(() => {
+    const handleNotesUpdated = () => {
+      fetchCommunityNotes();
+    };
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === "checkin-notes-updated-at") {
+        fetchCommunityNotes();
+      }
+    };
+
+    window.addEventListener("checkin-notes-updated", handleNotesUpdated);
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.removeEventListener("checkin-notes-updated", handleNotesUpdated);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, [fetchCommunityNotes]);
+
   // Show weight prompt on page load if user hasn't logged weight today
   useEffect(() => {
     if (loading || !user || rows.length === 0 || weightPromptDismissedRef.current) return;
@@ -254,7 +270,7 @@ export default function CheckInPage() {
     const today = formatDateLocal(new Date());
     const todayRow = rows.find(r => r.date === today);
     const userEntry = todayRow?.entries[user.id];
-    if (!userEntry?.weight) {
+    if (userEntry?.present && !userEntry?.weight) {
       setShowWeightPrompt(true);
     }
   }, [loading, user, rows]);
@@ -330,6 +346,7 @@ export default function CheckInPage() {
     if (!loading && !hasToday && rows.length === 0) {
       setRows([{ date: today, entries: {} }]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs only on initial load
   }, [loading]);
 
   const addTodayRow = () => {
@@ -413,51 +430,65 @@ export default function CheckInPage() {
     }
   };
 
-  const saveRow = async (date: string) => {
-    const row = rows.find((r) => r.date === date);
-    if (!row || !user) return;
-
-    try {
-      const saveRes = await fetch("/api/checkins", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date, entries: row.entries, requestingUserId: user.id }),
-      });
-
-      if (!saveRes.ok) throw new Error("Failed to save check-in");
-
-      // Award XP for the check-in
-      const newExperience = await awardCheckInXP(user.id);
-      
-      // Show XP feedback
-      setXpFeedback({
-        show: true,
-        xp: 15,
-        userId: user.id,
-      });
-
-      // Hide feedback after 3 seconds
-      setTimeout(() => {
-        setXpFeedback({ show: false, xp: 0, userId: "" });
-      }, 3000);
-    } catch (err) {
-      console.error("Failed to save check-in:", err);
+  const handleEditToggle = () => {
+    if (!isEditMode) {
+      // Entering edit mode — snapshot current state
+      setPreEditSnapshot(JSON.parse(JSON.stringify(rows)));
+      setIsEditMode(true);
+      // Scroll to newest date row
+      const newestDate = rows.reduce((max, r) => r.date > max ? r.date : max, rows[0]?.date || "");
+      if (newestDate) {
+        requestAnimationFrame(() => {
+          document.getElementById(`checkin-row-${newestDate}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+      }
+    } else {
+      // Exiting edit mode — save changed rows
+      (async () => {
+        try {
+          for (const row of rows) {
+            const original = preEditSnapshot.find(r => r.date === row.date);
+            if (!original) continue;
+            let changed = false;
+            for (const u of users) {
+              const origEntry = original.entries[u.id];
+              const newEntry = row.entries[u.id];
+              if (!origEntry && !newEntry) continue;
+              if (origEntry?.weight !== newEntry?.weight || origEntry?.comment !== newEntry?.comment) {
+                changed = true;
+                break;
+              }
+            }
+            if (changed) {
+              const entries: Record<string, { present: boolean; weight: string; comment: string }> = {};
+              for (const u of users) {
+                entries[u.id] = row.entries[u.id] || { present: false, weight: "", comment: "" };
+              }
+              await fetch("/api/checkins", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ date: row.date, entries }),
+              });
+            }
+          }
+        } catch (err) {
+          console.error("Failed to save edits:", err);
+        }
+      })();
+      setIsEditMode(false);
+      setPreEditSnapshot([]);
     }
   };
 
-  // Filter rows by date range
-  const filteredRows = rows.filter((row) => {
-    if (dateRange === "all") return true;
-    if (dateRange === "custom") {
-      if (customRangeStart && row.date < customRangeStart) return false;
-      if (customRangeEnd && row.date > customRangeEnd) return false;
-      return true;
-    }
-    const days = parseInt(dateRange);
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - days);
-    return new Date(row.date + "T00:00:00") >= cutoff;
-  });
+  const handleEditCancel = () => {
+    setRows(preEditSnapshot);
+    setIsEditMode(false);
+    setPreEditSnapshot([]);
+  };
+
+  const sortedRows = [...rows].sort((a, b) =>
+    sortOrder === "newest" ? b.date.localeCompare(a.date) : a.date.localeCompare(b.date)
+  );
 
   // Total check-in counts per user
   const totalCheckIns = users.reduce<Record<string, number>>((acc, u) => {
@@ -603,50 +634,46 @@ export default function CheckInPage() {
           )}
           <div className="flex justify-center">
             <div className="overflow-x-auto w-full">
-              {/* Date Range Filter */}
+              {/* Toolbar */}
               <div className="flex flex-wrap items-center gap-2 mb-3">
-                <span className="text-[10px] text-mist-dark uppercase tracking-wider">Range:</span>
-                {([
-                  ["all", "All"],
-                  ["7", "7d"],
-                  ["14", "14d"],
-                  ["30", "30d"],
-                  ["90", "90d"],
-                  ["custom", "Custom"],
-                ] as const).map(([value, label]) => (
-                  <button
-                    key={value}
-                    onClick={() => setDateRange(value)}
-                    className={`px-2 py-0.5 text-[10px] rounded border transition-all ${
-                      dateRange === value
-                        ? "bg-jade-deep/30 border-jade-glow/50 text-jade-light"
-                        : "border-ink-light/50 text-mist-dark hover:text-mist-light hover:border-ink-light"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-                {dateRange === "custom" && (
-                  <div className="flex items-center gap-1 ml-1">
-                    <input
-                      type="date"
-                      value={customRangeStart}
-                      onChange={(e) => setCustomRangeStart(e.target.value)}
-                      className="bg-ink-dark border border-ink-light rounded px-1.5 py-0.5 text-[10px] text-cloud-white outline-none focus:border-jade-glow transition-colors"
-                    />
-                    <span className="text-mist-dark text-[10px]">to</span>
-                    <input
-                      type="date"
-                      value={customRangeEnd}
-                      onChange={(e) => setCustomRangeEnd(e.target.value)}
-                      className="bg-ink-dark border border-ink-light rounded px-1.5 py-0.5 text-[10px] text-cloud-white outline-none focus:border-jade-glow transition-colors"
-                    />
-                  </div>
-                )}
+                <button
+                  onClick={() => {
+                    const next = sortOrder === "newest" ? "oldest" : "newest";
+                    setSortOrder(next);
+                    localStorage.setItem("checkin-sort-order", next);
+                  }}
+                  className="px-2.5 py-0.5 text-[10px] rounded border border-ink-light/50 text-mist-dark hover:text-mist-light hover:border-ink-light transition-all"
+                  title={sortOrder === "newest" ? "Showing newest first — click for oldest first" : "Showing oldest first — click for newest first"}
+                >
+                  {sortOrder === "newest" ? "↓ Newest" : "↑ Oldest"}
+                </button>
                 <span className="text-[10px] text-mist-dark ml-auto">
-                  {filteredRows.length} of {rows.length} records
+                  {rows.length} records
                 </span>
+                {rows.length > 0 && !isEditMode && (
+                  <button
+                    onClick={handleEditToggle}
+                    className="px-2.5 py-0.5 text-[10px] rounded border border-ink-light/50 text-mist-dark hover:text-mist-light hover:border-ink-light transition-all"
+                  >
+                    ✎ Edit
+                  </button>
+                )}
               </div>
+
+              {/* Save/Cancel at top when newest-first */}
+              {isEditMode && sortOrder === "newest" && rows.length > 0 && (
+                <div className="flex gap-3 pb-3 mb-2 border-b border-ink-light">
+                  <GlowButton variant="jade" size="sm" className="flex-1" onClick={handleEditToggle}>✓ Save Changes</GlowButton>
+                  <GlowButton variant="ghost" size="sm" className="flex-1" onClick={handleEditCancel}>✕ Cancel</GlowButton>
+                </div>
+              )}
+
+              {/* Edit mode banner */}
+              {isEditMode && (
+                <div className="p-2.5 mb-3 rounded-lg border bg-jade-deep/10 border-jade/40 text-[11px] text-jade-light">
+                  Edit mode enabled. Modify your weight and comment data below, then click Save or Cancel.
+                </div>
+              )}
 
               {/* Total Check-In Counts */}
               {users.length > 0 && (
@@ -661,157 +688,159 @@ export default function CheckInPage() {
                 </div>
               )}
 
-              <table className="mx-auto text-xs min-w-full border-collapse table-auto">
-                <thead>
-                  <tr className="border-b-2 border-jade-glow/50 bg-ink-mid/40">
-                    <th className="px-2 py-2 text-left text-[11px] text-jade-glow uppercase tracking-wider font-semibold sticky left-0 bg-ink-mid/40 z-10 align-middle">
-                      Date
-                    </th>
-                    {users.map((u) => (
-                      <th
-                        key={`header-check-${u.id}`}
-                        colSpan={1}
-                        className="px-2 py-2 text-center text-[11px] text-mist-light font-semibold align-middle"
-                      >
-                        {u.name}
-                      </th>
-                    ))}
-                    {users.map((u) => (
-                      <th
-                        key={`header-weight-${u.id}`}
-                        className="px-2 py-2 text-center text-[11px] text-mist-dark font-semibold align-middle"
-                      >
-                        {u.name} Wt
-                      </th>
-                    ))}
-                    <th className="px-2 py-2 text-left text-[11px] text-mist-dark font-semibold align-middle">
-                      Comments
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredRows.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={3 + users.length * 2}
-                        className="py-12 text-center text-mist-dark italic"
-                      >
-                        {rows.length === 0 ? "No records yet. Check-in records will be created automatically." : "No records match the selected date range."}
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredRows.map((row, rowIdx) => (
-                      <motion.tr
-                        key={row.date}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: rowIdx * 0.05 }}
-                        className="border-b border-ink-light/50 hover:bg-ink-dark/50 transition-colors"
-                      >
-                        <td className="px-2 py-1.5 text-cloud-white font-mono text-xs sticky left-0 bg-void-black align-middle whitespace-nowrap">
-                          <div className="flex items-center gap-1.5">
+              <div className="min-w-[480px]">
+                {/* Grid header */}
+                <div
+                  className="grid gap-0 text-[10px] uppercase tracking-wider font-semibold text-mist-dark border-b border-jade-glow/30 pb-1.5 mb-1"
+                  style={{ gridTemplateColumns: `80px repeat(${users.length}, 44px) repeat(${users.length}, 48px) 1fr` }}
+                >
+                  <div className="px-1">Date</div>
+                  {users.map((u) => (
+                    <div key={`h-c-${u.id}`} className="text-center px-0.5">{u.name}</div>
+                  ))}
+                  {users.map((u) => (
+                    <div key={`h-w-${u.id}`} className="text-center px-0.5">{u.name.charAt(0)}.Wt</div>
+                  ))}
+                  <div className="px-1">Comments</div>
+                </div>
+
+                {/* Rows */}
+                {sortedRows.length === 0 ? (
+                  <div className="py-10 text-center text-mist-dark italic text-xs">
+                    No records yet. Check-in records will be created automatically.
+                  </div>
+                ) : (
+                  <div className="space-y-0">
+                    {sortedRows.map((row) => {
+                      const rowDateObj = new Date(row.date + 'T00:00:00');
+                      const dayName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][rowDateObj.getDay()];
+                      const isWeekend = rowDateObj.getDay() === 0 || rowDateObj.getDay() === 6;
+                      const noteText = getDayNote(row.date);
+                      return (
+                        <div
+                          key={row.date}
+                          id={`checkin-row-${row.date}`}
+                          className={`grid gap-0 items-center py-1 border-b text-xs transition-colors duration-100 ${
+                            isEditMode
+                              ? "border-jade-glow/15 bg-jade-deep/5 hover:bg-jade-deep/10"
+                              : `border-ink-light/50 hover:bg-ink-mid/10 ${isWeekend ? "bg-ink-dark/20" : ""}`
+                          }`}
+                          style={{ gridTemplateColumns: `80px repeat(${users.length}, 44px) repeat(${users.length}, 48px) 1fr` }}
+                        >
+                          {/* Date + Day */}
+                          <div className="px-1 flex items-center gap-1">
                             <button
-                              onClick={() => setEditingNote({ date: row.date, note: getDayNote(row.date) })}
-                              className="hover:text-jade-glow transition-colors text-left group/date"
+                              onClick={() => setEditingNote({ date: row.date, note: noteText })}
+                              className="text-mist-light hover:text-jade-glow transition-colors text-left leading-tight"
                               title="Click to add/edit day note"
                             >
-                              <div className="flex flex-col leading-tight">
-                                <span className="tracking-normal">{formatDateWithPreference(row.date, dateFormat)}</span>
-                                <span className="text-[9px] text-mist-dark">{formatDateDisplay(row.date)}</span>
-                              </div>
+                              <span className="text-[11px]">{formatDateWithPreference(row.date, dateFormat)}</span>
+                              <span className={`text-[9px] ml-1 ${isWeekend ? "text-amber-400/60" : "text-mist-dark"}`}>{dayName}</span>
                             </button>
-                            {getDayNote(row.date) && (
-                              <span className="text-[10px] text-gold-glow" title={getDayNote(row.date)}>📝</span>
+                            {noteText && (
+                              <span className="text-[10px] text-gold-glow shrink-0" title={noteText}>📝</span>
                             )}
                           </div>
-                        </td>
-                        {users.map((u) => (
-                          <td
-                            key={`check-${row.date}-${u.id}`}
-                            className="px-2 py-1.5 text-center align-middle"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={row.entries[u.id]?.present || false}
-                              onChange={(e) =>
-                                handleCheckInToggle(
-                                  row.date,
-                                  u.id,
-                                  e.target.checked
-                                )
-                              }
-                              disabled={u.id !== user?.id}
-                              className={`w-4 h-4 accent-jade-glow ${u.id === user?.id ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}
-                            />
-                          </td>
-                        ))}
-                        {users.map((u) => (
-                          <td
-                            key={`weight-${row.date}-${u.id}`}
-                            className="px-2 py-1.5 align-middle"
-                          >
-                            {u.id === user?.id ? (
+
+                          {/* Check-in toggles */}
+                          {users.map((u) => {
+                            const isPresent = row.entries[u.id]?.present || false;
+                            const isOwn = u.id === user?.id;
+                            const canEdit = isOwn && isEditMode;
+                            return (
+                              <div key={`c-${row.date}-${u.id}`} className="flex justify-center">
+                                {canEdit ? (
+                                  <button
+                                    onClick={() => handleCheckInToggle(row.date, u.id, !isPresent)}
+                                    className={`w-5 h-5 rounded text-[10px] font-bold transition-all duration-150 ${
+                                      isPresent
+                                        ? "bg-jade-glow/20 text-jade-glow border border-jade-glow/40 shadow-[0_0_6px_rgba(58,143,143,0.3)]"
+                                        : "text-mist-dark border border-ink-light/40 hover:border-mist-dark/60"
+                                    }`}
+                                  >
+                                    {isPresent ? "✓" : ""}
+                                  </button>
+                                ) : (
+                                  <span className={`w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold ${
+                                    isPresent
+                                      ? "bg-jade-glow/15 text-jade-glow/70 border border-jade-glow/20"
+                                      : "text-mist-dark/40"
+                                  }`}>
+                                    {isPresent ? "✓" : "·"}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+
+                          {/* Weight columns */}
+                          {users.map((u) => (
+                            <div key={`w-${row.date}-${u.id}`} className="text-center px-0.5">
+                              {isEditMode && u.id === user?.id ? (
+                                <input
+                                  type="number"
+                                  step="0.1"
+                                  value={row.entries[u.id]?.weight || ""}
+                                  onChange={(e) => updateCell(row.date, u.id, "weight", e.target.value)}
+                                  placeholder="—"
+                                  className="w-full bg-ink-deep border border-jade-glow/30 rounded px-1 py-0.5 text-cloud-white
+                                             text-center text-[11px] outline-none focus:border-jade-glow"
+                                />
+                              ) : (
+                                <span className={`text-[11px] ${row.entries[u.id]?.weight ? "text-cloud-white" : "text-mist-dark/50"}`}>
+                                  {row.entries[u.id]?.weight || "—"}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+
+                          {/* Comments */}
+                          <div className="px-1 min-w-0">
+                            {isEditMode ? (
                               <input
-                                type="number"
-                                step="0.1"
-                                placeholder="—"
-                                value={row.entries[u.id]?.weight || ""}
+                                type="text"
+                                value={row.entries[users[0]?.id]?.comment || ""}
                                 onChange={(e) => {
-                                  updateCell(
-                                    row.date,
-                                    u.id,
-                                    "weight",
-                                    e.target.value
-                                  );
-                                  // Award XP when weight is entered
-                                  if (e.target.value) {
-                                    (async () => {
-                                      try {
-                                        await awardCheckInXP(u.id);
-                                        setXpFeedback({ show: true, xp: 10, userId: u.id });
-                                        setTimeout(() => {
-                                          setXpFeedback({ show: false, xp: 0, userId: "" });
-                                        }, 2000);
-                                      } catch (err) {
-                                        console.error("Failed to award XP:", err);
-                                      }
-                                    })();
+                                  if (users[0]) {
+                                    updateCell(row.date, users[0].id, "comment", e.target.value);
                                   }
                                 }}
-                                className="w-20 bg-transparent border-b border-ink-light text-center text-xs text-cloud-white focus:border-jade-glow outline-none transition-colors px-1"
+                                placeholder="Add notes..."
+                                className="w-full bg-ink-deep border border-jade-glow/30 rounded px-2 py-0.5 text-cloud-white text-[11px]
+                                           placeholder:text-mist-dark/40 outline-none focus:border-jade-glow"
                               />
                             ) : (
-                              <span className="text-xs text-mist-dark text-center block w-20">
-                                {row.entries[u.id]?.weight || "—"}
+                              <span
+                                className="text-mist-light/80 text-[11px] truncate block cursor-help hover:text-mist-glow transition-colors"
+                                title={row.entries[users[0]?.id]?.comment || "No notes"}
+                              >
+                                {row.entries[users[0]?.id]?.comment || "—"}
                               </span>
                             )}
-                          </td>
-                        ))}
-                        <td className="px-2 py-1.5 align-middle">
-                          <input
-                            type="text"
-                            placeholder="Notes..."
-                            value={
-                              row.entries[users[0]?.id]?.comment || ""
-                            }
-                            onChange={(e) => {
-                              if (users[0]) {
-                                updateCell(
-                                  row.date,
-                                  users[0].id,
-                                  "comment",
-                                  e.target.value
-                                );
-                              }
-                            }}
-                            className="w-full min-w-[150px] bg-transparent border-b border-ink-light text-xs text-mist-light placeholder-mist-dark focus:border-jade-glow outline-none transition-colors px-1"
-                          />
-                        </td>
-                      </motion.tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Save/Cancel at bottom when oldest-first */}
+              {isEditMode && sortOrder === "oldest" && rows.length > 0 && (
+                <div className="flex gap-3 pt-4 mt-2 border-t border-ink-light">
+                  <GlowButton variant="jade" size="sm" className="flex-1" onClick={handleEditToggle}>✓ Save Changes</GlowButton>
+                  <GlowButton variant="ghost" size="sm" className="flex-1" onClick={handleEditCancel}>✕ Cancel</GlowButton>
+                </div>
+              )}
+
+              {/* Footer */}
+              {rows.length > 0 && !isEditMode && (
+                <div className="text-center pt-2 border-t border-ink-light">
+                  <p className="text-xs text-mist-dark">
+                    Showing {rows.length} records
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </>

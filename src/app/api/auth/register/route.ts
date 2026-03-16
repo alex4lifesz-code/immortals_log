@@ -13,7 +13,42 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const existing = await prisma.user.findUnique({ where: { username } });
+    // Validate types
+    if (typeof username !== "string" || typeof password !== "string" || typeof name !== "string") {
+      return NextResponse.json(
+        { error: "Invalid field types" },
+        { status: 400 }
+      );
+    }
+
+    const trimmedUsername = username.trim();
+    const trimmedName = name.trim().slice(0, 100);
+
+    // Validate username: 2-30 chars, alphanumeric + underscores/hyphens
+    if (trimmedUsername.length < 2 || trimmedUsername.length > 30 || !/^[a-zA-Z0-9_-]+$/.test(trimmedUsername)) {
+      return NextResponse.json(
+        { error: "Dao name must be 2-30 characters (letters, numbers, underscores, hyphens)" },
+        { status: 400 }
+      );
+    }
+
+    // Validate password minimum length
+    if (password.length < 4 || password.length > 100) {
+      return NextResponse.json(
+        { error: "Secret art must be between 4 and 100 characters" },
+        { status: 400 }
+      );
+    }
+
+    // Validate display name
+    if (trimmedName.length < 1 || trimmedName.length > 100) {
+      return NextResponse.json(
+        { error: "Display name must be between 1 and 100 characters" },
+        { status: 400 }
+      );
+    }
+
+    const existing = await prisma.user.findUnique({ where: { username: trimmedUsername } });
     if (existing) {
       return NextResponse.json(
         { error: "Dao name already taken" },
@@ -28,7 +63,7 @@ export async function POST(req: NextRequest) {
     const role = userCount === 0 ? "admin" : "user";
 
     const user = await prisma.user.create({
-      data: { username, password: hashedPassword, name, role },
+      data: { username: trimmedUsername, password: hashedPassword, name: trimmedName, role },
     });
 
     return NextResponse.json({

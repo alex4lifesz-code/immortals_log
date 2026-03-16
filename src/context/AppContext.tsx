@@ -58,7 +58,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [currentPage, setCurrentPage] = useState("dashboard");
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [isNativeApp, setIsNativeApp] = useState(false);
+  const [isNativeApp] = useState(() => typeof window !== "undefined" ? isNativePlatform() : false);
   const [theme, setThemeState] = useState<ThemeMode>("dark");
   const [themeStyle, setThemeStyleState] = useState<ThemeStyle>("midnight-ink");
   const [navigationMode, setNavigationModeState] = useState<NavigationMode>("side");
@@ -72,12 +72,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setActiveDrawerClose(() => closeFn);
   }, []);
 
-  // Detect native vs browser platform on mount
-  useEffect(() => {
-    setIsNativeApp(isNativePlatform());
-  }, []);
+  // Detect native vs browser platform on mount — already handled via lazy initializer above
 
   // Load saved state from localStorage
+  /* eslint-disable react-hooks/set-state-in-effect -- hydration from localStorage on mount */
   useEffect(() => {
     try {
       const saved = localStorage.getItem("cultivation-nav-state");
@@ -117,6 +115,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // ignore parse errors
     }
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Persist state to localStorage
   const persistState = useCallback(() => {
@@ -130,18 +129,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
     localStorage.setItem("cultivation-nav-state", JSON.stringify(state));
   }, [navItems, dualPageView, navigationMode, viewportMode, collapsed, trainingMode]);
-
-  // Load saved theme on mount
-  useEffect(() => {
-    const saved = localStorage.getItem("cultivation-theme") as ThemeMode | null;
-    if (saved && (saved === "dark" || saved === "light")) {
-      setTheme(saved);
-    }
-    const savedStyle = localStorage.getItem("cultivation-theme-style") as ThemeStyle | null;
-    if (savedStyle && ["midnight-ink", "mountain-mist", "calligraphy", "sakura", "sakura-dark"].includes(savedStyle)) {
-      setThemeStyle(savedStyle);
-    }
-  }, []);
 
   const setTheme = useCallback((t: ThemeMode) => {
     setThemeState(t);
@@ -164,6 +151,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem("cultivation-theme-style", style);
     }
   }, []);
+
+  // Load saved theme on mount
+  /* eslint-disable react-hooks/set-state-in-effect -- hydration from localStorage on mount */
+  useEffect(() => {
+    const saved = localStorage.getItem("cultivation-theme") as ThemeMode | null;
+    if (saved && (saved === "dark" || saved === "light")) {
+      setTheme(saved);
+    }
+    const savedStyle = localStorage.getItem("cultivation-theme-style") as ThemeStyle | null;
+    if (savedStyle && ["midnight-ink", "mountain-mist", "calligraphy", "sakura", "sakura-dark"].includes(savedStyle)) {
+      setThemeStyle(savedStyle);
+    }
+  }, [setTheme, setThemeStyle]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Handle responsive layout changes (fixes bidirectional bug)
   // Explicit viewport overrides are honoured on all platforms (browser + native).
