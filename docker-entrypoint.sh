@@ -7,6 +7,30 @@ echo "DATABASE_URL: ${DATABASE_URL}"
 # Extract file path from DATABASE_URL (e.g. "file:/app/data/cultivation.db" -> "/app/data/cultivation.db")
 DB_PATH=$(echo "$DATABASE_URL" | sed 's|^file:||')
 
+# Resolve any previously failed migrations before deploying
+echo "Checking for failed migrations..."
+FAILED=$(npx prisma migrate status --schema=./prisma/schema.prisma 2>&1 | grep -oP '(?<=The `).*(?=` migration started .* failed)' || true)
+if [ -n "$FAILED" ]; then
+  echo "Found failed migration: $FAILED — resolving..."
+  npx prisma migrate resolve --rolled-back "$FAILED" --schema=./prisma/schema.prisma 2>&1
+  echo "Resolved failed migration."
+fi
+
+# Remove duplicates that would block unique constraints
+echo "Cleaning duplicate CheckInNote rows..."
+node -e '
+const { createClient } = require("@libsql/client");
+async function fix() {
+  const client = createClient({ url: process.env.DATABASE_URL });
+  try {
+    await client.execute("DELETE FROM CheckInNote WHERE id NOT IN (SELECT MAX(id) FROM CheckInNote GROUP BY date, userId)");
+    console.log("Duplicate cleanup done.");
+  } catch(e) { console.log("Cleanup skipped:", e.message); }
+  client.close();
+}
+fix();
+'
+
 # Run migrations
 echo "Running database migrations..."
 npx prisma migrate deploy --schema=./prisma/schema.prisma 2>&1
