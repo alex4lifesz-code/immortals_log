@@ -7,13 +7,27 @@ echo "DATABASE_URL: ${DATABASE_URL}"
 # Extract file path from DATABASE_URL (e.g. "file:/app/data/cultivation.db" -> "/app/data/cultivation.db")
 DB_PATH=$(echo "$DATABASE_URL" | sed 's|^file:||')
 
-# Resolve any previously failed migrations before deploying
+# Resolve any previously failed migrations by querying the database directly
 echo "Checking for failed migrations..."
-FAILED=$(npx prisma migrate status --schema=./prisma/schema.prisma 2>&1 | grep "failed" | sed -n 's/.*The `\([^`]*\)` migration.*/\1/p')
+FAILED=$(node -e '
+const { createClient } = require("@libsql/client");
+async function check() {
+  const client = createClient({ url: process.env.DATABASE_URL });
+  try {
+    const r = await client.execute("SELECT migration_name FROM _prisma_migrations WHERE rolled_back_at IS NULL AND logs IS NOT NULL AND logs != ''");
+    process.stdout.write(r.rows.map(r => r.migration_name).join("\n"));
+  } catch(e) { /* _prisma_migrations table may not exist yet */ }
+  client.close();
+}
+check();
+' 2>/dev/null)
 if [ -n "$FAILED" ]; then
-  echo "Found failed migration: $FAILED — resolving..."
-  npx prisma migrate resolve --rolled-back "$FAILED" --schema=./prisma/schema.prisma 2>&1
-  echo "Resolved failed migration."
+  echo "$FAILED" | while IFS= read -r mig; do
+    [ -z "$mig" ] && continue
+    echo "Found failed migration: $mig — marking as rolled back..."
+    npx prisma migrate resolve --rolled-back "$mig" --schema=./prisma/schema.prisma 2>&1
+    echo "Resolved: $mig"
+  done
 fi
 
 # Remove duplicates that would block unique constraints
