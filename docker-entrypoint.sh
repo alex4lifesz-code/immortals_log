@@ -7,6 +7,13 @@ echo "DATABASE_URL: ${DATABASE_URL}"
 # Extract file path from DATABASE_URL (e.g. "file:/app/data/cultivation.db" -> "/app/data/cultivation.db")
 DB_PATH=$(echo "$DATABASE_URL" | sed 's|^file:||')
 
+# ── Full database reset (set RESET_DB=true in environment to trigger) ──
+if [ "${RESET_DB:-false}" = "true" ]; then
+  echo "!!! RESET_DB=true — Deleting database for clean rebuild !!!"
+  rm -f "$DB_PATH" "${DB_PATH}-journal" "${DB_PATH}-wal" "${DB_PATH}-shm"
+  echo "Database files removed. Migrations will recreate from scratch."
+fi
+
 # Resolve any previously failed migrations by querying the database directly
 echo "Checking for failed migrations..."
 FAILED=$(node -e '

@@ -9,7 +9,11 @@
 #
 # Required environment variables (set in Portainer):
 #   APP_PORT       — Host port for the application (default: 3000)
-#   APP_VERSION    — Image tag / version label (default: 2.1.0)
+#   APP_VERSION    — Image tag / version label (default: 2.2.0)
+#
+# Optional environment variables:
+#   RESET_DB       — Set to "true" to wipe and rebuild the database from scratch
+#                    (remove after first successful restart!)
 # ============================================
 
 services:
@@ -24,6 +28,7 @@ services:
       - NODE_ENV=production
       - DATABASE_URL=file:/app/data/cultivation.db
       - NEXT_TELEMETRY_DISABLED=1
+      - RESET_DB=${RESET_DB:-false}
     volumes:
       - wuxia_data:/app/data
     tmpfs:

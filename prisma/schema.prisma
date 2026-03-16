@@ -132,5 +132,6 @@ model CheckInNote {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([date, userId])
   @@index([userId])
 }
