@@ -9,7 +9,7 @@ DB_PATH=$(echo "$DATABASE_URL" | sed 's|^file:||')
 
 # Resolve any previously failed migrations before deploying
 echo "Checking for failed migrations..."
-FAILED=$(npx prisma migrate status --schema=./prisma/schema.prisma 2>&1 | grep -oP '(?<=The `).*(?=` migration started .* failed)' || true)
+FAILED=$(npx prisma migrate status --schema=./prisma/schema.prisma 2>&1 | grep "failed" | sed -n 's/.*The `\([^`]*\)` migration.*/\1/p')
 if [ -n "$FAILED" ]; then
   echo "Found failed migration: $FAILED — resolving..."
   npx prisma migrate resolve --rolled-back "$FAILED" --schema=./prisma/schema.prisma 2>&1
