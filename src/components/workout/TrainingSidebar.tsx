@@ -7,7 +7,8 @@ import { getDifficultyColorClass, getDifficultyGlowStyleScaled } from "@/lib/dif
 import { getTypeColor, getDifficultyColor, getDifficultyGlow, getTargetGroupColor, parseDayAssignments } from "@/lib/constants";
 import { DAY_ABBREVIATIONS } from "@/lib/constants";
 import { useDisplaySettings, TechniqueDisplayMode, ActiveCardStyle } from "@/context/DisplaySettingsContext";
-import { getExerciseDisplayName, getExerciseSearchText } from "@/lib/exercise-name";
+import { useAuth } from "@/context/AuthContext";
+import { getExerciseDisplayName, getExerciseNameTooltip, getExerciseSearchText } from "@/lib/exercise-name";
 
 interface Exercise {
   id: string;
@@ -27,6 +28,7 @@ interface TrainingSidebarProps {
   isLoadingExercises: boolean;
   isMobile: boolean;
   onDrawerOpen: () => void;
+  refreshTrigger?: number;
 }
 
 interface TechniqueCardProps {
@@ -40,6 +42,18 @@ interface TechniqueCardProps {
 interface TechniqueCardExtendedProps extends TechniqueCardProps {
   compact?: boolean;
   cardStyle?: ActiveCardStyle;
+}
+
+type SidebarSortMode = "custom" | "recent" | "popular" | "name-asc";
+
+interface WorkoutSummary {
+  id: string;
+  date: string;
+  simplifiedExercises: {
+    exercise: {
+      id: string;
+    };
+  }[];
 }
 
 function TechniqueCard({ exercise, isSelected, onSelect, delay, displayMode, compact = false, cardStyle = "default" }: TechniqueCardExtendedProps) {
@@ -63,6 +77,7 @@ function TechniqueCard({ exercise, isSelected, onSelect, delay, displayMode, com
   const typeColor = getTypeColor(exercise.type);
   const { settings: dsSettings } = useDisplaySettings();
   const displayName = getExerciseDisplayName(exercise, dsSettings.terminologyMode);
+  const exerciseTooltip = getExerciseNameTooltip(exercise, dsSettings.terminologyMode, exercise.story);
   const glowIntensity = dsSettings.glowIntensitySidebar ?? 100;
   const loreVisible = dsSettings.sidebarLoreVisible ?? true;
   const glowStyle = getDifficultyGlowStyleScaled(exercise.difficulty, glowIntensity);
@@ -93,6 +108,7 @@ function TechniqueCard({ exercise, isSelected, onSelect, delay, displayMode, com
           `}
           style={showIllumination ? glowStyle as React.CSSProperties : undefined}
           onClick={() => onSelect(exercise.id)}
+          title={exerciseTooltip}
         >
           {/* Selected check */}
           {isSelected && (
@@ -163,6 +179,7 @@ function TechniqueCard({ exercise, isSelected, onSelect, delay, displayMode, com
           `}
           style={!isSelected && showIllumination && glowIntensity > 0 && glowIntensity < 100 ? { boxShadow: `0 0 12px rgba(58,143,143,0.2), ${glowStyle.boxShadow || ''}` } : undefined}
           onClick={() => onSelect(exercise.id)}
+          title={exerciseTooltip}
         >
           <div className="flex items-start gap-2.5">
             <span className="text-lg pt-0.5 opacity-80 shrink-0">{typeEmoji}</span>
@@ -251,6 +268,7 @@ function TechniqueCard({ exercise, isSelected, onSelect, delay, displayMode, com
         `}
         style={showIllumination ? glowStyle as React.CSSProperties : undefined}
         onClick={() => onSelect(exercise.id)}
+        title={exerciseTooltip}
       >
         {/* Technique Name */}
         <div className="flex items-center gap-1.5">
@@ -339,9 +357,13 @@ export default function TrainingSidebar({
   onSelectTechnique, 
   isLoadingExercises, 
   isMobile: _isMobile,
-  onDrawerOpen 
+  onDrawerOpen,
+  refreshTrigger = 0,
 }: TrainingSidebarProps) {
+  const { user } = useAuth();
   const [selectedDayFilter, setSelectedDayFilter] = useState<number | null>(null);
+  const [sortMode, setSortMode] = useState<SidebarSortMode>("custom");
+  const [workoutHistory, setWorkoutHistory] = useState<WorkoutSummary[]>([]);
   const [isCompact, setIsCompact] = useState(() => {
     if (typeof window === "undefined") return false;
     try { return localStorage.getItem("cultivateos-sidebar-compact") === "true"; } catch { return false; }
@@ -352,6 +374,26 @@ export default function TrainingSidebar({
   useEffect(() => {
     try { localStorage.setItem("cultivateos-sidebar-compact", String(isCompact)); } catch {}
   }, [isCompact]);
+
+  useEffect(() => {
+    async function fetchWorkoutHistory() {
+      if (!user?.id) {
+        setWorkoutHistory([]);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/workouts?userId=${user.id}&showAll=true`);
+        if (!response.ok) return;
+        const data = await response.json();
+        setWorkoutHistory(data.workouts || []);
+      } catch {
+        setWorkoutHistory([]);
+      }
+    }
+
+    fetchWorkoutHistory();
+  }, [user?.id, refreshTrigger]);
 
   // Compute technique counts per day
   const dayCounts = useMemo(() => {
@@ -382,6 +424,59 @@ export default function TrainingSidebar({
     if (!searchQuery.trim()) return true;
     return getExerciseSearchText(exercise).includes(searchQuery.trim().toLowerCase());
   });
+
+  const workoutStatsByExercise = useMemo(() => {
+    const stats = new Map<string, { count: number; lastTimestamp: number }>();
+
+    for (const workout of workoutHistory) {
+      const timestamp = new Date(workout.date).getTime();
+      for (const item of workout.simplifiedExercises || []) {
+        const exerciseId = item.exercise?.id;
+        if (!exerciseId) continue;
+        const prev = stats.get(exerciseId);
+        if (!prev) {
+          stats.set(exerciseId, { count: 1, lastTimestamp: timestamp });
+          continue;
+        }
+        stats.set(exerciseId, {
+          count: prev.count + 1,
+          lastTimestamp: Math.max(prev.lastTimestamp, timestamp),
+        });
+      }
+    }
+
+    return stats;
+  }, [workoutHistory]);
+
+  const sortedExercises = useMemo(() => {
+    const list = [...searchFilteredExercises];
+
+    if (sortMode === "custom") {
+      return list;
+    }
+
+    if (sortMode === "name-asc") {
+      return list.sort((a, b) =>
+        getExerciseSearchText(a).localeCompare(getExerciseSearchText(b), undefined, { sensitivity: "base" })
+      );
+    }
+
+    if (sortMode === "popular") {
+      return list.sort((a, b) => {
+        const aCount = workoutStatsByExercise.get(a.id)?.count || 0;
+        const bCount = workoutStatsByExercise.get(b.id)?.count || 0;
+        if (bCount !== aCount) return bCount - aCount;
+        return getExerciseSearchText(a).localeCompare(getExerciseSearchText(b), undefined, { sensitivity: "base" });
+      });
+    }
+
+    return list.sort((a, b) => {
+      const aLast = workoutStatsByExercise.get(a.id)?.lastTimestamp || 0;
+      const bLast = workoutStatsByExercise.get(b.id)?.lastTimestamp || 0;
+      if (bLast !== aLast) return bLast - aLast;
+      return getExerciseSearchText(a).localeCompare(getExerciseSearchText(b), undefined, { sensitivity: "base" });
+    });
+  }, [searchFilteredExercises, sortMode, workoutStatsByExercise]);
 
   return (
     <div className="h-full flex flex-col">
@@ -466,6 +561,21 @@ export default function TrainingSidebar({
           )}
         </div>
 
+        {/* Sort selector */}
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-semibold text-mist-dark shrink-0">Sort</span>
+          <select
+            value={sortMode}
+            onChange={(e) => setSortMode(e.target.value as SidebarSortMode)}
+            className="w-full bg-ink-dark border border-ink-light rounded-md px-2 py-1 text-[10px] text-cloud-white outline-none transition-all duration-200 focus:border-jade-glow focus:shadow-[0_0_10px_rgba(58,143,143,0.2)]"
+          >
+            <option value="custom">Custom order</option>
+            <option value="recent">Most recent</option>
+            <option value="popular">Most popular</option>
+            <option value="name-asc">A-Z</option>
+          </select>
+        </div>
+
         {/* Individual day buttons row */}
         <div className="flex rounded-md overflow-hidden border border-ink-light/40">
           {DAY_ABBREVIATIONS.map((day, index) => {
@@ -532,12 +642,12 @@ export default function TrainingSidebar({
               ⚙ Manage Techniques
             </GlowButton>
           </div>
-        ) : searchFilteredExercises.length === 0 ? (
+        ) : sortedExercises.length === 0 ? (
           <div className="text-center text-mist-dark py-6">
             <p className="text-[11px]">{searchQuery ? "No matching techniques" : "No techniques found"}</p>
           </div>
         ) : (
-          searchFilteredExercises.map((exercise, index) => (
+          sortedExercises.map((exercise, index) => (
             <TechniqueCard
               key={exercise.id}
               exercise={exercise}

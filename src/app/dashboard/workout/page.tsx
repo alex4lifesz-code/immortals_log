@@ -145,6 +145,7 @@ export default function TrainingGrounds() {
       isLoadingExercises={isLoadingExercises}
       isMobile={isMobile}
       onDrawerOpen={handleDrawerOpen}
+      refreshTrigger={refreshTrigger}
     />
   );
 

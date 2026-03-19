@@ -8,7 +8,7 @@ import { getTypeColor, getDifficultyColor, getDifficultyGlow, getTargetGroupColo
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { useAppContext } from "@/context/AppContext";
-import { getExerciseDisplayName } from "@/lib/exercise-name";
+import { getExerciseDisplayName, getExerciseNameTooltip } from "@/lib/exercise-name";
 
 interface Exercise {
   id: string;
@@ -50,16 +50,21 @@ export default function ActiveTrainingCard({
   const [submitMessage, setSubmitMessage] = useState<{ type: "success" | "error", text: string } | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, boolean>>({});
   const [showHistory, setShowHistory] = useState(false);
-  const [showConventionalName, setShowConventionalName] = useState(false);
+  const [showExerciseInfo, setShowExerciseInfo] = useState(false);
   const [historyData, setHistoryData] = useState<{ id: string; date: string; weight1: number | null; reps1: number | null; weight2: number | null; reps2: number | null; weight3: number | null; reps3: number | null; notes: string | null }[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
   const difficultyColorClass = getDifficultyColorClass(exercise.difficulty);
   const exerciseDisplayName = getExerciseDisplayName(exercise, settings.terminologyMode);
+  const exerciseTooltip = getExerciseNameTooltip(exercise, settings.terminologyMode, exercise.story);
   const typeColor = getTypeColor(exercise.type);
   const glowIntensity = settings.glowIntensityActiveCards ?? 100;
   const loreVisible = settings.activeCardLoreVisible ?? true;
   const glowStyle = getDifficultyGlowStyleScaled(exercise.difficulty, glowIntensity);
+  const hasConventionalName = Boolean(exercise.name?.trim());
+  const hasCultivationName = Boolean(exercise.wuxiaName?.trim());
+  const hasLore = Boolean(exercise.story?.trim());
+  const showInfoButton = hasConventionalName || hasCultivationName || hasLore;
 
   // Derive display flags from activeCardMode
   const mode = settings.activeCardMode || "name-illumination-realm-path";
@@ -271,20 +276,21 @@ export default function ActiveTrainingCard({
                 <div className="flex flex-col min-w-0">
                   <div className="flex items-center gap-1.5 min-w-0">
                     <h3 className={`${isCompact ? 'text-xs' : 'text-sm'} font-semibold ${showIllumination ? difficultyColorClass : 'text-cloud-white'} truncate leading-snug tracking-wide`}>
-                      {exerciseDisplayName}
+                      <span title={exerciseTooltip}>{exerciseDisplayName}</span>
                     </h3>
-                    {settings.terminologyMode === "fantasy" && exercise.name && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setShowConventionalName(!showConventionalName); }}
-                        className={`shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold transition-all duration-200 ${showConventionalName ? 'bg-jade-glow/20 text-jade-glow border border-jade-glow/40' : 'bg-ink-light/30 text-mist-dark hover:text-mist-light hover:bg-ink-light/50 border border-ink-light/40'}`}
-                        title="Show conventional name"
-                      >
-                        i
-                      </button>
-                    )}
                   </div>
-                  {showConventionalName && settings.terminologyMode === "fantasy" && exercise.name && (
-                    <p className="text-[10px] text-mist-mid mt-0.5 truncate">Conventional: {exercise.name}</p>
+                  {showExerciseInfo && (
+                    <div className="mt-1 space-y-1">
+                      {hasCultivationName && (
+                        <p className="text-[10px] text-mist-mid truncate" title={exercise.wuxiaName || ""}>Cultivation: {exercise.wuxiaName}</p>
+                      )}
+                      {hasConventionalName && (
+                        <p className="text-[10px] text-mist-mid truncate" title={exercise.name}>Conventional: {exercise.name}</p>
+                      )}
+                      {hasLore && (
+                        <p className="text-[10px] text-mist-mid leading-relaxed line-clamp-3" title={exercise.story || ""}>Lore: {exercise.story}</p>
+                      )}
+                    </div>
                   )}
                   {!isCompact && (showRealm || showPath) && (
                     <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
@@ -518,17 +524,8 @@ export default function ActiveTrainingCard({
             <div className={`flex-1 ${isCompact ? 'space-y-0.5' : 'space-y-1.5'} min-w-0`}>
               <div className="flex items-center gap-1.5">
                 <h3 className={`${isCompact ? 'text-xs' : 'text-sm'} font-semibold ${showIllumination ? difficultyColorClass : 'text-cloud-white'} truncate transition-colors duration-200 group-hover:brightness-110`}>
-                  {exerciseDisplayName}
+                  <span title={exerciseTooltip}>{exerciseDisplayName}</span>
                 </h3>
-                {settings.terminologyMode === "fantasy" && exercise.name && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setShowConventionalName(!showConventionalName); }}
-                    className={`shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold transition-all duration-200 ${showConventionalName ? 'bg-jade-glow/20 text-jade-glow border border-jade-glow/40' : 'bg-ink-light/30 text-mist-dark hover:text-mist-light hover:bg-ink-light/50 border border-ink-light/40'}`}
-                    title="Show conventional name"
-                  >
-                    i
-                  </button>
-                )}
                 {!isCompact && (
                   <button
                     onClick={(e) => { e.stopPropagation(); handleHistoryToggle(); }}
@@ -542,8 +539,18 @@ export default function ActiveTrainingCard({
                   </button>
                 )}
               </div>
-              {showConventionalName && settings.terminologyMode === "fantasy" && exercise.name && (
-                <p className="text-[10px] text-mist-mid truncate">Conventional: {exercise.name}</p>
+              {showExerciseInfo && (
+                <div className="space-y-1">
+                  {hasCultivationName && (
+                    <p className="text-[10px] text-mist-mid truncate" title={exercise.wuxiaName || ""}>Cultivation: {exercise.wuxiaName}</p>
+                  )}
+                  {hasConventionalName && (
+                    <p className="text-[10px] text-mist-mid truncate" title={exercise.name}>Conventional: {exercise.name}</p>
+                  )}
+                  {hasLore && (
+                    <p className="text-[10px] text-mist-mid leading-relaxed line-clamp-3" title={exercise.story || ""}>Lore: {exercise.story}</p>
+                  )}
+                </div>
               )}
               {/* Realm + Path badges */}
               {!isCompact && (showRealm || showPath) && (

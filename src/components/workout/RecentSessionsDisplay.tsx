@@ -9,7 +9,7 @@ import { getDifficultyColorClass, getDifficultyGlowStyleScaled } from "@/lib/dif
 import { getTypeColor, getTargetGroupColor, formatDateWithPreference } from "@/lib/constants";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { useAppContext } from "@/context/AppContext";
-import { getExerciseDisplayName } from "@/lib/exercise-name";
+import { getExerciseDisplayName, getExerciseNameTooltip } from "@/lib/exercise-name";
 import ExerciseHistoryModal from "@/components/workout/ExerciseHistoryModal";
 // DisplaySettingsPopup moved to TopBar
 
@@ -513,6 +513,7 @@ export default function RecentSessionsDisplay({ refreshTrigger }: RecentSessions
                   formatSet(exercise.weight3, exercise.reps3),
                 ].filter(Boolean);
                 const exerciseDisplayName = getExerciseDisplayName(exercise.exercise, settings.terminologyMode);
+                const exerciseTooltip = getExerciseNameTooltip(exercise.exercise, settings.terminologyMode);
 
                 return (
                   <motion.div
@@ -524,13 +525,13 @@ export default function RecentSessionsDisplay({ refreshTrigger }: RecentSessions
                   >
                     <span className="text-[10px] text-mist-dark shrink-0 w-14">{formatDate(session.date)}</span>
                     {settings.recentSessionsMode === "name-only" ? (
-                      <span className="text-xs font-normal text-cloud-white flex-1 min-w-0 break-words" title={exerciseDisplayName}>
+                      <span className="text-xs font-normal text-cloud-white flex-1 min-w-0 break-words" title={exerciseTooltip}>
                         {exerciseDisplayName}
                       </span>
                     ) : (
                       <span
                         className={`text-xs font-normal flex-1 min-w-0 break-words ${getDifficultyColorClass(exercise.exercise.difficulty)}`}
-                        title={exerciseDisplayName}
+                        title={exerciseTooltip}
                       >
                         {exerciseDisplayName}
                       </span>
@@ -587,6 +588,7 @@ export default function RecentSessionsDisplay({ refreshTrigger }: RecentSessions
                     session.simplifiedExercises.map((exercise, exerciseIndex) => {
                       const editData = editingData[exercise.id];
                       const renderedName = getExerciseDisplayName(exercise.exercise, settings.terminologyMode);
+                      const exerciseTooltip = getExerciseNameTooltip(exercise.exercise, settings.terminologyMode);
                       const exerciseName = truncateExerciseName(renderedName);
 
                       return (
@@ -614,14 +616,14 @@ export default function RecentSessionsDisplay({ refreshTrigger }: RecentSessions
                             onClick={() => !isEditMode && setHistoryModal({ exerciseId: exercise.exercise.id, exerciseName: renderedName })}
                           >
                             {settings.recentSessionsMode === "name-only" ? (
-                              <span className="text-xs text-cloud-white" title={exerciseName.full}>
+                              <span className="text-xs text-cloud-white" title={exerciseTooltip}>
                                 {exerciseName.display}
                               </span>
                             ) : (
                               <div
                                 className="px-2 py-1 rounded border inline-flex items-center gap-1.5"
                                 style={glowIntensityRecent > 0 ? getDifficultyGlowStyleScaled(exercise.exercise.difficulty, glowIntensityRecent) as CSSProperties : undefined}
-                                title={exerciseName.full}
+                                title={exerciseTooltip}
                               >
                                 <span className={`text-xs font-normal ${getDifficultyColorClass(exercise.exercise.difficulty)}`}>
                                   {exerciseName.display}
