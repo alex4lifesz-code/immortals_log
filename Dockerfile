@@ -90,9 +90,9 @@ COPY --from=builder /app/scripts ./scripts
 # Create data directory for SQLite and set permissions
 RUN mkdir -p /app/data && chown -R nextjs:nodejs /app/data
 
-# Startup script
+# Startup script (sed strips Windows CRLF line endings that break exec)
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
-RUN chmod +x /app/docker-entrypoint.sh
+RUN sed -i 's/\r$//' /app/docker-entrypoint.sh && chmod +x /app/docker-entrypoint.sh
 
 USER nextjs
 
