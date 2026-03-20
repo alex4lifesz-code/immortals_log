@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getDifficultyXP } from "@/lib/constants";
 
 /**
  * POST /api/workouts/import
@@ -79,7 +78,6 @@ export async function POST(req: NextRequest) {
           userId,
           name: `${exercise.name} Training`,
           date,
-          totalXP: getDifficultyXP(exercise.difficulty),
           notes: row.notes ? String(row.notes).trim() : null,
           simplifiedExercises: {
             create: {
@@ -90,6 +88,7 @@ export async function POST(req: NextRequest) {
               reps2: isNaN(r2) ? null : r2,
               weight3: isNaN(w3) ? null : w3,
               reps3: isNaN(r3) ? null : r3,
+              holdTime: row.holdTime != null && !isNaN(parseInt(String(row.holdTime))) ? parseInt(String(row.holdTime)) : null,
               notes: row.notes ? String(row.notes).trim() : null,
               order: 0,
             },

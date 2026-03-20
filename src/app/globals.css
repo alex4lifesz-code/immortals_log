@@ -46,6 +46,8 @@
   --difficulty-pink-glow: #d946ef;
   --difficulty-light-pink: #f9a8d4;
   --difficulty-light-pink-glow: #f472b6;
+  --difficulty-cyan: #67e8f9;
+  --difficulty-cyan-glow: #22d3ee;
 
   /* Semantic tokens */
   --background: var(--void-black);
@@ -83,6 +85,7 @@
   --glow-difficulty-violet: 0 0 15px rgba(139, 92, 246, 0.3), 0 0 30px rgba(139, 92, 246, 0.1);
   --glow-difficulty-pink: 0 0 15px rgba(236, 72, 153, 0.3), 0 0 30px rgba(236, 72, 153, 0.1);
   --glow-difficulty-light-pink: 0 0 15px rgba(249, 168, 212, 0.3), 0 0 30px rgba(249, 168, 212, 0.1);
+  --glow-difficulty-cyan: 0 0 15px rgba(103, 232, 249, 0.3), 0 0 30px rgba(103, 232, 249, 0.1);
 }
 
 @theme inline {
@@ -144,6 +147,8 @@
   --color-difficulty-pink-glow: var(--difficulty-pink-glow);
   --color-difficulty-light-pink: var(--difficulty-light-pink);
   --color-difficulty-light-pink-glow: var(--difficulty-light-pink-glow);
+  --color-difficulty-cyan: var(--difficulty-cyan);
+  --color-difficulty-cyan-glow: var(--difficulty-cyan-glow);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -193,6 +198,20 @@ body {
     box-shadow: 0 0 28px color-mix(in srgb, var(--glow-color, #3a8f8f) 55%, transparent),
       0 0 75px color-mix(in srgb, var(--glow-color, #3a8f8f) 35%, transparent);
   }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-5px); }
+  30% { transform: translateX(5px); }
+  45% { transform: translateX(-4px); }
+  60% { transform: translateX(4px); }
+  75% { transform: translateX(-2px); }
+  90% { transform: translateX(2px); }
+}
+
+.animate-shake {
+  animation: shake 0.45s ease-in-out;
 }
 
 .animate-glow-pulse {
@@ -275,6 +294,10 @@ body {
   box-shadow: var(--glow-difficulty-light-pink);
 }
 
+.glow-difficulty-cyan {
+  box-shadow: var(--glow-difficulty-cyan);
+}
+
 .ink-border {
   border: 1px solid var(--border);
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
@@ -342,6 +365,8 @@ body {
   --difficulty-pink-glow: #9d174d;
   --difficulty-light-pink: #c026d3;
   --difficulty-light-pink-glow: #a21caf;
+  --difficulty-cyan: #0891b2;
+  --difficulty-cyan-glow: #0e7490;
 
   /* Difficulty glows — darker shadows for light backgrounds */
   --glow-difficulty-green: 0 0 12px rgba(21, 128, 61, 0.35), 0 0 24px rgba(21, 128, 61, 0.15);
@@ -350,6 +375,7 @@ body {
   --glow-difficulty-violet: 0 0 12px rgba(109, 40, 217, 0.35), 0 0 24px rgba(109, 40, 217, 0.15);
   --glow-difficulty-pink: 0 0 12px rgba(190, 24, 93, 0.35), 0 0 24px rgba(190, 24, 93, 0.15);
   --glow-difficulty-light-pink: 0 0 12px rgba(192, 38, 211, 0.35), 0 0 24px rgba(192, 38, 211, 0.15);
+  --glow-difficulty-cyan: 0 0 12px rgba(8, 145, 178, 0.35), 0 0 24px rgba(8, 145, 178, 0.15);
 
   --background: var(--void-black);
   --foreground: var(--cloud-white);

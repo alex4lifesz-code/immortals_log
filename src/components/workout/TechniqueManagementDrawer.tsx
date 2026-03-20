@@ -5,7 +5,7 @@ import { motion, AnimatePresence, Reorder, useDragControls } from "framer-motion
 import { getDifficultyColorClass, getDifficultyGlowStyle } from "@/lib/difficulty-styles";
 import { getTypeColor } from "@/lib/constants";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
-import { getExerciseDisplayName, getExerciseSearchText } from "@/lib/exercise-name";
+import { getExerciseDisplayName, getExerciseSearchText, matchesLooseSearch } from "@/lib/exercise-name";
 import {
   DAYS_OF_WEEK,
   DAY_ABBREVIATIONS,
@@ -285,7 +285,7 @@ export default function TechniqueManagementDrawer({
 
   // Enhanced filter logic
   const filteredExercises = exercises.filter((exercise) => {
-    const matchesSearch = getExerciseSearchText(exercise).includes(searchTerm.toLowerCase());
+    const matchesSearch = matchesLooseSearch(getExerciseSearchText(exercise), searchTerm);
     const matchesDay = dayFilter === null || isDayAssigned(exercise.assignedDays || "", dayFilter);
     const matchesPath = !pathFilter || exercise.type === pathFilter;
     const matchesRealm = !realmFilter || exercise.difficulty === realmFilter;

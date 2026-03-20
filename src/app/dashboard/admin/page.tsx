@@ -16,7 +16,6 @@ interface AdminUser {
   username: string;
   name: string;
   createdAt: string;
-  experience: number;
   _count?: { workouts: number; checkIns: number };
 }
 
@@ -251,9 +250,6 @@ export default function AdminPanelPage() {
                     </th>
                     <th className="px-3 py-2 text-left text-xs text-jade-glow uppercase">Name</th>
                     <th className="px-3 py-2 text-center text-xs text-jade-glow uppercase">
-                      Experience
-                    </th>
-                    <th className="px-3 py-2 text-center text-xs text-jade-glow uppercase">
                       Created
                     </th>
                     <th className="px-2 py-2 text-xs text-jade-glow uppercase">Actions</th>
@@ -269,7 +265,6 @@ export default function AdminPanelPage() {
                     >
                       <td className="px-3 py-2 text-cloud-white">{user.username}</td>
                       <td className="px-3 py-2 text-mist-light">{user.name}</td>
-                      <td className="px-3 py-2 text-center text-jade-glow">{user.experience}</td>
                       <td className="px-3 py-2 text-center text-mist-dark text-xs">
                         {new Date(user.createdAt).toLocaleDateString()}
                       </td>
@@ -350,10 +345,6 @@ export default function AdminPanelPage() {
               <div>
                 <p className="text-xs text-mist-dark uppercase">Username</p>
                 <p className="text-sm text-cloud-white mt-1">{selectedUser.username}</p>
-              </div>
-              <div>
-                <p className="text-xs text-mist-dark uppercase">Experience</p>
-                <p className="text-sm text-jade-glow mt-1">{selectedUser.experience}</p>
               </div>
               <div>
                 <p className="text-xs text-mist-dark uppercase">Workouts</p>

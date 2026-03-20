@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, exerciseId, weight1, reps1, weight2, reps2, weight3, reps3, notes } = await req.json();
+    const { userId, exerciseId, weight1, reps1, weight2, reps2, weight3, reps3, holdTime, notes } = await req.json();
 
     // Validation
     if (!userId || typeof userId !== "string" || !exerciseId || typeof exerciseId !== "string") {
@@ -172,7 +172,6 @@ export async function POST(req: NextRequest) {
       data: {
         userId,
         name: `${exercise.name} Training`,
-        totalXP: getDifficultyXP(exercise.difficulty),
         targetGroups: exercise.targetGroup || null,
         simplifiedExercises: {
           create: {
@@ -183,6 +182,7 @@ export async function POST(req: NextRequest) {
             reps2: reps2 ? parseInt(reps2) : null,
             weight3: weight3 ? parseFloat(weight3) : null,
             reps3: reps3 ? parseInt(reps3) : null,
+            holdTime: holdTime ? parseInt(holdTime) : null,
             notes: notes || null,
             order: 0,
           }
@@ -207,13 +207,4 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Helper function to calculate XP based on difficulty
-function getDifficultyXP(difficulty: string): number {
-  switch (difficulty.toLowerCase()) {
-    case 'beginner': return 10;
-    case 'intermediate': return 20;
-    case 'advanced': return 30;
-    case 'master': return 50;
-    default: return 10;
-  }
-}
+

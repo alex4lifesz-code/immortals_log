@@ -38,14 +38,11 @@ function formatDateLocal(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-import { awardCheckInXP } from "@/lib/experience";
-
 
 const quickActions = [
   { label: "Start Training", icon: "⚔️", path: "/dashboard/workout", glow: "jade" as const },
   { label: "Check In", icon: "📋", path: "/dashboard/checkin", glow: "blue" as const },
   { label: "Browse Techniques", icon: "📜", path: "/dashboard/exercises", glow: "gold" as const },
-  { label: "View Path", icon: "🏔️", path: "/dashboard/progress", glow: "crimson" as const },
 ];
 
 const DEFAULT_CULTIVATOR_COLORS = [
@@ -70,9 +67,7 @@ const CULTIVATOR_COLOR_OPTIONS = [
   { name: "Rose", value: "#e74c8c" },
 ];
 
-function DashboardSidebar({ stats, allUsers, userColors, onColorChange }: { stats: { sessions: number; techniques: number; streak: number; realm: string }; allUsers: User[]; userColors: Record<string, string>; onColorChange: (userId: string, color: string) => void }) {
-  const { settings: dsSettings } = useDisplaySettings();
-  const gamificationVisible = dsSettings.gamificationVisible ?? true;
+function DashboardSidebar({ stats, allUsers, userColors, onColorChange }: { stats: { sessions: number; techniques: number; streak: number }; allUsers: User[]; userColors: Record<string, string>; onColorChange: (userId: string, color: string) => void }) {
   return (
     <div className="space-y-3">
       <GlowButton variant="jade" size="sm" glow className="w-full">
@@ -93,18 +88,10 @@ function DashboardSidebar({ stats, allUsers, userColors, onColorChange }: { stat
             <span className="text-mist-mid">Techniques Known</span>
             <span className="text-cloud-white">{stats.techniques}</span>
           </div>
-          {gamificationVisible && (
-            <>
-              <div className="flex justify-between text-xs">
-                <span className="text-mist-mid">Check-In Streak</span>
-                <span className="text-jade-glow font-semibold">{stats.streak} days</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-mist-mid">Realm</span>
-                <span className="text-gold-dim uppercase">{stats.realm}</span>
-              </div>
-            </>
-          )}
+          <div className="flex justify-between text-xs">
+            <span className="text-mist-mid">Check-In Streak</span>
+            <span className="text-jade-glow font-semibold">{stats.streak} days</span>
+          </div>
         </div>
       </div>
 
@@ -310,13 +297,12 @@ export default function DaoHallPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [checkInUsersByDate, setCheckInUsersByDate] = useState<Map<string, string[]>>(new Map());
   const [userColors, setUserColors] = useState<Record<string, string>>({});
-  const [stats, setStats] = useState({ sessions: 0, techniques: 0, streak: 0, realm: "Mortal" });
+  const [stats, setStats] = useState({ sessions: 0, techniques: 0, streak: 0 });
   const [loading, setLoading] = useState(true);
   const [dayNotes, setDayNotes] = useState<Map<string, string>>(new Map());
   const [futureNotes, setFutureNotes] = useState<CommunityNote[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [checkInRows, setCheckInRows] = useState<CheckInRow[]>([]);
-  const [xpFeedback, setXpFeedback] = useState<{ show: boolean; xp: number }>({ show: false, xp: 0 });
   const sectRegisterRef = useRef<HTMLDivElement>(null);
   // Check-in modal state
   const [checkInModal, setCheckInModal] = useState<{
@@ -338,6 +324,7 @@ export default function DaoHallPage() {
   const [sectFilterDays, setSectFilterDays] = useState<7 | 14 | 30>(14);
   const [isSectEditMode, setIsSectEditMode] = useState(false);
   const [sectEditData, setSectEditData] = useState<Record<string, Record<string, { weight: string; comment: string }>>>({});
+  const [deletingRowDate, setDeletingRowDate] = useState<string | null>(null);
 
   // Load user colors from localStorage
   useEffect(() => {
@@ -380,6 +367,28 @@ export default function DaoHallPage() {
       console.error("Failed to fetch future notes:", err);
     }
   }, []);
+
+  const handleDeleteRow = useCallback(async (date: string) => {
+    try {
+      const res = await fetch("/api/checkins", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date }),
+      });
+      if (res.ok) {
+        setCheckInRows(prev => prev.filter(r => r.date !== date));
+        setCheckInUsersByDate(prev => {
+          const updated = new Map(prev);
+          updated.delete(date);
+          return updated;
+        });
+        setDeletingRowDate(null);
+        broadcastNotesUpdated();
+      }
+    } catch (err) {
+      console.error("Failed to delete row:", err);
+    }
+  }, [broadcastNotesUpdated]);
 
   const handleDayClick = (dateStr: string) => {
     // Open check-in modal for the selected day
@@ -470,14 +479,6 @@ export default function DaoHallPage() {
         body: JSON.stringify({ date: checkInModal.date, entries: ownEntries, requestingUserId: user.id }),
       });
 
-      // Award XP if current user checked in
-      const currentUserEntry = checkInModal.entries[user.id];
-      if (currentUserEntry?.present) {
-        await awardCheckInXP(user.id);
-        setXpFeedback({ show: true, xp: 15 });
-        setTimeout(() => setXpFeedback({ show: false, xp: 0 }), 3000);
-      }
-
       // Update local rows
       setCheckInRows(prev => {
         const filtered = prev.filter(r => r.date !== checkInModal.date);
@@ -547,9 +548,7 @@ export default function DaoHallPage() {
 
       const currentEntry = updatedEntries[user.id];
       if (currentEntry?.present) {
-        await awardCheckInXP(user.id);
-        setXpFeedback({ show: true, xp: 15 });
-        setTimeout(() => setXpFeedback({ show: false, xp: 0 }), 3000);
+        // Check-in saved
       }
 
       setCheckInRows(prev => {
@@ -623,12 +622,6 @@ export default function DaoHallPage() {
           requestingUserId: user.id,
         }),
       });
-
-      if (present && userId === user.id) {
-        await awardCheckInXP(user.id);
-        setXpFeedback({ show: true, xp: 15 });
-        setTimeout(() => setXpFeedback({ show: false, xp: 0 }), 3000);
-      }
 
       // Update calendar user check-ins
       setCheckInUsersByDate(prev => {
@@ -743,7 +736,7 @@ export default function DaoHallPage() {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
     const diffDays = Math.floor((now.getTime() - rowDate.getTime()) / 86400000);
-    return diffDays >= 0 && diffDays < sectFilterDays;
+    return diffDays >= -1 && diffDays < sectFilterDays;
   });
 
   useEffect(() => {
@@ -752,17 +745,15 @@ export default function DaoHallPage() {
 
       try {
         // Fetch check-ins, users, and future notes in parallel
-        const [checkinsRes, usersRes, expRes, workoutRes, exerciseRes, futureNotesRes] = await Promise.all([
+        const [checkinsRes, usersRes, workoutRes, exerciseRes, futureNotesRes] = await Promise.all([
           fetch("/api/checkins"),
           fetch("/api/users"),
-          fetch(`/api/users/experience?userId=${user.id}`),
           fetch(`/api/workouts?userId=${user.id}`),
           fetch("/api/exercises"),
           fetch(`/api/checkins/notes?future=true&today=${formatDateLocal(new Date())}`),
         ]);
         const checkinsData = await checkinsRes.json();
         const usersData = await usersRes.json();
-        const expData = await expRes.json();
         const workoutData = await workoutRes.json();
         const exerciseData = await exerciseRes.json();
         const futureNotesData = await futureNotesRes.json();
@@ -803,7 +794,6 @@ export default function DaoHallPage() {
           .map(([date, entries]) => ({ date, entries }));
         setCheckInRows(sortedRows);
 
-        const userExp = expData.user?.experience || 0;
         const userWorkouts = (workoutData.workouts || []).filter((w: { userId: string }) => w.userId === user.id);
 
         // Calculate streak using current user's dates
@@ -820,22 +810,10 @@ export default function DaoHallPage() {
           }
         }
 
-        // Calculate realm from experience
-        const realms = ["Mortal", "Foundation", "Core", "Nascent", "Soul Splitting", "Tribulation", "Immortal"];
-        const xpThresholds = [0, 100, 300, 600, 1200, 2000, 3500];
-        let currentRealm = "Mortal";
-        for (let i = xpThresholds.length - 1; i >= 0; i--) {
-          if (userExp >= xpThresholds[i]) {
-            currentRealm = realms[i];
-            break;
-          }
-        }
-
         setStats({
           sessions: userWorkouts.length,
           techniques: exerciseData.exercises?.length || 0,
           streak,
-          realm: currentRealm,
         });
       } catch (err) {
         console.error("Failed to fetch dashboard data:", err);
@@ -895,7 +873,6 @@ export default function DaoHallPage() {
             <h3 className="text-sm text-jade-glow uppercase mb-3">Quick Actions</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {quickActions
-                .filter((action) => (settings.gamificationVisible ?? true) || action.path !== "/dashboard/progress")
                 .map((action, i) => (
                 <motion.div
                   key={action.path}
@@ -919,16 +896,23 @@ export default function DaoHallPage() {
           </div>
 
           {/* Future Notes Log */}
-          <GlowCard glow="gold" className="p-4 space-y-3">
+          <GlowCard glow="gold" className="p-3 space-y-2">
             <div className="flex items-center gap-2">
-              <span className="text-base">📝</span>
-              <h3 className="text-sm text-gold-glow uppercase tracking-wider font-semibold">Upcoming Notes</h3>
+              <span className="text-sm">📝</span>
+              <h3 className="text-xs text-gold-glow uppercase tracking-wider font-semibold">Upcoming Notes</h3>
               {futureNotes.length > 0 && (
-                <span className="text-[10px] text-mist-dark bg-ink-mid/60 px-1.5 py-0.5 rounded-full">{futureNotes.length}</span>
+                <span className="text-[9px] text-mist-dark bg-ink-mid/60 px-1.5 py-0.5 rounded-full">{futureNotes.length}</span>
               )}
+              <button
+                onClick={() => router.push("/dashboard/checkin")}
+                className="ml-auto text-[10px] text-jade-light/70 hover:text-jade-glow transition-colors flex items-center gap-1"
+                title="Manage notes in Sect Register"
+              >
+                Manage in Register →
+              </button>
             </div>
             {futureNotes.length > 0 ? (
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {futureNotes.map((note) => {
                   const noteUserIdx = allUsers.findIndex(u => u.id === note.user.id);
                   const noteColor = userColors[note.user.id] || DEFAULT_CULTIVATOR_COLORS[noteUserIdx >= 0 ? noteUserIdx % DEFAULT_CULTIVATOR_COLORS.length : 0];
@@ -937,48 +921,27 @@ export default function DaoHallPage() {
                       key={note.id}
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
-                      className="flex items-start gap-3 p-3 rounded-lg border border-ink-light/40 bg-ink-dark/40 hover:bg-ink-mid/30 transition-colors"
+                      className="flex items-center gap-2 px-2 py-1.5 rounded-md border border-ink-light/30 bg-ink-dark/30 hover:bg-ink-mid/20 transition-colors"
                     >
                       <div
-                        className="w-2 h-2 rounded-full mt-1.5 shrink-0"
-                        style={{ backgroundColor: noteColor, boxShadow: `0 0 6px ${noteColor}80` }}
+                        className="w-1.5 h-1.5 rounded-full shrink-0"
+                        style={{ backgroundColor: noteColor, boxShadow: `0 0 4px ${noteColor}80` }}
                       />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1">
-                          <span className="text-xs font-semibold" style={{ color: noteColor }}>
-                            {note.user.name}
-                          </span>
-                          <span className="text-[10px] text-mist-dark">
-                            {formatDateWithPreference(note.date, dateFormat)}
-                          </span>
-                        </div>
-                        <p className="text-xs text-mist-light leading-relaxed break-words">{note.content}</p>
-                        <span className="text-[9px] text-mist-dark mt-1 block">
-                          {new Date(note.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
-                        </span>
-                      </div>
+                      <span className="text-[10px] font-medium shrink-0" style={{ color: noteColor }}>
+                        {note.user.name}
+                      </span>
+                      <span className="text-[10px] text-mist-dark shrink-0">
+                        {formatDateWithPreference(note.date, dateFormat)}
+                      </span>
+                      <span className="text-[10px] text-mist-light truncate flex-1">{note.content}</span>
                     </motion.div>
                   );
                 })}
               </div>
             ) : (
-              <p className="text-xs text-mist-dark italic py-2">No upcoming notes. Add notes to future calendar dates to see them here.</p>
+              <p className="text-[10px] text-mist-dark italic py-1">No upcoming notes. Add notes to future calendar dates to see them here.</p>
             )}
           </GlowCard>
-
-          {/* XP Feedback */}
-          {(settings.gamificationVisible ?? true) && xpFeedback.show && (
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="p-3 bg-gradient-to-r from-jade-dark to-jade-glow/30 border border-jade-glow rounded-lg text-center text-jade-glow font-semibold flex items-center justify-center gap-2"
-            >
-              <span className="text-lg">✨</span>
-              <span>+{xpFeedback.xp} XP Gained!</span>
-              <span className="text-lg">✨</span>
-            </motion.div>
-          )}
 
           {/* Sect Register Table — Check-In Records */}
           <GlowCard glow="jade" className="w-full">
@@ -1037,7 +1000,7 @@ export default function DaoHallPage() {
                   {/* Grid header */}
                   <div
                     className="grid gap-0 text-[10px] uppercase tracking-wider font-semibold text-mist-dark border-b border-jade-glow/30 pb-1.5 mb-1"
-                    style={{ gridTemplateColumns: `80px repeat(${allUsers.length}, 44px) repeat(${allUsers.length}, 48px) 1fr` }}
+                    style={{ gridTemplateColumns: `${isSectEditMode ? '104px' : '80px'} repeat(${allUsers.length}, 44px) repeat(${allUsers.length}, 48px) 1fr` }}
                   >
                     <div className="px-1">Date</div>
                     {allUsers.map((u) => (
@@ -1068,10 +1031,38 @@ export default function DaoHallPage() {
                                 ? "border-jade-glow/15 bg-jade-deep/5 hover:bg-jade-deep/10"
                                 : `border-ink-light/50 hover:bg-ink-mid/10 ${isWeekend ? "bg-ink-dark/20" : ""}`
                             }`}
-                            style={{ gridTemplateColumns: `80px repeat(${allUsers.length}, 44px) repeat(${allUsers.length}, 48px) 1fr` }}
+                            style={{ gridTemplateColumns: `${isSectEditMode ? '104px' : '80px'} repeat(${allUsers.length}, 44px) repeat(${allUsers.length}, 48px) 1fr` }}
                           >
                             {/* Date + Day */}
-                            <div className="px-1">
+                            <div className="px-1 flex items-center gap-1">
+                              {isSectEditMode && (
+                                deletingRowDate === row.date ? (
+                                  <div className="flex items-center gap-0.5 shrink-0">
+                                    <button
+                                      onClick={() => handleDeleteRow(row.date)}
+                                      className="text-[9px] text-crimson-light hover:text-crimson-glow transition-colors"
+                                      title="Confirm delete"
+                                    >
+                                      ✓
+                                    </button>
+                                    <button
+                                      onClick={() => setDeletingRowDate(null)}
+                                      className="text-[9px] text-mist-dark hover:text-mist-light transition-colors"
+                                      title="Cancel"
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => setDeletingRowDate(row.date)}
+                                    className="text-[9px] text-mist-dark hover:text-crimson-light transition-colors shrink-0"
+                                    title="Delete this row"
+                                  >
+                                    🗑
+                                  </button>
+                                )
+                              )}
                               <button
                                 onClick={() => handleDayClick(row.date)}
                                 className="text-mist-light hover:text-jade-glow transition-colors text-left leading-tight"

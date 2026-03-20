@@ -20,13 +20,7 @@ export async function POST(req: NextRequest) {
       "Soul Splitting",
       "Tribulation Transcendence",
       "Immortal",
-    ];
-
-    const validTypes = [
-      "Upper Heaven",
-      "Lower Realms",
-      "Heart Meridian",
-      "Unified Realm",
+      "Heavenly Dao",
     ];
 
     const validExercises = [];
@@ -45,11 +39,6 @@ export async function POST(req: NextRequest) {
         errors.push(`Exercise ${i + 1}: invalid difficulty "${ex.difficulty}"`);
         continue;
       }
-      if (ex.type && !validTypes.includes(ex.type)) {
-        errors.push(`Exercise ${i + 1}: invalid type "${ex.type}"`);
-        continue;
-      }
-
       validExercises.push({
         name: conventionalName,
         wuxiaName: wuxiaName || null,
@@ -67,12 +56,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Skip duplicates by name
+    const existing = await prisma.exercise.findMany({ select: { name: true } });
+    const existingNames = new Set(existing.map(e => e.name.trim().toLowerCase()));
+    const newExercises = validExercises.filter(e => !existingNames.has(e.name.trim().toLowerCase()));
+
+    if (newExercises.length === 0) {
+      return NextResponse.json({
+        imported: 0,
+        skipped: validExercises.length,
+        errors: errors.length > 0 ? errors : undefined,
+      });
+    }
+
     const result = await prisma.exercise.createMany({
-      data: validExercises,
+      data: newExercises,
     });
 
     return NextResponse.json({
       imported: result.count,
+      skipped: validExercises.length - newExercises.length > 0 ? validExercises.length - newExercises.length : undefined,
       errors: errors.length > 0 ? errors : undefined,
     });
   } catch (error) {

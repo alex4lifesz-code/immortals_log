@@ -92,11 +92,27 @@ function SettingsSidebar({ onLogout }: { onLogout: () => void }) {
       </div>
 
       <div className="ink-border rounded-lg p-3 bg-ink-dark">
+        <h3 className="text-[10px] text-gold uppercase tracking-wider mb-2 font-semibold">🏛️ Progression</h3>
+        <div className="divide-y divide-ink-light/20">
+          <SettingRow label="Sidebar" value={modeLabels[settings.progressionSidebarMode] || settings.progressionSidebarMode} color="text-gold" />
+          <SettingRow label="Sidebar Style" value={styleLabels[settings.progressionSidebarStyle] || settings.progressionSidebarStyle} color="text-gold" />
+          <SettingRow label="Cards" value={modeLabels[settings.progressionCardMode] || settings.progressionCardMode} color="text-gold" />
+          <SettingRow label="Card Style" value={styleLabels[settings.progressionCardStyle] || settings.progressionCardStyle} color="text-gold" />
+          <SettingRow label="Card Compact" value={(settings.progressionCardCompact ?? false) ? "On" : "Off"} color={(settings.progressionCardCompact ?? false) ? "text-gold" : "text-mist-dark"} />
+          <SettingRow label="Log" value={modeLabels[settings.progressionLogMode] || settings.progressionLogMode} color="text-gold" />
+          <SettingRow label="Log Compact" value={settings.progressionLogCompact ?? "auto"} color="text-gold" />
+          <SettingRow label="Sidebar Glow" value={`${settings.glowIntensityProgressionSidebar ?? 100}%`} color={(settings.glowIntensityProgressionSidebar ?? 100) > 0 ? "text-gold" : "text-mist-dark"} />
+          <SettingRow label="Card Glow" value={`${settings.glowIntensityProgressionCards ?? 100}%`} color={(settings.glowIntensityProgressionCards ?? 100) > 0 ? "text-gold" : "text-mist-dark"} />
+          <SettingRow label="Log Glow" value={`${settings.glowIntensityProgressionLog ?? 100}%`} color={(settings.glowIntensityProgressionLog ?? 100) > 0 ? "text-gold" : "text-mist-dark"} />
+          <SettingRow label="Click Mode" value={(settings.progressionSidebarExpandTiers ?? true) ? "Expanded" : "Basic"} color="text-gold" />
+        </div>
+      </div>
+
+      <div className="ink-border rounded-lg p-3 bg-ink-dark">
         <h3 className="text-[10px] text-mountain-blue-glow uppercase tracking-wider mb-2 font-semibold">⚙️ Layout</h3>
         <div className="divide-y divide-ink-light/20">
           <SettingRow label="Panel Position" value={settings.sidebarPosition === "left" ? "Left" : "Right"} color="text-mountain-blue-glow" />
           <SettingRow label="Quick View" value={settings.rightPanelVisible ? "Visible" : "Hidden"} color={settings.rightPanelVisible ? "text-mountain-blue-glow" : "text-mist-dark"} />
-          <SettingRow label="Gamification" value={(settings.gamificationVisible ?? true) ? "Visible" : "Hidden"} color={(settings.gamificationVisible ?? true) ? "text-mountain-blue-glow" : "text-mist-dark"} />
           <SettingRow label="Date Format" value={dateLabels[settings.dateFormat] || settings.dateFormat} color="text-mountain-blue-glow" />
         </div>
       </div>
@@ -512,15 +528,6 @@ export default function SettingsPage() {
                     <span className={`absolute top-[2px] left-[2px] w-[14px] h-[14px] rounded-full bg-cloud-white shadow transition-transform ${(settings.columnOrderGrouped ?? false) ? "translate-x-[14px]" : "translate-x-0"}`} />
                   </button>
                 </div>
-                <div className="flex items-center justify-between gap-3 py-1.5">
-                  <div className="min-w-0">
-                    <span className="text-[11px] text-mist-light shrink-0 block">Experience &amp; progression</span>
-                    <span className="text-[9px] text-mist-dark block mt-0.5">Hide XP, realms, Quick View, and all gamification content</span>
-                  </div>
-                  <button type="button" role="switch" aria-checked={settings.gamificationVisible ?? true} onClick={() => updateSettings({ gamificationVisible: !(settings.gamificationVisible ?? true) })} className={`relative shrink-0 w-8 h-[18px] rounded-full transition-colors ${(settings.gamificationVisible ?? true) ? "bg-jade-glow" : "bg-ink-light"}`}>
-                    <span className={`absolute top-[2px] left-[2px] w-[14px] h-[14px] rounded-full bg-cloud-white shadow transition-transform ${(settings.gamificationVisible ?? true) ? "translate-x-[14px]" : "translate-x-0"}`} />
-                  </button>
-                </div>
               </div>
             </div>
 
@@ -534,6 +541,228 @@ export default function SettingsPage() {
             >
               Reset Display Settings to Defaults
             </button>
+          </div>
+        </GlowCard>
+
+        {/* ══════════════════════════════════════════════════════════
+            SECTION 2B: PROGRESSION DISPLAY SETTINGS
+           ══════════════════════════════════════════════════════════ */}
+        <GlowCard glow="gold" hoverable={false}>
+          <h3 className="text-sm text-gold uppercase tracking-wider mb-4">
+            Progression Display
+          </h3>
+
+          <div className="space-y-6">
+
+            {/* ── Progression Sidebar ── */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-sm">📑</span>
+                <h4 className="text-[11px] font-semibold text-gold uppercase tracking-wider">Progression Sidebar</h4>
+                <div className="flex-1 h-px bg-ink-light/30" />
+              </div>
+              <p className="text-[10px] text-mist-dark mb-3 pl-1">Adjust progression sidebar appearance</p>
+              <div className="space-y-2 pl-1">
+                <div className="flex items-center justify-between gap-3 py-1.5">
+                  <span className="text-[11px] text-mist-light shrink-0">Detail level</span>
+                  <select
+                    value={settings.progressionSidebarMode ?? "name-illumination-realm"}
+                    onChange={(e) => updateSettings({ progressionSidebarMode: e.target.value as TechniqueDisplayMode })}
+                    className="bg-ink-dark border border-ink-light rounded-md px-2 py-1 text-[11px] text-cloud-white cursor-pointer hover:border-jade/40 focus:border-jade-glow/60 focus:outline-none transition-colors appearance-none pr-6"
+                    style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 6px center" }}
+                  >
+                    <option value="name-only">Name Only</option>
+                    <option value="name-illumination">Name + Illumination</option>
+                    <option value="name-illumination-realm">Name + Illumination + Realm</option>
+                    <option value="name-illumination-realm-path">Full Treatment</option>
+                  </select>
+                </div>
+                <div className="flex items-center justify-between gap-3 py-1.5">
+                  <span className="text-[11px] text-mist-light shrink-0">Visual style</span>
+                  <div className="flex rounded-md border border-ink-light overflow-hidden">
+                    {([{ value: "default", label: "Default" }, { value: "scroll-card", label: "Scroll" }]).map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => updateSettings({ progressionSidebarStyle: opt.value as ActiveCardStyle })}
+                        className={`px-2.5 py-1 text-[10px] font-medium transition-all ${
+                          (settings.progressionSidebarStyle ?? "default") === opt.value
+                            ? "bg-gold-dim/20 text-gold border-gold/30"
+                            : "text-mist-dark hover:text-mist-light hover:bg-ink-mid/20"
+                        } ${opt.value !== "default" ? "border-l border-ink-light" : ""}`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-3 py-1.5">
+                  <span className="text-[11px] text-mist-light shrink-0">Lore text</span>
+                  <button type="button" role="switch" aria-checked={settings.progressionSidebarLoreVisible ?? true} onClick={() => updateSettings({ progressionSidebarLoreVisible: !(settings.progressionSidebarLoreVisible ?? true) })} className={`relative shrink-0 w-8 h-[18px] rounded-full transition-colors ${(settings.progressionSidebarLoreVisible ?? true) ? "bg-gold" : "bg-ink-light"}`}>
+                    <span className={`absolute top-[2px] left-[2px] w-[14px] h-[14px] rounded-full bg-cloud-white shadow transition-transform ${(settings.progressionSidebarLoreVisible ?? true) ? "translate-x-[14px]" : "translate-x-0"}`} />
+                  </button>
+                </div>
+                <div className="flex items-center justify-between gap-3 py-1.5">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[11px] text-mist-light shrink-0">Click mode</span>
+                    <span className="text-[9px] text-mist-dark">{(settings.progressionSidebarExpandTiers ?? true) ? "Expand tiers, pick level with +" : "Click to add, change level in log form"}</span>
+                  </div>
+                  <div className="flex rounded-md border border-ink-light overflow-hidden shrink-0">
+                    {([{ value: true, label: "Expanded" }, { value: false, label: "Basic" }] as const).map((opt) => (
+                      <button
+                        key={String(opt.value)}
+                        onClick={() => updateSettings({ progressionSidebarExpandTiers: opt.value })}
+                        className={`px-2.5 py-1 text-[10px] font-medium transition-all ${
+                          (settings.progressionSidebarExpandTiers ?? true) === opt.value
+                            ? "bg-gold-dim/20 text-gold border-gold/30"
+                            : "text-mist-dark hover:text-mist-light hover:bg-ink-mid/20"
+                        } ${!opt.value ? "border-l border-ink-light" : ""}`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="py-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[11px] text-mist-light">Glow intensity</span>
+                    <span className="text-[10px] text-gold font-medium tabular-nums w-8 text-right">{settings.glowIntensityProgressionSidebar ?? 100}%</span>
+                  </div>
+                  <input type="range" min="0" max="100" step="5" value={settings.glowIntensityProgressionSidebar ?? 100} onChange={(e) => updateSettings({ glowIntensityProgressionSidebar: parseInt(e.target.value) })} className="w-full h-1 bg-ink-light rounded-full appearance-none cursor-pointer accent-gold" />
+                </div>
+              </div>
+            </div>
+
+            {/* ── Progression Cards ── */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-sm">🎴</span>
+                <h4 className="text-[11px] font-semibold text-gold uppercase tracking-wider">Progression Cards</h4>
+                <div className="flex-1 h-px bg-ink-light/30" />
+              </div>
+              <p className="text-[10px] text-mist-dark mb-3 pl-1">Control how active progression cards appear when logging</p>
+              <div className="space-y-2 pl-1">
+                <div className="flex items-center justify-between gap-3 py-1.5">
+                  <span className="text-[11px] text-mist-light shrink-0">Detail level</span>
+                  <select
+                    value={settings.progressionCardMode ?? "name-illumination-realm-path"}
+                    onChange={(e) => updateSettings({ progressionCardMode: e.target.value as TechniqueDisplayMode })}
+                    className="bg-ink-dark border border-ink-light rounded-md px-2 py-1 text-[11px] text-cloud-white cursor-pointer hover:border-jade/40 focus:border-jade-glow/60 focus:outline-none transition-colors appearance-none pr-6"
+                    style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 6px center" }}
+                  >
+                    <option value="name-only">Name Only</option>
+                    <option value="name-illumination">Name + Illumination</option>
+                    <option value="name-illumination-realm">Name + Illumination + Realm</option>
+                    <option value="name-illumination-realm-path">Full Treatment</option>
+                  </select>
+                </div>
+                <div className="flex items-center justify-between gap-3 py-1.5">
+                  <span className="text-[11px] text-mist-light shrink-0">Visual style</span>
+                  <div className="flex rounded-md border border-ink-light overflow-hidden">
+                    {([{ value: "default", label: "Default" }, { value: "scroll-card", label: "Scroll" }]).map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => updateSettings({ progressionCardStyle: opt.value as ActiveCardStyle })}
+                        className={`px-2.5 py-1 text-[10px] font-medium transition-all ${
+                          (settings.progressionCardStyle ?? "default") === opt.value
+                            ? "bg-gold-dim/20 text-gold border-gold/30"
+                            : "text-mist-dark hover:text-mist-light hover:bg-ink-mid/20"
+                        } ${opt.value !== "default" ? "border-l border-ink-light" : ""}`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-3 py-1.5">
+                  <span className="text-[11px] text-mist-light shrink-0">Compact cards</span>
+                  <button type="button" role="switch" aria-checked={settings.progressionCardCompact ?? false} onClick={() => updateSettings({ progressionCardCompact: !(settings.progressionCardCompact ?? false) })} className={`relative shrink-0 w-8 h-[18px] rounded-full transition-colors ${(settings.progressionCardCompact ?? false) ? "bg-gold" : "bg-ink-light"}`}>
+                    <span className={`absolute top-[2px] left-[2px] w-[14px] h-[14px] rounded-full bg-cloud-white shadow transition-transform ${(settings.progressionCardCompact ?? false) ? "translate-x-[14px]" : "translate-x-0"}`} />
+                  </button>
+                </div>
+                <div className="flex items-center justify-between gap-3 py-1.5">
+                  <span className="text-[11px] text-mist-light shrink-0">Lore text</span>
+                  <button type="button" role="switch" aria-checked={settings.progressionCardLoreVisible ?? true} onClick={() => updateSettings({ progressionCardLoreVisible: !(settings.progressionCardLoreVisible ?? true) })} className={`relative shrink-0 w-8 h-[18px] rounded-full transition-colors ${(settings.progressionCardLoreVisible ?? true) ? "bg-gold" : "bg-ink-light"}`}>
+                    <span className={`absolute top-[2px] left-[2px] w-[14px] h-[14px] rounded-full bg-cloud-white shadow transition-transform ${(settings.progressionCardLoreVisible ?? true) ? "translate-x-[14px]" : "translate-x-0"}`} />
+                  </button>
+                </div>
+                <div className="py-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[11px] text-mist-light">Glow intensity</span>
+                    <span className="text-[10px] text-gold font-medium tabular-nums w-8 text-right">{settings.glowIntensityProgressionCards ?? 100}%</span>
+                  </div>
+                  <input type="range" min="0" max="100" step="5" value={settings.glowIntensityProgressionCards ?? 100} onChange={(e) => updateSettings({ glowIntensityProgressionCards: parseInt(e.target.value) })} className="w-full h-1 bg-ink-light rounded-full appearance-none cursor-pointer accent-gold" />
+                </div>
+              </div>
+            </div>
+
+            {/* ── Progression Training Log ── */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-sm">📜</span>
+                <h4 className="text-[11px] font-semibold text-gold uppercase tracking-wider">Training Log</h4>
+                <div className="flex-1 h-px bg-ink-light/30" />
+              </div>
+              <p className="text-[10px] text-mist-dark mb-3 pl-1">Configure the progression training log table</p>
+              <div className="space-y-2 pl-1">
+                <div className="flex items-center justify-between gap-3 py-1.5">
+                  <span className="text-[11px] text-mist-light shrink-0">Detail level</span>
+                  <select
+                    value={settings.progressionLogMode ?? "name-illumination-realm"}
+                    onChange={(e) => updateSettings({ progressionLogMode: e.target.value as TechniqueDisplayMode })}
+                    className="bg-ink-dark border border-ink-light rounded-md px-2 py-1 text-[11px] text-cloud-white cursor-pointer hover:border-jade/40 focus:border-jade-glow/60 focus:outline-none transition-colors appearance-none pr-6"
+                    style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 6px center" }}
+                  >
+                    <option value="name-only">Name Only</option>
+                    <option value="name-illumination">Name + Illumination</option>
+                    <option value="name-illumination-realm">Name + Illumination + Realm</option>
+                    <option value="name-illumination-realm-path">Full Treatment</option>
+                  </select>
+                </div>
+                <div className="flex items-center justify-between gap-3 py-1.5">
+                  <span className="text-[11px] text-mist-light shrink-0">Layout density</span>
+                  <div className="flex rounded-md border border-ink-light overflow-hidden">
+                    {([{ value: "auto", label: "Auto" }, { value: "compact", label: "Compact" }, { value: "full", label: "Full" }]).map((opt, idx) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => updateSettings({ progressionLogCompact: opt.value as RecentSessionsCompactMode })}
+                        className={`px-2.5 py-1 text-[10px] font-medium transition-all ${
+                          (settings.progressionLogCompact ?? "auto") === opt.value
+                            ? "bg-gold-dim/20 text-gold border-gold/30"
+                            : "text-mist-dark hover:text-mist-light hover:bg-ink-mid/20"
+                        } ${idx > 0 ? "border-l border-ink-light" : ""}`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-3 py-1.5">
+                  <span className="text-[11px] text-mist-light shrink-0">Column colours (W/R)</span>
+                  <button type="button" role="switch" aria-checked={settings.progressionColumnColorsEnabled ?? true} onClick={() => updateSettings({ progressionColumnColorsEnabled: !(settings.progressionColumnColorsEnabled ?? true) })} className={`relative shrink-0 w-8 h-[18px] rounded-full transition-colors ${(settings.progressionColumnColorsEnabled ?? true) ? "bg-gold" : "bg-ink-light"}`}>
+                    <span className={`absolute top-[2px] left-[2px] w-[14px] h-[14px] rounded-full bg-cloud-white shadow transition-transform ${(settings.progressionColumnColorsEnabled ?? true) ? "translate-x-[14px]" : "translate-x-0"}`} />
+                  </button>
+                </div>
+                <div className="flex items-center justify-between gap-3 py-1.5">
+                  <div className="min-w-0">
+                    <span className="text-[11px] text-mist-light shrink-0 block">Column order</span>
+                    <span className="text-[9px] text-mist-dark block mt-0.5">
+                      {(settings.progressionColumnOrderGrouped ?? false) ? "W1, W2, W3, R1, R2, R3 (grouped)" : "W1, R1, W2, R2, W3, R3 (paired)"}
+                    </span>
+                  </div>
+                  <button type="button" role="switch" aria-checked={settings.progressionColumnOrderGrouped ?? false} onClick={() => updateSettings({ progressionColumnOrderGrouped: !(settings.progressionColumnOrderGrouped ?? false) })} className={`relative shrink-0 w-8 h-[18px] rounded-full transition-colors ${(settings.progressionColumnOrderGrouped ?? false) ? "bg-gold" : "bg-ink-light"}`}>
+                    <span className={`absolute top-[2px] left-[2px] w-[14px] h-[14px] rounded-full bg-cloud-white shadow transition-transform ${(settings.progressionColumnOrderGrouped ?? false) ? "translate-x-[14px]" : "translate-x-0"}`} />
+                  </button>
+                </div>
+                <div className="py-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[11px] text-mist-light">Glow intensity</span>
+                    <span className="text-[10px] text-gold font-medium tabular-nums w-8 text-right">{settings.glowIntensityProgressionLog ?? 100}%</span>
+                  </div>
+                  <input type="range" min="0" max="100" step="5" value={settings.glowIntensityProgressionLog ?? 100} onChange={(e) => updateSettings({ glowIntensityProgressionLog: parseInt(e.target.value) })} className="w-full h-1 bg-ink-light rounded-full appearance-none cursor-pointer accent-gold" />
+                </div>
+              </div>
+            </div>
+
           </div>
         </GlowCard>
 

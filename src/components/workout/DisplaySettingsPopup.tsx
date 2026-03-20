@@ -353,9 +353,6 @@ function DisplaySettingsModal({ onClose }: { onClose: () => void }) {
                   <SettingRow label="Quick View panel">
                     <Toggle checked={settings.rightPanelVisible} onChange={(v) => updateSettings({ rightPanelVisible: v })} />
                   </SettingRow>
-                  <SettingRow label="Experience &amp; progression">
-                    <Toggle checked={settings.gamificationVisible ?? true} onChange={(v) => updateSettings({ gamificationVisible: v })} />
-                  </SettingRow>
                 </div>
               </div>
             </div>

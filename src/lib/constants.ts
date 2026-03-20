@@ -13,7 +13,6 @@ export const defaultNavItems: NavItem[] = [
   { id: "workout", label: "Training Grounds", icon: "⚔️", path: "/dashboard/workout", pinned: false, visible: true },
   { id: "exercises", label: "Technique Scroll", icon: "📜", path: "/dashboard/exercises", pinned: false, visible: true },
   { id: "checkin", label: "Sect Register", icon: "📋", path: "/dashboard/checkin", pinned: false, visible: true },
-  { id: "progress", label: "Cultivation Path", icon: "🏔️", path: "/dashboard/progress", pinned: false, visible: true },
   { id: "history", label: "Ancient Records", icon: "📖", path: "/dashboard/history", pinned: false, visible: true },
   { id: "community", label: "Sect Hall", icon: "🏯", path: "/dashboard/community", pinned: false, visible: true },
   { id: "settings", label: "Inner Chamber", icon: "⚙️", path: "/dashboard/settings", pinned: false, visible: true },
@@ -28,16 +27,7 @@ export const DIFFICULTY_LEVELS = [
   "Soul Splitting",
   "Tribulation Transcendence",
   "Immortal",
-] as const;
-
-export const REALM_LEVELS = [
-  "Mortal",
-  "Foundation",
-  "Core",
-  "Nascent",
-  "Soul Splitting",
-  "Tribulation",
-  "Immortal",
+  "Heavenly Dao",
 ] as const;
 
 export const EXERCISE_TYPES = [
@@ -80,6 +70,7 @@ export function getDifficultyColor(difficulty: string): string {
     "Soul Splitting": "text-difficulty-pink",
     "Tribulation Transcendence": "text-gold",
     "Immortal": "text-difficulty-light-pink",
+    "Heavenly Dao": "text-cyan-300",
   };
   return colors[difficulty] || "text-mist-light";
 }
@@ -93,21 +84,9 @@ export function getDifficultyGlow(difficulty: string): string {
     "Soul Splitting": "glow-difficulty-pink",
     "Tribulation Transcendence": "glow-gold",
     "Immortal": "glow-difficulty-light-pink",
+    "Heavenly Dao": "glow-difficulty-cyan",
   };
   return glows[difficulty] || "";
-}
-
-export function getDifficultyXP(difficulty: string): number {
-  const xp: Record<string, number> = {
-    "Mortal": 10,
-    "Foundation Establishment": 25,
-    "Core Formation": 50,
-    "Nascent Soul": 100,
-    "Soul Splitting": 150,
-    "Tribulation Transcendence": 200,
-    "Immortal": 300,
-  };
-  return xp[difficulty] || 5;
 }
 
 export function getTypeColor(type: string): string {

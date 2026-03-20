@@ -1,7 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import GlowButton from "@/components/ui/GlowButton";
 import GlowInput from "@/components/ui/GlowInput";
@@ -10,10 +10,10 @@ import GlowCard from "@/components/ui/GlowCard";
 import { GlowModal } from "@/components/ui/GlowCard";
 import { useAppContext } from "@/context/AppContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
+import { useAuth } from "@/context/AuthContext";
 import { getExerciseDisplayName, getExerciseSearchText } from "@/lib/exercise-name";
 import {
   DIFFICULTY_LEVELS,
-  EXERCISE_TYPES,
   TARGET_GROUPS,
   getDifficultyColor,
   getDifficultyGlow,
@@ -41,14 +41,17 @@ function ExercisesSidebar({
   setFilterDifficulty,
   filterType,
   setFilterType,
+  availableTypes,
   total,
-  isMobile,
   exercises: _exercises,
   favouriteIds,
   onToggleFavourite: _onToggleFavourite,
   filterFavourites,
   setFilterFavourites,
   onDismissSidebar,
+  onUploadProgression,
+  onRemoveAllProgressions,
+  progressionCount,
 }: {
   onAdd: () => void;
   onSearch: (term: string) => void;
@@ -57,125 +60,241 @@ function ExercisesSidebar({
   setFilterDifficulty: (v: string) => void;
   filterType: string;
   setFilterType: (v: string) => void;
+  availableTypes: string[];
   total: number;
-  isMobile: boolean;
   exercises: Exercise[];
   favouriteIds: Set<string>;
   onToggleFavourite: (id: string) => void;
   filterFavourites: boolean;
   setFilterFavourites: (v: boolean) => void;
   onDismissSidebar: () => void;
+  onUploadProgression: () => void;
+  onRemoveAllProgressions: () => void;
+  progressionCount: number;
 }) {
+  const [showFilters, setShowFilters] = useState(true);
+  const [sortMode, setSortMode] = useState<string>(() => {
+    if (typeof window === "undefined") return "a-z";
+    try { return localStorage.getItem("cultivateos-exercises-sidebar-sort") || "a-z"; } catch { return "a-z"; }
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem("cultivateos-exercises-sidebar-sort", sortMode); } catch {}
+  }, [sortMode]);
+
+  const activeFiltersCount = (filterDifficulty ? 1 : 0) + (filterType ? 1 : 0) + (filterFavourites ? 1 : 0);
+
   return (
-    <div className="space-y-3">
-      <GlowButton variant="jade" size="sm" glow className="w-full" onClick={onAdd}>
-        ✦ Add Technique
-      </GlowButton>
+    <div className="h-full flex flex-col">
+      {/* ── Toolbar ── */}
+      <div className="px-3 pt-2.5 pb-2 shrink-0 space-y-2">
+        {/* Search */}
+        <div className="relative">
+          <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-mist-dark pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Search techniques..."
+            value={searchTerm}
+            onChange={(e) => {
+              onSearch(e.target.value);
+            }}
+            onKeyDown={(e: React.KeyboardEvent) => {
+              if (e.key === "Enter") onDismissSidebar();
+            }}
+            className="w-full bg-ink-dark/80 border border-ink-light/50 rounded-lg pl-8 pr-8 py-1.5 text-[11px] text-cloud-white placeholder:text-mist-dark/70 outline-none transition-all duration-200 focus:border-jade-glow/60 focus:bg-ink-dark"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => onSearch("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-mist-dark hover:text-cloud-white transition-colors"
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
 
-      <div className="pt-4 border-t border-ink-light">
-        <GlowInput
-          placeholder="Search techniques..."
-          value={searchTerm}
-          onChange={(e) => onSearch(e.target.value)}
-          onKeyDown={(e: React.KeyboardEvent) => {
-            if (e.key === "Enter") onDismissSidebar();
-          }}
-        />
+        {/* Action bar */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={onAdd}
+            className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium border border-jade/30 text-jade-light bg-jade-deep/15 hover:bg-jade-deep/30 hover:border-jade/50 transition-all duration-150"
+            title="Add new technique"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+            Add
+          </button>
+          <button
+            onClick={onUploadProgression}
+            className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium border border-jade/30 text-jade-light bg-jade-deep/15 hover:bg-jade-deep/30 hover:border-jade/50 transition-all duration-150"
+            title="Upload progression JSON file"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5-5m0 0l5 5m-5-5v12" /></svg>
+            Upload
+          </button>
+          {progressionCount > 0 && (
+            <button
+              onClick={onRemoveAllProgressions}
+              className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium border border-crimson/20 text-crimson-light/70 hover:bg-crimson-deep/15 hover:border-crimson/40 hover:text-crimson-light transition-all duration-150"
+              title="Remove all progressions"
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            </button>
+          )}
+
+          <div className="flex-1" />
+
+          <button
+            onClick={() => setFilterFavourites(!filterFavourites)}
+            className={`w-7 h-7 rounded-md flex items-center justify-center text-[11px] border transition-all duration-150 ${
+              filterFavourites
+                ? 'bg-gold-dim/20 border-gold-dim/50 text-gold'
+                : 'border-ink-light/40 text-mist-dark hover:text-mist-light hover:border-ink-light/60'
+            }`}
+            title={filterFavourites ? "Show all" : `Favourites${favouriteIds.size > 0 ? ` (${favouriteIds.size})` : ""}`}
+          >
+            {filterFavourites ? "★" : "☆"}
+          </button>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`w-7 h-7 rounded-md flex items-center justify-center border transition-all duration-150 ${
+              showFilters
+                ? 'bg-jade-deep/25 border-jade/40 text-jade-glow'
+                : 'border-ink-light/40 text-mist-dark hover:text-mist-light hover:border-ink-light/60'
+            }`}
+            title={showFilters ? "Hide filters" : "Show filters"}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
+          </button>
+        </div>
       </div>
 
-      {/* Favourites filter — always visible */}
-      <div className="pt-2">
-        <GlowButton
-          variant={filterFavourites ? "gold" : "ghost"}
-          size="sm"
-          className="w-full text-xs"
-          onClick={() => setFilterFavourites(!filterFavourites)}
-        >
-          ★ Favourites{favouriteIds.size > 0 ? ` (${favouriteIds.size})` : ""}
-        </GlowButton>
-      </div>
+      {/* ── Collapsible Filters + Sort ── */}
+      <AnimatePresence initial={false}>
+        {showFilters && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+            className="overflow-hidden shrink-0"
+          >
+            <div className="px-3 pb-2 space-y-2">
+              {/* Realm / Difficulty */}
+              <div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="text-[9px] text-mist-dark/80 uppercase tracking-widest font-medium">Realm</span>
+                  {filterDifficulty && (
+                    <button onClick={() => setFilterDifficulty("")} className="text-[9px] text-jade-glow/70 hover:text-jade-glow transition-colors">clear</button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  <button
+                    onClick={() => setFilterDifficulty("")}
+                    className={`text-[10px] px-2 py-0.5 rounded-md transition-all duration-150 border ${
+                      !filterDifficulty
+                        ? "bg-jade-deep/40 text-jade-glow border-jade/40 shadow-[0_0_6px_rgba(58,143,143,0.15)]"
+                        : "bg-transparent text-mist-dark border-ink-light/30 hover:text-mist-light hover:border-ink-light/50"
+                    }`}
+                  >
+                    All
+                  </button>
+                  {DIFFICULTY_LEVELS.map((d) => (
+                    <button
+                      key={d}
+                      onClick={() => setFilterDifficulty(filterDifficulty === d ? "" : d)}
+                      className={`text-[10px] px-2 py-0.5 rounded-md transition-all duration-150 border ${
+                        filterDifficulty === d
+                          ? "bg-jade-deep/40 text-jade-glow border-jade/40 shadow-[0_0_6px_rgba(58,143,143,0.15)]"
+                          : "bg-transparent text-mist-dark border-ink-light/30 hover:text-mist-light hover:border-ink-light/50"
+                      }`}
+                    >
+                      {d.split(" ")[0]}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-      <div className="pt-2 space-y-2">
-        {isMobile ? (
-          <>
-            <GlowSelect
-              label="Difficulty"
-              value={filterDifficulty}
-              onChange={(e) => setFilterDifficulty(e.target.value)}
-              options={[
-                { value: "", label: "All Realms" },
-                ...DIFFICULTY_LEVELS.map((d) => ({ value: d, label: d })),
-              ]}
-            />
-            <GlowSelect
-              label="Type"
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              options={[
-                { value: "", label: "All Paths" },
-                ...EXERCISE_TYPES.map((t) => ({ value: t, label: t })),
-              ]}
-            />
-          </>
-        ) : (
-          <>
-            <div>
-              <p className="text-xs text-mist-dark uppercase mb-2">Realm</p>
-              <div className="flex flex-wrap gap-1">
-                <GlowButton
-                  variant={filterDifficulty === "" ? "jade" : "ghost"}
-                  size="sm"
-                  className="text-xs"
-                  onClick={() => setFilterDifficulty("")}
-                >
-                  All
-                </GlowButton>
-                {DIFFICULTY_LEVELS.map((d) => (
-                  <GlowButton
-                    key={d}
-                    variant={filterDifficulty === d ? "jade" : "ghost"}
-                    size="sm"
-                    className="text-xs"
-                    onClick={() => setFilterDifficulty(d)}
+              {/* Type */}
+              <div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="text-[9px] text-mist-dark/80 uppercase tracking-widest font-medium">Type</span>
+                  {filterType && (
+                    <button onClick={() => setFilterType("")} className="text-[9px] text-jade-glow/70 hover:text-jade-glow transition-colors">clear</button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  <button
+                    onClick={() => setFilterType("")}
+                    className={`text-[10px] px-2 py-0.5 rounded-md transition-all duration-150 border ${
+                      !filterType
+                        ? "bg-jade-deep/40 text-jade-glow border-jade/40 shadow-[0_0_6px_rgba(58,143,143,0.15)]"
+                        : "bg-transparent text-mist-dark border-ink-light/30 hover:text-mist-light hover:border-ink-light/50"
+                    }`}
                   >
-                    {d.split(" ")[0]}
-                  </GlowButton>
-                ))}
+                    All
+                  </button>
+                  {availableTypes.map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setFilterType(filterType === t ? "" : t)}
+                      className={`text-[10px] px-2 py-0.5 rounded-md transition-all duration-150 border ${
+                        filterType === t
+                          ? "bg-jade-deep/40 text-jade-glow border-jade/40 shadow-[0_0_6px_rgba(58,143,143,0.15)]"
+                          : "bg-transparent text-mist-dark border-ink-light/30 hover:text-mist-light hover:border-ink-light/50"
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Sort */}
+              <div>
+                <span className="text-[9px] text-mist-dark/80 uppercase tracking-widest font-medium block mb-1">Sort By</span>
+                <select
+                  value={sortMode}
+                  onChange={(e) => setSortMode(e.target.value)}
+                  className="w-full bg-ink-dark/80 border border-ink-light/40 rounded-md px-2 py-1 text-[11px] text-cloud-white outline-none transition-all duration-150 focus:border-jade-glow/50 appearance-none cursor-pointer"
+                  style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 6px center', backgroundRepeat: 'no-repeat', backgroundSize: '16px', paddingRight: '28px' }}
+                >
+                  <option value="a-z">A–Z</option>
+                  <option value="z-a">Z–A</option>
+                  <option value="recent">Recent</option>
+                  <option value="difficulty">Difficulty</option>
+                  <option value="favourites">Favourites First</option>
+                </select>
               </div>
             </div>
-            <div>
-              <p className="text-xs text-mist-dark uppercase mb-2">Path</p>
-              <div className="flex flex-wrap gap-1">
-                <GlowButton
-                  variant={filterType === "" ? "jade" : "ghost"}
-                  size="sm"
-                  className="text-xs"
-                  onClick={() => setFilterType("")}
-                >
-                  All
-                </GlowButton>
-                {EXERCISE_TYPES.map((t) => (
-                  <GlowButton
-                    key={t}
-                    variant={filterType === t ? "jade" : "ghost"}
-                    size="sm"
-                    className="text-xs"
-                    onClick={() => setFilterType(t)}
-                  >
-                    {t.split(" ")[0]}
-                  </GlowButton>
-                ))}
-              </div>
-            </div>
-          </>
+          </motion.div>
         )}
+      </AnimatePresence>
+
+      {/* ── Divider with stats ── */}
+      <div className="px-3 py-1.5 border-y border-ink-light/20 bg-ink-dark/30 shrink-0">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-mist-light/90 font-medium">
+              {total} technique{total !== 1 ? "s" : ""}
+            </span>
+            {activeFiltersCount > 0 && (
+              <span className="text-[9px] text-jade-glow/80 bg-jade-deep/20 px-1.5 py-0 rounded-full border border-jade/20">
+                {activeFiltersCount} filter{activeFiltersCount !== 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
+          {favouriteIds.size > 0 && (
+            <span className="text-[10px] text-gold/70 font-medium">★ {favouriteIds.size}</span>
+          )}
+        </div>
       </div>
 
-      <div className="pt-4 border-t border-ink-light">
-        <p className="text-xs text-mist-dark">
-          <span className="text-jade-glow">{total}</span> techniques in library
-        </p>
-      </div>
+      {/* Spacer so content below scrolls cleanly */}
+      <div className="flex-1" />
     </div>
   );
 }
@@ -183,6 +302,7 @@ function ExercisesSidebar({
 export default function ExercisesPage() {
   const { isMobile, setMobileSidebarOpen } = useAppContext();
   const { settings } = useDisplaySettings();
+  const { user } = useAuth();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -196,13 +316,32 @@ export default function ExercisesPage() {
   const [favouriteIds, setFavouriteIds] = useState<Set<string>>(new Set());
   const [filterFavourites, setFilterFavourites] = useState(false);
 
+  // Progression upload state
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showConfirmRemove, setShowConfirmRemove] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const [uploadSuccess, setUploadSuccess] = useState("");
+  const [progressionCount, setProgressionCount] = useState(0);
+  const modalFileInputRef = useRef<HTMLInputElement>(null);
+
+  const userId = user?.id;
+
   // New exercise form
   const [newName, setNewName] = useState("");
   const [newWuxiaName, setNewWuxiaName] = useState("");
   const [newDifficulty, setNewDifficulty] = useState<string>(DIFFICULTY_LEVELS[0]);
-  const [newType, setNewType] = useState<string>(EXERCISE_TYPES[0]);
+  const [newType, setNewType] = useState("");
   const [newStory, setNewStory] = useState("");
   const [newTarget, setNewTarget] = useState("");
+
+  const availableTypes = useMemo(() => {
+    const seen = new Set<string>();
+    for (const ex of exercises) {
+      const t = (ex.type || "").trim();
+      if (t) seen.add(t);
+    }
+    return Array.from(seen).sort((a, b) => a.localeCompare(b));
+  }, [exercises]);
 
   // Load favourites from localStorage
   useEffect(() => {
@@ -285,8 +424,101 @@ export default function ExercisesPage() {
     return matchSearch && matchDifficulty && matchType && matchFavourites;
   });
 
+  // --- Progression upload/delete logic ---
+  const fetchProgressionCount = useCallback(async () => {
+    if (!userId) return;
+    try {
+      const res = await fetch(`/api/progressions?userId=${encodeURIComponent(userId)}`);
+      const data = await res.json();
+      const arr = data.exercises ?? data;
+      setProgressionCount(Array.isArray(arr) ? arr.length : 0);
+    } catch { setProgressionCount(0); }
+  }, [userId]);
+
+  useEffect(() => {
+    fetchProgressionCount();
+  }, [fetchProgressionCount]);
+
+  const processFile = useCallback(async (file: File) => {
+    if (!userId) return;
+    setUploadError("");
+    setUploadSuccess("");
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text);
+      const exercisesArr: Record<string, unknown>[] = Array.isArray(json) ? json : json.exercises;
+      if (!Array.isArray(exercisesArr) || exercisesArr.length === 0) {
+        setUploadError("Invalid format — expected an array of exercises.");
+        return;
+      }
+
+      // 1) Import into Exercise library so they show on this page
+      const libraryPayload = exercisesArr.map((ex) => {
+        const tiers = (ex.progressions || ex.tiers) as { difficulty?: string }[] | undefined;
+        const maxDifficulty = tiers?.length
+          ? tiers[tiers.length - 1]?.difficulty || "Mortal"
+          : (ex.difficulty as string) || "Mortal";
+        return {
+          name: ex.name,
+          wuxiaName: ex.wuxiaName || "",
+          difficulty: maxDifficulty,
+          type: ex.type || "Unified Realm",
+          story: ex.story || "",
+          targetGroup: ex.category || "",
+        };
+      });
+      const libRes = await fetch("/api/exercises/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ exercises: libraryPayload }),
+      });
+      const libData = await libRes.json();
+      if (!libRes.ok) {
+        setUploadError(libData.error || "Library import failed");
+        return;
+      }
+
+      // 2) Import into Progression system for tier tracking
+      const progRes = await fetch("/api/progressions/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, exercises: exercisesArr }),
+      });
+      const progData = await progRes.json();
+      if (!progRes.ok) {
+        setUploadError(progData.error || "Progression import failed (library import succeeded)");
+        return;
+      }
+
+      const imported = libData.imported ?? 0;
+      const skipped = (libData.skipped ?? 0) + (progData.skipped ?? 0);
+      let msg = `Imported ${imported} exercise${imported !== 1 ? "s" : ""}`;
+      if (skipped > 0) msg += ` (${skipped > imported ? Math.ceil(skipped / 2) : skipped} duplicate${skipped !== 1 ? "s" : ""} skipped)`;
+      setUploadSuccess(msg);
+      fetchExercises();
+      fetchProgressionCount();
+      window.dispatchEvent(new Event("progression-exercises-updated"));
+    } catch (err: unknown) {
+      setUploadError(err instanceof Error ? err.message : "Invalid JSON");
+    }
+  }, [userId, fetchExercises, fetchProgressionCount]);
+
+  const handleRemoveAllProgressions = useCallback(async () => {
+    if (!userId) return;
+    try {
+      // Remove progression data
+      await fetch(`/api/progressions?userId=${encodeURIComponent(userId)}`, { method: "DELETE" });
+      // Remove exercise library entries
+      await fetch("/api/exercises", { method: "DELETE" });
+      setProgressionCount(0);
+      setShowConfirmRemove(false);
+      fetchExercises();
+      window.dispatchEvent(new Event("progression-exercises-updated"));
+    } catch (err) { console.error("Failed to remove exercises:", err); }
+  }, [userId, fetchExercises]);
+
   const addExercise = async () => {
-    if (!newName.trim()) return;
+    if (!newName.trim() || !newType.trim()) return;
     try {
       const res = await fetch("/api/exercises", {
         method: "POST",
@@ -313,12 +545,15 @@ export default function ExercisesPage() {
     }
   };
 
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+
   const deleteExercise = async (id: string) => {
     try {
       await fetch(`/api/exercises/${id}`, { method: "DELETE" });
       fetchExercises();
       setShowDetailModal(null);
       setShowConventionalInDetail(false);
+      setShowDeleteConfirm(null);
     } catch (err) {
       console.error("Failed to delete exercise:", err);
     }
@@ -338,14 +573,17 @@ export default function ExercisesPage() {
           setFilterDifficulty={setFilterDifficulty}
           filterType={filterType}
           setFilterType={setFilterType}
+          availableTypes={availableTypes}
           total={exercises.length}
-          isMobile={isMobile}
           exercises={exercises}
           favouriteIds={favouriteIds}
           onToggleFavourite={toggleFavourite}
           filterFavourites={filterFavourites}
           setFilterFavourites={setFilterFavourites}
           onDismissSidebar={() => setMobileSidebarOpen(false)}
+          onUploadProgression={() => { setUploadError(""); setUploadSuccess(""); setShowUploadModal(true); }}
+          onRemoveAllProgressions={() => setShowConfirmRemove(true)}
+          progressionCount={progressionCount}
         />
       }
     >
@@ -419,7 +657,9 @@ export default function ExercisesPage() {
             >
               <GlowCard
                 glow={
-                  exercise.difficulty === "Immortal"
+                  exercise.difficulty === "Heavenly Dao"
+                    ? "gold"
+                    : exercise.difficulty === "Immortal"
                     ? "gold"
                     : exercise.difficulty.includes("Tribulation")
                     ? "crimson"
@@ -515,11 +755,11 @@ export default function ExercisesPage() {
             onChange={(e) => setNewDifficulty(e.target.value)}
             options={DIFFICULTY_LEVELS.map((d) => ({ value: d, label: d }))}
           />
-          <GlowSelect
+          <GlowInput
             label="Path"
+            placeholder="e.g. barbell, machine, cardio..."
             value={newType}
             onChange={(e) => setNewType(e.target.value)}
-            options={EXERCISE_TYPES.map((t) => ({ value: t, label: t }))}
           />
           <GlowSelect
             label="Target Group"
@@ -770,19 +1010,126 @@ export default function ExercisesPage() {
                 className="px-8 sm:px-12 py-5 flex justify-center"
                 style={{ borderTop: `1px solid ${accentColor}15` }}
               >
-                <GlowButton
-                  variant="crimson"
-                  size="sm"
-                  onClick={() => deleteExercise(showDetailModal.id)}
-                  className="font-medium text-xs"
-                  style={{ fontFamily: "'Cinzel', serif" }}
-                >
-                  Remove Technique
-                </GlowButton>
+                {showDeleteConfirm === showDetailModal.id ? (
+                  <div className="flex flex-col items-center gap-3 w-full max-w-xs">
+                    <p className="text-xs text-crimson-light text-center">Are you sure you want to remove this technique? This action cannot be undone.</p>
+                    <div className="flex gap-2 w-full">
+                      <GlowButton
+                        variant="crimson"
+                        size="sm"
+                        onClick={() => deleteExercise(showDetailModal.id)}
+                        className="flex-1 font-medium text-xs"
+                        style={{ fontFamily: "'Cinzel', serif" }}
+                      >
+                        Confirm Remove
+                      </GlowButton>
+                      <GlowButton
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowDeleteConfirm(null)}
+                        className="flex-1 font-medium text-xs"
+                        style={{ fontFamily: "'Cinzel', serif" }}
+                      >
+                        Cancel
+                      </GlowButton>
+                    </div>
+                  </div>
+                ) : (
+                  <GlowButton
+                    variant="crimson"
+                    size="sm"
+                    onClick={() => setShowDeleteConfirm(showDetailModal.id)}
+                    className="font-medium text-xs"
+                    style={{ fontFamily: "'Cinzel', serif" }}
+                  >
+                    Remove Technique
+                  </GlowButton>
+                )}
               </div>
             </div>
           );
         })()}
+      </GlowModal>
+
+      {/* ─── Progression Upload Modal ─── */}
+      <GlowModal
+        isOpen={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        title="Upload Technique Scroll"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-mist-light">
+            Upload a JSON scroll to populate the <span className="text-jade-glow font-medium">Exercise Library</span> and <span className="text-jade-glow font-medium">Progression</span> tracker.
+          </p>
+          <input
+            ref={modalFileInputRef}
+            type="file"
+            accept=".json"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) processFile(file);
+              e.target.value = "";
+            }}
+          />
+          <GlowButton
+            variant="jade"
+            glow
+            className="w-full"
+            onClick={() => modalFileInputRef.current?.click()}
+          >
+            📤 Select JSON File
+          </GlowButton>
+          {uploadError && (
+            <p className="text-xs text-crimson-light bg-crimson-dark/10 border border-crimson-dark/20 rounded px-3 py-2">{uploadError}</p>
+          )}
+          {uploadSuccess && (
+            <p className="text-xs text-jade-glow bg-jade-glow/10 border border-jade-glow/20 rounded px-3 py-2">{uploadSuccess}</p>
+          )}
+          <div className="bg-ink-dark/50 border border-ink-light/20 rounded-lg p-3">
+            <p className="text-[10px] text-mist-dark font-medium uppercase tracking-wider mb-2">Expected Format</p>
+            <pre className="text-[10px] text-mist-mid leading-relaxed overflow-x-auto sidebar-scroll">
+{`{
+  "exercises": [
+    {
+      "name": "Push Up",
+      "category": "Upper Body",
+      "tiers": [
+        {
+          "tier": 1,
+          "variations": [
+            { "name": "Wall Push Up", "reps": "3x10" }
+          ]
+        }
+      ]
+    }
+  ]
+}`}
+            </pre>
+          </div>
+        </div>
+      </GlowModal>
+
+      {/* ─── Remove All Progressions Confirmation ─── */}
+      <GlowModal
+        isOpen={showConfirmRemove}
+        onClose={() => setShowConfirmRemove(false)}
+        title="Purge All Exercises"
+      >
+        <div className="space-y-4 text-center">
+          <p className="text-sm text-crimson-light">
+            This will permanently remove all exercises from the library and <span className="font-bold">{progressionCount}</span> progression exercise{progressionCount !== 1 ? "s" : ""} with all training logs.
+          </p>
+          <p className="text-xs text-mist-dark">This action cannot be undone.</p>
+          <div className="flex gap-3 justify-center pt-2">
+            <GlowButton variant="crimson" glow onClick={handleRemoveAllProgressions}>
+              Purge All
+            </GlowButton>
+            <GlowButton variant="ghost" onClick={() => setShowConfirmRemove(false)}>
+              Cancel
+            </GlowButton>
+          </div>
+        </div>
       </GlowModal>
     </PageLayout>
   );

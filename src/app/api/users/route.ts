@@ -9,7 +9,6 @@ export async function GET() {
         username: true,
         name: true,
         createdAt: true,
-        experience: true,
         _count: {
           select: {
             workouts: true,

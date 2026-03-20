@@ -9,6 +9,7 @@ interface ExerciseUpdate {
   reps2: number | null;
   weight3: number | null;
   reps3: number | null;
+  holdTime: number | null;
   notes: string | null;
 }
 
@@ -96,6 +97,7 @@ export async function POST(req: NextRequest) {
           reps2: update.reps2,
           weight3: update.weight3,
           reps3: update.reps3,
+          holdTime: update.holdTime,
           notes: update.notes,
         },
       })

@@ -30,18 +30,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const validDifficulties = ["mortal", "foundation establishment", "core formation", "nascent soul", "soul splitting", "tribulation transcendence", "immortal"];
+    const validDifficulties = ["mortal", "foundation establishment", "core formation", "nascent soul", "soul splitting", "tribulation transcendence", "immortal", "heavenly dao"];
     if (!validDifficulties.includes(difficulty.toLowerCase())) {
       return NextResponse.json(
         { error: `Difficulty must be one of: ${validDifficulties.join(", ")}` },
-        { status: 400 }
-      );
-    }
-
-    const validTypes = ["upper heaven", "lower realms", "heart meridian", "unified realm"];
-    if (!validTypes.includes(type.toLowerCase())) {
-      return NextResponse.json(
-        { error: `Type must be one of: ${validTypes.join(", ")}` },
         { status: 400 }
       );
     }

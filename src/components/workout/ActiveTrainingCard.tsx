@@ -44,6 +44,7 @@ export default function ActiveTrainingCard({
   const [reps2, setReps2] = useState("");
   const [weight3, setWeight3] = useState("");
   const [reps3, setReps3] = useState("");
+  const [holdTime, setHoldTime] = useState("");
   const [notes, setNotes] = useState("");
   const [showNotes, setShowNotes] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -51,7 +52,7 @@ export default function ActiveTrainingCard({
   const [validationErrors, setValidationErrors] = useState<Record<string, boolean>>({});
   const [showHistory, setShowHistory] = useState(false);
   const [showConventionalName, setShowConventionalName] = useState(false);
-  const [historyData, setHistoryData] = useState<{ id: string; date: string; weight1: number | null; reps1: number | null; weight2: number | null; reps2: number | null; weight3: number | null; reps3: number | null; notes: string | null }[]>([]);
+  const [historyData, setHistoryData] = useState<{ id: string; date: string; weight1: number | null; reps1: number | null; weight2: number | null; reps2: number | null; weight3: number | null; reps3: number | null; holdTime: number | null; notes: string | null }[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
   const difficultyColorClass = getDifficultyColorClass(exercise.difficulty);
@@ -176,6 +177,7 @@ export default function ActiveTrainingCard({
           reps2: reps2 ? parseInt(reps2) : undefined,
           weight3: weight3 ? parseFloat(weight3) : undefined,
           reps3: reps3 ? parseInt(reps3) : undefined,
+          holdTime: holdTime ? parseInt(holdTime) : undefined,
           notes: notes.trim() || undefined,
         }),
       });
@@ -190,6 +192,7 @@ export default function ActiveTrainingCard({
         setReps2("");
         setWeight3("");
         setReps3("");
+        setHoldTime("");
         setNotes("");
         if (!notesAlwaysVisible) setShowNotes(false);
         
@@ -379,6 +382,10 @@ export default function ActiveTrainingCard({
                       <input type="number" placeholder="Reps" value={set.r} onChange={(e) => { set.setR(e.target.value); setValidationErrors(p => ({ ...p, [set.rKey]: false })); }} onWheel={(e) => e.currentTarget.blur()} className={`${inputBaseClass} ${validationErrors[set.rKey] ? inputErrorClass : inputNormalClass} flex-1 min-w-0 ${isCompact ? '!px-1 !py-0.5 !text-[10px]' : '!px-1.5 !py-1 !text-[11px]'}`} min="1" max="500" />
                     </div>
                   ))}
+                  <div className={`flex items-center gap-1 bg-ink-deep/40 rounded-md ${isCompact ? 'px-1.5 py-1' : 'px-2 py-1.5'} shrink-0`}>
+                    <span className={`${isCompact ? 'text-[9px]' : 'text-[10px]'} text-mountain-blue-glow font-semibold shrink-0 uppercase`}>Hold</span>
+                    <input type="number" placeholder="sec" value={holdTime} onChange={(e) => setHoldTime(e.target.value)} onWheel={(e) => e.currentTarget.blur()} className={`${inputBaseClass} ${inputNormalClass} ${isCompact ? '!px-1 !py-0.5 !text-[10px] w-[40px]' : '!px-1.5 !py-1 !text-[11px] w-[50px]'}`} min="0" />
+                  </div>
                   {(isCompact || !(notesAlwaysVisible || showNotes)) && (
                     <GlowButton onClick={handleSubmit} disabled={isSubmitting} variant="jade" size="sm" className={isCompact ? "!px-3 !py-1 !text-[10px] font-semibold shrink-0" : "!px-4 !py-1.5 !text-[11px] font-semibold shrink-0"}>
                       {isSubmitting ? "..." : isCompact ? "✓" : "Record"}
@@ -399,6 +406,10 @@ export default function ActiveTrainingCard({
                       <input type="number" placeholder="Reps" value={set.r} onChange={(e) => { set.setR(e.target.value); setValidationErrors(p => ({ ...p, [set.rKey]: false })); }} onWheel={(e) => e.currentTarget.blur()} className={`${inputBaseClass} ${validationErrors[set.rKey] ? inputErrorClass : inputNormalClass} w-full ${isCompact ? '!px-1 !py-0.5 !text-[10px]' : '!px-1.5 !py-1 !text-[11px]'}`} min="1" max="500" />
                     </div>
                   ))}
+                </div>
+                <div className={`flex items-center gap-1.5 bg-ink-deep/40 rounded-md ${isCompact ? 'px-1.5 py-1' : 'px-2 py-1.5'}`}>
+                  <span className={`${isCompact ? 'text-[9px]' : 'text-[10px]'} text-mountain-blue-glow font-semibold shrink-0 uppercase`}>Hold (sec)</span>
+                  <input type="number" placeholder="sec" value={holdTime} onChange={(e) => setHoldTime(e.target.value)} onWheel={(e) => e.currentTarget.blur()} className={`${inputBaseClass} ${inputNormalClass} flex-1 ${isCompact ? '!px-1 !py-0.5 !text-[10px]' : '!px-1.5 !py-1 !text-[11px]'}`} min="0" />
                 </div>
                 <GlowButton onClick={handleSubmit} disabled={isSubmitting} variant="jade" size="sm" className={isCompact ? "w-full !py-1 !text-[10px] font-semibold" : "w-full !py-1.5 !text-[11px] font-semibold"}>
                   {isSubmitting ? "..." : isCompact ? "✓ Record" : "⚔ Record Session"}
@@ -454,7 +465,7 @@ export default function ActiveTrainingCard({
                     ) : (
                       <div className="max-h-[200px] overflow-y-auto overflow-x-auto sidebar-scroll">
                         <table className="w-full text-[10px] min-w-[400px]">
-                          <thead className="sticky top-0 bg-ink-dark"><tr className="border-b border-ink-light/40 text-mist-dark"><th className="text-left py-1 px-1 font-semibold">Date</th>{(settings.columnOrderGrouped ? ["W1","W2","W3","R1","R2","R3"] : ["W1","R1","W2","R2","W3","R3"]).map(h => <th key={h} className="text-center py-1 px-0.5 font-semibold" style={(settings.columnColorsEnabled ?? true) && h.startsWith('W') ? { color: 'var(--col-weight)' } : (settings.columnColorsEnabled ?? true) && h.startsWith('R') ? { color: 'var(--col-reps)' } : undefined}>{h}</th>)}<th className="text-left py-1 px-1 font-semibold">Notes</th></tr></thead>
+                          <thead className="sticky top-0 bg-ink-dark"><tr className="border-b border-ink-light/40 text-mist-dark"><th className="text-left py-1 px-1 font-semibold">Date</th>{(settings.columnOrderGrouped ? ["W1","W2","W3","R1","R2","R3"] : ["W1","R1","W2","R2","W3","R3"]).map(h => <th key={h} className="text-center py-1 px-0.5 font-semibold" style={(settings.columnColorsEnabled ?? true) && h.startsWith('W') ? { color: 'var(--col-weight)' } : (settings.columnColorsEnabled ?? true) && h.startsWith('R') ? { color: 'var(--col-reps)' } : undefined}>{h}</th>)}<th className="text-center py-1 px-0.5 font-semibold" style={{ color: 'var(--mountain-blue-glow, #5b9bd5)' }}>Hold</th><th className="text-left py-1 px-1 font-semibold">Notes</th></tr></thead>
                           <tbody>
                             {historyData.map((entry) => {
                               const colTypes = settings.columnOrderGrouped
@@ -467,6 +478,7 @@ export default function ActiveTrainingCard({
                               <tr key={entry.id} className="border-b border-ink-light/20 hover:bg-ink-mid/10">
                                 <td className="py-1 px-1 text-mist-light whitespace-nowrap">{formatDateWithPreference(new Date(entry.date), settings.dateFormat || "dd-mmm-yyyy")}</td>
                                 {fields.map((v, i) => <td key={i} className="py-1 px-0.5 text-center text-cloud-white" style={(settings.columnColorsEnabled ?? true) && colTypes[i] === 'weight' ? { backgroundColor: 'var(--col-weight-bg)' } : (settings.columnColorsEnabled ?? true) && colTypes[i] === 'reps' ? { backgroundColor: 'var(--col-reps-bg)' } : undefined}>{v != null ? v : "—"}</td>)}
+                                <td className="py-1 px-0.5 text-center text-mountain-blue-glow">{entry.holdTime != null ? `${entry.holdTime}s` : "—"}</td>
                                 <td className="py-1 px-1 text-mist-dark truncate max-w-[80px]" title={entry.notes || ""}>{entry.notes || "—"}</td>
                               </tr>
                               );
@@ -648,6 +660,10 @@ export default function ActiveTrainingCard({
                     />
                   </div>
                 ))}
+                <div className={`flex items-center gap-1 bg-ink-deep/40 rounded-md ${isCompact ? 'px-1.5 py-1' : 'px-2 py-1.5'} shrink-0`}>
+                  <span className={`${isCompact ? 'text-[9px]' : 'text-[10px]'} text-mountain-blue-glow font-semibold shrink-0 uppercase`}>Hold</span>
+                  <input type="number" placeholder="sec" value={holdTime} onChange={(e) => setHoldTime(e.target.value)} onWheel={(e) => e.currentTarget.blur()} className={`${inputBaseClass} ${inputNormalClass} ${isCompact ? '!px-1 !py-0.5 !text-[10px] w-[40px]' : '!px-1.5 !py-1 !text-[11px] w-[50px]'}`} min="0" />
+                </div>
 
                 {/* Record button inline when notes are hidden */}
                 {(isCompact || !(notesAlwaysVisible || showNotes)) && (
@@ -696,6 +712,10 @@ export default function ActiveTrainingCard({
                     />
                   </div>
                 ))}
+              </div>
+              <div className={`flex items-center gap-1.5 bg-ink-deep/40 rounded-md ${isCompact ? 'px-1.5 py-1' : 'px-2 py-1.5'}`}>
+                <span className={`${isCompact ? 'text-[9px]' : 'text-[10px]'} text-mountain-blue-glow font-semibold shrink-0 uppercase`}>Hold (sec)</span>
+                <input type="number" placeholder="sec" value={holdTime} onChange={(e) => setHoldTime(e.target.value)} onWheel={(e) => e.currentTarget.blur()} className={`${inputBaseClass} ${inputNormalClass} flex-1 ${isCompact ? '!px-1 !py-0.5 !text-[10px]' : '!px-1.5 !py-1 !text-[11px]'}`} min="0" />
               </div>
               {/* Mobile record button */}
               <GlowButton
@@ -817,6 +837,7 @@ export default function ActiveTrainingCard({
                                 }
                               >{h}</th>
                             ))}
+                            <th className="text-center py-1 px-0.5 font-semibold" style={{ color: 'var(--mountain-blue-glow, #5b9bd5)' }}>Hold</th>
                             <th className="text-left py-1 px-1 font-semibold">Notes</th>
                           </tr>
                         </thead>
@@ -846,6 +867,7 @@ export default function ActiveTrainingCard({
                                   }
                                 >{v != null ? v : "—"}</td>
                               ))}
+                              <td className="py-1 px-0.5 text-center text-mountain-blue-glow">{entry.holdTime != null ? `${entry.holdTime}s` : "—"}</td>
                               <td className="py-1 px-1 text-mist-dark truncate max-w-[80px]" title={entry.notes || ""}>
                                 {entry.notes || "—"}
                               </td>

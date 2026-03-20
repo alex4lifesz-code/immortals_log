@@ -19,6 +19,7 @@ const DIFFICULTY_CSS_VAR_MAP: Record<string, { colorVar: string; glowVar: string
   "Soul Splitting": { colorVar: "--difficulty-pink", glowVar: "--glow-difficulty-pink", textColor: "text-pink-400" },
   "Tribulation Transcendence": { colorVar: "--difficulty-amber", glowVar: "--glow-difficulty-amber", textColor: "text-yellow-300" },
   "Immortal": { colorVar: "--difficulty-light-pink", glowVar: "--glow-difficulty-light-pink", textColor: "text-pink-300" },
+  "Heavenly Dao": { colorVar: "--difficulty-cyan", glowVar: "--glow-difficulty-cyan", textColor: "text-cyan-300" },
 };
 
 /** Fallback values (match :root defaults) */
@@ -30,6 +31,7 @@ const FALLBACK_STYLES: Record<string, DifficultyStyle> = {
   "Soul Splitting": { textColor: "text-pink-400", glowColor: "#f472b6", glowShadow: "0 0 12px rgba(244, 114, 182, 0.4), inset 0 0 12px rgba(244, 114, 182, 0.1)" },
   "Tribulation Transcendence": { textColor: "text-yellow-300", glowColor: "#fbbf24", glowShadow: "0 0 12px rgba(251, 191, 36, 0.5), inset 0 0 12px rgba(251, 191, 36, 0.15)" },
   "Immortal": { textColor: "text-pink-300", glowColor: "#f9a8d4", glowShadow: "0 0 12px rgba(249, 168, 212, 0.4), inset 0 0 12px rgba(249, 168, 212, 0.1)" },
+  "Heavenly Dao": { textColor: "text-cyan-300", glowColor: "#67e8f9", glowShadow: "0 0 12px rgba(103, 232, 249, 0.4), inset 0 0 12px rgba(103, 232, 249, 0.1)" },
 };
 
 function getCSSVar(varName: string): string {
@@ -106,6 +108,7 @@ export function getAbbreviatedDifficulty(difficulty: string): string {
     "Soul Splitting": "SS",
     "Tribulation Transcendence": "TT",
     "Immortal": "I",
+    "Heavenly Dao": "HD",
   };
   return abbr[difficulty] || "?";
 }

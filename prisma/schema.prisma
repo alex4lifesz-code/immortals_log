@@ -15,7 +15,6 @@ model User {
   password  String
   name      String
   role      String   @default("user")
-  experience Int     @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -71,7 +70,6 @@ model Workout {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name      String
   date      DateTime @default(now())
-  totalXP   Int      @default(0)
   notes     String?
   targetGroups String? // Auto-assigned comma-separated muscle groups derived from exercises
   createdAt DateTime @default(now())
@@ -94,6 +92,7 @@ model SimplifiedWorkoutExercise {
   reps2      Int?
   weight3    Float?
   reps3      Int?
+  holdTime   Int?
   notes      String?
   order      Int      @default(0)
   createdAt  DateTime @default(now())
@@ -134,4 +133,112 @@ model CheckInNote {
 
   @@unique([date, userId])
   @@index([userId])
+}
+
+// ── Progression Module ──
+
+model ProgressionExercise {
+  id              String   @id @default(cuid())
+  name            String
+  wuxiaName       String   @default("")
+  difficulty      String   @default("")
+  type            String   @default("")
+  story           String   @default("")
+  tips            String   @default("")   // JSON array stored as string
+  category        String
+  equipmentType   String                  // e.g. "bar", "floor", "rings"
+  bodyweight      Boolean  @default(true)
+  weighted        Boolean  @default(false)
+  rings           Boolean  @default(false)
+  primaryMuscles  String                  // comma-separated
+  secondaryMuscles String  @default("")   // comma-separated
+  assignedDays    String   @default("")   // Comma-separated list of days: "0,1,2" for Sun,Mon,Tue
+  createdAt       DateTime @default(now())
+  userId          String
+
+  tiers      ProgressionTier[]
+  variations ProgressionVariation[]
+  modifiers  ProgressionModifier[]
+  userProgress UserProgressionLevel[]
+
+  @@index([userId])
+}
+
+model ProgressionTier {
+  id            String   @id @default(cuid())
+  exerciseId    String
+  exercise      ProgressionExercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  level         Int
+  name          String
+  wuxiaName     String   @default("")
+  difficulty    String   @default("")
+  description   String   @default("")
+  targetHold    Int?                      // target hold time in seconds
+  targetReps    Int?                      // target reps if applicable
+
+  @@index([exerciseId])
+}
+
+model ProgressionVariation {
+  id            String   @id @default(cuid())
+  exerciseId    String
+  exercise      ProgressionExercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  name          String
+  wuxiaName     String   @default("")
+  difficulty    String   @default("")
+  description   String   @default("")
+
+  @@index([exerciseId])
+}
+
+model ProgressionModifier {
+  id                String   @id @default(cuid())
+  exerciseId        String
+  exercise          ProgressionExercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  type              String              // "rings" | "weighted"
+  available         Boolean  @default(false)
+  difficultyMod     Float    @default(0) // e.g. +0.5 difficulty bump
+  notes             String   @default("")
+
+  @@index([exerciseId])
+}
+
+model UserProgressionLevel {
+  id            String   @id @default(cuid())
+  userId        String
+  exerciseId    String
+  exercise      ProgressionExercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  currentLevel  Int      @default(1)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  logs ProgressionLog[]
+
+  @@unique([userId, exerciseId])
+  @@index([userId])
+  @@index([exerciseId])
+}
+
+model ProgressionLog {
+  id                  String   @id @default(cuid())
+  userProgressionId   String
+  userProgression     UserProgressionLevel @relation(fields: [userProgressionId], references: [id], onDelete: Cascade)
+  level               Int
+  weight1             Float?
+  reps1               Int?
+  weight2             Float?
+  reps2               Int?
+  weight3             Float?
+  reps3               Int?
+  holdTime            Int?      // seconds achieved (set 1)
+  holdTime2           Int?      // seconds achieved (set 2)
+  holdTime3           Int?      // seconds achieved (set 3)
+  reps                Int?      // legacy single reps field
+  modifier            String?   // selected modifier type (e.g. "rings", "weighted")
+  variant             String?   // selected variation name
+  notes               String?
+  completed           Boolean   @default(false)  // marked level as completed
+  createdAt           DateTime  @default(now())
+
+  @@index([userProgressionId])
 }

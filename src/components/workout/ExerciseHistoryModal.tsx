@@ -23,6 +23,7 @@ interface HistoryEntry {
   reps2: number | null;
   weight3: number | null;
   reps3: number | null;
+  holdTime: number | null;
   notes: string | null;
 }
 
@@ -80,6 +81,7 @@ export default function ExerciseHistoryModal({ exerciseId, exerciseName, isOpen,
                     }
                   >{h}</th>
                 ))}
+                <th className="text-center py-1.5 px-1 font-semibold" style={{ color: 'var(--mountain-blue-glow, #5b9bd5)' }}>Hold</th>
                 <th className="text-left py-1.5 px-1.5 font-semibold">Notes</th>
               </tr>
             </thead>
@@ -109,6 +111,7 @@ export default function ExerciseHistoryModal({ exerciseId, exerciseName, isOpen,
                       }
                     >{v != null ? v : "—"}</td>
                   ))}
+                  <td className="py-1.5 px-1 text-center text-mountain-blue-glow">{entry.holdTime != null ? `${entry.holdTime}s` : "—"}</td>
                   <td className="py-1.5 px-1.5 text-mist-dark truncate max-w-[100px]" title={entry.notes || ""}>{entry.notes || "—"}</td>
                 </tr>
                 );

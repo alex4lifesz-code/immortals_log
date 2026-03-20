@@ -13,12 +13,11 @@ function LeftSidebar() {
   const { getSortedNavItems, collapsed, isMobile, reorderNavItems } = useAppContext();
   const { logout, user } = useAuth();
   const { settings } = useDisplaySettings();
-  const gamificationVisible = settings.gamificationVisible ?? true;
   const terminologyMode = settings.terminologyMode ?? "fantasy";
   const router = useRouter();
   const pathname = usePathname();
   const isAdmin = user?.role === "admin";
-  const items = getSortedNavItems().filter(item => (gamificationVisible || (item.id !== "progress" && item.id !== "community" && item.id !== "history")) && (item.id !== "admin" || isAdmin));
+  const items = getSortedNavItems().filter(item => (item.id !== "admin" || isAdmin));
   const [isDragging, setIsDragging] = useState(false);
 
   // Hide on mobile or when collapsed to reduce visual noise

@@ -5,12 +5,10 @@ import { useAppContext } from "@/context/AppContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { useAuth } from "@/context/AuthContext";
 import { t } from "@/lib/terminology";
-import { getCurrentRealm, getExperiencePercentage } from "@/lib/experience";
 import PresetSlots from "@/components/ui/PresetSlots";
 import { memo, useState, useEffect, useCallback, useRef } from "react";
 
 interface QuickStats {
-  xp: number;
   todaySessions: number;
   todayExercises: number;
   recentWorkouts: { name: string; date: string }[];
@@ -21,10 +19,9 @@ function RightPanel() {
   const { settings, updateSettings } = useDisplaySettings();
   const { user } = useAuth();
   const visible = settings.rightPanelVisible;
-  const gamificationVisible = settings.gamificationVisible ?? true;
   const terminologyMode = settings.terminologyMode ?? "fantasy";
 
-  const [stats, setStats] = useState<QuickStats>({ xp: 0, todaySessions: 0, todayExercises: 0, recentWorkouts: [] });
+  const [stats, setStats] = useState<QuickStats>({ todaySessions: 0, todayExercises: 0, recentWorkouts: [] });
   const abortRef = useRef<AbortController | null>(null);
 
   const fetchStats = useCallback(async () => {
@@ -33,19 +30,14 @@ function RightPanel() {
     const controller = new AbortController();
     abortRef.current = controller;
     try {
-      const [expRes, workoutRes] = await Promise.all([
-        fetch(`/api/users/experience?userId=${encodeURIComponent(user.id)}`, { signal: controller.signal }),
-        fetch(`/api/workouts?userId=${encodeURIComponent(user.id)}`, { signal: controller.signal }),
-      ]);
-      const [expData, workoutData] = await Promise.all([expRes.json(), workoutRes.json()]);
-      const userExp = expData.user?.experience || 0;
+      const workoutRes = await fetch(`/api/workouts?userId=${encodeURIComponent(user.id)}`, { signal: controller.signal });
+      const workoutData = await workoutRes.json();
       const workouts: { name: string; date: string }[] = (workoutData.workouts || []);
       const todayStr = new Date().toISOString().split("T")[0];
       const todayWorkouts = workouts.filter(w => w.date && w.date.split("T")[0] === todayStr);
       setStats({
-        xp: userExp,
         todaySessions: todayWorkouts.length,
-        todayExercises: todayWorkouts.length, // Each workout is one exercise session
+        todayExercises: todayWorkouts.length,
         recentWorkouts: workouts.slice(0, 3).map(w => ({ name: w.name, date: w.date })),
       });
     } catch (err) {
@@ -54,7 +46,6 @@ function RightPanel() {
   }, [user]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- async data fetch sets state in callback
     fetchStats();
     const interval = setInterval(fetchStats, 120000);
     return () => {
@@ -63,17 +54,11 @@ function RightPanel() {
     };
   }, [fetchStats]);
 
-  // Hide entire panel when gamification is disabled
-  if (!gamificationVisible) return null;
-
   // On mobile, the Quick View panel is handled by PageLayout slide-in
   if (isMobile) return null;
 
   // Hide when nav collapsed on desktop (no room)
   if (collapsed && !isMobile) return null;
-
-  const realm = getCurrentRealm(stats.xp);
-  const realmProgress = getExperiencePercentage(stats.xp);
 
   return (
     <div className="relative flex shrink-0">
@@ -121,27 +106,6 @@ function RightPanel() {
                       <span className="text-mist-light">Exercises</span>
                       <span className="text-cloud-white">{stats.todayExercises}</span>
                     </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-mist-light">Total XP</span>
-                      <span className="text-cloud-white">{stats.xp.toLocaleString()}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Cultivation Level */}
-                <div className="ink-border rounded-lg p-3 bg-ink-dark">
-                  <h3 className="text-xs text-gold mb-2">{t("Cultivation Realm", terminologyMode)}</h3>
-                  <div className="text-center py-2">
-                    <span className="text-lg text-gold-glow animate-glow-pulse">{realm.name}</span>
-                    <div className="mt-2 w-full bg-ink-mid rounded-full h-1.5">
-                      <div
-                        className="bg-jade-glow h-1.5 rounded-full transition-all"
-                        style={{ width: `${realmProgress}%` }}
-                      />
-                    </div>
-                    <p className="text-[10px] text-mist-dark mt-1">
-                      {realmProgress}% progress
-                    </p>
                   </div>
                 </div>
 

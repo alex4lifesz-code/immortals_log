@@ -35,6 +35,7 @@ const CULTIVATION_COLOURS = [
   { level: "Soul Splitting", color: "#ec4899", label: "Soul Splitting" },
   { level: "Tribulation Transcendence", color: "#c4a84a", label: "Tribulation" },
   { level: "Immortal", color: "#f9a8d4", label: "Immortal" },
+  { level: "Heavenly Dao", color: "#67e8f9", label: "Heavenly Dao" },
 ];
 
 // Terminology comparison pairs for the terminology config page
@@ -55,7 +56,7 @@ interface SetupWizardProps {
   onComplete: () => void;
 }
 
-const TOTAL_PAGES = 8;
+const TOTAL_PAGES = 7;
 
 export default function SetupWizard({ onComplete }: SetupWizardProps) {
   const [page, setPage] = useState(0);
@@ -436,82 +437,6 @@ export default function SetupWizard({ onComplete }: SetupWizardProps) {
             )}
 
             {page === 4 && (
-              <WizardPage key="experience" title="Experience & Progression" subtitle="Configure gamification and XP features">
-                <div className="space-y-4">
-                  <p className="text-[10px] text-mist-dark">
-                    The application includes an experience point (XP) system with cultivation realms. 
-                    You earn XP by completing workouts and checking in. Toggle this feature to show or hide all gamification content.
-                  </p>
-
-                  {/* Toggle with clear visual feedback */}
-                  <div className="p-4 rounded-lg border border-ink-light/30 bg-ink-dark/50">
-                    <div className="flex items-center justify-between gap-3 mb-3">
-                      <div>
-                        <p className="text-[12px] text-mist-light font-semibold">Experience &amp; Progression</p>
-                        <p className="text-[10px] text-mist-dark">Show XP, realms, and gamification features</p>
-                      </div>
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={settings.gamificationVisible ?? true}
-                        onClick={() => updateSettings({ gamificationVisible: !(settings.gamificationVisible ?? true) })}
-                        className={`relative shrink-0 w-10 h-[22px] rounded-full transition-colors duration-300 ${(settings.gamificationVisible ?? true) ? "bg-jade-glow" : "bg-ink-light"}`}
-                      >
-                        <span className={`absolute top-[3px] left-[3px] w-[16px] h-[16px] rounded-full bg-cloud-white shadow transition-transform duration-300 ${(settings.gamificationVisible ?? true) ? "translate-x-[18px]" : "translate-x-0"}`} />
-                      </button>
-                    </div>
-
-                    {/* State indicator with clear feedback */}
-                    <motion.div
-                      key={String(settings.gamificationVisible ?? true)}
-                      initial={{ opacity: 0, y: 4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-md border transition-all ${
-                        (settings.gamificationVisible ?? true)
-                          ? "border-jade-glow/30 bg-jade-deep/20"
-                          : "border-ink-light/30 bg-ink-dark/30"
-                      }`}
-                    >
-                      <span className="text-base">
-                        {(settings.gamificationVisible ?? true) ? "✨" : "🔇"}
-                      </span>
-                      <div>
-                        <p className={`text-[11px] font-medium ${(settings.gamificationVisible ?? true) ? "text-jade-glow" : "text-mist-dark"}`}>
-                          {(settings.gamificationVisible ?? true) ? "Enabled — XP, realms, and progression visible" : "Disabled — All gamification content hidden"}
-                        </p>
-                        <p className="text-[9px] text-mist-dark mt-0.5">
-                          {(settings.gamificationVisible ?? true)
-                            ? "Top bar shows XP, streak, and realm info. Quick View panel visible."
-                            : "Top bar, Quick View, and realm displays are hidden throughout the app."}
-                        </p>
-                      </div>
-                    </motion.div>
-                  </div>
-
-                  {/* Preview of what's shown/hidden */}
-                  <div className="p-3 rounded-lg border border-ink-light/30 bg-ink-dark/50">
-                    <p className="text-[9px] text-mist-dark uppercase tracking-wider mb-2">Preview</p>
-                    <div className={`space-y-1.5 transition-opacity ${(settings.gamificationVisible ?? true) ? "opacity-100" : "opacity-30"}`}>
-                      <div className="flex items-center gap-2 text-[10px]">
-                        <span>⚡</span>
-                        <span className="text-mist-light">150 XP</span>
-                        <span className="text-mist-dark">•</span>
-                        <span className="text-jade-glow">Foundation Establishment</span>
-                      </div>
-                      <div className="w-full h-1.5 rounded-full bg-ink-dark overflow-hidden">
-                        <div className="h-full rounded-full bg-jade-glow/60 w-3/5" />
-                      </div>
-                      <p className="text-[9px] text-mist-dark">50 XP to next realm</p>
-                    </div>
-                    {!(settings.gamificationVisible ?? true) && (
-                      <p className="text-[9px] text-mist-dark text-center mt-2 italic">Content hidden when disabled</p>
-                    )}
-                  </div>
-                </div>
-              </WizardPage>
-            )}
-
-            {page === 5 && (
               <WizardPage key="terminology" title="Terminology Mode" subtitle="Choose your preferred interface language style">
                 <div className="space-y-4">
                   <p className="text-[10px] text-mist-dark">
@@ -577,7 +502,7 @@ export default function SetupWizard({ onComplete }: SetupWizardProps) {
               </WizardPage>
             )}
 
-            {page === 6 && (
+            {page === 5 && (
               <WizardPage key="layout" title="Layout & Preferences" subtitle="Final layout configuration options">
                 <div className="space-y-4">
                   {/* Sidebar position */}
@@ -634,7 +559,7 @@ export default function SetupWizard({ onComplete }: SetupWizardProps) {
               </WizardPage>
             )}
 
-            {page === 7 && (
+            {page === 6 && (
               <WizardPage key="complete" title="Setup Complete" subtitle="Your cultivation path is prepared">
                 <div className="space-y-4">
                   <div className="text-center py-2">

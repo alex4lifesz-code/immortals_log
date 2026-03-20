@@ -21,6 +21,7 @@ interface EditingExercise {
   reps2: number | null;
   weight3: number | null;
   reps3: number | null;
+  holdTime: number | null;
   notes: string | null;
 }
 
@@ -28,7 +29,6 @@ interface WorkoutSession {
   id: string;
   name: string;
   date: string;
-  totalXP: number;
   targetGroups?: string | null;
   simplifiedExercises: {
     id: string;
@@ -38,6 +38,7 @@ interface WorkoutSession {
     reps2: number | null;
     weight3: number | null;
     reps3: number | null;
+    holdTime: number | null;
     notes: string | null;
     exercise: {
       id: string;
@@ -60,6 +61,7 @@ const COLUMN_CONFIG_DEFAULT = [
   { key: "reps2", label: "R2", type: "numeric", width: "", editable: true, colType: "reps" },
   { key: "weight3", label: "W3", type: "numeric", width: "", editable: true, colType: "weight" },
   { key: "reps3", label: "R3", type: "numeric", width: "", editable: true, colType: "reps" },
+  { key: "holdTime", label: "Hold (sec)", type: "numeric", width: "", editable: true, colType: "hold" },
   { key: "notes", label: "Notes", type: "text", width: "", editable: true, colType: "" },
 ];
 
@@ -73,6 +75,7 @@ const COLUMN_CONFIG_GROUPED = [
   { key: "reps1", label: "R1", type: "numeric", width: "", editable: true, colType: "reps" },
   { key: "reps2", label: "R2", type: "numeric", width: "", editable: true, colType: "reps" },
   { key: "reps3", label: "R3", type: "numeric", width: "", editable: true, colType: "reps" },
+  { key: "holdTime", label: "Hold (sec)", type: "numeric", width: "", editable: true, colType: "hold" },
   { key: "notes", label: "Notes", type: "text", width: "", editable: true, colType: "" },
 ];
 
@@ -228,6 +231,7 @@ export default function RecentSessionsDisplay({ refreshTrigger }: RecentSessions
             reps2: exercise.reps2,
             weight3: exercise.weight3,
             reps3: exercise.reps3,
+            holdTime: exercise.holdTime,
             notes: exercise.notes,
           };
         });
@@ -307,6 +311,7 @@ export default function RecentSessionsDisplay({ refreshTrigger }: RecentSessions
           reps2: data.reps2,
           weight3: data.weight3,
           reps3: data.reps3,
+          holdTime: data.holdTime,
           notes: data.notes,
         });
       }
@@ -570,7 +575,9 @@ export default function RecentSessionsDisplay({ refreshTrigger }: RecentSessions
                           ? { color: 'var(--col-weight)' }
                           : settings.columnColorsEnabled && col.colType === 'reps'
                             ? { color: 'var(--col-reps)' }
-                            : undefined
+                            : col.colType === 'hold'
+                              ? { color: 'var(--mountain-blue-glow, #5b9bd5)' }
+                              : undefined
                       }
                     >
                       {col.label}
@@ -700,6 +707,32 @@ export default function RecentSessionsDisplay({ refreshTrigger }: RecentSessions
                               );
                             });
                           })()}
+
+                          {/* HOLD TIME COLUMN */}
+                          {isEditMode && editData ? (
+                            <td className="px-1 py-1.5 text-center align-middle">
+                              <input
+                                type="number"
+                                min="0"
+                                value={editData.holdTime ?? ""}
+                                onChange={(e) =>
+                                  handleEditChange(
+                                    exercise.id,
+                                    "holdTime",
+                                    e.target.value ? parseInt(e.target.value) : null
+                                  )
+                                }
+                                placeholder="—"
+                                className="w-full min-w-[52px] bg-ink-deep border border-jade-glow/30 rounded px-1 py-1 text-cloud-white
+                                           text-center text-xs outline-none transition-all duration-200
+                                           focus:border-jade-glow focus:shadow-[0_0_8px_rgba(58,143,143,0.4)]"
+                              />
+                            </td>
+                          ) : (
+                            <td className="px-1 py-1.5 text-center text-mountain-blue-glow text-xs align-middle">
+                              {exercise.holdTime != null ? `${exercise.holdTime}s` : "—"}
+                            </td>
+                          )}
 
                           {/* NOTES COLUMN - Terminal Position */}
                           {isEditMode && editData ? (

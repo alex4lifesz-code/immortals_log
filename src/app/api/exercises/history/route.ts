@@ -40,6 +40,7 @@ export async function GET(req: NextRequest) {
         reps2: entry.reps2,
         weight3: entry.weight3,
         reps3: entry.reps3,
+        holdTime: entry.holdTime,
         notes: entry.notes,
       })),
     });

@@ -7,7 +7,7 @@ import { getDifficultyColorClass, getDifficultyGlowStyleScaled } from "@/lib/dif
 import { getTypeColor, getDifficultyColor, getDifficultyGlow, getTargetGroupColor, parseDayAssignments } from "@/lib/constants";
 import { DAY_ABBREVIATIONS } from "@/lib/constants";
 import { useDisplaySettings, TechniqueDisplayMode, ActiveCardStyle } from "@/context/DisplaySettingsContext";
-import { getExerciseDisplayName, getExerciseSearchText } from "@/lib/exercise-name";
+import { getExerciseDisplayName, getExerciseSearchText, matchesLooseSearch } from "@/lib/exercise-name";
 
 interface Exercise {
   id: string;
@@ -104,7 +104,7 @@ function TechniqueCard({ exercise, isSelected, onSelect, delay, displayMode, com
           )}
           {isScrollStyle && <span className="text-sm opacity-80 shrink-0">{typeEmoji}</span>}
           {/* Name */}
-          <span className={`text-xs font-normal truncate flex-1 ${showIllumination ? difficultyColorClass : 'text-cloud-white'}`}>
+          <span className={`text-xs font-normal truncate flex-1 ${showIllumination ? difficultyColorClass : 'text-cloud-white'}`} title={displayName}>
             {displayName}
           </span>
           {dsSettings.terminologyMode === "fantasy" && exercise.name && (
@@ -168,7 +168,7 @@ function TechniqueCard({ exercise, isSelected, onSelect, delay, displayMode, com
             <span className="text-lg pt-0.5 opacity-80 shrink-0">{typeEmoji}</span>
             <div className="flex flex-col min-w-0 flex-1">
               <div className="flex items-center gap-1.5 min-w-0">
-                <h3 className={`text-xs font-normal ${showIllumination ? difficultyColorClass : 'text-cloud-white'} truncate leading-snug tracking-wide flex-1`}>
+                <h3 className={`text-xs font-normal ${showIllumination ? difficultyColorClass : 'text-cloud-white'} truncate leading-snug tracking-wide flex-1`} title={displayName}>
                   {displayName}
                 </h3>
                 {dsSettings.terminologyMode === "fantasy" && exercise.name && (
@@ -254,7 +254,7 @@ function TechniqueCard({ exercise, isSelected, onSelect, delay, displayMode, com
       >
         {/* Technique Name */}
         <div className="flex items-center gap-1.5">
-          <div className={`text-xs font-normal ${showIllumination ? difficultyColorClass : 'text-cloud-white'} transition-all duration-200 truncate flex-1`}>
+          <div className={`text-xs font-normal ${showIllumination ? difficultyColorClass : 'text-cloud-white'} transition-all duration-200 truncate flex-1`} title={displayName}>
             {displayName}
           </div>
           {dsSettings.terminologyMode === "fantasy" && exercise.name && (
@@ -346,7 +346,17 @@ export default function TrainingSidebar({
     if (typeof window === "undefined") return false;
     try { return localStorage.getItem("cultivateos-sidebar-compact") === "true"; } catch { return false; }
   });
+  const [filterFavourites, setFilterFavourites] = useState(false);
+  const [favouriteIds, setFavouriteIds] = useState<Set<string>>(new Set());
   const { settings } = useDisplaySettings();
+
+  // Load favourites from localStorage (shared with Technique Scroll)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("cultivateos-favourite-techniques");
+      if (saved) setFavouriteIds(new Set(JSON.parse(saved)));
+    } catch { /* ignore */ }
+  }, []);
 
   // Persist compact state
   useEffect(() => {
@@ -366,13 +376,14 @@ export default function TrainingSidebar({
   }, [exercises]);
 
   const filteredExercises = exercises.filter(exercise => {
+    if (filterFavourites && !favouriteIds.has(exercise.id)) return false;
     if (selectedDayFilter === null) return true;
     if (!exercise.assignedDays || exercise.assignedDays.trim() === "") return false;
     const assignedDays = exercise.assignedDays.split(',').map(d => parseInt(d.trim())).filter(d => !isNaN(d));
     return assignedDays.includes(selectedDayFilter);
   });
 
-  const showEmptyDayAction = selectedDayFilter !== null && filteredExercises.length === 0 && !isLoadingExercises;
+  const showEmptyDayAction = selectedDayFilter !== null && filteredExercises.length === 0 && !isLoadingExercises && !filterFavourites;
 
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -380,7 +391,7 @@ export default function TrainingSidebar({
   // Apply search filter on top of day filter
   const searchFilteredExercises = filteredExercises.filter(exercise => {
     if (!searchQuery.trim()) return true;
-    return getExerciseSearchText(exercise).includes(searchQuery.trim().toLowerCase());
+    return matchesLooseSearch(getExerciseSearchText(exercise), searchQuery);
   });
 
   return (
@@ -427,20 +438,36 @@ export default function TrainingSidebar({
 
       {/* Day Filter — compact controls */}
       <div className="px-2.5 pb-2 border-b border-ink-light/30 shrink-0 space-y-1">
-        {/* "All" meta-filter button */}
-        <button
-          onClick={() => setSelectedDayFilter(null)}
-          className={`
-            w-full py-1 text-[10px] font-semibold rounded-md transition-all duration-200 relative border
-            ${selectedDayFilter === null
-              ? 'bg-jade-deep/60 text-jade-glow border-jade-glow/40 shadow-[inset_0_0_12px_rgba(58,143,143,0.15)]'
-              : 'bg-ink-dark/60 text-mist-dark border-ink-light/40 hover:text-mist-light hover:bg-ink-mid/40'
-            }
-          `}
-        >
-          All Techniques
-          <span className="ml-1 text-[9px] opacity-70">({exercises.length})</span>
-        </button>
+        {/* "All" + Favourites row */}
+        <div className="flex gap-1">
+          <button
+            onClick={() => { setSelectedDayFilter(null); setFilterFavourites(false); }}
+            className={`
+              flex-1 py-1 text-[10px] font-semibold rounded-md transition-all duration-200 relative border
+              ${selectedDayFilter === null && !filterFavourites
+                ? 'bg-jade-deep/60 text-jade-glow border-jade-glow/40 shadow-[inset_0_0_12px_rgba(58,143,143,0.15)]'
+                : 'bg-ink-dark/60 text-mist-dark border-ink-light/40 hover:text-mist-light hover:bg-ink-mid/40'
+              }
+            `}
+          >
+            All Techniques
+            <span className="ml-1 text-[9px] opacity-70">({exercises.length})</span>
+          </button>
+          <button
+            onClick={() => setFilterFavourites(!filterFavourites)}
+            className={`
+              px-2 py-1 text-[10px] font-semibold rounded-md transition-all duration-200 border shrink-0
+              ${filterFavourites
+                ? 'bg-gold-dim/20 text-gold border-gold/40 shadow-[inset_0_0_12px_rgba(212,168,67,0.15)]'
+                : 'bg-ink-dark/60 text-mist-dark border-ink-light/40 hover:text-gold-dim hover:border-gold/30'
+              }
+            `}
+            title={filterFavourites ? 'Show all techniques' : 'Show favourites only'}
+          >
+            {filterFavourites ? '★' : '☆'}
+            {favouriteIds.size > 0 && <span className="ml-0.5 text-[8px] opacity-70">{favouriteIds.size}</span>}
+          </button>
+        </div>
 
         {/* Search input */}
         <div className="relative">

@@ -66,10 +66,43 @@ export interface DisplaySettings {
   recentSessionsDays: number;
   // Column colour differentiation for W/R columns
   columnColorsEnabled: boolean;
-  // Hide all gamification/experience content (XP, realms, progression)
-  gamificationVisible: boolean;
   // Column order: false = W1,R1,W2,R2,W3,R3 (default), true = W1,W2,W3,R1,R2,R3 (grouped)
   columnOrderGrouped: boolean;
+  // ── Progression page settings ──
+  // Progression sidebar display mode
+  progressionSidebarMode: TechniqueDisplayMode;
+  // Progression sidebar visual style variant
+  progressionSidebarStyle: ActiveCardStyle;
+  // Progression sidebar compact mode
+  progressionSidebarCompact: boolean;
+  // Progression sidebar glow intensity (0-100)
+  glowIntensityProgressionSidebar: number;
+  // Progression sidebar lore visibility
+  progressionSidebarLoreVisible: boolean;
+  // Progression sidebar use theme color instead of difficulty color
+  progressionSidebarUseThemeColor: boolean;
+  // Progression sidebar expand tiers mode (true = expandable tiers, false = basic click-to-add)
+  progressionSidebarExpandTiers: boolean;
+  // Progression active card display mode
+  progressionCardMode: TechniqueDisplayMode;
+  // Progression active card visual style variant
+  progressionCardStyle: ActiveCardStyle;
+  // Progression active card compact mode
+  progressionCardCompact: boolean;
+  // Progression active card glow intensity (0-100)
+  glowIntensityProgressionCards: number;
+  // Progression active card lore visibility
+  progressionCardLoreVisible: boolean;
+  // Progression training log display mode
+  progressionLogMode: TechniqueDisplayMode;
+  // Progression training log compact mode
+  progressionLogCompact: RecentSessionsCompactMode;
+  // Progression training log glow intensity (0-100)
+  glowIntensityProgressionLog: number;
+  // Progression log column colours
+  progressionColumnColorsEnabled: boolean;
+  // Progression log column order grouped
+  progressionColumnOrderGrouped: boolean;
 }
 
 const DEFAULT_SETTINGS: DisplaySettings = {
@@ -96,8 +129,25 @@ const DEFAULT_SETTINGS: DisplaySettings = {
   sidebarLoreVisible: true,
   recentSessionsDays: 0,
   columnColorsEnabled: true,
-  gamificationVisible: true,
   columnOrderGrouped: false,
+  // Progression defaults
+  progressionSidebarMode: "name-illumination-realm",
+  progressionSidebarStyle: "default",
+  progressionSidebarCompact: false,
+  glowIntensityProgressionSidebar: 100,
+  progressionSidebarLoreVisible: true,
+  progressionSidebarUseThemeColor: false,
+  progressionSidebarExpandTiers: true,
+  progressionCardMode: "name-illumination-realm-path",
+  progressionCardStyle: "default",
+  progressionCardCompact: false,
+  glowIntensityProgressionCards: 100,
+  progressionCardLoreVisible: true,
+  progressionLogMode: "name-illumination-realm",
+  progressionLogCompact: "auto",
+  glowIntensityProgressionLog: 100,
+  progressionColumnColorsEnabled: true,
+  progressionColumnOrderGrouped: false,
 };
 
 const STORAGE_KEY = "cultivateos-display-settings";

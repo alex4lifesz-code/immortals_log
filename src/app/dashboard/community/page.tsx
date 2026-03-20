@@ -5,18 +5,17 @@ import { useState, useEffect } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import GlowCard from "@/components/ui/GlowCard";
 import { useAuth } from "@/context/AuthContext";
-import { REALM_LEVELS } from "@/lib/constants";
 
 interface Cultivator {
   id: string;
   name: string;
   username: string;
-  experience: number;
-  realm: string;
   rank: number;
+  workoutCount: number;
+  checkInCount: number;
 }
 
-function CommunitySidebar({ totalMembers, topCultivator }: { totalMembers: number; topCultivator: Cultivator | null }) {
+function CommunitySidebar({ totalMembers }: { totalMembers: number }) {
   return (
     <div className="space-y-3">
       <div className="ink-border rounded-lg p-3 bg-ink-dark space-y-2">
@@ -32,32 +31,11 @@ function CommunitySidebar({ totalMembers, topCultivator }: { totalMembers: numbe
           </div>
         </div>
       </div>
-
-      {topCultivator && (
-        <div className="ink-border rounded-lg p-3 bg-jade-deep/20 border-jade-glow/50 space-y-2">
-          <h3 className="text-xs text-gold-glow uppercase font-semibold">🏆 Sect Leader</h3>
-          <div>
-            <p className="text-sm font-bold text-cloud-white">{topCultivator.name}</p>
-            <p className="text-xs text-gold-glow">{topCultivator.realm}</p>
-            <p className="text-xs text-mist-dark mt-1">Level {topCultivator.rank}</p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
 function CultivatorCard({ cultivator, rank, isCurrentUser }: { cultivator: Cultivator; rank: number; isCurrentUser: boolean }) {
-  const realmEmojis: Record<string, string> = {
-    Mortal: "⛩️",
-    Foundation: "🌱",
-    Core: "💎",
-    Nascent: "✨",
-    "Soul Splitting": "👻",
-    Tribulation: "⚡",
-    Immortal: "👑",
-  };
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -88,25 +66,16 @@ function CultivatorCard({ cultivator, rank, isCurrentUser }: { cultivator: Culti
           </div>
         </div>
 
-        {/* Realm and XP */}
+        {/* Stats */}
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">{realmEmojis[cultivator.realm] || "🏔️"}</span>
-            <span className="text-sm font-semibold text-jade-glow">{cultivator.realm}</span>
+          <div className="flex justify-between text-xs">
+            <span className="text-mist-dark">Sessions</span>
+            <span className="text-cloud-white font-bold">{cultivator.workoutCount}</span>
           </div>
           <div className="flex justify-between text-xs">
-            <span className="text-mist-dark">Experience</span>
-            <span className="text-cloud-white font-bold">{cultivator.experience.toLocaleString()} XP</span>
+            <span className="text-mist-dark">Check-Ins</span>
+            <span className="text-cloud-white font-bold">{cultivator.checkInCount}</span>
           </div>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="w-full h-1.5 bg-ink-light rounded-full overflow-hidden">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${Math.min((cultivator.experience % 500) / 5, 100)}%` }}
-            className="h-full bg-gradient-to-r from-jade-glow to-jade-light rounded-full"
-          />
         </div>
 
         {isCurrentUser && (
@@ -123,44 +92,28 @@ export default function SectHallPage() {
   const { user } = useAuth();
   const [cultivators, setCultivators] = useState<Cultivator[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedRealm, setSelectedRealm] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchCultivators = async () => {
       try {
-        // Fetch all users
         const res = await fetch("/api/users");
         const data = await res.json();
         const users = data.users || [];
 
-        // Calculate realm for each user
-        const realms = ["Mortal", "Foundation", "Core", "Nascent", "Soul Splitting", "Tribulation", "Immortal"];
-        const xpThresholds = [0, 100, 300, 600, 1200, 2000, 3500];
+        const cultivatorsData: Cultivator[] = users.map((u: { id: string; name: string; username: string; _count?: { workouts: number; checkIns: number } }, idx: number) => ({
+          id: u.id,
+          name: u.name,
+          username: u.username,
+          workoutCount: u._count?.workouts || 0,
+          checkInCount: u._count?.checkIns || 0,
+          rank: idx + 1,
+        }));
 
-        const cultivatorsWithRealm = users.map((u: Cultivator, idx: number) => {
-          let realm = "Mortal";
-          for (let i = xpThresholds.length - 1; i >= 0; i--) {
-            if (u.experience >= xpThresholds[i]) {
-              realm = realms[i];
-              break;
-            }
-          }
-          return {
-            ...u,
-            realm,
-            rank: idx + 1,
-          };
-        });
+        // Sort by workout count descending
+        cultivatorsData.sort((a, b) => b.workoutCount - a.workoutCount);
+        cultivatorsData.forEach((c, idx) => { c.rank = idx + 1; });
 
-        // Sort by experience descending
-        cultivatorsWithRealm.sort((a: Cultivator, b: Cultivator) => b.experience - a.experience);
-
-        // Recalculate ranks after sorting
-        cultivatorsWithRealm.forEach((c: Cultivator, idx: number) => {
-          c.rank = idx + 1;
-        });
-
-        setCultivators(cultivatorsWithRealm);
+        setCultivators(cultivatorsData);
       } catch (err) {
         console.error("Failed to fetch cultivators:", err);
       } finally {
@@ -171,19 +124,11 @@ export default function SectHallPage() {
     fetchCultivators();
   }, []);
 
-  const realms = REALM_LEVELS;
-  
-  const filteredCultivators = selectedRealm
-    ? cultivators.filter((c) => c.realm === selectedRealm)
-    : cultivators;
-
-  const topCultivator = cultivators.length > 0 ? cultivators[0] : null;
-
   return (
     <PageLayout
       title="Sect Hall"
       subtitle="Connect with fellow cultivators and compare your path"
-      sidebar={<CommunitySidebar totalMembers={cultivators.length} topCultivator={topCultivator} />}
+      sidebar={<CommunitySidebar totalMembers={cultivators.length} />}
       sidebarLabel="Members"
     >
       {loading ? (
@@ -212,64 +157,19 @@ export default function SectHallPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Realm Filter */}
-          <div>
-            <h3 className="text-sm text-jade-glow uppercase font-semibold mb-3">Filter by Realm</h3>
-            <div className="flex flex-wrap gap-2">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setSelectedRealm(null)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  selectedRealm === null
-                    ? "bg-jade-glow text-ink-deep"
-                    : "bg-ink-light text-cloud-white hover:bg-ink-mid"
-                }`}
-              >
-                All Realms
-              </motion.button>
-              {realms.map((realm) => {
-                const count = cultivators.filter((c) => c.realm === realm).length;
-                return (
-                  <motion.button
-                    key={realm}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setSelectedRealm(realm)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                      selectedRealm === realm
-                        ? "bg-jade-glow text-ink-deep"
-                        : "bg-ink-light text-cloud-white hover:bg-ink-mid"
-                    }`}
-                  >
-                    {realm} ({count})
-                  </motion.button>
-                );
-              })}
-            </div>
-          </div>
-
           {/* Leaderboard */}
           <div>
-            <h3 className="text-sm text-jade-glow uppercase font-semibold mb-4">
-              {selectedRealm ? `${selectedRealm} Cultivators` : "Sect Leaderboard"}
-            </h3>
-            {filteredCultivators.length === 0 ? (
-              <div className="text-center py-8 text-mist-dark">
-                No cultivators in {selectedRealm} realm yet
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredCultivators.map((cultivator) => (
-                  <CultivatorCard
-                    key={cultivator.id}
-                    cultivator={cultivator}
-                    rank={cultivator.rank}
-                    isCurrentUser={user?.id === cultivator.id}
-                  />
-                ))}
-              </div>
-            )}
+            <h3 className="text-sm text-jade-glow uppercase font-semibold mb-4">Sect Leaderboard</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {cultivators.map((cultivator) => (
+                <CultivatorCard
+                  key={cultivator.id}
+                  cultivator={cultivator}
+                  rank={cultivator.rank}
+                  isCurrentUser={user?.id === cultivator.id}
+                />
+              ))}
+            </div>
           </div>
 
           {/* Information Card */}
@@ -277,7 +177,7 @@ export default function SectHallPage() {
             <div className="space-y-2">
               <h3 className="text-sm font-bold text-jade-glow uppercase">Sect Traditions</h3>
               <p className="text-xs text-mist-light leading-relaxed">
-                In the Sect Hall, all cultivators are ranked by their total experience points. Climb the leaderboard by completing training sessions, checking in daily, and mastering new techniques. The highest-ranked cultivator leads the sect and guides others on the path to immortality.
+                In the Sect Hall, all cultivators are ranked by their training activity. Climb the leaderboard by completing training sessions and checking in daily.
               </p>
               <div className="pt-2 border-t border-ink-light">
                 <p className="text-xs text-mist-dark font-semibold">Rankings:</p>

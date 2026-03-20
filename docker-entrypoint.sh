@@ -73,8 +73,8 @@ async function seed() {
     const hash = await bcrypt.hash("admin", 10);
     const now = new Date().toISOString();
     await client.execute({
-      sql: "INSERT INTO User (id, username, password, name, role, experience, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-      args: [id, "admin", hash, "Administrator", "admin", 0, now, now]
+      sql: "INSERT INTO User (id, username, password, name, role, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      args: [id, "admin", hash, "Administrator", "admin", now, now]
     });
     console.log("Default admin account created (admin/admin).");
     console.log("WARNING: Change default password after first login.");

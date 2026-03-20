@@ -18,6 +18,7 @@ const terminologyMap: Record<string, string> = {
   "Sect Hall": "Community",
   "Inner Chamber": "Settings",
   "Administrative Palace": "Admin Panel",
+  "Ascension Codex": "Progressions",
 
   // ── Page Titles & Subtitles ──
   "Record attendance and physical metrics of all cultivators": "Record attendance and physical metrics of all members",
@@ -59,7 +60,6 @@ const terminologyMap: Record<string, string> = {
   "Export Check-In Records": "Export Check-In Records",
 
   // ── Stats & Realms ──
-  "Cultivation Realm": "Fitness Level",
   "Mortal": "Beginner",
   "Foundation Establishment": "Novice",
   "Core Formation": "Intermediate",
@@ -67,6 +67,7 @@ const terminologyMap: Record<string, string> = {
   "Soul Splitting": "Expert",
   "Tribulation Transcendence": "Elite",
   "Immortal": "Master",
+  "Heavenly Dao": "Grandmaster",
 
   // ── Exercise Types ──
   "Upper Heaven": "Upper Body",
@@ -106,10 +107,8 @@ const terminologyMap: Record<string, string> = {
   "The path of cultivation is long": "Keep pushing forward",
   "No cultivators yet": "No members yet",
   "Record training observations, energy levels, insights...": "Record workout observations, energy levels, notes...",
-  "XP Gained": "XP Gained",
   "Streak": "Streak",
   "Sessions": "Sessions",
-  "Realm": "Level",
   "Quick View": "Quick View",
   "Today's Cultivation": "Today's Activity",
 

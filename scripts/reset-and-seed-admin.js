@@ -67,7 +67,6 @@ async function main() {
       password: hashedPassword,
       name: 'Administrator',
       role: 'admin',
-      experience: 0,
     },
   });
 

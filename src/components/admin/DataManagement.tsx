@@ -114,11 +114,12 @@ export default function DataManagement() {
       const r2Key = resolveKey(["r2", "reps2", "reps 2"]);
       const w3Key = resolveKey(["w3", "weight3", "weight 3"]);
       const r3Key = resolveKey(["r3", "reps3", "reps 3"]);
+      const holdKey = resolveKey(["holdtime", "hold", "hold time", "hold_time", "holdsec", "hold (sec)", "hold(sec)"]);
       const notesKey = resolveKey(["notes", "note", "comment", "comments"]);
 
       // Fallback: if exercise column not found, use the first unmatched column
       if (!exerciseKey) {
-        const matched = new Set([dateKey, w1Key, r1Key, w2Key, r2Key, w3Key, r3Key, notesKey].filter(Boolean));
+        const matched = new Set([dateKey, w1Key, r1Key, w2Key, r2Key, w3Key, r3Key, holdKey, notesKey].filter(Boolean));
         const unmatched = firstRowKeys.filter((k) => !matched.has(k));
         if (unmatched.length === 1) {
           exerciseKey = unmatched[0];
@@ -141,6 +142,7 @@ export default function DataManagement() {
           r2: r2Key ? row[r2Key] : "",
           w3: w3Key ? row[w3Key] : "",
           r3: r3Key ? row[r3Key] : "",
+          holdTime: holdKey ? row[holdKey] : "",
           notes: notesKey ? row[notesKey] : "",
         };
       });
@@ -211,7 +213,7 @@ export default function DataManagement() {
       }
 
       // Build flat rows for XLSX
-      const rows = workouts.flatMap((w: { date?: string; simplifiedExercises?: { exercise?: { name?: string }; weight1?: number | null; reps1?: number | null; weight2?: number | null; reps2?: number | null; weight3?: number | null; reps3?: number | null; notes?: string | null }[] }) =>
+      const rows = workouts.flatMap((w: { date?: string; simplifiedExercises?: { exercise?: { name?: string }; weight1?: number | null; reps1?: number | null; weight2?: number | null; reps2?: number | null; weight3?: number | null; reps3?: number | null; holdTime?: number | null; notes?: string | null }[] }) =>
         (w.simplifiedExercises || []).map((se) => ({
           Date: w.date ? new Date(w.date).toISOString().split("T")[0] : "",
           Exercise: se.exercise?.name || "Unknown",
@@ -221,6 +223,7 @@ export default function DataManagement() {
           R2: se.reps2 ?? "",
           W3: se.weight3 ?? "",
           R3: se.reps3 ?? "",
+          Hold: se.holdTime ?? "",
           Notes: se.notes || "",
         }))
       );
@@ -243,10 +246,10 @@ export default function DataManagement() {
       const data = JSON.parse(techniqueImportText);
       const exercises = Array.isArray(data) ? data : [data];
 
-      const res = await fetch("/api/exercises/import", {
+      const res = await fetch("/api/progressions/upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ exercises }),
+        body: JSON.stringify({ userId: targetUserId, exercises }),
       });
 
       if (res.ok) {
@@ -611,7 +614,7 @@ export default function DataManagement() {
         <p className="text-xs text-mist-light font-medium mb-2">Training Sessions {targetUserId !== user?.id && <span className="text-gold">— {targetUserName}</span>}</p>
         <p className="text-xs text-mist-dark mb-3">
           Import historical training data from XLSX spreadsheets, export existing records, or purge all sessions.
-          Expected columns: <span className="text-mist-light font-mono">Date, Exercise, W1, R1, W2, R2, W3, R3, Notes</span>
+          Expected columns: <span className="text-mist-light font-mono">Date, Exercise, W1, R1, W2, R2, W3, R3, Hold, Notes</span>
         </p>
         <div className="space-y-3">
           {/* Import XLSX */}
@@ -914,17 +917,42 @@ export default function DataManagement() {
           </p>
           <pre className="text-[10px] text-mist-dark bg-ink-dark p-3 rounded-lg overflow-x-auto">
             {`[{
-  "name": "Conventional Exercise Name",
-  "wuxiaName": "Optional Wuxia Technique Name",
+  "name": "Conventional Name",
+  "wuxiaName": "Wuxia Technique Name",
   "difficulty": "Core Formation",
   "type": "Upper Heaven",
+  "category": "Push",
   "story": "Optional description...",
-  "targetGroup": "Optional target group"
+  "primaryMuscles": ["Chest", "Triceps"],
+  "secondaryMuscles": ["Shoulders"],
+  "tips": ["Tip 1", "Tip 2"],
+  "equipment": {
+    "type": "bodyweight",
+    "bodyweight": true
+  },
+  "tiers": [{
+    "level": 1,
+    "name": "Tier Name",
+    "wuxiaName": "Wuxia Tier Name",
+    "difficulty": "Mortal",
+    "description": "Tier description",
+    "targetReps": 10,
+    "targetHold": 30
+  }],
+  "variations": [{
+    "name": "Variation Name",
+    "description": "Description"
+  }],
+  "modifiers": [{
+    "type": "Ring",
+    "available": true,
+    "notes": "Extra difficulty"
+  }]
 }]`}
           </pre>
           <p className="text-[10px] text-mist-dark">
-            <span className="text-mist-light">Required:</span> name, difficulty, type.{" "}
-            <span className="text-mist-light">Optional:</span> wuxiaName, story, targetGroup.
+            <span className="text-mist-light">Required:</span> name, category.{" "}
+            <span className="text-mist-light">Optional:</span> wuxiaName, difficulty, type, story, primaryMuscles, secondaryMuscles, tips, equipment, tiers, variations, modifiers.
           </p>
 
           <div className="flex gap-2">

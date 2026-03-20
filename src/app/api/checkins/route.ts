@@ -95,8 +95,35 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function DELETE() {
+export async function DELETE(req: NextRequest) {
   try {
+    const body = await req.json().catch(() => ({}));
+    const { date } = body as { date?: string };
+
+    if (date) {
+      if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return NextResponse.json(
+          { error: "Invalid date format" },
+          { status: 400 }
+        );
+      }
+      const dateObj = new Date(date + "T00:00:00.000Z");
+      if (isNaN(dateObj.getTime())) {
+        return NextResponse.json(
+          { error: "Invalid date" },
+          { status: 400 }
+        );
+      }
+      // Also delete any community notes for this date
+      await prisma.checkInNote.deleteMany({ where: { date } });
+      const result = await prisma.checkIn.deleteMany({ where: { date: dateObj } });
+      return NextResponse.json({
+        success: true,
+        message: `Removed ${result.count} check-in record(s) for ${date}`,
+        count: result.count,
+      });
+    }
+
     const result = await prisma.checkIn.deleteMany({});
     return NextResponse.json({
       success: true,

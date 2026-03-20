@@ -7,7 +7,6 @@ import GlowButton from "@/components/ui/GlowButton";
 import { GlowModal } from "@/components/ui/GlowCard";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
-import { awardCheckInXP } from "@/lib/experience";
 import { formatDateWithPreference } from "@/lib/constants";
 
 interface User {
@@ -120,11 +119,6 @@ export default function CheckInPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [rows, setRows] = useState<CheckInRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [xpFeedback, setXpFeedback] = useState<{ show: boolean; xp: number; userId: string }>({
-    show: false,
-    xp: 0,
-    userId: "",
-  });
   const [showCustomDateModal, setShowCustomDateModal] = useState(false);
   const [customDate, setCustomDate] = useState("");
   const [dayNotes, setDayNotes] = useState<DayNote[]>([]);
@@ -145,6 +139,7 @@ export default function CheckInPage() {
   const [showWeightPrompt, setShowWeightPrompt] = useState(false);
   const [weightPromptValue, setWeightPromptValue] = useState("");
   const weightPromptDismissedRef = useRef(false);
+  const [deletingRowDate, setDeletingRowDate] = useState<string | null>(null);
 
   const broadcastNotesUpdated = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -178,6 +173,23 @@ export default function CheckInPage() {
       console.error("Failed to delete community note:", err);
     }
   }, [broadcastNotesUpdated, user]);
+
+  const handleDeleteRow = useCallback(async (date: string) => {
+    try {
+      const res = await fetch("/api/checkins", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date }),
+      });
+      if (res.ok) {
+        setRows(prev => prev.filter(r => r.date !== date));
+        setDeletingRowDate(null);
+        broadcastNotesUpdated();
+      }
+    } catch (err) {
+      console.error("Failed to delete row:", err);
+    }
+  }, [broadcastNotesUpdated]);
 
   const handleTogglePinNote = useCallback(async (noteId: string, pinned: boolean) => {
     if (!user) return;
@@ -419,11 +431,7 @@ export default function CheckInPage() {
 
       // Award XP only when checking in (not when unchecking)
       if (present && userId === user.id) {
-        await awardCheckInXP(user.id);
-        setXpFeedback({ show: true, xp: 15, userId: user.id });
-        setTimeout(() => {
-          setXpFeedback({ show: false, xp: 0, userId: "" });
-        }, 3000);
+        // Check-in saved
       }
     } catch (err) {
       console.error("Failed to auto-save check-in:", err);
@@ -515,18 +523,6 @@ export default function CheckInPage() {
         </div>
       ) : (
         <>
-          {xpFeedback.show && (
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="mb-4 p-3 bg-gradient-to-r from-jade-dark to-jade-glow/30 border border-jade-glow rounded-lg text-center text-jade-glow font-semibold flex items-center justify-center gap-2"
-            >
-              <span className="text-lg">✨</span>
-              <span>+{xpFeedback.xp} XP Gained!</span>
-              <span className="text-lg">✨</span>
-            </motion.div>
-          )}
           {/* Cultivation Journal — personal day notes */}
           {dayNotes.length > 0 && (
               <motion.div
@@ -692,7 +688,7 @@ export default function CheckInPage() {
                 {/* Grid header */}
                 <div
                   className="grid gap-0 text-[10px] uppercase tracking-wider font-semibold text-mist-dark border-b border-jade-glow/30 pb-1.5 mb-1"
-                  style={{ gridTemplateColumns: `80px repeat(${users.length}, 44px) repeat(${users.length}, 48px) 1fr` }}
+                  style={{ gridTemplateColumns: `${isEditMode ? '104px' : '80px'} repeat(${users.length}, 44px) repeat(${users.length}, 48px) 1fr` }}
                 >
                   <div className="px-1">Date</div>
                   {users.map((u) => (
@@ -725,10 +721,38 @@ export default function CheckInPage() {
                               ? "border-jade-glow/15 bg-jade-deep/5 hover:bg-jade-deep/10"
                               : `border-ink-light/50 hover:bg-ink-mid/10 ${isWeekend ? "bg-ink-dark/20" : ""}`
                           }`}
-                          style={{ gridTemplateColumns: `80px repeat(${users.length}, 44px) repeat(${users.length}, 48px) 1fr` }}
+                          style={{ gridTemplateColumns: `${isEditMode ? '104px' : '80px'} repeat(${users.length}, 44px) repeat(${users.length}, 48px) 1fr` }}
                         >
                           {/* Date + Day */}
                           <div className="px-1 flex items-center gap-1">
+                            {isEditMode && (
+                              deletingRowDate === row.date ? (
+                                <div className="flex items-center gap-0.5 shrink-0">
+                                  <button
+                                    onClick={() => handleDeleteRow(row.date)}
+                                    className="text-[9px] text-crimson-light hover:text-crimson-glow transition-colors"
+                                    title="Confirm delete"
+                                  >
+                                    ✓
+                                  </button>
+                                  <button
+                                    onClick={() => setDeletingRowDate(null)}
+                                    className="text-[9px] text-mist-dark hover:text-mist-light transition-colors"
+                                    title="Cancel"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setDeletingRowDate(row.date)}
+                                  className="text-[9px] text-mist-dark hover:text-crimson-light transition-colors shrink-0"
+                                  title="Delete this row"
+                                >
+                                  🗑
+                                </button>
+                              )
+                            )}
                             <button
                               onClick={() => setEditingNote({ date: row.date, note: noteText })}
                               className="text-mist-light hover:text-jade-glow transition-colors text-left leading-tight"
