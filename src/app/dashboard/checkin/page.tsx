@@ -8,6 +8,7 @@ import { GlowModal } from "@/components/ui/GlowCard";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { formatDateWithPreference } from "@/lib/constants";
+import { syncWeightFromLatestCheckin } from "@/lib/user-physique";
 
 interface User {
   id: string;
@@ -306,6 +307,8 @@ export default function CheckInPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ date: today, entries: { [user.id]: updatedEntry }, requestingUserId: user.id }),
       });
+      // Auto-sync weight if sync toggle is enabled
+      syncWeightFromLatestCheckin(user.id);
     } catch (err) {
       console.error("Failed to save weight:", err);
     }

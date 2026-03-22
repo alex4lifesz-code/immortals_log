@@ -1,7 +1,8 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect, useCallback, useMemo, useRef, memo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, memo, startTransition } from "react";
+import { createPortal } from "react-dom";
 import PageLayout from "@/components/layout/PageLayout";
 import GlowButton from "@/components/ui/GlowButton";
 import GlowCard from "@/components/ui/GlowCard";
@@ -1009,31 +1010,37 @@ function TrainingLogTable({
 
   const handleEditModeToggle = () => {
     if (!isEditMode) {
-      const newData: typeof editingData = {};
-      entries.forEach(entry => {
-        const ex = exerciseLookup.get(entry.exerciseId);
-        const autoFromSet = ex
-          ? getAutoGymLevelFromSet(ex, physique, {
-              weight1: entry.weight1,
-              weight2: entry.weight2,
-              weight3: entry.weight3,
-            }, entry.resistanceBandKg)
-          : null;
-        const effectiveLevel =
-          ex && isGymCategoryExercise(ex)
-            ? (autoFromSet ?? entry.level)
-            : entry.level;
-        newData[entry.logId] = {
-          weight1: entry.weight1, reps1: entry.reps1,
-          weight2: entry.weight2, reps2: entry.reps2,
-          weight3: entry.weight3, reps3: entry.reps3,
-          level: effectiveLevel,
-          modifier: entry.modifier, resistanceBandKg: entry.resistanceBandKg, variant: entry.variant, notes: entry.notes,
-        };
+      // Toggle immediately for instant visual feedback
+      setIsEditMode(true);
+      // Defer heavy data preparation to keep the UI responsive
+      startTransition(() => {
+        const newData: typeof editingData = {};
+        entries.forEach(entry => {
+          const ex = exerciseLookup.get(entry.exerciseId);
+          const autoFromSet = ex
+            ? getAutoGymLevelFromSet(ex, physique, {
+                weight1: entry.weight1,
+                weight2: entry.weight2,
+                weight3: entry.weight3,
+              }, entry.resistanceBandKg)
+            : null;
+          const effectiveLevel =
+            ex && isGymCategoryExercise(ex)
+              ? (autoFromSet ?? entry.level)
+              : entry.level;
+          newData[entry.logId] = {
+            weight1: entry.weight1, reps1: entry.reps1,
+            weight2: entry.weight2, reps2: entry.reps2,
+            weight3: entry.weight3, reps3: entry.reps3,
+            level: effectiveLevel,
+            modifier: entry.modifier, resistanceBandKg: entry.resistanceBandKg, variant: entry.variant, notes: entry.notes,
+          };
+        });
+        setEditingData(newData);
       });
-      setEditingData(newData);
+    } else {
+      setIsEditMode(false);
     }
-    setIsEditMode(!isEditMode);
   };
 
   const handleEditChange = (logId: string, field: string, value: string | number | null) => {
@@ -1171,14 +1178,12 @@ function TrainingLogTable({
                 </GlowButton>
               </>
             ) : (
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+              <button
                 onClick={handleEditModeToggle}
-                className="text-xs px-3 py-1 rounded border border-jade-glow/40 text-jade-light hover:bg-jade-deep/10 transition-all"
+                className="text-xs px-3 py-1 rounded border border-jade-glow/40 text-jade-light hover:bg-jade-deep/10 hover:scale-105 active:scale-95 transition-all duration-100"
               >
                 ✎ Edit
-              </motion.button>
+              </button>
             )}
           </div>
         </div>
@@ -1373,7 +1378,7 @@ function TrainingLogTable({
                                   )
                                 }
                                 placeholder="—"
-                                className="w-full min-w-[52px] bg-ink-deep border border-jade-glow/30 rounded px-1 py-1 text-cloud-white text-center text-xs outline-none transition-all duration-200 focus:border-jade-glow focus:shadow-[0_0_8px_rgba(58,143,143,0.4)]"
+                                className="w-full min-w-[52px] bg-ink-deep border border-jade-glow/30 rounded px-1 py-1 text-cloud-white text-center text-xs outline-none transition-all duration-200 hover:border-jade-glow/50 hover:bg-ink-dark/60 focus:border-jade-glow focus:shadow-[0_0_8px_rgba(58,143,143,0.4)]"
                               />
                             </td>
                           );
@@ -1396,7 +1401,7 @@ function TrainingLogTable({
                               value={editData.modifier ?? ""}
                               onChange={(e) => handleEditChange(entry.logId, "modifier", e.target.value || null)}
                               placeholder="—"
-                              className="w-full min-w-[52px] bg-ink-deep border border-jade-glow/30 rounded px-1 py-1 text-amber-400 text-center text-xs outline-none transition-all duration-200 focus:border-jade-glow focus:shadow-[0_0_8px_rgba(58,143,143,0.4)]"
+                              className="w-full min-w-[52px] bg-ink-deep border border-jade-glow/30 rounded px-1 py-1 text-amber-400 text-center text-xs outline-none transition-all duration-200 hover:border-jade-glow/50 hover:bg-ink-dark/60 focus:border-jade-glow focus:shadow-[0_0_8px_rgba(58,143,143,0.4)]"
                             />
                           </td>
                         ) : (
@@ -1501,113 +1506,120 @@ function TrainingLogTable({
       </div>
     </GlowCard>
 
-    {/* Delete Confirmation Modal */}
-    <AnimatePresence>
-      {deleteConfirm && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px]"
-            onClick={() => setDeleteConfirm(null)}
-          />
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[340px] max-w-[90vw] bg-ink-deep border border-ink-light rounded-xl shadow-2xl p-5"
-            style={{ boxShadow: "0 0 30px rgba(200, 50, 50, 0.15), 0 20px 40px rgba(0,0,0,0.4)" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-sm font-semibold text-crimson-light mb-3">Delete Training Record</h3>
-            <p className="text-xs text-mist-light mb-5 leading-relaxed">
-              Are you sure you want to permanently delete the log record for{" "}
-              <span className="text-cloud-white font-medium">{deleteConfirm.exerciseName}</span>?
-              This action cannot be undone.
-            </p>
-            <div className="flex gap-3">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleDeleteLog(deleteConfirm.logId)}
-                disabled={isDeleting}
-                className="flex-1 px-4 py-2 text-xs font-semibold rounded-lg bg-crimson-deep/30 border border-crimson/50 text-crimson-light hover:bg-crimson-deep/50 transition-all duration-200 disabled:opacity-50"
-              >
-                {isDeleting ? "Deleting..." : "Delete Record"}
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setDeleteConfirm(null)}
-                disabled={isDeleting}
-                className="flex-1 px-4 py-2 text-xs font-semibold rounded-lg border border-ink-light text-mist-light hover:bg-ink-mid/30 transition-all duration-200 disabled:opacity-50"
-              >
-                Cancel
-              </motion.button>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
-
-    <AnimatePresence>
-      {levelPicker && (() => {
-        const ex = exerciseLookup.get(levelPicker.exerciseId);
-        if (!ex) return null;
-        const tiers = [...ex.tiers].sort((a, b) => a.level - b.level);
-        const current = editingData[levelPicker.logId]?.level
-          ?? entries.find((e) => e.logId === levelPicker.logId)?.level
-          ?? 1;
-
-        return (
+    {/* Delete Confirmation Modal — portalled to escape stacking context */}
+    {typeof document !== "undefined" && createPortal(
+      <AnimatePresence>
+        {deleteConfirm && (
           <>
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px]"
-              onClick={() => setLevelPicker(null)}
+              onClick={() => setDeleteConfirm(null)}
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[360px] max-w-[92vw] bg-ink-deep border border-ink-light rounded-xl shadow-2xl p-4"
+              className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[340px] max-w-[90vw] bg-ink-deep border border-ink-light rounded-xl shadow-2xl p-5"
+              style={{ boxShadow: "0 0 30px rgba(200, 50, 50, 0.15), 0 20px 40px rgba(0,0,0,0.4)" }}
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-sm font-semibold text-cloud-white mb-3">Change Progression Tier</h3>
-              <p className="text-[11px] text-mist-light mb-3">{stripBwPercentHint(getExerciseDisplayName(ex, settings.terminologyMode))}</p>
-              <div className="max-h-[280px] overflow-y-auto space-y-1 pr-1">
-                {tiers.map((t) => {
-                  const active = t.level === current;
-                  return (
-                    <button
-                      key={t.id}
-                      onClick={() => {
-                        handleEditChange(levelPicker.logId, "level", t.level);
-                        setLevelPicker(null);
-                      }}
-                      className={`w-full text-left px-2.5 py-2 rounded border transition-colors ${active ? "border-jade-glow/50 bg-jade-deep/20 text-jade-light" : "border-ink-light/40 bg-ink-mid/20 text-mist-light hover:border-jade-glow/35 hover:bg-jade-deep/10"}`}
-                    >
-                      <span className="text-[11px] font-semibold">Lv.{t.level} - {stripBwPercentHint(getExerciseDisplayName(t, settings.terminologyMode))}</span>
-                    </button>
-                  );
-                })}
-              </div>
-              <div className="mt-3 flex justify-end">
-                <button
-                  onClick={() => setLevelPicker(null)}
-                  className="px-3 py-1.5 text-xs rounded border border-ink-light text-mist-light hover:bg-ink-mid/30"
+              <h3 className="text-sm font-semibold text-crimson-light mb-3">Delete Training Record</h3>
+              <p className="text-xs text-mist-light mb-5 leading-relaxed">
+                Are you sure you want to permanently delete the log record for{" "}
+                <span className="text-cloud-white font-medium">{deleteConfirm.exerciseName}</span>?
+                This action cannot be undone.
+              </p>
+              <div className="flex gap-3">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => handleDeleteLog(deleteConfirm.logId)}
+                  disabled={isDeleting}
+                  className="flex-1 px-4 py-2 text-xs font-semibold rounded-lg bg-crimson-deep/30 border border-crimson/50 text-crimson-light hover:bg-crimson-deep/50 transition-all duration-200 disabled:opacity-50"
                 >
-                  Close
-                </button>
+                  {isDeleting ? "Deleting..." : "Delete Record"}
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setDeleteConfirm(null)}
+                  disabled={isDeleting}
+                  className="flex-1 px-4 py-2 text-xs font-semibold rounded-lg border border-ink-light text-mist-light hover:bg-ink-mid/30 transition-all duration-200 disabled:opacity-50"
+                >
+                  Cancel
+                </motion.button>
               </div>
             </motion.div>
           </>
-        );
-      })()}
-    </AnimatePresence>
+        )}
+      </AnimatePresence>,
+      document.body
+    )}
+
+    {/* Level Picker Modal — portalled to escape stacking context */}
+    {typeof document !== "undefined" && createPortal(
+      <AnimatePresence>
+        {levelPicker && (() => {
+          const ex = exerciseLookup.get(levelPicker.exerciseId);
+          if (!ex) return null;
+          const tiers = [...ex.tiers].sort((a, b) => a.level - b.level);
+          const current = editingData[levelPicker.logId]?.level
+            ?? entries.find((e) => e.logId === levelPicker.logId)?.level
+            ?? 1;
+
+          return (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px]"
+                onClick={() => setLevelPicker(null)}
+              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[360px] max-w-[92vw] bg-ink-deep border border-ink-light rounded-xl shadow-2xl p-4"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h3 className="text-sm font-semibold text-cloud-white mb-3">Change Progression Tier</h3>
+                <p className="text-[11px] text-mist-light mb-3">{stripBwPercentHint(getExerciseDisplayName(ex, settings.terminologyMode))}</p>
+                <div className="max-h-[280px] overflow-y-auto space-y-1 pr-1">
+                  {tiers.map((t) => {
+                    const active = t.level === current;
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={() => {
+                          handleEditChange(levelPicker.logId, "level", t.level);
+                          setLevelPicker(null);
+                        }}
+                        className={`w-full text-left px-2.5 py-2 rounded border transition-colors ${active ? "border-jade-glow/50 bg-jade-deep/20 text-jade-light" : "border-ink-light/40 bg-ink-mid/20 text-mist-light hover:border-jade-glow/35 hover:bg-jade-deep/10"}`}
+                      >
+                        <span className="text-[11px] font-semibold">Lv.{t.level} - {stripBwPercentHint(getExerciseDisplayName(t, settings.terminologyMode))}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="mt-3 flex justify-end">
+                  <button
+                    onClick={() => setLevelPicker(null)}
+                    className="px-3 py-1.5 text-xs rounded border border-ink-light text-mist-light hover:bg-ink-mid/30"
+                  >
+                    Close
+                  </button>
+                </div>
+              </motion.div>
+            </>
+          );
+        })()}
+      </AnimatePresence>,
+      document.body
+    )}
     </>
   );
 }
@@ -1697,19 +1709,23 @@ function HoldTrainingLogTable({
 
   const handleEditModeToggle = () => {
     if (!isEditMode) {
-      const newData: typeof editingData = {};
-      entries.forEach(entry => {
-        newData[entry.logId] = {
-          reps1: entry.reps1, holdTime: entry.holdTime,
-          reps2: entry.reps2, holdTime2: entry.holdTime2,
-          reps3: entry.reps3, holdTime3: entry.holdTime3,
-          level: entry.level,
-          modifier: entry.modifier, resistanceBandKg: entry.resistanceBandKg, variant: entry.variant, notes: entry.notes,
-        };
+      setIsEditMode(true);
+      startTransition(() => {
+        const newData: typeof editingData = {};
+        entries.forEach(entry => {
+          newData[entry.logId] = {
+            reps1: entry.reps1, holdTime: entry.holdTime,
+            reps2: entry.reps2, holdTime2: entry.holdTime2,
+            reps3: entry.reps3, holdTime3: entry.holdTime3,
+            level: entry.level,
+            modifier: entry.modifier, resistanceBandKg: entry.resistanceBandKg, variant: entry.variant, notes: entry.notes,
+          };
+        });
+        setEditingData(newData);
       });
-      setEditingData(newData);
+    } else {
+      setIsEditMode(false);
     }
-    setIsEditMode(!isEditMode);
   };
 
   const handleEditChange = (logId: string, field: string, value: string | number | null) => {
@@ -1827,14 +1843,12 @@ function HoldTrainingLogTable({
               </GlowButton>
             </>
           ) : (
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+            <button
               onClick={handleEditModeToggle}
-              className="text-xs px-3 py-1 rounded border border-jade-glow/40 text-jade-light hover:bg-jade-deep/10 transition-all"
+              className="text-xs px-3 py-1 rounded border border-jade-glow/40 text-jade-light hover:bg-jade-deep/10 hover:scale-105 active:scale-95 transition-all duration-100"
             >
               ✎ Edit
-            </motion.button>
+            </button>
           )}
         </div>
       </div>
@@ -2007,7 +2021,7 @@ function HoldTrainingLogTable({
                                 )
                               }
                               placeholder="—"
-                              className="w-full min-w-[52px] bg-ink-deep border border-jade-glow/30 rounded px-1 py-1 text-cloud-white text-center text-xs outline-none transition-all duration-200 focus:border-jade-glow focus:shadow-[0_0_8px_rgba(58,143,143,0.4)]"
+                              className="w-full min-w-[52px] bg-ink-deep border border-jade-glow/30 rounded px-1 py-1 text-cloud-white text-center text-xs outline-none transition-all duration-200 hover:border-jade-glow/50 hover:bg-ink-dark/60 focus:border-jade-glow focus:shadow-[0_0_8px_rgba(58,143,143,0.4)]"
                             />
                           </td>
                         );
@@ -2033,7 +2047,7 @@ function HoldTrainingLogTable({
                             value={editData.modifier ?? ""}
                             onChange={(e) => handleEditChange(entry.logId, "modifier", e.target.value || null)}
                             placeholder="—"
-                            className="w-full min-w-[52px] bg-ink-deep border border-jade-glow/30 rounded px-1 py-1 text-amber-400 text-center text-xs outline-none transition-all duration-200 focus:border-jade-glow focus:shadow-[0_0_8px_rgba(58,143,143,0.4)]"
+                            className="w-full min-w-[52px] bg-ink-deep border border-jade-glow/30 rounded px-1 py-1 text-amber-400 text-center text-xs outline-none transition-all duration-200 hover:border-jade-glow/50 hover:bg-ink-dark/60 focus:border-jade-glow focus:shadow-[0_0_8px_rgba(58,143,143,0.4)]"
                           />
                         </td>
                       ) : (
@@ -2137,113 +2151,120 @@ function HoldTrainingLogTable({
       </div>
     </GlowCard>
 
-    {/* Delete Confirmation Modal */}
-    <AnimatePresence>
-      {deleteConfirm && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px]"
-            onClick={() => setDeleteConfirm(null)}
-          />
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[340px] max-w-[90vw] bg-ink-deep border border-ink-light rounded-xl shadow-2xl p-5"
-            style={{ boxShadow: "0 0 30px rgba(200, 50, 50, 0.15), 0 20px 40px rgba(0,0,0,0.4)" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-sm font-semibold text-crimson-light mb-3">Delete Training Record</h3>
-            <p className="text-xs text-mist-light mb-5 leading-relaxed">
-              Are you sure you want to permanently delete the log record for{" "}
-              <span className="text-cloud-white font-medium">{deleteConfirm.exerciseName}</span>?
-              This action cannot be undone.
-            </p>
-            <div className="flex gap-3">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleDeleteLog(deleteConfirm.logId)}
-                disabled={isDeleting}
-                className="flex-1 px-4 py-2 text-xs font-semibold rounded-lg bg-crimson-deep/30 border border-crimson/50 text-crimson-light hover:bg-crimson-deep/50 transition-all duration-200 disabled:opacity-50"
-              >
-                {isDeleting ? "Deleting..." : "Delete Record"}
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setDeleteConfirm(null)}
-                disabled={isDeleting}
-                className="flex-1 px-4 py-2 text-xs font-semibold rounded-lg border border-ink-light text-mist-light hover:bg-ink-mid/30 transition-all duration-200 disabled:opacity-50"
-              >
-                Cancel
-              </motion.button>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
-
-    <AnimatePresence>
-      {levelPicker && (() => {
-        const ex = exerciseLookup.get(levelPicker.exerciseId);
-        if (!ex) return null;
-        const tiers = [...ex.tiers].sort((a, b) => a.level - b.level);
-        const current = editingData[levelPicker.logId]?.level
-          ?? entries.find((e) => e.logId === levelPicker.logId)?.level
-          ?? 1;
-
-        return (
+    {/* Delete Confirmation Modal — portalled to escape stacking context */}
+    {typeof document !== "undefined" && createPortal(
+      <AnimatePresence>
+        {deleteConfirm && (
           <>
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px]"
-              onClick={() => setLevelPicker(null)}
+              onClick={() => setDeleteConfirm(null)}
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[360px] max-w-[92vw] bg-ink-deep border border-ink-light rounded-xl shadow-2xl p-4"
+              className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[340px] max-w-[90vw] bg-ink-deep border border-ink-light rounded-xl shadow-2xl p-5"
+              style={{ boxShadow: "0 0 30px rgba(200, 50, 50, 0.15), 0 20px 40px rgba(0,0,0,0.4)" }}
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-sm font-semibold text-cloud-white mb-3">Change Progression Tier</h3>
-              <p className="text-[11px] text-mist-light mb-3">{stripBwPercentHint(getExerciseDisplayName(ex, settings.terminologyMode))}</p>
-              <div className="max-h-[280px] overflow-y-auto space-y-1 pr-1">
-                {tiers.map((t) => {
-                  const active = t.level === current;
-                  return (
-                    <button
-                      key={t.id}
-                      onClick={() => {
-                        handleEditChange(levelPicker.logId, "level", t.level);
-                        setLevelPicker(null);
-                      }}
-                      className={`w-full text-left px-2.5 py-2 rounded border transition-colors ${active ? "border-jade-glow/50 bg-jade-deep/20 text-jade-light" : "border-ink-light/40 bg-ink-mid/20 text-mist-light hover:border-jade-glow/35 hover:bg-jade-deep/10"}`}
-                    >
-                      <span className="text-[11px] font-semibold">Lv.{t.level} - {stripBwPercentHint(getExerciseDisplayName(t, settings.terminologyMode))}</span>
-                    </button>
-                  );
-                })}
-              </div>
-              <div className="mt-3 flex justify-end">
-                <button
-                  onClick={() => setLevelPicker(null)}
-                  className="px-3 py-1.5 text-xs rounded border border-ink-light text-mist-light hover:bg-ink-mid/30"
+              <h3 className="text-sm font-semibold text-crimson-light mb-3">Delete Training Record</h3>
+              <p className="text-xs text-mist-light mb-5 leading-relaxed">
+                Are you sure you want to permanently delete the log record for{" "}
+                <span className="text-cloud-white font-medium">{deleteConfirm.exerciseName}</span>?
+                This action cannot be undone.
+              </p>
+              <div className="flex gap-3">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => handleDeleteLog(deleteConfirm.logId)}
+                  disabled={isDeleting}
+                  className="flex-1 px-4 py-2 text-xs font-semibold rounded-lg bg-crimson-deep/30 border border-crimson/50 text-crimson-light hover:bg-crimson-deep/50 transition-all duration-200 disabled:opacity-50"
                 >
-                  Close
-                </button>
+                  {isDeleting ? "Deleting..." : "Delete Record"}
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setDeleteConfirm(null)}
+                  disabled={isDeleting}
+                  className="flex-1 px-4 py-2 text-xs font-semibold rounded-lg border border-ink-light text-mist-light hover:bg-ink-mid/30 transition-all duration-200 disabled:opacity-50"
+                >
+                  Cancel
+                </motion.button>
               </div>
             </motion.div>
           </>
-        );
-      })()}
-    </AnimatePresence>
+        )}
+      </AnimatePresence>,
+      document.body
+    )}
+
+    {/* Level Picker Modal — portalled to escape stacking context */}
+    {typeof document !== "undefined" && createPortal(
+      <AnimatePresence>
+        {levelPicker && (() => {
+          const ex = exerciseLookup.get(levelPicker.exerciseId);
+          if (!ex) return null;
+          const tiers = [...ex.tiers].sort((a, b) => a.level - b.level);
+          const current = editingData[levelPicker.logId]?.level
+            ?? entries.find((e) => e.logId === levelPicker.logId)?.level
+            ?? 1;
+
+          return (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px]"
+                onClick={() => setLevelPicker(null)}
+              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[360px] max-w-[92vw] bg-ink-deep border border-ink-light rounded-xl shadow-2xl p-4"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h3 className="text-sm font-semibold text-cloud-white mb-3">Change Progression Tier</h3>
+                <p className="text-[11px] text-mist-light mb-3">{stripBwPercentHint(getExerciseDisplayName(ex, settings.terminologyMode))}</p>
+                <div className="max-h-[280px] overflow-y-auto space-y-1 pr-1">
+                  {tiers.map((t) => {
+                    const active = t.level === current;
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={() => {
+                          handleEditChange(levelPicker.logId, "level", t.level);
+                          setLevelPicker(null);
+                        }}
+                        className={`w-full text-left px-2.5 py-2 rounded border transition-colors ${active ? "border-jade-glow/50 bg-jade-deep/20 text-jade-light" : "border-ink-light/40 bg-ink-mid/20 text-mist-light hover:border-jade-glow/35 hover:bg-jade-deep/10"}`}
+                      >
+                        <span className="text-[11px] font-semibold">Lv.{t.level} - {stripBwPercentHint(getExerciseDisplayName(t, settings.terminologyMode))}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="mt-3 flex justify-end">
+                  <button
+                    onClick={() => setLevelPicker(null)}
+                    className="px-3 py-1.5 text-xs rounded border border-ink-light text-mist-light hover:bg-ink-mid/30"
+                  >
+                    Close
+                  </button>
+                </div>
+              </motion.div>
+            </>
+          );
+        })()}
+      </AnimatePresence>,
+      document.body
+    )}
     </>
   );
 }
@@ -2292,6 +2313,8 @@ function InlineLogForm({
   const [selectedModifier, setSelectedModifier] = useState("");
   const [selectedResistanceBand, setSelectedResistanceBand] = useState("");
   const [selectedVariation, setSelectedVariation] = useState("");
+  // Track which config fields were auto-populated from last session (for asterisk indicator)
+  const [autoPopulated, setAutoPopulated] = useState<{ modifier: boolean; band: boolean; variation: boolean }>({ modifier: false, band: false, variation: false });
   const [submitting, setSubmitting] = useState(false);
   const [saved, setSaved] = useState(false);
   const [shakeError, setShakeError] = useState(false);
@@ -2387,7 +2410,7 @@ function InlineLogForm({
 
   const mobilePanelBorder = `${getDifficultyStyle(currentDifficulty).glowColor}30`;
   const useSetPanelLayout = true;
-  const setInputClass = `w-full border bg-ink-dark text-cloud-white outline-none transition-all duration-200 placeholder:text-mist-dark/35 focus:bg-ink-mid/40 ${isMobile ? "rounded-xl px-3 py-3 text-sm" : "rounded-lg px-2.5 py-2 text-xs"}`;
+  const setInputClass = `w-full border bg-ink-dark text-cloud-white outline-none transition-all duration-200 placeholder:text-mist-dark/35 hover:border-jade-glow/40 hover:bg-ink-dark/80 focus:bg-ink-mid/40 focus:border-jade-glow/60 focus:shadow-[0_0_8px_rgba(58,143,143,0.2)] ${isMobile ? "rounded-xl px-3 py-3 text-sm" : "rounded-lg px-2.5 py-2 text-xs"}`;
 
   useEffect(() => {
     setInputMode(getTierInputMode(exercise, selectedLevel));
@@ -2436,6 +2459,34 @@ function InlineLogForm({
     prevDraftKeyRef.current = draftKey;
     setDraftReady(true);
   }, [draftStorageKey, draftReady]);
+
+  // Pre-fill modifier, band, and variation from latest log when no draft values exist
+  useEffect(() => {
+    if (!draftReady) return;
+
+    // Only pre-fill if all config fields are currently empty (not overriding draft data)
+    if (selectedModifier || selectedResistanceBand || selectedVariation) return;
+
+    // Find the most recent log for this exercise
+    const logs = exercise.userProgress?.flatMap((up) => up.logs) ?? [];
+    if (logs.length === 0) return;
+
+    const sortedLogs = [...logs].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    const latestLog = sortedLogs[0];
+    if (!latestLog) return;
+
+    const { baseModifier, resistanceBandKg } = parseModifierWithBand(latestLog.modifier);
+    const autoFlags = { modifier: false, band: false, variation: false };
+    if (baseModifier) { setSelectedModifier(baseModifier); autoFlags.modifier = true; }
+    if (resistanceBandKg != null) { setSelectedResistanceBand(String(resistanceBandKg)); autoFlags.band = true; }
+    if (latestLog.variant) { setSelectedVariation(latestLog.variant); autoFlags.variation = true; }
+    if (autoFlags.modifier || autoFlags.band || autoFlags.variation) {
+      setAutoPopulated(autoFlags);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftReady, exercise.id]);
 
   useEffect(() => {
     if (!draftStorageKey || !draftReady) return;
@@ -2645,8 +2696,8 @@ function InlineLogForm({
         className={`relative overflow-hidden border-2 rounded-2xl rounded-tr-[26px] rounded-bl-[26px] ${isCompact ? 'p-2' : 'p-3'}`}
         style={{
           background: 'var(--ink-deep)',
-          borderColor: `${diffStyle.glowColor}b8`,
-          boxShadow: `0 0 26px ${diffStyle.glowColor}66, 0 0 52px ${diffStyle.glowColor}30, inset 0 0 18px ${diffStyle.glowColor}1f, inset 0 0 0 1px ${diffStyle.glowColor}2a, inset 0 1px 0 rgba(255,255,255,0.05)`,
+          borderColor: `${diffStyle.glowColor}d0`,
+          boxShadow: `0 0 20px ${diffStyle.glowColor}88, 0 0 40px ${diffStyle.glowColor}50, 0 0 70px ${diffStyle.glowColor}22, inset 0 0 16px ${diffStyle.glowColor}25, inset 0 0 0 1px ${diffStyle.glowColor}35, inset 0 1px 0 rgba(255,255,255,0.07)`,
         }}
       >
         {/* Difficulty accent stripe */}
@@ -2733,7 +2784,7 @@ function InlineLogForm({
                           : (l.weight1 != null || l.weight2 != null || l.weight3 != null))
                       ).length;
                       return (
-                        <option key={t.level} value={t.level}>
+                        <option key={t.id} value={t.level}>
                           Lv.{t.level} — {t.name} ({count})
                         </option>
                       );
@@ -2802,10 +2853,12 @@ function InlineLogForm({
               <div className="grid gap-2">
                 {exercise.modifiers && exercise.modifiers.length > 0 && (
                   <label className="block space-y-1">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-mist-dark">Modifier</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-mist-dark">
+                      Modifier{autoPopulated.modifier && <span className="text-gold/70 ml-0.5" title="Pre-filled from last session">*</span>}
+                    </span>
                     <select
                       value={selectedModifier}
-                      onChange={(e) => setSelectedModifier(e.target.value)}
+                      onChange={(e) => { setSelectedModifier(e.target.value); setAutoPopulated(prev => ({ ...prev, modifier: false })); }}
                       className={`w-full border border-ink-light/20 bg-ink-dark text-gold outline-none focus:border-gold/40 transition-colors cursor-pointer ${isMobile ? "rounded-xl px-3 py-3 text-sm" : "rounded-lg px-2.5 py-2 text-xs"}`}
                     >
                       <option value="">No modifier</option>
@@ -2819,10 +2872,12 @@ function InlineLogForm({
                 )}
                 {showResistanceBand && (
                   <label className="block space-y-1">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-mist-dark">Resistance band</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-mist-dark">
+                      Resistance band{autoPopulated.band && <span className="text-sky-300/70 ml-0.5" title="Pre-filled from last session">*</span>}
+                    </span>
                     <select
                       value={selectedResistanceBand}
-                      onChange={(e) => setSelectedResistanceBand(e.target.value)}
+                      onChange={(e) => { setSelectedResistanceBand(e.target.value); setAutoPopulated(prev => ({ ...prev, band: false })); }}
                       className={`w-full border border-ink-light/20 bg-ink-dark text-sky-300 outline-none focus:border-sky-300/40 transition-colors cursor-pointer ${isMobile ? "rounded-xl px-3 py-3 text-sm" : "rounded-lg px-2.5 py-2 text-xs"}`}
                     >
                       <option value="">No resistance band</option>
@@ -2836,10 +2891,12 @@ function InlineLogForm({
                 )}
                 {exercise.variations && exercise.variations.length > 0 && (
                   <label className="block space-y-1">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-mist-dark">Variation</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-mist-dark">
+                      Variation{autoPopulated.variation && <span className="text-crimson-light/70 ml-0.5" title="Pre-filled from last session">*</span>}
+                    </span>
                     <select
                       value={selectedVariation}
-                      onChange={(e) => setSelectedVariation(e.target.value)}
+                      onChange={(e) => { setSelectedVariation(e.target.value); setAutoPopulated(prev => ({ ...prev, variation: false })); }}
                       className={`w-full border border-ink-light/20 bg-ink-dark text-crimson-light outline-none focus:border-crimson/40 transition-colors cursor-pointer ${isMobile ? "rounded-xl px-3 py-3 text-sm" : "rounded-lg px-2.5 py-2 text-xs"}`}
                     >
                       <option value="">No variation</option>
@@ -2928,8 +2985,8 @@ function InlineLogForm({
                                 borderColor: shakeError && setConfig.id === 1
                                   ? "rgba(220,50,50,0.7)"
                                   : showHold
-                                    ? "rgba(94,184,232,0.35)"
-                                    : `${diffStyle.glowColor}40`,
+                                    ? "rgba(94,184,232,0.45)"
+                                    : `${diffStyle.glowColor}55`,
                               }}
                             />
                           </label>
@@ -2947,7 +3004,7 @@ function InlineLogForm({
                               }}
                               placeholder="reps"
                               className={`${setInputClass}${shakeError && setConfig.id === 1 ? ' animate-shake' : ''}`}
-                              style={{ borderColor: shakeError && setConfig.id === 1 ? "rgba(220,50,50,0.7)" : "rgba(196,168,74,0.22)" }}
+                              style={{ borderColor: shakeError && setConfig.id === 1 ? "rgba(220,50,50,0.7)" : "rgba(196,168,74,0.35)" }}
                             />
                           </label>
                         </div>
@@ -3113,46 +3170,55 @@ function InlineLogForm({
             {((exercise.modifiers && exercise.modifiers.length > 0) || showResistanceBand || (exercise.variations && exercise.variations.length > 0)) && (
               <div className="flex items-center gap-2 mb-2.5 pl-2 flex-wrap">
                 {exercise.modifiers && exercise.modifiers.length > 0 && (
-                  <select
-                    value={selectedModifier}
-                    onChange={(e) => setSelectedModifier(e.target.value)}
-                    className="bg-ink-dark border border-ink-light/20 rounded px-2 py-1 text-xs text-gold outline-none focus:border-gold/40 transition-colors cursor-pointer"
-                  >
-                    <option value="">No modifier</option>
-                    {exercise.modifiers.filter(m => m.available).map((m) => (
-                      <option key={m.id} value={m.type}>
-                        {m.type}{m.difficultyMod !== 0 ? ` (${m.difficultyMod > 0 ? "+" : ""}${m.difficultyMod})` : ""}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <select
+                      value={selectedModifier}
+                      onChange={(e) => { setSelectedModifier(e.target.value); setAutoPopulated(prev => ({ ...prev, modifier: false })); }}
+                      className="bg-ink-dark border border-ink-light/20 rounded px-2 py-1 text-xs text-gold outline-none focus:border-gold/40 transition-colors cursor-pointer"
+                    >
+                      <option value="">No modifier</option>
+                      {exercise.modifiers.filter(m => m.available).map((m) => (
+                        <option key={m.id} value={m.type}>
+                          {m.type}{m.difficultyMod !== 0 ? ` (${m.difficultyMod > 0 ? "+" : ""}${m.difficultyMod})` : ""}
+                        </option>
+                      ))}
+                    </select>
+                    {autoPopulated.modifier && <span className="absolute -top-1.5 -right-1 text-[10px] text-gold/70" title="Pre-filled from last session">*</span>}
+                  </div>
                 )}
                 {showResistanceBand && (
-                  <select
-                    value={selectedResistanceBand}
-                    onChange={(e) => setSelectedResistanceBand(e.target.value)}
-                    className="bg-ink-dark border border-ink-light/20 rounded px-2 py-1 text-xs text-sky-300 outline-none focus:border-sky-300/40 transition-colors cursor-pointer"
-                  >
-                    <option value="">No resistance band</option>
-                    {RESISTANCE_BAND_OPTIONS.map((kg) => (
-                      <option key={kg} value={String(kg)}>
-                        Resistance band {formatResistanceBandLabel(kg)}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <select
+                      value={selectedResistanceBand}
+                      onChange={(e) => { setSelectedResistanceBand(e.target.value); setAutoPopulated(prev => ({ ...prev, band: false })); }}
+                      className="bg-ink-dark border border-ink-light/20 rounded px-2 py-1 text-xs text-sky-300 outline-none focus:border-sky-300/40 transition-colors cursor-pointer"
+                    >
+                      <option value="">No resistance band</option>
+                      {RESISTANCE_BAND_OPTIONS.map((kg) => (
+                        <option key={kg} value={String(kg)}>
+                          Resistance band {formatResistanceBandLabel(kg)}
+                        </option>
+                      ))}
+                    </select>
+                    {autoPopulated.band && <span className="absolute -top-1.5 -right-1 text-[10px] text-sky-300/70" title="Pre-filled from last session">*</span>}
+                  </div>
                 )}
                 {exercise.variations && exercise.variations.length > 0 && (
-                  <select
-                    value={selectedVariation}
-                    onChange={(e) => setSelectedVariation(e.target.value)}
-                    className="bg-ink-dark border border-ink-light/20 rounded px-2 py-1 text-xs text-crimson-light outline-none focus:border-crimson/40 transition-colors cursor-pointer"
-                  >
-                    <option value="">No variation</option>
-                    {exercise.variations.map((v) => (
-                      <option key={v.id} value={v.name}>
-                        {v.name}
+                  <div className="relative">
+                    <select
+                      value={selectedVariation}
+                      onChange={(e) => { setSelectedVariation(e.target.value); setAutoPopulated(prev => ({ ...prev, variation: false })); }}
+                      className="bg-ink-dark border border-ink-light/20 rounded px-2 py-1 text-xs text-crimson-light outline-none focus:border-crimson/40 transition-colors cursor-pointer"
+                    >
+                      <option value="">No variation</option>
+                      {exercise.variations.map((v) => (
+                        <option key={v.id} value={v.name}>
+                          {v.name}
                       </option>
                     ))}
                   </select>
+                    {autoPopulated.variation && <span className="absolute -top-1.5 -right-1 text-[10px] text-crimson-light/70" title="Pre-filled from last session">*</span>}
+                  </div>
                 )}
               </div>
             )}
@@ -3433,6 +3499,14 @@ function ProgressionSidebar({
     try { localStorage.setItem("cultivateos-progression-sidebar-compact", String(isCompact)); } catch {}
   }, [isCompact]);
 
+  // Suppress initial mount animations to prevent sidebar expand animation on refresh
+  const sidebarMountedRef = useRef(false);
+  useEffect(() => {
+    // Delay marking as mounted so first render has no animations
+    const id = requestAnimationFrame(() => { sidebarMountedRef.current = true; });
+    return () => cancelAnimationFrame(id);
+  }, []);
+
   const [sortMode, setSortMode] = useState<string>(() => {
     if (typeof window === "undefined") return "a-z";
     try { return localStorage.getItem("cultivateos-progression-sidebar-sort") || "a-z"; } catch { return "a-z"; }
@@ -3505,6 +3579,7 @@ function ProgressionSidebar({
         e.wuxiaName,
         e.primaryMuscles,
         e.secondaryMuscles,
+        e.category,
       ]);
     }
     return true;
@@ -3562,6 +3637,23 @@ function ProgressionSidebar({
   const activeFiltersCount = (filterCategory ? 1 : 0) + (filterType ? 1 : 0) + (filterEquipment ? 1 : 0);
   const searchQuery = searchTerm.trim();
   const isSearchActive = searchQuery.length > 0;
+
+  // Group search results by category when searching
+  const searchGroupedByCategory = useMemo(() => {
+    if (!isSearchActive) return null;
+    const groups: { category: string; exercises: typeof sorted }[] = [];
+    const categoryMap = new Map<string, typeof sorted>();
+    for (const ex of sorted) {
+      const cats = parseCategoryTags(ex.category);
+      const categoryKey = cats.length > 0 ? cats[0] : "Uncategorised";
+      if (!categoryMap.has(categoryKey)) categoryMap.set(categoryKey, []);
+      categoryMap.get(categoryKey)!.push(ex);
+    }
+    for (const [category, exercises] of categoryMap) {
+      groups.push({ category, exercises });
+    }
+    return groups;
+  }, [isSearchActive, sorted]);
 
   const toggleExpand = useCallback((id: string) => {
     setExpandedIds(prev => {
@@ -3936,9 +4028,21 @@ function ProgressionSidebar({
             <div className="flex flex-col items-center justify-center py-10 text-center">
               <div className="text-2xl opacity-30 mb-2">{exercises.length === 0 ? "📂" : "🔍"}</div>
               <p className="text-[11px] text-mist-dark">
-                {exercises.length === 0 ? "Upload a JSON file to add exercises" : "No exercises match current filters"}
+                {exercises.length === 0
+                  ? "Upload a JSON file to add exercises"
+                  : isSearchActive
+                    ? `No exercises found for "${searchQuery}"`
+                    : "No exercises match current filters"
+                }
               </p>
-              {activeFiltersCount > 0 && (
+              {isSearchActive ? (
+                <button
+                  onClick={() => onSearch("")}
+                  className="mt-2 text-[10px] text-jade-glow/70 hover:text-jade-glow transition-colors"
+                >
+                  Clear search
+                </button>
+              ) : activeFiltersCount > 0 && (
                 <button
                   onClick={() => { setFilterCategory(""); setFilterType(""); setFilterEquipment(""); }}
                   className="mt-2 text-[10px] text-jade-glow/70 hover:text-jade-glow transition-colors"
@@ -3950,7 +4054,29 @@ function ProgressionSidebar({
           )
         ) : (
           <div className={`${compactEnabled ? 'space-y-px' : 'space-y-1.5'}`}>
-            {sorted.map((exercise) => {
+            {(() => {
+              // When searching, use category-grouped order; otherwise use normal sorted order
+              const renderList = isSearchActive && searchGroupedByCategory
+                ? searchGroupedByCategory.flatMap(g => g.exercises)
+                : sorted;
+              let lastCategoryKey = '';
+              const elements: React.ReactNode[] = [];
+              renderList.forEach((exercise) => {
+                // Inject category header when searching and category changes
+                if (isSearchActive) {
+                  const primaryCategory = parseCategoryTags(exercise.category)[0] || 'Uncategorised';
+                  if (primaryCategory !== lastCategoryKey) {
+                    lastCategoryKey = primaryCategory;
+                    const groupCount = searchGroupedByCategory?.find(g => g.category === primaryCategory)?.exercises.length ?? 0;
+                    elements.push(
+                      <div key={`cat-${primaryCategory}`} className="sticky top-0 z-10 px-1.5 py-1 mt-2 first:mt-0 mb-0.5 bg-ink-dark/90 backdrop-blur-sm border-b border-ink-light/20">
+                        <span className="text-[10px] font-semibold text-mist-light/70 uppercase tracking-wider">{primaryCategory}</span>
+                        <span className="ml-1.5 text-[9px] text-mist-dark/60">({groupCount})</span>
+                      </div>
+                    );
+                  }
+                }
+
               const isActive = selectedIds.has(exercise.id);
               const currentLevel = exercise.userProgress[0]?.currentLevel ?? 1;
               const effectiveLevel = levelDefaults[exercise.id] || autoLevelByExerciseId[exercise.id] || currentLevel;
@@ -4028,7 +4154,7 @@ function ProgressionSidebar({
                                 ? ''
                                 : (isActiveTier
                                   ? 'transition-colors duration-150 bg-jade-deep/25'
-                                  : isCurrent
+                                  : isCurrent && isActive
                                     ? 'transition-colors duration-150 bg-jade-deep/15 hover:bg-jade-deep/22'
                                     : 'transition-colors duration-150 hover:bg-jade-deep/14')
                             }`}
@@ -4036,18 +4162,18 @@ function ProgressionSidebar({
                             <span className={`font-mono shrink-0 text-center ${
                               isGymExercise
                                 ? (isAutoTier ? 'min-w-[1.5rem] px-1 py-0.5 rounded border border-mist-light/35 bg-ink-dark/55 text-mist-light font-semibold' : 'w-4 text-mist-dark/70')
-                                : (isActiveTier ? 'min-w-[1.5rem] px-1 py-0.5 rounded border border-gold/40 bg-gold/10 text-gold font-bold shadow-[0_0_6px_rgba(196,168,74,0.2)]' : isCurrent ? 'w-4 text-gold font-bold' : 'w-4 text-mist-dark/60')
+                                : (isActiveTier ? 'min-w-[1.5rem] px-1 py-0.5 rounded border border-gold/40 bg-gold/10 text-gold font-bold shadow-[0_0_6px_rgba(196,168,74,0.2)]' : isCurrent && isActive ? 'w-4 text-gold font-bold' : 'w-4 text-mist-dark/60')
                             }`}>
                               {tier.level}
                             </span>
                             <span className={`truncate flex-1 transition-[text-shadow,color] duration-150 ${
                               isGymExercise
                                 ? (isAutoTier ? 'text-mist-light font-semibold' : 'text-mist-dark')
-                                : (isCurrent ? 'text-jade-light font-semibold' : 'text-mist-light/85')
-                            } ${isCurrent ? 'font-medium' : 'opacity-90'} ${!isGymExercise ? 'group-hover/tier:text-jade-light group-hover/tier:[text-shadow:0_0_8px_rgba(58,143,143,0.4)]' : ''}`} title={tier.wuxiaName || tier.name}>
+                                : (isCurrent && isActive ? 'text-jade-light font-semibold' : 'text-mist-light/85')
+                            } ${isCurrent && isActive ? 'font-medium' : 'opacity-90'} ${!isGymExercise ? 'group-hover/tier:text-jade-light group-hover/tier:[text-shadow:0_0_8px_rgba(58,143,143,0.4)]' : ''}`} title={tier.wuxiaName || tier.name}>
                               {getExerciseDisplayName(tier, settings.terminologyMode)}
                             </span>
-                            <span className={`shrink-0 min-w-[1.3rem] text-right text-[9px] font-semibold ${isCurrent ? 'text-jade-light' : 'text-mist-mid/85'}`}>
+                            <span className={`shrink-0 min-w-[1.3rem] text-right text-[9px] font-semibold ${isCurrent && isActive ? 'text-jade-light' : 'text-mist-mid/85'}`}>
                               {tierLogCount}
                             </span>
                           </div>
@@ -4103,7 +4229,7 @@ function ProgressionSidebar({
 
               /* ═══ Compact mode ═══ */
               if (compactEnabled) {
-                return (
+                elements.push(
                   <div key={exercise.id}>
                     <div
                       className={`
@@ -4136,14 +4262,15 @@ function ProgressionSidebar({
                     {expandTiers && tierPanel}
                   </div>
                 );
+                return;
               }
 
               /* ═══ Scroll-Card Style (expanded) ═══ */
               if (isScrollStyle) {
-                return (
+                elements.push(
                   <motion.div
                     key={exercise.id}
-                    initial={{ opacity: 0, y: 4 }}
+                    initial={sidebarMountedRef.current ? { opacity: 0, y: 4 } : false}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.2 }}
                   >
@@ -4201,13 +4328,14 @@ function ProgressionSidebar({
                     </div>
                   </motion.div>
                 );
+                return;
               }
 
               /* ═══ Default Style (expanded) ═══ */
-              return (
+              elements.push(
                 <motion.div
                   key={exercise.id}
-                  initial={{ opacity: 0, y: 4 }}
+                  initial={sidebarMountedRef.current ? { opacity: 0, y: 4 } : false}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.2 }}
                 >
@@ -4260,7 +4388,9 @@ function ProgressionSidebar({
                   </div>
                 </motion.div>
               );
-            })}
+              });
+              return elements;
+            })()}
           </div>
         )}
       </div>
@@ -4477,6 +4607,84 @@ export default function ProgressionPage() {
       // Ignore draft cleanup failures.
     }
   }, [getDraftStorageKey]);
+
+  // Read draft data from sessionStorage and produce a comprehensive summary for queue display
+  const getDraftSummary = useCallback((exerciseId: string): string | null => {
+    const draftKey = getDraftStorageKey(exerciseId);
+    if (!draftKey) return null;
+
+    try {
+      const raw = sessionStorage.getItem(draftKey);
+      if (!raw) return null;
+      const draft = JSON.parse(raw) as Record<string, string>;
+
+      const setParts: string[] = [];
+      const unit = draft.weightUnit === "lbs" ? "lbs" : "kg";
+      const isHold = draft.inputMode === "hold";
+
+      if (isHold) {
+        const sets = [
+          { hold: draft.hold, reps: draft.r1 },
+          { hold: draft.hold2, reps: draft.r2 },
+          { hold: draft.hold3, reps: draft.r3 },
+        ];
+        sets.forEach((s, i) => {
+          if (s.hold || s.reps) {
+            const holdPart = s.hold ? `${s.hold}s` : "";
+            const repsPart = s.reps ? `${s.reps}r` : "";
+            const combined = [holdPart, repsPart].filter(Boolean).join(" · ");
+            setParts.push(`S${i + 1}: ${combined}`);
+          }
+        });
+      } else {
+        const sets = [
+          { w: draft.w1, r: draft.r1 },
+          { w: draft.w2, r: draft.r2 },
+          { w: draft.w3, r: draft.r3 },
+        ];
+        sets.forEach((s, i) => {
+          if (s.w || s.r) {
+            const wPart = s.w ? `${s.w}${unit}` : "";
+            const rPart = s.r ? `×${s.r}` : "";
+            setParts.push(`S${i + 1}: ${wPart}${rPart}`);
+          }
+        });
+      }
+
+      const configParts: string[] = [];
+      if (draft.selectedModifier) configParts.push(`Mod: ${draft.selectedModifier}`);
+      if (draft.selectedResistanceBand) configParts.push(`Band: ${formatResistanceBandLabel(parseFloat(draft.selectedResistanceBand))}`);
+      if (draft.selectedVariation) configParts.push(`Var: ${draft.selectedVariation}`);
+
+      const allParts: string[] = [];
+      if (setParts.length > 0) allParts.push(setParts.join(" | "));
+      if (configParts.length > 0) allParts.push(configParts.join(", "));
+      if (draft.notes) allParts.push("📝");
+
+      return allParts.length > 0 ? allParts.join(" · ") : null;
+    } catch {
+      return null;
+    }
+  }, [getDraftStorageKey]);
+
+  // Track draft summaries for queue display, refresh when popup closes
+  const [draftSummaryTick, setDraftSummaryTick] = useState(0);
+  const draftSummaries = useMemo(() => {
+    // draftSummaryTick forces recalculation when logger closes
+    void draftSummaryTick;
+    const summaries: Record<string, string | null> = {};
+    for (const item of readyToLogQueueItems) {
+      summaries[item.exerciseId] = getDraftSummary(item.exerciseId);
+    }
+    return summaries;
+  }, [readyToLogQueueItems, getDraftSummary, draftSummaryTick]);
+
+  // Refresh draft summaries when the logger popup closes
+  useEffect(() => {
+    if (!activeQueueItemId) {
+      setDraftSummaryTick((t) => t + 1);
+    }
+  }, [activeQueueItemId]);
 
   // ── User physique settings (used for gym auto-tiering) ──
   useEffect(() => {
@@ -4981,6 +5189,7 @@ export default function ProgressionPage() {
                     ? stripBwPercentHint(selectedTier?.name || exercise.name || "")
                     : stripBwPercentHint(selectedTier?.wuxiaName || exercise.wuxiaName || "");
                   const showAltName = !!altName && altName !== displayName;
+                  const draftSummary = draftSummaries[exercise.id];
                   const openLogger = () => {
                     setActiveQueueItemId(queueItemId);
                   };
@@ -5026,6 +5235,33 @@ export default function ProgressionPage() {
                           <span className="text-mist-dark">Lv.{level}</span>
                           <span className="font-semibold" style={{ color: difficultyStyle.glowColor }}>{conventionalDifficulty}</span>
                         </div>
+                        {draftSummary && (() => {
+                          // Split summary into set data and config sections
+                          const sections = draftSummary.split(" · ");
+                          const setSection = sections[0]; // "S1: 25kg×12 | S2: 27.5kg×10" or similar
+                          const configSections = sections.slice(1).filter(s => s !== "📝");
+                          const hasNotes = sections.includes("📝");
+                          return (
+                            <div className="mt-1 space-y-0.5">
+                              <div className="flex items-center gap-1.5 text-[10px] text-jade-light/80">
+                                <span
+                                  className="inline-block h-1.5 w-1.5 rounded-full shrink-0"
+                                  style={{ backgroundColor: difficultyStyle.glowColor, boxShadow: `0 0 4px ${difficultyStyle.glowColor}` }}
+                                />
+                                <span className="truncate">{setSection}{hasNotes ? " 📝" : ""}</span>
+                              </div>
+                              {configSections.length > 0 && (
+                                <div className="flex items-center gap-1.5 text-[9px] text-mist-dark/80 pl-[13px] flex-wrap">
+                                  {configSections.map((cfg, i) => (
+                                    <span key={i} className="inline-flex items-center px-1 py-0 rounded bg-ink-mid/30 border border-ink-light/15">
+                                      {cfg}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
                       <div className="flex items-center gap-1">
                         <button
@@ -5147,49 +5383,53 @@ export default function ProgressionPage() {
         selectedDayFilter={selectedDayFilter}
       />
 
-      {/* Ready-to-log popup logger */}
-      <AnimatePresence>
-        {activeLoggerExercise && activeLoggerQueueItem && (
-          <>
-            <motion.button
-              type="button"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setActiveQueueItemId(null)}
-              className="fixed inset-0 z-[60] bg-black/55 backdrop-blur-[1px]"
-              aria-label="Close logger"
-            />
-            <motion.div
-              initial={isMobile ? { opacity: 0, y: 20 } : { opacity: 0, y: 18, scale: 0.98 }}
-              animate={isMobile ? { opacity: 1, y: 0 } : { opacity: 1, y: 0, scale: 1 }}
-              exit={isMobile ? { opacity: 0, y: 12 } : { opacity: 0, y: 12, scale: 0.98 }}
-              transition={{ duration: 0.16 }}
-              className="fixed inset-0 z-[70] overflow-y-auto overscroll-contain p-2 sm:p-6 antialiased [text-rendering:optimizeLegibility]"
-              style={{ WebkitOverflowScrolling: "touch", WebkitFontSmoothing: "antialiased" }}
-              onClick={() => setActiveQueueItemId(null)}
-            >
-              <div
-                className="mx-auto w-full max-w-4xl pb-[calc(env(safe-area-inset-bottom)+7rem)]"
-                onClick={(event) => event.stopPropagation()}
+      {/* Ready-to-log popup logger — portalled to document.body to avoid transform stacking context issues */}
+      {typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          {activeLoggerExercise && activeLoggerQueueItem && (
+            <>
+              <motion.button
+                type="button"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.14 }}
+                onClick={() => setActiveQueueItemId(null)}
+                className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-[2px]"
+                aria-label="Close logger"
+              />
+              <motion.div
+                initial={isMobile ? { opacity: 0, y: 20 } : { opacity: 0, y: 14, scale: 0.97 }}
+                animate={isMobile ? { opacity: 1, y: 0 } : { opacity: 1, y: 0, scale: 1 }}
+                exit={isMobile ? { opacity: 0, y: 10 } : { opacity: 0, y: 10, scale: 0.97 }}
+                transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
+                className="fixed inset-0 z-[70] overflow-y-auto overscroll-contain p-2 sm:p-6 antialiased [text-rendering:optimizeLegibility]"
+                style={{ WebkitOverflowScrolling: "touch", WebkitFontSmoothing: "antialiased" }}
+                onClick={() => setActiveQueueItemId(null)}
               >
-                <InlineLogForm
-                  key={activeLoggerQueueItem.id}
-                  queueItemId={activeLoggerQueueItem.id}
-                  exercise={activeLoggerExercise}
-                  selectedLevel={getSelectedLevel(activeLoggerExercise, levelDefaults, autoLevelByExerciseId)}
-                  onSubmit={handleLog}
-                  onChangeLevel={updateLevelDefault}
-                  onDismiss={dismissQueueItem}
-                  onViewDetail={handleViewExercise}
-                  onExit={() => setActiveQueueItemId(null)}
-                  draftStorageKey={getDraftStorageKey(activeLoggerExercise.id)}
-                />
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+                <div
+                  className="mx-auto w-full max-w-4xl pb-[calc(env(safe-area-inset-bottom)+7rem)]"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <InlineLogForm
+                    key={activeLoggerQueueItem.id}
+                    queueItemId={activeLoggerQueueItem.id}
+                    exercise={activeLoggerExercise}
+                    selectedLevel={getSelectedLevel(activeLoggerExercise, levelDefaults, autoLevelByExerciseId)}
+                    onSubmit={handleLog}
+                    onChangeLevel={updateLevelDefault}
+                    onDismiss={dismissQueueItem}
+                    onViewDetail={handleViewExercise}
+                    onExit={() => setActiveQueueItemId(null)}
+                    draftStorageKey={getDraftStorageKey(activeLoggerExercise.id)}
+                  />
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </PageLayout>
   );
 }
