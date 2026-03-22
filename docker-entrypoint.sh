@@ -6,12 +6,20 @@ echo "DATABASE_URL: ${DATABASE_URL}"
 
 # Extract file path from DATABASE_URL (e.g. "file:/app/data/cultivation.db" -> "/app/data/cultivation.db")
 DB_PATH=$(echo "$DATABASE_URL" | sed 's|^file:||')
+SEED_DB_PATH="${SEED_DB_PATH:-/app/seed/cultivation.db}"
 
 # â”€â”€ Full database reset (set RESET_DB=true in environment to trigger) â”€â”€
 if [ "${RESET_DB:-false}" = "true" ]; then
   echo "!!! RESET_DB=true â€” Deleting database for clean rebuild !!!"
   rm -f "$DB_PATH" "${DB_PATH}-journal" "${DB_PATH}-wal" "${DB_PATH}-shm"
   echo "Database files removed. Migrations will recreate from scratch."
+fi
+
+# If database is missing on first deployment, initialize from bundled snapshot.
+if [ ! -f "$DB_PATH" ] && [ -f "$SEED_DB_PATH" ]; then
+  echo "No database found at $DB_PATH. Initializing from snapshot $SEED_DB_PATH ..."
+  cp "$SEED_DB_PATH" "$DB_PATH"
+  echo "Snapshot database restored."
 fi
 
 # Resolve any previously failed migrations by querying the database directly

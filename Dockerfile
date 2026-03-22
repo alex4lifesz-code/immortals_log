@@ -87,8 +87,11 @@ COPY --from=builder /app/package.json ./package.json
 # Copy seed and migration scripts
 COPY --from=builder /app/scripts ./scripts
 
+# Bundle a database snapshot so first boot can start with preloaded user data
+COPY --from=builder /app/seed-data/cultivation.seed.sqlite /app/seed/cultivation.db
+
 # Create data directory for SQLite and set permissions
-RUN mkdir -p /app/data && chown -R nextjs:nodejs /app/data
+RUN mkdir -p /app/data /app/seed && chown -R nextjs:nodejs /app/data /app/seed
 
 # Startup script normalization strips UTF-8 BOM + CRLF to prevent exec errors
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
