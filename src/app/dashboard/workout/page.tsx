@@ -4007,7 +4007,6 @@ export default function ProgressionPage() {
       selectedDayFilter={selectedDayFilter}
       setSelectedDayFilter={setSelectedDayFilter}
       onDrawerOpen={handleDrawerOpen}
-      refreshTrigger={refreshTrigger}
     />
   );
 

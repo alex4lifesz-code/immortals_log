@@ -24,6 +24,7 @@ const eslintConfig = defineConfig([
     "android/**/build/**",
     "scripts/**/*.js",
     "scripts/**/*.cjs",
+    "*.js",
     "*.cjs",
     "*.mjs",
   ]),
