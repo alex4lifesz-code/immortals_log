@@ -10,6 +10,7 @@ import LeftSidebar from "@/components/navigation/LeftSidebar";
 import RightPanel from "@/components/navigation/RightPanel";
 import BottomBar from "@/components/navigation/BottomBar";
 import FloatingMobileSidebar from "@/components/navigation/FloatingMobileSidebar";
+import SwipeNavigation from "@/components/navigation/SwipeNavigation";
 import SetupWizard, { SETUP_WIZARD_COMPLETED_KEY } from "@/components/ui/SetupWizard";
 import ConnectivityBanner from "@/components/system/ConnectivityBanner";
 import { useAppContext } from "@/context/AppContext";
@@ -75,7 +76,9 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         <ConnectivityBanner />
         <div className="flex-1 flex overflow-hidden">
           <LeftSidebar />
-          <div className="flex-1 overflow-auto">{children}</div>
+          <SwipeNavigation>
+            <div className="flex-1 overflow-auto">{children}</div>
+          </SwipeNavigation>
           <RightPanel />
         </div>
         <FloatingMobileSidebar />

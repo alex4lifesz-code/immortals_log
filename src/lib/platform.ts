@@ -48,6 +48,11 @@ export function isNativePlatform(): boolean {
     return true;
   }
 
+  // Quaternary: custom UA string appended by capacitor.config.ts
+  if (/CapacitorNative/.test(ua)) {
+    return true;
+  }
+
   return false;
 }
 

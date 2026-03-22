@@ -1144,3 +1144,367 @@ html.browser-desktop-mode body {
 html.browser-desktop-mode .safe-area-bottom {
   padding-bottom: 0 !important;
 }
+
+/* ================================================================
+   NATIVE APK OPTIMISATIONS
+   Applied exclusively when running inside the Capacitor Android APK.
+   The `native-apk` class is added to <html> by the platform-detection
+   script in layout.tsx.  Browser/PWA rendering is NOT affected.
+   ================================================================ */
+
+/* ── Viewport & Rendering Foundation ──────────────────────────── */
+html.native-apk {
+  /* Prevent Android WebView text size inflation */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+
+  /* Smooth scrolling for momentum in WebView */
+  scroll-behavior: smooth;
+
+  /* Prevent overscroll bounce (rubber-banding) on the root */
+  overscroll-behavior: none;
+
+  /* Ensure touch manipulation across the app */
+  touch-action: manipulation;
+}
+
+html.native-apk body {
+  /* Prevent overscroll on body */
+  overscroll-behavior-y: none;
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+  height: 100%;
+
+  /* Optimised font rendering for Android WebView */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "kern" 1;
+
+  /* Prevent pull-to-refresh */
+  overscroll-behavior: contain;
+}
+
+/* ── Typography & Font Rendering ─────────────────────────────── */
+html.native-apk {
+  /* Use system font stack optimised for Android rendering pipeline */
+  --apk-font-stack: "Roboto", "Noto Sans", system-ui, -apple-system, sans-serif;
+
+  /* Scale-independent pixel alignment: ensure text renders
+     crisply at all density buckets (mdpi → xxxhdpi) */
+  font-variant-ligatures: common-ligatures;
+  font-kerning: normal;
+  -webkit-font-feature-settings: "kern" 1, "liga" 1;
+}
+
+/* Prevent subpixel rendering blur on Android WebView */
+html.native-apk * {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Fix font size on inputs to prevent Android zoom-on-focus */
+html.native-apk input,
+html.native-apk textarea,
+html.native-apk select {
+  font-size: 16px !important;
+}
+
+/* ── Touch Target Sizing (Material Design 48dp minimum) ──────── */
+html.native-apk button,
+html.native-apk [role="button"],
+html.native-apk a,
+html.native-apk input[type="checkbox"],
+html.native-apk input[type="radio"],
+html.native-apk select {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Smaller inline elements (badges, tags) can be exempt */
+html.native-apk .touch-target-sm {
+  min-height: 32px;
+  min-width: 32px;
+}
+
+/* ── Touch Feedback & Interaction ────────────────────────────── */
+html.native-apk {
+  /* Disable default tap highlight — we handle our own feedback */
+  -webkit-tap-highlight-color: transparent;
+}
+
+html.native-apk button,
+html.native-apk [role="button"],
+html.native-apk a {
+  /* Provide fast active states with no 300ms delay */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+
+  /* GPU-accelerated transitions for touch feedback */
+  will-change: transform, opacity;
+  transform: translateZ(0);
+}
+
+/* Active press state — immediate visual feedback */
+html.native-apk button:active,
+html.native-apk [role="button"]:active,
+html.native-apk a:active {
+  opacity: 0.85;
+  transform: scale(0.97) translateZ(0);
+  transition: transform 0.06s ease-out, opacity 0.06s ease-out;
+}
+
+/* Disable text selection on interactive elements */
+html.native-apk button,
+html.native-apk [role="button"],
+html.native-apk nav,
+html.native-apk .bottom-bar {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ── Scroll Behaviour & Containers ───────────────────────────── */
+html.native-apk .overflow-y-auto,
+html.native-apk .overflow-auto,
+html.native-apk [class*="overflow-y-auto"],
+html.native-apk [class*="overflow-auto"] {
+  /* Native-like momentum scrolling */
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+
+  /* Thin scrollbar matching app theme */
+  scrollbar-width: thin;
+  scrollbar-color: var(--ink-light) transparent;
+}
+
+/* Hide scrollbars in APK for cleaner native feel */
+html.native-apk .scrollbar-hide,
+html.native-apk .sidebar-scroll {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+html.native-apk .scrollbar-hide::-webkit-scrollbar,
+html.native-apk .sidebar-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Prevent nested scroll conflicts */
+html.native-apk .overflow-y-auto {
+  overscroll-behavior: contain;
+}
+
+/* ── Safe Area & System UI Insets ────────────────────────────── */
+html.native-apk .safe-area-bottom {
+  /* Account for Android navigation bar + rounded corners */
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 8px);
+}
+
+html.native-apk .safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Status bar spacing for edge-to-edge */
+html.native-apk .h-screen,
+html.native-apk [class*="h-screen"] {
+  height: 100vh;
+  height: 100dvh; /* Dynamic viewport height — accounts for system UI */
+}
+
+/* ── Keyboard Handling ───────────────────────────────────────── */
+/* When the Android soft keyboard appears, the viewport shrinks.
+   These rules ensure inputs remain visible above the keyboard. */
+html.native-apk input:focus,
+html.native-apk textarea:focus,
+html.native-apk select:focus {
+  /* Scroll the focused element into view with padding */
+  scroll-margin-bottom: 120px;
+  scroll-padding-bottom: 120px;
+}
+
+/* Prevent viewport jumping when keyboard opens */
+html.native-apk .fixed {
+  /* Fixed elements should use visual viewport */
+  position: fixed;
+}
+
+/* ── Animation & Transition Performance ──────────────────────── */
+
+/* Prefer transform/opacity animations for GPU compositing */
+html.native-apk .animate-glow-pulse,
+html.native-apk .animate-float,
+html.native-apk .glow-breath {
+  /* Promote to compositor layer */
+  will-change: transform, opacity;
+  contain: layout style paint;
+  transform: translateZ(0);
+}
+
+/* Reduce glow animation intensity on lower-end devices
+   (saves GPU bandwidth without removing the effect) */
+@media (max-resolution: 1.5dppx) {
+  html.native-apk .glow-jade,
+  html.native-apk .glow-crimson,
+  html.native-apk .glow-gold,
+  html.native-apk .glow-blue {
+    box-shadow: none !important;
+  }
+  html.native-apk .glow-subtle {
+    box-shadow: none !important;
+  }
+}
+
+/* View transitions within 300ms threshold */
+html.native-apk [class*="transition-"] {
+  transition-duration: 200ms !important;
+}
+
+/* Disable transitions for reduced-motion preferences  */
+@media (prefers-reduced-motion: reduce) {
+  html.native-apk *,
+  html.native-apk *::before,
+  html.native-apk *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Layout & Spacing Density Calibration ────────────────────── */
+
+/* Ensure minimum comfortable spacing on high-density displays */
+html.native-apk .p-4 { padding: 1rem; }
+html.native-apk .p-6 { padding: 1.25rem; }
+html.native-apk .pb-24 { padding-bottom: 5.5rem; } /* Space for bottom nav bar */
+
+/* Prevent component overlap — enforce gap minimums */
+html.native-apk .gap-1 { gap: 0.25rem; }
+html.native-apk .gap-2 { gap: 0.5rem; }
+html.native-apk .gap-3 { gap: 0.75rem; }
+
+/* ── Bottom Navigation Bar — APK-Specific Tuning ─────────────── */
+html.native-apk nav.safe-area-bottom,
+html.native-apk nav[class*="safe-area-bottom"] {
+  /* Ensure bottom bar sits above system nav bar */
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 12px);
+}
+
+/* ── Image & Asset Rendering ─────────────────────────────────── */
+html.native-apk img,
+html.native-apk svg {
+  /* Crisp rendering at all density buckets */
+  image-rendering: -webkit-optimize-contrast;
+}
+
+html.native-apk img {
+  /* Prevent layout shift during image load */
+  content-visibility: auto;
+}
+
+/* ── Input Fields — Android Keyboard Type Hints ──────────────── */
+html.native-apk input[type="number"] {
+  /* Show numeric keypad on Android */
+  inputmode: numeric;
+}
+
+html.native-apk input[type="email"] {
+  inputmode: email;
+}
+
+html.native-apk input[type="tel"] {
+  inputmode: tel;
+}
+
+html.native-apk input[type="url"] {
+  inputmode: url;
+}
+
+/* ── Modal & Overlay Optimisation ────────────────────────────── */
+html.native-apk .fixed.inset-0,
+html.native-apk [class*="backdrop-blur"] {
+  /* GPU-composited blur for native-quality overlays */
+  transform: translateZ(0);
+  will-change: opacity;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+/* ── APK-specific scrollbar for main content areas ───────────── */
+html.native-apk ::-webkit-scrollbar {
+  width: 3px;
+}
+
+html.native-apk ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+html.native-apk ::-webkit-scrollbar-thumb {
+  background: var(--ink-light);
+  border-radius: 3px;
+}
+
+/* ── Density-Responsive Media Queries ────────────────────────── */
+
+/* mdpi devices (160dpi) — baseline, no adjustments needed */
+
+/* hdpi devices (240dpi, 1.5x) */
+@media (min-resolution: 1.5dppx) and (max-resolution: 1.99dppx) {
+  html.native-apk {
+    --apk-density-scale: 1.5;
+  }
+}
+
+/* xhdpi devices (320dpi, 2x) */
+@media (min-resolution: 2dppx) and (max-resolution: 2.99dppx) {
+  html.native-apk {
+    --apk-density-scale: 2;
+  }
+}
+
+/* xxhdpi devices (480dpi, 3x) */
+@media (min-resolution: 3dppx) and (max-resolution: 3.99dppx) {
+  html.native-apk {
+    --apk-density-scale: 3;
+  }
+}
+
+/* xxxhdpi devices (640dpi, 4x) */
+@media (min-resolution: 4dppx) {
+  html.native-apk {
+    --apk-density-scale: 4;
+  }
+}
+
+/* ── Small Screen Adaptations (compact phones, ≤360dp) ───────── */
+@media (max-width: 360px) {
+  html.native-apk {
+    font-size: 14px;
+  }
+  html.native-apk .text-xs { font-size: 0.7rem; }
+  html.native-apk .text-sm { font-size: 0.8rem; }
+  html.native-apk .p-4 { padding: 0.75rem; }
+  html.native-apk .p-6 { padding: 1rem; }
+}
+
+/* ── Tall/Narrow Displays (19.5:9 and similar) ───────────────── */
+@media (max-width: 420px) and (min-height: 780px) {
+  html.native-apk .pb-24 {
+    padding-bottom: 6rem; /* Extra space for tall phones with large bottom bars */
+  }
+}
+
+/* ── Foldable / Tablet Displays (≥600dp) ─────────────────────── */
+@media (min-width: 600px) {
+  html.native-apk .p-4 { padding: 1.5rem; }
+  html.native-apk .p-6 { padding: 2rem; }
+}
+
+/* ── Landscape Orientation ───────────────────────────────────── */
+@media (orientation: landscape) and (max-height: 500px) {
+  html.native-apk .safe-area-bottom {
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 4px);
+  }
+  html.native-apk .pb-24 {
+    padding-bottom: 4.5rem;
+  }
+}

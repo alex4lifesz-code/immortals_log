@@ -16,6 +16,12 @@ const config: CapacitorConfig = {
     backgroundColor: "#0d0f14",
     captureInput: true,
     webContentsDebuggingEnabled: true,
+    // Optimised WebView initial scale — prevent zoom inconsistencies
+    initialFocus: false,
+    // Override user-agent to identify Capacitor runtime reliably
+    overrideUserAgent: undefined,
+    // Append to UA instead of replacing to preserve WebView detection
+    appendUserAgent: " CapacitorNative/3.0",
   },
   plugins: {
     SplashScreen: {
@@ -23,6 +29,11 @@ const config: CapacitorConfig = {
       launchShowDuration: 1500,
       backgroundColor: "#0d0f14",
       showSpinner: false,
+      androidScaleType: "CENTER_CROP",
+    },
+    Keyboard: {
+      resize: "body",
+      resizeOnFullScreen: true,
     },
   },
 };

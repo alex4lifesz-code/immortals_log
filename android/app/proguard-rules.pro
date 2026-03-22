@@ -16,6 +16,12 @@
 # ── AndroidX ──────────────────────────────────
 -keep class androidx.** { *; }
 -keep interface androidx.** { *; }
+-keep class androidx.core.view.WindowCompat { *; }
+-keep class androidx.core.view.WindowInsetsControllerCompat { *; }
+
+# ── WebView / WebSettings ─────────────────────
+-keep class android.webkit.WebView { *; }
+-keep class android.webkit.WebSettings { *; }
 
 # ── Google Services (optional) ────────────────
 -keep class com.google.android.gms.** { *; }
