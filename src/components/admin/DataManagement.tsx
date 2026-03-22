@@ -108,7 +108,9 @@ export default function DataManagement() {
       };
 
       const dateKey = resolveKey(["date", "day", "datum"]);
+      const createdAtKey = resolveKey(["createdat", "created at", "timestamp", "datetime", "date time"]);
       let exerciseKey = resolveKey(["exercise", "name", "technique", "movement"]);
+      const exerciseIdKey = resolveKey(["exerciseid", "exercise id", "id"]);
       const levelKey = resolveKey(["level", "lvl"]);
       const w1Key = resolveKey(["w1", "weight1", "weight 1"]);
       const r1Key = resolveKey(["r1", "reps1", "reps 1"]);
@@ -125,7 +127,7 @@ export default function DataManagement() {
 
       // Fallback: if exercise column not found, use the first unmatched column
       if (!exerciseKey) {
-        const matched = new Set([dateKey, levelKey, w1Key, r1Key, w2Key, r2Key, w3Key, r3Key, holdKey, hold2Key, hold3Key, modifierKey, variantKey, notesKey].filter(Boolean));
+        const matched = new Set([createdAtKey, dateKey, exerciseIdKey, levelKey, w1Key, r1Key, w2Key, r2Key, w3Key, r3Key, holdKey, hold2Key, hold3Key, modifierKey, variantKey, notesKey].filter(Boolean));
         const unmatched = firstRowKeys.filter((k) => !matched.has(k));
         if (unmatched.length === 1) {
           exerciseKey = unmatched[0];
@@ -139,13 +141,18 @@ export default function DataManagement() {
 
       // Map header names to progression log format
       const logs = rows.map((row) => {
+        const createdAtVal = createdAtKey ? row[createdAtKey] : "";
         const dateVal = dateKey ? row[dateKey] : "";
         let createdAt: string | undefined;
-        if (dateVal) {
+        if (createdAtVal) {
+          const d = new Date(String(createdAtVal));
+          if (!isNaN(d.getTime())) createdAt = d.toISOString();
+        } else if (dateVal) {
           const d = new Date(String(dateVal));
           if (!isNaN(d.getTime())) createdAt = d.toISOString();
         }
         return {
+          exerciseId: exerciseIdKey ? String(row[exerciseIdKey] ?? "").trim() || undefined : undefined,
           exerciseName: exerciseKey ? String(row[exerciseKey] ?? "") : "",
           level: levelKey ? Number(row[levelKey]) || 1 : 1,
           weight1: w1Key ? (row[w1Key] !== "" ? Number(row[w1Key]) : null) : null,
@@ -231,8 +238,10 @@ export default function DataManagement() {
       }
 
       // Build flat rows for XLSX
-      const rows = logs.map((log: { exerciseName?: string; level?: number | null; weight1?: number | null; reps1?: number | null; weight2?: number | null; reps2?: number | null; weight3?: number | null; reps3?: number | null; holdTime?: number | null; holdTime2?: number | null; holdTime3?: number | null; modifier?: string | null; variant?: string | null; notes?: string | null; createdAt?: string }) => ({
+      const rows = logs.map((log: { exerciseId?: string; exerciseName?: string; level?: number | null; weight1?: number | null; reps1?: number | null; weight2?: number | null; reps2?: number | null; weight3?: number | null; reps3?: number | null; holdTime?: number | null; holdTime2?: number | null; holdTime3?: number | null; modifier?: string | null; variant?: string | null; notes?: string | null; createdAt?: string }) => ({
+        CreatedAt: log.createdAt || "",
         Date: log.createdAt ? new Date(log.createdAt).toISOString().split("T")[0] : "",
+        ExerciseId: log.exerciseId || "",
         Level: log.level ?? 1,
         Exercise: log.exerciseName || "Unknown",
         W1: log.weight1 ?? "",
@@ -703,7 +712,7 @@ export default function DataManagement() {
         <p className="text-xs text-mist-light font-medium mb-2">Training Log {targetUserId !== user?.id && <span className="text-gold">— {targetUserName}</span>}</p>
         <p className="text-xs text-mist-dark mb-3">
           Import or export the current Training Log format used on the workout page. Import appends entries to the selected user&apos;s log, export downloads the same log structure, and remove clears all saved log entries for that user.
-          Expected columns: <span className="text-mist-light font-mono">Date, Level, Exercise, W1, R1, W2, R2, W3, R3, T1, T2, T3, Modifier, Variant, Notes</span>
+          Expected columns: <span className="text-mist-light font-mono">CreatedAt, Date, ExerciseId, Level, Exercise, W1, R1, W2, R2, W3, R3, T1, T2, T3, Modifier, Variant, Notes</span>
         </p>
         <div className="space-y-3">
           {/* Import XLSX */}
