@@ -13,9 +13,11 @@ import FloatingMobileSidebar from "@/components/navigation/FloatingMobileSidebar
 import SetupWizard, { SETUP_WIZARD_COMPLETED_KEY } from "@/components/ui/SetupWizard";
 import ConnectivityBanner from "@/components/system/ConnectivityBanner";
 import { useAppContext } from "@/context/AppContext";
+import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
   const { viewportMode, isNativeApp } = useAppContext();
+  const { user } = useAuth();
   const [showWizard, setShowWizard] = useState(() => {
     if (typeof window === "undefined") return false;
     return !localStorage.getItem(SETUP_WIZARD_COMPLETED_KEY);
@@ -77,6 +79,17 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
           <RightPanel />
         </div>
         <FloatingMobileSidebar />
+        {(isNativeApp || viewportMode === "mobile") && user && (
+          <div className="fixed right-3 bottom-20 z-50">
+            <div className="rounded-full border border-jade-glow/35 bg-ink-deep/90 px-3 py-2 shadow-[0_8px_24px_rgba(0,0,0,0.45)]">
+              <UserPhysiqueButton
+                userId={user.id}
+                userName="⚖ Profile"
+                className="text-xs font-semibold text-jade-light hover:text-jade-glow transition-colors"
+              />
+            </div>
+          </div>
+        )}
         <BottomBar />
       </div>
     </>

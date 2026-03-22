@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from "react";
+import { useAuth } from "@/context/AuthContext";
 
 // Display mode options for technique rendering
 export type TechniqueDisplayMode =
@@ -255,10 +256,13 @@ function saveActivePresetIndex(index: number | null) {
 }
 
 export function DisplaySettingsProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const [settings, setSettings] = useState<DisplaySettings>(() => loadSettings());
   const [presets, setPresets] = useState<PresetSlots>(() => loadPresets());
   const [activePresetIndex, setActivePresetIndex] = useState<number | null>(() => loadActivePresetIndex());
   const [hydrated] = useState(() => typeof window !== "undefined");
+  const [remotePrefsReady, setRemotePrefsReady] = useState(false);
+  const syncedUserIdRef = useRef<string | null>(null);
 
   // Hydrate flag for SSR — on the server loadSettings/loadPresets return
   // defaults so the first client render matches. The flag is already true on
@@ -284,6 +288,64 @@ export function DisplaySettingsProvider({ children }: { children: ReactNode }) {
       saveActivePresetIndex(activePresetIndex);
     }
   }, [activePresetIndex, hydrated]);
+
+  // Hydrate display settings from per-user shared preferences.
+  useEffect(() => {
+    let cancelled = false;
+
+    const hydrateRemoteDisplaySettings = async () => {
+      if (!user?.id) {
+        syncedUserIdRef.current = null;
+        setRemotePrefsReady(true);
+        return;
+      }
+
+      setRemotePrefsReady(false);
+      try {
+        const res = await fetch(`/api/users/preferences?userId=${encodeURIComponent(user.id)}`, { cache: "no-store" });
+        if (!res.ok) return;
+
+        const payload = await res.json();
+        const remoteSettings = payload?.displaySettings;
+        if (!cancelled && remoteSettings && typeof remoteSettings === "object" && !Array.isArray(remoteSettings)) {
+          setSettings({ ...DEFAULT_SETTINGS, ...(remoteSettings as Partial<DisplaySettings>) });
+        }
+      } catch {
+        // Ignore remote sync errors and keep local settings.
+      } finally {
+        if (!cancelled) {
+          syncedUserIdRef.current = user.id;
+          setRemotePrefsReady(true);
+        }
+      }
+    };
+
+    hydrateRemoteDisplaySettings();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  // Persist display settings to shared per-user preferences.
+  useEffect(() => {
+    if (!remotePrefsReady || !user?.id || syncedUserIdRef.current !== user.id) return;
+
+    const timer = window.setTimeout(() => {
+      fetch("/api/users/preferences", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user.id,
+          displaySettings: settings,
+        }),
+      }).catch(() => {
+        // Ignore sync failures; local storage persistence still applies.
+      });
+    }, 350);
+
+    return () => window.clearTimeout(timer);
+  }, [settings, remotePrefsReady, user?.id]);
 
   const updateSettings = useCallback((partial: Partial<DisplaySettings>) => {
     setSettings(prev => ({ ...prev, ...partial }));

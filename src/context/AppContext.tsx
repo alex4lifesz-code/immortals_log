@@ -1,8 +1,9 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import { NavItem, defaultNavItems } from "@/lib/constants";
 import { isNativePlatform } from "@/lib/platform";
+import { useAuth } from "@/context/AuthContext";
 
 type ThemeMode = "dark" | "light";
 type ThemeStyle = "midnight-ink" | "mountain-mist" | "calligraphy" | "sakura" | "sakura-dark";
@@ -52,6 +53,7 @@ interface AppContextType extends AppState {
 const AppContext = createContext<AppContextType | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
   const [navItems, setNavItems] = useState<NavItem[]>(defaultNavItems);
   const [dualPageView, setDualPageView] = useState(false);
   const [panelPosition, setPanelPosition] = useState<"left" | "top">("left");
@@ -67,6 +69,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [trainingMode, setTrainingModeState] = useState<TrainingMode>("simplified");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [activeDrawerClose, setActiveDrawerClose] = useState<(() => void) | null>(null);
+  const [remotePrefsReady, setRemotePrefsReady] = useState(false);
+  const syncedUserIdRef = useRef<string | null>(null);
 
   const registerDrawerClose = useCallback((closeFn: (() => void) | null) => {
     setActiveDrawerClose(() => closeFn);
@@ -165,6 +169,82 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [setTheme, setThemeStyle]);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Hydrate shared theme preferences per user (desktop/web + APK)
+  useEffect(() => {
+    let cancelled = false;
+
+    const hydrateRemoteTheme = async () => {
+      if (!user?.id) {
+        syncedUserIdRef.current = null;
+        setRemotePrefsReady(true);
+        return;
+      }
+
+      setRemotePrefsReady(false);
+      try {
+        const res = await fetch(`/api/users/preferences?userId=${encodeURIComponent(user.id)}`, { cache: "no-store" });
+        if (!res.ok) return;
+
+        const payload = await res.json();
+        const appPrefs = payload?.appPrefs && typeof payload.appPrefs === "object" ? payload.appPrefs : null;
+        if (!appPrefs || cancelled) return;
+
+        const remoteTheme = appPrefs.theme;
+        const remoteThemeStyle = appPrefs.themeStyle;
+
+        if (remoteTheme === "dark" || remoteTheme === "light") {
+          setThemeState(remoteTheme);
+          document.documentElement.classList.remove("dark", "light");
+          document.documentElement.classList.add(remoteTheme);
+          localStorage.setItem("cultivation-theme", remoteTheme);
+        }
+
+        if (typeof remoteThemeStyle === "string" && ["midnight-ink", "mountain-mist", "calligraphy", "sakura", "sakura-dark"].includes(remoteThemeStyle)) {
+          setThemeStyleState(remoteThemeStyle as ThemeStyle);
+          document.documentElement.classList.remove("midnight-ink", "mountain-mist", "calligraphy", "sakura", "sakura-dark");
+          document.documentElement.classList.add(remoteThemeStyle);
+          localStorage.setItem("cultivation-theme-style", remoteThemeStyle);
+        }
+      } catch {
+        // Ignore remote sync errors; local settings remain usable.
+      } finally {
+        if (!cancelled) {
+          syncedUserIdRef.current = user.id;
+          setRemotePrefsReady(true);
+        }
+      }
+    };
+
+    hydrateRemoteTheme();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  // Persist theme changes to shared per-user preferences.
+  useEffect(() => {
+    if (!remotePrefsReady || !user?.id || syncedUserIdRef.current !== user.id) return;
+
+    const timer = window.setTimeout(() => {
+      fetch("/api/users/preferences", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user.id,
+          appPrefs: {
+            theme,
+            themeStyle,
+          },
+        }),
+      }).catch(() => {
+        // Ignore sync failures; local settings are still saved.
+      });
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+  }, [theme, themeStyle, remotePrefsReady, user?.id]);
 
   // Handle responsive layout changes (fixes bidirectional bug)
   // Explicit viewport overrides are honoured on all platforms (browser + native).

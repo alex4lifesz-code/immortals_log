@@ -197,6 +197,19 @@ function PageLayout({
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.1 }}
         >
+          {mobileMode && sidebar && !mobileSidebarOpen && (
+            <div className="mb-3 flex justify-end">
+              <button
+                onClick={() => setMobileSidebarOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-jade-glow/45 bg-jade-deep/25 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-jade-glow shadow-[0_0_10px_rgba(58,143,143,0.22)] transition-all hover:border-jade-glow/70 hover:bg-jade-deep/35"
+              >
+                <span>Filters</span>
+                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+              </button>
+            </div>
+          )}
           {subtitle && (
             <p className="text-xs text-mist-dark mb-4 italic">{subtitle}</p>
           )}
@@ -227,16 +240,16 @@ function PageLayout({
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "spring", damping: 28, stiffness: 300, mass: 0.8 }}
-              className="fixed inset-y-0 left-0 z-50 bg-ink-deep/98 backdrop-blur-lg border-r border-jade-glow/10 flex flex-col shadow-2xl"
-              style={{ width: "min(85vw, 340px)" }}
+              className="fixed inset-y-0 left-0 z-50 bg-ink-deep/98 border-r border-jade-glow/15 flex flex-col shadow-2xl"
+              style={{ width: "min(92vw, 420px)" }}
             >
               <div className="flex items-center justify-between px-5 py-4 border-b border-ink-light/50 shrink-0">
-                <h2 className="text-sm text-jade-glow font-semibold uppercase tracking-[0.12em]">
+                <h2 className="text-base text-jade-glow font-semibold uppercase tracking-[0.1em]">
                   {sidebarLabel || title}
                 </h2>
                 <button
                   onClick={() => setMobileSidebarOpen(false)}
-                  className="p-2 rounded-xl text-mist-dark active:text-cloud-white active:bg-white/10 transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center"
+                  className="p-2 rounded-xl text-mist-dark active:text-cloud-white active:bg-white/10 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

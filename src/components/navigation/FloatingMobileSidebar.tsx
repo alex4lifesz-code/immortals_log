@@ -7,6 +7,7 @@ import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { useRouter, usePathname } from "next/navigation";
 import { memo, useCallback, useEffect } from "react";
 import { t } from "@/lib/terminology";
+import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
 
 function FloatingMobileSidebar() {
   const { getSortedNavItems, isMobile, viewportMode, mobileSidebarOpen, setMobileSidebarOpen } = useAppContext();
@@ -61,17 +62,17 @@ function FloatingMobileSidebar() {
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
             transition={{ type: "spring", damping: 28, stiffness: 300, mass: 0.8 }}
-            className="fixed left-0 top-0 z-40 h-screen flex flex-col bg-ink-deep/98 backdrop-blur-lg border-r border-jade-glow/10 shadow-2xl overflow-hidden"
-            style={{ width: "min(80vw, 320px)" }}
+            className="fixed left-0 top-0 z-40 h-screen flex flex-col bg-ink-deep/98 border-r border-jade-glow/15 shadow-2xl overflow-hidden"
+            style={{ width: "min(92vw, 420px)" }}
           >
             {/* Header */}
             <div className="px-5 pt-5 pb-4 border-b border-ink-light/50 flex items-center justify-between shrink-0">
               <div>
-                <h2 className="text-sm text-jade-glow font-bold tracking-[0.15em] uppercase">
+                <h2 className="text-base text-jade-glow font-bold tracking-[0.12em] uppercase">
                   ⚔ Navigation
                 </h2>
                 {user && (
-                  <p className="text-[11px] text-mist-light mt-0.5 truncate">{user.name}</p>
+                  <p className="text-xs text-mist-light mt-0.5 truncate">{user.name}</p>
                 )}
               </div>
               <motion.button
@@ -85,8 +86,19 @@ function FloatingMobileSidebar() {
               </motion.button>
             </div>
 
+            {user && (
+              <div className="mx-4 mt-3 mb-2 rounded-xl border border-jade-glow/20 bg-ink-mid/35 px-4 py-3">
+                <p className="text-[10px] uppercase tracking-[0.12em] text-mist-dark mb-1">Body Profile</p>
+                <UserPhysiqueButton
+                  userId={user.id}
+                  userName="Update Weight & Gender"
+                  className="text-sm font-semibold text-jade-light hover:text-jade-glow transition-colors"
+                />
+              </div>
+            )}
+
             {/* Navigation Items — scrollable */}
-            <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-1 overscroll-contain">
+            <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-1.5 overscroll-contain">
               {items.map((item, index) => {
                 const isActive = pathname === item.path;
                 return (
@@ -97,14 +109,14 @@ function FloatingMobileSidebar() {
                     transition={{ delay: index * 0.03, type: "spring", stiffness: 400, damping: 30 }}
                     whileTap={{ scale: 0.97 }}
                     onClick={() => handleNavigate(item.path)}
-                    className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm transition-colors min-h-[48px] ${
+                    className={`w-full flex items-center gap-3 px-4 py-4 rounded-xl text-base transition-colors min-h-[56px] ${
                       isActive
                         ? "bg-jade-deep/40 text-jade-light border border-jade/20 shadow-sm"
                         : "text-mist-light active:text-cloud-white active:bg-ink-mid/60 border border-transparent"
                     }`}
                     style={{ WebkitTapHighlightColor: 'transparent' }}
                   >
-                    <span className="text-lg flex-shrink-0 w-7 text-center">{item.icon}</span>
+                    <span className="text-xl flex-shrink-0 w-8 text-center">{item.icon}</span>
                     <span className="flex-1 text-left font-medium">{t(item.label, terminologyMode)}</span>
                     {item.pinned && <span className="text-[10px] text-gold-dim flex-shrink-0">📌</span>}
                     {isActive && (

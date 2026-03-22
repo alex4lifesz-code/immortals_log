@@ -2196,6 +2196,7 @@ function InlineLogForm({
   const [timerReps, setTimerReps] = useState("");
   const showHold = inputMode === "hold";
   const { settings } = useDisplaySettings();
+  const { isMobile } = useAppContext();
 
   const mode = settings.progressionCardMode ?? "name-illumination-realm-path";
   const cardStyle = settings.progressionCardStyle ?? "default";
@@ -2563,7 +2564,14 @@ function InlineLogForm({
 
         {/* Input grid */}
         <div className="pl-2">
-          <div className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(6, 1fr) 1.5fr" }}>
+          <div className={isMobile ? "overflow-x-auto pb-1" : undefined}>
+            <div
+              className="grid gap-1.5"
+              style={{
+                gridTemplateColumns: "repeat(6, 1fr) 1.5fr",
+                minWidth: isMobile ? "560px" : undefined,
+              }}
+            >
             {/* Column headers */}
             {!showHold ? (
               <>
@@ -2630,6 +2638,7 @@ function InlineLogForm({
             )}
             <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes..."
               className="w-full rounded-md px-1.5 py-1.5 text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/20 text-cloud-white placeholder:text-mist-dark/40 focus:border-mist-mid/30 focus:bg-ink-mid/30" />
+          </div>
           </div>
         </div>
 
@@ -2818,6 +2827,7 @@ function ProgressionSidebar({
   setSelectedDayFilter: (v: number | null) => void;
   onDrawerOpen: () => void;
 }) {
+  const { isMobile } = useAppContext();
   const { settings } = useDisplaySettings();
   const [isCompact, setIsCompact] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -2972,10 +2982,15 @@ function ProgressionSidebar({
     { key: "selected", label: "Selected", icon: "✦" },
   ] as const;
 
+  const compactEnabled = !isMobile && isCompact;
+  const controlSizeClass = isMobile ? "h-9" : "h-7";
+  const chipTextClass = isMobile ? "text-xs" : "text-[10px]";
+  const labelTextClass = isMobile ? "text-[10px]" : "text-[9px]";
+
   return (
     <div className="h-full flex flex-col">
       {/* ── Toolbar ── */}
-      <div className="px-3 pt-2.5 pb-2 shrink-0 space-y-2">
+      <div className="px-3 pt-3 pb-2.5 shrink-0 space-y-2.5">
         {/* Search */}
         <div className="relative">
           <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-mist-dark pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2986,7 +3001,7 @@ function ProgressionSidebar({
             placeholder="Search exercises..."
             value={searchTerm}
             onChange={(e) => onSearch(e.target.value)}
-            className="w-full bg-ink-dark/80 border border-ink-light/50 rounded-lg pl-8 pr-8 py-1.5 text-[11px] text-cloud-white placeholder:text-mist-dark/70 outline-none transition-all duration-200 focus:border-jade-glow/60 focus:bg-ink-dark"
+            className={`w-full bg-ink-dark/80 border border-ink-light/50 rounded-lg pl-8 pr-8 ${isMobile ? "py-2.5 text-sm" : "py-1.5 text-[11px]"} text-cloud-white placeholder:text-mist-dark/70 outline-none transition-all duration-200 focus:border-jade-glow/60 focus:bg-ink-dark`}
           />
           {searchTerm && (
             <button
@@ -3006,7 +3021,7 @@ function ProgressionSidebar({
             <button
               onClick={() => setSelectedDayFilter(null)}
               className={`
-                flex-1 py-1 text-[10px] font-semibold rounded-md transition-all duration-200 border
+                flex-1 ${isMobile ? "py-2 text-xs" : "py-1 text-[10px]"} font-semibold rounded-md transition-all duration-200 border
                 ${selectedDayFilter === null
                   ? 'bg-jade-deep/60 text-jade-glow border-jade-glow/40 shadow-[inset_0_0_12px_rgba(58,143,143,0.15)]'
                   : 'bg-ink-dark/60 text-mist-dark border-ink-light/40 hover:text-mist-light hover:bg-ink-mid/40'
@@ -3022,7 +3037,7 @@ function ProgressionSidebar({
                 variant="jade"
                 size="sm"
                 glow
-                className="!py-1 !text-[10px] shrink-0"
+                className={`${isMobile ? "!py-2 !text-xs" : "!py-1 !text-[10px]"} shrink-0`}
               >
                 ⚙ Manage
               </GlowButton>
@@ -3039,7 +3054,7 @@ function ProgressionSidebar({
                   key={day}
                   onClick={() => setSelectedDayFilter(index)}
                   className={`
-                    flex-1 py-1 text-[10px] font-semibold transition-all duration-200 relative flex flex-col items-center gap-0.5
+                    flex-1 ${isMobile ? "py-2 text-xs" : "py-1 text-[10px]"} font-semibold transition-all duration-200 relative flex flex-col items-center gap-0.5
                     ${index > 0 ? 'border-l border-ink-light/30' : ''}
                     ${isSelected
                       ? 'bg-jade-deep/60 text-jade-glow shadow-[inset_0_0_12px_rgba(58,143,143,0.15)]'
@@ -3077,7 +3092,7 @@ function ProgressionSidebar({
             <button
               onClick={() => setExpandedIds(new Set())}
               disabled={!canCollapseAll}
-              className={`group inline-flex items-center gap-1.5 px-2.5 h-7 rounded-md border focus-visible:outline-none focus-visible:ring-2 transition-all duration-200 text-[10px] font-semibold tracking-wide ${
+              className={`group inline-flex items-center gap-1.5 px-2.5 ${controlSizeClass} rounded-md border focus-visible:outline-none focus-visible:ring-2 transition-all duration-200 ${chipTextClass} font-semibold tracking-wide ${
                 canCollapseAll
                   ? 'border-jade/45 bg-jade-deep/30 text-jade-light hover:bg-jade-deep/45 hover:border-jade/65 hover:text-cloud-white focus-visible:ring-jade-glow/35 shadow-[0_0_10px_rgba(58,143,143,0.18)]'
                   : 'border-ink-light/35 bg-ink-mid/20 text-mist-dark/70 cursor-not-allowed focus-visible:ring-mist-mid/20 opacity-80'
@@ -3094,7 +3109,7 @@ function ProgressionSidebar({
 
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`w-7 h-7 rounded-md flex items-center justify-center border transition-all duration-150 ${
+            className={`${isMobile ? "w-9 h-9" : "w-7 h-7"} rounded-md flex items-center justify-center border transition-all duration-150 ${
               showFilters
                 ? 'bg-jade-deep/25 border-jade/40 text-jade-glow'
                 : 'border-ink-light/40 text-mist-dark hover:text-mist-light hover:border-ink-light/60'
@@ -3105,14 +3120,15 @@ function ProgressionSidebar({
           </button>
           <button
             onClick={() => setIsCompact(!isCompact)}
-            className={`w-7 h-7 rounded-md flex items-center justify-center border transition-all duration-150 ${
-              isCompact
+            disabled={isMobile}
+            className={`${isMobile ? "w-9 h-9" : "w-7 h-7"} rounded-md flex items-center justify-center border transition-all duration-150 ${
+              compactEnabled
                 ? 'bg-jade-deep/25 border-jade/40 text-jade-glow'
-                : 'border-ink-light/40 text-mist-dark hover:text-mist-light hover:border-ink-light/60'
+                : `border-ink-light/40 text-mist-dark ${isMobile ? "opacity-40 cursor-not-allowed" : "hover:text-mist-light hover:border-ink-light/60"}`
             }`}
-            title={isCompact ? "Expanded view" : "Compact view"}
+            title={isMobile ? "Compact mode is disabled on mobile" : (compactEnabled ? "Expanded view" : "Compact view")}
           >
-            {isCompact ? (
+            {compactEnabled ? (
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
             ) : (
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
@@ -3136,15 +3152,15 @@ function ProgressionSidebar({
               {categories.length > 0 && (
                 <div>
                   <div className="flex items-center gap-1.5 mb-1">
-                    <span className="text-[9px] text-mist-dark/80 uppercase tracking-widest font-medium">Category</span>
+                    <span className={`${labelTextClass} text-mist-dark/80 uppercase tracking-widest font-medium`}>Category</span>
                     {filterCategory && (
-                      <button onClick={() => setFilterCategory("")} className="text-[9px] text-jade-glow/70 hover:text-jade-glow transition-colors">clear</button>
+                      <button onClick={() => setFilterCategory("")} className={`${labelTextClass} text-jade-glow/70 hover:text-jade-glow transition-colors`}>clear</button>
                     )}
                   </div>
                   <div className="flex flex-wrap gap-1">
                     <button
                       onClick={() => setFilterCategory("")}
-                      className={`text-[10px] px-2 py-0.5 rounded-md transition-all duration-150 border ${
+                      className={`${chipTextClass} px-2 py-1 rounded-md transition-all duration-150 border ${
                         !filterCategory
                           ? "bg-jade-deep/40 text-jade-glow border-jade/40 shadow-[0_0_6px_rgba(58,143,143,0.15)]"
                           : "bg-transparent text-mist-dark border-ink-light/30 hover:text-mist-light hover:border-ink-light/50"
@@ -3156,7 +3172,7 @@ function ProgressionSidebar({
                       <button
                         key={cat}
                         onClick={() => setFilterCategory(filterCategory === cat ? "" : cat)}
-                        className={`text-[10px] px-2 py-0.5 rounded-md transition-all duration-150 border ${
+                        className={`${chipTextClass} px-2 py-1 rounded-md transition-all duration-150 border ${
                           filterCategory === cat
                             ? "bg-jade-deep/40 text-jade-glow border-jade/40 shadow-[0_0_6px_rgba(58,143,143,0.15)]"
                             : "bg-transparent text-mist-dark border-ink-light/30 hover:text-mist-light hover:border-ink-light/50"
@@ -3173,15 +3189,15 @@ function ProgressionSidebar({
               {types.length > 0 && (
                 <div>
                   <div className="flex items-center gap-1.5 mb-1">
-                    <span className="text-[9px] text-mist-dark/80 uppercase tracking-widest font-medium">Type</span>
+                    <span className={`${labelTextClass} text-mist-dark/80 uppercase tracking-widest font-medium`}>Type</span>
                     {filterType && (
-                      <button onClick={() => setFilterType("")} className="text-[9px] text-jade-glow/70 hover:text-jade-glow transition-colors">clear</button>
+                      <button onClick={() => setFilterType("")} className={`${labelTextClass} text-jade-glow/70 hover:text-jade-glow transition-colors`}>clear</button>
                     )}
                   </div>
                   <div className="flex flex-wrap gap-1">
                     <button
                       onClick={() => setFilterType("")}
-                      className={`text-[10px] px-2 py-0.5 rounded-md transition-all duration-150 border ${
+                      className={`${chipTextClass} px-2 py-1 rounded-md transition-all duration-150 border ${
                         !filterType
                           ? "bg-jade-deep/40 text-jade-glow border-jade/40 shadow-[0_0_6px_rgba(58,143,143,0.15)]"
                           : "bg-transparent text-mist-dark border-ink-light/30 hover:text-mist-light hover:border-ink-light/50"
@@ -3193,7 +3209,7 @@ function ProgressionSidebar({
                       <button
                         key={t}
                         onClick={() => setFilterType(filterType === t ? "" : t)}
-                        className={`text-[10px] px-2 py-0.5 rounded-md transition-all duration-150 border ${
+                        className={`${chipTextClass} px-2 py-1 rounded-md transition-all duration-150 border ${
                           filterType === t
                             ? "bg-jade-deep/40 text-jade-glow border-jade/40 shadow-[0_0_6px_rgba(58,143,143,0.15)]"
                             : "bg-transparent text-mist-dark border-ink-light/30 hover:text-mist-light hover:border-ink-light/50"
@@ -3210,9 +3226,9 @@ function ProgressionSidebar({
               {equipmentTypes.length > 1 && (
                 <div>
                   <div className="flex items-center gap-1.5 mb-1">
-                    <span className="text-[9px] text-mist-dark/80 uppercase tracking-widest font-medium">Equipment</span>
+                    <span className={`${labelTextClass} text-mist-dark/80 uppercase tracking-widest font-medium`}>Equipment</span>
                     {filterEquipment && (
-                      <button onClick={() => setFilterEquipment("")} className="text-[9px] text-jade-glow/70 hover:text-jade-glow transition-colors">clear</button>
+                      <button onClick={() => setFilterEquipment("")} className={`${labelTextClass} text-jade-glow/70 hover:text-jade-glow transition-colors`}>clear</button>
                     )}
                   </div>
                   <div className="flex flex-wrap gap-1">
@@ -3220,7 +3236,7 @@ function ProgressionSidebar({
                       <button
                         key={eq}
                         onClick={() => setFilterEquipment(filterEquipment === eq ? "" : eq)}
-                        className={`text-[10px] px-2 py-0.5 rounded-md transition-all duration-150 border ${
+                        className={`${chipTextClass} px-2 py-1 rounded-md transition-all duration-150 border ${
                           filterEquipment === eq
                             ? "bg-jade-deep/40 text-jade-glow border-jade/40 shadow-[0_0_6px_rgba(58,143,143,0.15)]"
                             : "bg-transparent text-mist-dark border-ink-light/30 hover:text-mist-light hover:border-ink-light/50"
@@ -3235,11 +3251,11 @@ function ProgressionSidebar({
 
               {/* Sort */}
               <div>
-                <span className="text-[9px] text-mist-dark/80 uppercase tracking-widest font-medium block mb-1">Sort By</span>
+                <span className={`${labelTextClass} text-mist-dark/80 uppercase tracking-widest font-medium block mb-1`}>Sort By</span>
                 <select
                   value={sortMode}
                   onChange={(e) => setSortMode(e.target.value)}
-                  className="w-full bg-ink-dark/80 border border-ink-light/40 rounded-md px-2 py-1 text-[11px] text-cloud-white outline-none transition-all duration-150 focus:border-jade-glow/50 appearance-none cursor-pointer"
+                  className={`w-full bg-ink-dark/80 border border-ink-light/40 rounded-md px-2 ${isMobile ? "py-2 text-sm" : "py-1 text-[11px]"} text-cloud-white outline-none transition-all duration-150 focus:border-jade-glow/50 appearance-none cursor-pointer`}
                   style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 6px center', backgroundRepeat: 'no-repeat', backgroundSize: '16px', paddingRight: '28px' }}
                 >
                   {sortOptions.map((opt) => (
@@ -3317,7 +3333,7 @@ function ProgressionSidebar({
             </div>
           )
         ) : (
-          <div className={`${isCompact ? 'space-y-px' : 'space-y-1'}`}>
+          <div className={`${compactEnabled ? 'space-y-px' : 'space-y-1.5'}`}>
             {sorted.map((exercise, idx) => {
               const isActive = selectedIds.has(exercise.id);
               const currentLevel = exercise.userProgress[0]?.currentLevel ?? 1;
@@ -3433,7 +3449,7 @@ function ProgressionSidebar({
                 : () => onToggleExercise(exercise.id);
 
               /* ═══ Compact mode ═══ */
-              if (isCompact) {
+              if (compactEnabled) {
                 return (
                   <div key={exercise.id}>
                     <div
@@ -4025,7 +4041,7 @@ export default function ProgressionPage() {
       {exercises.length === 0 ? (
         <EmptyState />
       ) : (
-        <div className="p-4 space-y-4">
+        <div className="px-0 py-3 sm:p-4 space-y-4">
           {/* Color guide */}
           <div className="flex items-center gap-2">
             <button
@@ -4068,8 +4084,8 @@ export default function ProgressionPage() {
           )}
 
           {/* Training Log Table */}
-          <section>
-            <div className="flex items-center justify-between mb-3 gap-2">
+          <section className="space-y-3">
+            <div className="flex items-center justify-between gap-2 px-1 sm:px-0">
               <h3 className="text-xs text-mist-light uppercase tracking-wider">Training Log</h3>
               {selectedLogExerciseId && (
                 <button
@@ -4080,27 +4096,31 @@ export default function ProgressionPage() {
                 </button>
               )}
             </div>
-            <TrainingLogTable
-              exercises={exercises}
-              physique={physique}
-              selectedExerciseId={selectedLogExerciseId}
-              onSelectExercise={setSelectedLogExerciseId}
-              onRefresh={fetchExercises}
-              userId={userId || ''}
-            />
-          </section>
-
-          {/* Timed Hold Log Table */}
-          {exercises.some(hasHoldBasedTiers) && (
-            <section>
-              <h3 className="text-xs text-mountain-blue-glow uppercase tracking-wider mb-3">Timed Hold Log</h3>
-              <HoldTrainingLogTable
+            <div className="-mx-4 sm:mx-0">
+              <TrainingLogTable
                 exercises={exercises}
+                physique={physique}
                 selectedExerciseId={selectedLogExerciseId}
                 onSelectExercise={setSelectedLogExerciseId}
                 onRefresh={fetchExercises}
                 userId={userId || ''}
               />
+            </div>
+          </section>
+
+          {/* Timed Hold Log Table */}
+          {exercises.some(hasHoldBasedTiers) && (
+            <section className="space-y-3">
+              <h3 className="text-xs text-mountain-blue-glow uppercase tracking-wider px-1 sm:px-0">Timed Hold Log</h3>
+              <div className="-mx-4 sm:mx-0">
+                <HoldTrainingLogTable
+                  exercises={exercises}
+                  selectedExerciseId={selectedLogExerciseId}
+                  onSelectExercise={setSelectedLogExerciseId}
+                  onRefresh={fetchExercises}
+                  userId={userId || ''}
+                />
+              </div>
             </section>
           )}
         </div>

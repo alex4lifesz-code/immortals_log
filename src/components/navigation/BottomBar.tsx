@@ -7,6 +7,7 @@ import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { useState, memo, useCallback, useMemo, type ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { t } from "@/lib/terminology";
+import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
 
 const NAV_ICON_MAP: Record<string, ReactNode> = {
   "/dashboard": (
@@ -112,6 +113,16 @@ function BottomBar() {
                 </button>
               </div>
               <div className="grid grid-cols-2 gap-1.5 px-1">
+                {user && (
+                  <div className="col-span-2 rounded-xl border border-jade-glow/20 bg-ink-mid/40 px-3 py-2">
+                    <p className="text-[10px] uppercase tracking-[0.12em] text-mist-dark mb-0.5">Body Profile</p>
+                    <UserPhysiqueButton
+                      userId={user.id}
+                      userName="Update Weight & Gender"
+                      className="text-[13px] font-semibold text-jade-light hover:text-jade-glow transition-colors"
+                    />
+                  </div>
+                )}
                 {moreItems.map((item, index) => (
                   <motion.button
                     key={item.id}
