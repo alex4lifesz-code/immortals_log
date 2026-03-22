@@ -1145,7 +1145,7 @@ function TrainingLogTable({
 
   return (
     <>
-    <GlowCard className="w-full !p-0" glow="jade" hoverable={false}>
+    <GlowCard className={isMobile ? "w-full !p-0 border-x-0 rounded-none" : "w-full !p-0"} glow="jade" hoverable={false}>
       {/* Edit header bar */}
       {entries.length > 0 && (
         <div className="flex items-center justify-between px-3 py-2 border-b border-jade-glow/20">
@@ -1802,7 +1802,7 @@ function HoldTrainingLogTable({
 
   return (
     <>
-    <GlowCard className="w-full !p-0" glow="jade" hoverable={false}>
+    <GlowCard className={isMobile ? "w-full !p-0 border-x-0 rounded-none" : "w-full !p-0"} glow="jade" hoverable={false}>
       {/* Edit header bar */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-jade-glow/20">
         <div className="flex items-center gap-2">
@@ -4438,6 +4438,7 @@ function EmptyState() {
 export default function ProgressionPage() {
   const { settings } = useDisplaySettings();
   const { user } = useAuth();
+  const { isMobile } = useAppContext();
   const [exercises, setExercises] = useState<ProgressionExercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -4826,6 +4827,29 @@ export default function ProgressionPage() {
     return () => window.removeEventListener("popstate", onPopState);
   }, [activeQueueItemId, selectedLogFilter]);
 
+  // Android WebView hardware back fallback.
+  useEffect(() => {
+    const onBackButton = (event: Event) => {
+      if (!activeQueueItemId && !selectedLogFilter) return;
+
+      if (typeof (event as { preventDefault?: () => void }).preventDefault === "function") {
+        (event as { preventDefault: () => void }).preventDefault();
+      }
+
+      if (activeQueueItemId) {
+        setActiveQueueItemId(null);
+        loggerHistoryArmedRef.current = false;
+        return;
+      }
+
+      setSelectedLogFilter(null);
+      filterHistoryArmedRef.current = false;
+    };
+
+    document.addEventListener("backbutton", onBackButton as EventListener);
+    return () => document.removeEventListener("backbutton", onBackButton as EventListener);
+  }, [activeQueueItemId, selectedLogFilter]);
+
   // ── Render ──
 
   const sidebar = (
@@ -5098,14 +5122,18 @@ export default function ProgressionPage() {
               aria-label="Close logger"
             />
             <motion.div
-              initial={{ opacity: 0, y: 18, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 12, scale: 0.98 }}
+              initial={isMobile ? { opacity: 0, y: 20 } : { opacity: 0, y: 18, scale: 0.98 }}
+              animate={isMobile ? { opacity: 1, y: 0 } : { opacity: 1, y: 0, scale: 1 }}
+              exit={isMobile ? { opacity: 0, y: 12 } : { opacity: 0, y: 12, scale: 0.98 }}
               transition={{ duration: 0.16 }}
-              className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-3 sm:p-6"
+              className="fixed inset-0 z-50 overflow-y-auto overscroll-contain p-2 sm:p-6 antialiased [text-rendering:optimizeLegibility]"
+              style={{ WebkitOverflowScrolling: "touch", WebkitFontSmoothing: "antialiased" }}
               onClick={() => setActiveQueueItemId(null)}
             >
-              <div className="w-full max-w-4xl" onClick={(event) => event.stopPropagation()}>
+              <div
+                className="mx-auto w-full max-w-4xl pb-[calc(env(safe-area-inset-bottom)+1rem)]"
+                onClick={(event) => event.stopPropagation()}
+              >
                 <InlineLogForm
                   key={activeLoggerQueueItem.id}
                   queueItemId={activeLoggerQueueItem.id}
