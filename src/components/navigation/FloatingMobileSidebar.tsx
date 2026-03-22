@@ -5,7 +5,7 @@ import { useAppContext } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { useRouter, usePathname } from "next/navigation";
-import { memo, useCallback, useEffect } from "react";
+import { memo, useCallback, useEffect, useRef } from "react";
 import { t } from "@/lib/terminology";
 import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
 
@@ -18,6 +18,8 @@ function FloatingMobileSidebar() {
   const pathname = usePathname();
   const isAdmin = user?.role === "admin";
   const items = getSortedNavItems().filter(item => item.id !== "admin" || isAdmin);
+  const touchStartXRef = useRef<number | null>(null);
+  const touchCurrentXRef = useRef<number | null>(null);
 
   // Auto-close sidebar whenever the route changes
   useEffect(() => {
@@ -32,6 +34,26 @@ function FloatingMobileSidebar() {
     router.push(path);
     setMobileSidebarOpen(false);
   }, [router, setMobileSidebarOpen]);
+
+  const onSidebarTouchStart = (event: React.TouchEvent<HTMLElement>) => {
+    touchStartXRef.current = event.touches[0]?.clientX ?? null;
+    touchCurrentXRef.current = touchStartXRef.current;
+  };
+
+  const onSidebarTouchMove = (event: React.TouchEvent<HTMLElement>) => {
+    touchCurrentXRef.current = event.touches[0]?.clientX ?? null;
+  };
+
+  const onSidebarTouchEnd = () => {
+    const start = touchStartXRef.current;
+    const end = touchCurrentXRef.current;
+    touchStartXRef.current = null;
+    touchCurrentXRef.current = null;
+    if (start == null || end == null) return;
+    if (end - start < -48) {
+      handleClose();
+    }
+  };
 
   const effectiveMobile = isMobile || viewportMode === "mobile";
 
@@ -73,6 +95,9 @@ function FloatingMobileSidebar() {
             transition={{ type: "spring", damping: 28, stiffness: 300, mass: 0.8 }}
             className="fixed left-0 top-0 z-40 h-screen flex flex-col bg-ink-deep/98 border-r border-jade-glow/15 shadow-2xl overflow-hidden touch-pan-y"
             style={{ width: "min(92vw, 420px)" }}
+            onTouchStart={onSidebarTouchStart}
+            onTouchMove={onSidebarTouchMove}
+            onTouchEnd={onSidebarTouchEnd}
           >
             {/* Header */}
             <div className="px-5 pt-5 pb-4 border-b border-ink-light/50 flex items-center justify-between shrink-0">

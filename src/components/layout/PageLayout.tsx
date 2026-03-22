@@ -26,6 +26,8 @@ function PageLayout({
   const mobileMode = isMobile && (isNativeApp || viewportMode === "mobile");
   const [mobileQuickViewOpen, setMobileQuickViewOpen] = useState(false);
   const mobileSidebarHistoryArmedRef = useRef(false);
+  const sidebarTouchStartXRef = useRef<number | null>(null);
+  const sidebarTouchCurrentXRef = useRef<number | null>(null);
   const sidebarPosition = settings.sidebarPosition || "left";
   const sidebarWidth = settings.sidebarWidth || 320;
 
@@ -135,6 +137,62 @@ function PageLayout({
     document.addEventListener("backbutton", onBackButton as EventListener);
     return () => document.removeEventListener("backbutton", onBackButton as EventListener);
   }, [mobileSidebarOpen, mobileQuickViewOpen, setMobileSidebarOpen]);
+
+  // Capacitor native Android back-button (reliable in APK webview).
+  useEffect(() => {
+    let handle: { remove: () => Promise<void> } | null = null;
+    let cancelled = false;
+
+    const register = async () => {
+      try {
+        const mod = await import("@capacitor/app");
+        if (cancelled) return;
+        const result = await mod.App.addListener("backButton", () => {
+          if (!mobileSidebarOpen && !mobileQuickViewOpen) return;
+          setMobileSidebarOpen(false);
+          setMobileQuickViewOpen(false);
+          mobileSidebarHistoryArmedRef.current = false;
+        });
+        if (cancelled) {
+          void result.remove();
+          return;
+        }
+        handle = result;
+      } catch {
+        // Capacitor App plugin unavailable outside native runtime.
+      }
+    };
+
+    void register();
+
+    return () => {
+      cancelled = true;
+      if (!handle) return;
+      void handle.remove();
+    };
+  }, [mobileSidebarOpen, mobileQuickViewOpen, setMobileSidebarOpen]);
+
+  const onSidebarTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    sidebarTouchStartXRef.current = event.touches[0]?.clientX ?? null;
+    sidebarTouchCurrentXRef.current = sidebarTouchStartXRef.current;
+  };
+
+  const onSidebarTouchMove = (event: React.TouchEvent<HTMLDivElement>) => {
+    sidebarTouchCurrentXRef.current = event.touches[0]?.clientX ?? null;
+  };
+
+  const onSidebarTouchEnd = () => {
+    const start = sidebarTouchStartXRef.current;
+    const end = sidebarTouchCurrentXRef.current;
+    sidebarTouchStartXRef.current = null;
+    sidebarTouchCurrentXRef.current = null;
+    if (start == null || end == null) return;
+    const deltaX = end - start;
+    if (deltaX < -48) {
+      setMobileSidebarOpen(false);
+      mobileSidebarHistoryArmedRef.current = false;
+    }
+  };
 
   // Mutual exclusion: close QuickView when sidebar opens
   useEffect(() => {
@@ -297,6 +355,9 @@ function PageLayout({
               transition={{ type: "spring", damping: 28, stiffness: 300, mass: 0.8 }}
               className="fixed inset-y-0 left-0 z-50 bg-ink-deep/98 border-r border-jade-glow/15 flex flex-col shadow-2xl touch-pan-y"
               style={{ width: "min(92vw, 420px)" }}
+              onTouchStart={onSidebarTouchStart}
+              onTouchMove={onSidebarTouchMove}
+              onTouchEnd={onSidebarTouchEnd}
             >
               <div className="flex items-center justify-between px-5 py-4 border-b border-ink-light/50 shrink-0">
                 <h2 className="text-base text-jade-glow font-semibold uppercase tracking-[0.1em]">

@@ -4850,6 +4850,45 @@ export default function ProgressionPage() {
     return () => document.removeEventListener("backbutton", onBackButton as EventListener);
   }, [activeQueueItemId, selectedLogFilter]);
 
+  // Capacitor native Android back-button (reliable in APK webview).
+  useEffect(() => {
+    let handle: { remove: () => Promise<void> } | null = null;
+    let cancelled = false;
+
+    const register = async () => {
+      try {
+        const mod = await import("@capacitor/app");
+        if (cancelled) return;
+        const result = await mod.App.addListener("backButton", () => {
+          if (activeQueueItemId) {
+            setActiveQueueItemId(null);
+            loggerHistoryArmedRef.current = false;
+            return;
+          }
+          if (selectedLogFilter) {
+            setSelectedLogFilter(null);
+            filterHistoryArmedRef.current = false;
+          }
+        });
+        if (cancelled) {
+          void result.remove();
+          return;
+        }
+        handle = result;
+      } catch {
+        // Capacitor App plugin unavailable outside native runtime.
+      }
+    };
+
+    void register();
+
+    return () => {
+      cancelled = true;
+      if (!handle) return;
+      void handle.remove();
+    };
+  }, [activeQueueItemId, selectedLogFilter]);
+
   // ── Render ──
 
   const sidebar = (
@@ -5118,7 +5157,7 @@ export default function ProgressionPage() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setActiveQueueItemId(null)}
-              className="fixed inset-0 z-40 bg-black/55 backdrop-blur-[1px]"
+              className="fixed inset-0 z-[60] bg-black/55 backdrop-blur-[1px]"
               aria-label="Close logger"
             />
             <motion.div
@@ -5126,12 +5165,12 @@ export default function ProgressionPage() {
               animate={isMobile ? { opacity: 1, y: 0 } : { opacity: 1, y: 0, scale: 1 }}
               exit={isMobile ? { opacity: 0, y: 12 } : { opacity: 0, y: 12, scale: 0.98 }}
               transition={{ duration: 0.16 }}
-              className="fixed inset-0 z-50 overflow-y-auto overscroll-contain p-2 sm:p-6 antialiased [text-rendering:optimizeLegibility]"
+              className="fixed inset-0 z-[70] overflow-y-auto overscroll-contain p-2 sm:p-6 antialiased [text-rendering:optimizeLegibility]"
               style={{ WebkitOverflowScrolling: "touch", WebkitFontSmoothing: "antialiased" }}
               onClick={() => setActiveQueueItemId(null)}
             >
               <div
-                className="mx-auto w-full max-w-4xl pb-[calc(env(safe-area-inset-bottom)+1rem)]"
+                className="mx-auto w-full max-w-4xl pb-[calc(env(safe-area-inset-bottom)+7rem)]"
                 onClick={(event) => event.stopPropagation()}
               >
                 <InlineLogForm
