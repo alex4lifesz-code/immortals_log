@@ -61,8 +61,17 @@ function FloatingMobileSidebar() {
             initial={{ x: "-100%" }}
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
+            drag="x"
+            dragDirectionLock
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={{ left: 0.06, right: 0 }}
+            onDragEnd={(_event, info) => {
+              if (info.offset.x < -70 || info.velocity.x < -380) {
+                handleClose();
+              }
+            }}
             transition={{ type: "spring", damping: 28, stiffness: 300, mass: 0.8 }}
-            className="fixed left-0 top-0 z-40 h-screen flex flex-col bg-ink-deep/98 border-r border-jade-glow/15 shadow-2xl overflow-hidden"
+            className="fixed left-0 top-0 z-40 h-screen flex flex-col bg-ink-deep/98 border-r border-jade-glow/15 shadow-2xl overflow-hidden touch-pan-y"
             style={{ width: "min(92vw, 420px)" }}
           >
             {/* Header */}

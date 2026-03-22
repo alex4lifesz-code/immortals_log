@@ -25,6 +25,7 @@ function PageLayout({
   const effectivePosition = isMobile ? "top" : panelPosition;
   const mobileMode = isMobile && (isNativeApp || viewportMode === "mobile");
   const [mobileQuickViewOpen, setMobileQuickViewOpen] = useState(false);
+  const mobileSidebarHistoryArmedRef = useRef(false);
   const sidebarPosition = settings.sidebarPosition || "left";
   const sidebarWidth = settings.sidebarWidth || 320;
 
@@ -89,6 +90,51 @@ function PageLayout({
     }
     return () => { document.body.style.overflow = ""; };
   }, [mobileSidebarOpen, mobileQuickViewOpen]);
+
+  // Arm history while mobile drawers are open so Android back closes drawer first.
+  useEffect(() => {
+    if (!mobileSidebarOpen && !mobileQuickViewOpen) {
+      mobileSidebarHistoryArmedRef.current = false;
+      return;
+    }
+    if (mobileSidebarHistoryArmedRef.current) return;
+
+    try {
+      window.history.pushState({ mobileDrawer: true, at: Date.now() }, "", window.location.href);
+      mobileSidebarHistoryArmedRef.current = true;
+    } catch {
+      // Ignore history errors.
+    }
+  }, [mobileSidebarOpen, mobileQuickViewOpen]);
+
+  // Browser back should close mobile drawers before navigation.
+  useEffect(() => {
+    const onPopState = () => {
+      if (!mobileSidebarOpen && !mobileQuickViewOpen) return;
+      setMobileSidebarOpen(false);
+      setMobileQuickViewOpen(false);
+      mobileSidebarHistoryArmedRef.current = false;
+    };
+
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [mobileSidebarOpen, mobileQuickViewOpen, setMobileSidebarOpen]);
+
+  // Capacitor Android hardware back fallback for closing mobile drawers.
+  useEffect(() => {
+    const onBackButton = (event: Event) => {
+      if (!mobileSidebarOpen && !mobileQuickViewOpen) return;
+      if (typeof (event as { preventDefault?: () => void }).preventDefault === "function") {
+        (event as { preventDefault: () => void }).preventDefault();
+      }
+      setMobileSidebarOpen(false);
+      setMobileQuickViewOpen(false);
+      mobileSidebarHistoryArmedRef.current = false;
+    };
+
+    document.addEventListener("backbutton", onBackButton as EventListener);
+    return () => document.removeEventListener("backbutton", onBackButton as EventListener);
+  }, [mobileSidebarOpen, mobileQuickViewOpen, setMobileSidebarOpen]);
 
   // Mutual exclusion: close QuickView when sidebar opens
   useEffect(() => {
@@ -239,8 +285,17 @@ function PageLayout({
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
+              drag="x"
+              dragDirectionLock
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={{ left: 0.06, right: 0 }}
+              onDragEnd={(_event, info) => {
+                if (info.offset.x < -70 || info.velocity.x < -380) {
+                  setMobileSidebarOpen(false);
+                }
+              }}
               transition={{ type: "spring", damping: 28, stiffness: 300, mass: 0.8 }}
-              className="fixed inset-y-0 left-0 z-50 bg-ink-deep/98 border-r border-jade-glow/15 flex flex-col shadow-2xl"
+              className="fixed inset-y-0 left-0 z-50 bg-ink-deep/98 border-r border-jade-glow/15 flex flex-col shadow-2xl touch-pan-y"
               style={{ width: "min(92vw, 420px)" }}
             >
               <div className="flex items-center justify-between px-5 py-4 border-b border-ink-light/50 shrink-0">
