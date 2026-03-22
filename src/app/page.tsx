@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import GlowButton from "@/components/ui/GlowButton";
 import GlowInput from "@/components/ui/GlowInput";
 import { useAuth } from "@/context/AuthContext";
+import ConnectivityBanner from "@/components/system/ConnectivityBanner";
 
 const REMEMBERED_CREDENTIALS_KEY = "cultivation-remembered-credentials";
 
@@ -87,7 +88,7 @@ export default function LoginPage() {
 
       router.push("/dashboard");
     } catch {
-      setError("Connection failed");
+      setError("Cannot connect to server/database. If using the Android APK, ensure the app URL is reachable and WireGuard or Tailscale VPN is connected.");
     } finally {
       setLoading(false);
     }
@@ -95,6 +96,9 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
+      <div className="absolute top-0 inset-x-0 z-20">
+        <ConnectivityBanner />
+      </div>
       {/* Background mist layers */}
       <div className="absolute inset-0 bg-gradient-to-br from-void-black via-ink-deep to-jade-deep/20" />
       <div className="absolute inset-0 opacity-30">

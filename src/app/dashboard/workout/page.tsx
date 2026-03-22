@@ -7,7 +7,7 @@ import GlowButton from "@/components/ui/GlowButton";
 import GlowCard from "@/components/ui/GlowCard";
 import { GlowModal } from "@/components/ui/GlowCard";
 import { useAuth } from "@/context/AuthContext";
-import { useDisplaySettings, TechniqueDisplayMode, ActiveCardStyle } from "@/context/DisplaySettingsContext";
+import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { getDifficultyColor, getTypeColor, DAY_ABBREVIATIONS, parseDayAssignments } from "@/lib/constants";
 import { getDifficultyColorClass, getDifficultyGlowStyleScaled, getDifficultyStyle } from "@/lib/difficulty-styles";
 import { getExerciseDisplayName, matchesLooseSearchInFields, getTypeDisplayName, getDifficultyDisplayName, getDifficultyColorKey, getTypeColorKey } from "@/lib/exercise-name";
@@ -239,17 +239,6 @@ function averageWeightsFromLog(log: ProgressionLog): number | null {
   return vals.reduce((sum, v) => sum + v, 0) / vals.length;
 }
 
-function recentAverageWeight(logs: ProgressionLog[], limit = 3): number | null {
-  const valid = [...logs]
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .map(averageWeightsFromLog)
-    .filter((v): v is number => v != null)
-    .slice(0, limit);
-
-  if (valid.length === 0) return null;
-  return valid.reduce((sum, v) => sum + v, 0) / valid.length;
-}
-
 function scaleTargets(seed: number[], count: number): number[] {
   if (count <= 1) return [seed[0]];
   if (count === seed.length) return [...seed];
@@ -388,26 +377,6 @@ function supportsResistanceBandAssistance(exercise: ProgressionExercise): boolea
   return !gymHints.some((hint) => equipment.includes(hint) || name.includes(hint));
 }
 
-function getBandAdjustedCalisthenicsLevel(
-  exercise: ProgressionExercise,
-  requestedLevel: number,
-  physique: UserPhysiqueSettings,
-  resistanceBandKg: number | null | undefined,
-): number {
-  if (!supportsResistanceBandAssistance(exercise)) return requestedLevel;
-  if (!physique.bodyWeightKg || physique.bodyWeightKg <= 0) return requestedLevel;
-  if (!resistanceBandKg || resistanceBandKg <= 0) return requestedLevel;
-  if (!exercise.tiers || exercise.tiers.length === 0) return requestedLevel;
-
-  const sorted = [...exercise.tiers].sort((a, b) => a.level - b.level);
-  const requestedIdx = Math.max(0, sorted.findIndex((t) => t.level === requestedLevel));
-
-  const assistancePct = (resistanceBandKg / physique.bodyWeightKg) * 100;
-  const levelsDown = Math.max(1, Math.round(assistancePct / 5));
-  const adjustedIdx = Math.max(0, requestedIdx - levelsDown);
-
-  return sorted[adjustedIdx]?.level ?? requestedLevel;
-}
 
 function getAutoGymLevelFromAverage(
   exercise: ProgressionExercise,
@@ -1819,7 +1788,7 @@ function HoldTrainingLogTable({
           </thead>
           <tbody>
             <AnimatePresence initial={false}>
-              {entries.map((entry, i) => {
+              {entries.map((entry, _i) => {
                 const ex = exerciseLookup.get(entry.exerciseId);
                 const editData = editingData[entry.logId];
                 const previewLevel = isEditMode && editData ? editData.level : entry.level;
@@ -2234,13 +2203,13 @@ function InlineLogForm({
   const glowIntensity = settings.glowIntensityProgressionCards ?? 100;
   const loreVisible = settings.progressionCardLoreVisible ?? true;
 
-  const showIllumination = mode !== "name-only";
-  const showRealm = mode === "name-illumination-realm" || mode === "name-illumination-realm-path";
+  const _showIllumination = mode !== "name-only";
+  const _showRealm = mode === "name-illumination-realm" || mode === "name-illumination-realm-path";
   const showPath = mode === "name-illumination-realm-path";
   const isScrollStyle = cardStyle === "scroll-card";
 
-  const diffColorClass = getDifficultyColorClass(getWeightedDifficulty(exercise, selectedLevel, selectedVariation || undefined, selectedModifier || undefined));
-  const glowStyle = getDifficultyGlowStyleScaled(getWeightedDifficulty(exercise, selectedLevel, selectedVariation || undefined, selectedModifier || undefined), glowIntensity);
+  const _diffColorClass = getDifficultyColorClass(getWeightedDifficulty(exercise, selectedLevel, selectedVariation || undefined, selectedModifier || undefined));
+  const _glowStyle = getDifficultyGlowStyleScaled(getWeightedDifficulty(exercise, selectedLevel, selectedVariation || undefined, selectedModifier || undefined), glowIntensity);
   const currentDifficulty = getWeightedDifficulty(exercise, selectedLevel, selectedVariation || undefined, selectedModifier || undefined);
   const currentDifficultyDisplay = getDifficultyDisplayName(
     { difficulty: currentDifficulty, wuxiaDifficulty: currentDifficulty },
@@ -2260,7 +2229,7 @@ function InlineLogForm({
     setTimerStartedAt(null);
     setTimerElapsedMs(0);
     setTimerTick(0);
-  }, [exercise.id, selectedLevel]);
+  }, [exercise, exercise.id, selectedLevel]);
 
   useEffect(() => {
     if (!timerRunning) return;
@@ -2849,7 +2818,7 @@ function ProgressionSidebar({
   setSelectedDayFilter: (v: number | null) => void;
   onDrawerOpen: () => void;
 }) {
-  const { settings, updateSettings } = useDisplaySettings();
+  const { settings } = useDisplaySettings();
   const [isCompact, setIsCompact] = useState(() => {
     if (typeof window === "undefined") return false;
     try { return localStorage.getItem("cultivateos-progression-sidebar-compact") === "true"; } catch { return false; }
@@ -2873,7 +2842,6 @@ function ProgressionSidebar({
   const cardStyle = settings.progressionSidebarStyle ?? "default";
   const glowIntensity = settings.glowIntensityProgressionSidebar ?? 100;
   const loreVisible = settings.progressionSidebarLoreVisible ?? true;
-  const useThemeColor = settings.progressionSidebarUseThemeColor ?? true;
   const expandTiers = settings.progressionSidebarExpandTiers ?? true;
 
   const hiddenSidebarExerciseNames = new Set([
@@ -3372,7 +3340,7 @@ function ProgressionSidebar({
               ]);
 
               // Shared select/add button
-              const selectButton = (
+              const _selectButton = (
                 <button
                   onClick={(e) => { e.stopPropagation(); onToggleExercise(exercise.id); }}
                   className={`shrink-0 w-5 h-5 rounded flex items-center justify-center border transition-all duration-150 ${
@@ -3819,7 +3787,7 @@ export default function ProgressionPage() {
   const [showColorGuide, setShowColorGuide] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedDayFilter, setSelectedDayFilter] = useState<number | null>(null);
-  const [exerciseOrder, setExerciseOrder] = useState<string[]>([]);
+  const [_exerciseOrder, setExerciseOrder] = useState<string[]>([]);
   const [physique, setPhysique] = useState<UserPhysiqueSettings>(DEFAULT_USER_PHYSIQUE);
 
   const userId = user?.id;
@@ -3985,33 +3953,6 @@ export default function ProgressionPage() {
       throw new Error(errMsg);
     }
     await fetchExercises();
-  };
-
-  // ── Complete level ──
-  const handleComplete = async (exerciseId: string, level: number) => {
-    if (!userId) return;
-    try {
-      await fetch(`/api/progressions/${exerciseId}/log`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, level, completed: true }),
-      });
-      fetchExercises();
-    } catch (err) {
-      console.error("Failed to complete:", err);
-    }
-  };
-
-  // ── Delete single ──
-  const handleDelete = async (exerciseId: string) => {
-    if (!userId) return;
-    try {
-      await fetch(`/api/progressions/${exerciseId}?userId=${encodeURIComponent(userId)}`, { method: "DELETE" });
-      setExercises((prev) => prev.filter((e) => e.id !== exerciseId));
-      dismissExercise(exerciseId);
-    } catch (err) {
-      console.error("Failed to delete:", err);
-    }
   };
 
   // ── View detail ──

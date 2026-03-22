@@ -45,7 +45,6 @@ export default function DataManagement() {
   const targetUser = allUsers.find(u => u.id === targetUserId);
   const targetUserName = targetUser?.name || user?.name || "Unknown";
   const targetUserSessionCount = targetUser?.sessionCount ?? targetUser?.progressionLogCount ?? 0;
-  const targetUserProgressionLogCount = targetUser?.progressionLogCount ?? 0;
 
   // Training log state
   const xlsxInputRef = useRef<HTMLInputElement>(null);

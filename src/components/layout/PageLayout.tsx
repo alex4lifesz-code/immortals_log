@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ReactNode, useState, useEffect, useCallback, useRef, memo } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
-import { useAuth } from "@/context/AuthContext";
 
 interface PageLayoutProps {
   children: ReactNode;
@@ -21,9 +20,8 @@ function PageLayout({
   subtitle,
   sidebarLabel,
 }: PageLayoutProps) {
-  const { panelPosition, isMobile, isNativeApp, viewportMode, mobileSidebarOpen, setMobileSidebarOpen, topPanelExpanded, setTopPanelExpanded } = useAppContext();
+  const { panelPosition, isMobile, isNativeApp, viewportMode, mobileSidebarOpen, setMobileSidebarOpen } = useAppContext();
   const { settings, updateSettings } = useDisplaySettings();
-  const { user } = useAuth();
   const effectivePosition = isMobile ? "top" : panelPosition;
   const mobileMode = isMobile && (isNativeApp || viewportMode === "mobile");
   const [mobileQuickViewOpen, setMobileQuickViewOpen] = useState(false);
@@ -95,15 +93,21 @@ function PageLayout({
   // Mutual exclusion: close QuickView when sidebar opens
   useEffect(() => {
     if (mobileSidebarOpen && mobileQuickViewOpen) {
-      setMobileQuickViewOpen(false);
+      const timer = window.setTimeout(() => {
+        setMobileQuickViewOpen(false);
+      }, 0);
+      return () => window.clearTimeout(timer);
     }
   }, [mobileSidebarOpen, mobileQuickViewOpen]);
 
   // Close sidebars when switching away from mobile
   useEffect(() => {
     if (!isMobile) {
-      setMobileSidebarOpen(false);
-      setMobileQuickViewOpen(false);
+      const timer = window.setTimeout(() => {
+        setMobileSidebarOpen(false);
+        setMobileQuickViewOpen(false);
+      }, 0);
+      return () => window.clearTimeout(timer);
     }
   }, [isMobile, setMobileSidebarOpen]);
 

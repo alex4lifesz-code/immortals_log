@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { serializeDayAssignments } from "@/lib/constants";
 
-const ARCHIVED_TARGET_GROUP = "__archived__";
-
 function isAdminRequest(req: NextRequest): boolean {
   return (req.headers.get("x-user-role") || "").toLowerCase() === "admin";
 }

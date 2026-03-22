@@ -47,9 +47,14 @@ function RightPanel() {
   }, [user]);
 
   useEffect(() => {
-    fetchStats();
-    const interval = setInterval(fetchStats, 120000);
+    const initialTimer = window.setTimeout(() => {
+      void fetchStats();
+    }, 0);
+    const interval = window.setInterval(() => {
+      void fetchStats();
+    }, 120000);
     return () => {
+      window.clearTimeout(initialTimer);
       clearInterval(interval);
       if (abortRef.current) abortRef.current.abort();
     };

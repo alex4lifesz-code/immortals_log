@@ -11,6 +11,7 @@ import RightPanel from "@/components/navigation/RightPanel";
 import BottomBar from "@/components/navigation/BottomBar";
 import FloatingMobileSidebar from "@/components/navigation/FloatingMobileSidebar";
 import SetupWizard, { SETUP_WIZARD_COMPLETED_KEY } from "@/components/ui/SetupWizard";
+import ConnectivityBanner from "@/components/system/ConnectivityBanner";
 import { useAppContext } from "@/context/AppContext";
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
@@ -26,14 +27,18 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isDesktopMobilePreview) {
-      setMobilePreviewScale(1);
-      setPreviewBaseWidth(null);
-      return;
+      const resetTimer = window.setTimeout(() => {
+        setMobilePreviewScale(1);
+        setPreviewBaseWidth(null);
+      }, 0);
+      return () => window.clearTimeout(resetTimer);
     }
 
     if (previewBaseWidth === null) {
-      setPreviewBaseWidth(window.innerWidth);
-      return;
+      const initTimer = window.setTimeout(() => {
+        setPreviewBaseWidth(window.innerWidth);
+      }, 0);
+      return () => window.clearTimeout(initTimer);
     }
 
     const updateMobilePreviewScale = () => {
@@ -43,9 +48,12 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
       setMobilePreviewScale(Number(nextScale.toFixed(3)));
     };
 
-    updateMobilePreviewScale();
+    const raf = window.requestAnimationFrame(updateMobilePreviewScale);
     window.addEventListener("resize", updateMobilePreviewScale);
-    return () => window.removeEventListener("resize", updateMobilePreviewScale);
+    return () => {
+      window.cancelAnimationFrame(raf);
+      window.removeEventListener("resize", updateMobilePreviewScale);
+    };
   }, [isDesktopMobilePreview, previewBaseWidth]);
 
   return (
@@ -62,6 +70,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         }
       >
         <TopBar />
+        <ConnectivityBanner />
         <div className="flex-1 flex overflow-hidden">
           <LeftSidebar />
           <div className="flex-1 overflow-auto">{children}</div>

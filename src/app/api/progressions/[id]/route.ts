@@ -207,11 +207,10 @@ export async function PATCH(
       }
     }
 
-    let exercise;
     if (Object.keys(data).length > 0) {
-      exercise = await prisma.progressionExercise.update({ where: { id }, data });
+      await prisma.progressionExercise.update({ where: { id }, data });
     } else {
-      exercise = await prisma.progressionExercise.findUnique({ where: { id } });
+      await prisma.progressionExercise.findUnique({ where: { id } });
     }
 
     // Re-fetch with full includes

@@ -357,7 +357,12 @@ export default function TrainingSidebar({
   useEffect(() => {
     try {
       const saved = localStorage.getItem("cultivateos-favourite-techniques");
-      if (saved) setFavouriteIds(new Set(JSON.parse(saved)));
+      if (saved) {
+        const timer = window.setTimeout(() => {
+          setFavouriteIds(new Set(JSON.parse(saved)));
+        }, 0);
+        return () => window.clearTimeout(timer);
+      }
     } catch { /* ignore */ }
   }, []);
 
