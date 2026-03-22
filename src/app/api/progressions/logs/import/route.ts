@@ -21,6 +21,40 @@ type ImportedLog = {
   createdAt?: string;
 };
 
+type TargetExercise = {
+  id: string;
+  name: string;
+  wuxiaName: string;
+};
+
+type SourceProgressionExercise = {
+  id: string;
+  name: string;
+  wuxiaName: string;
+  difficulty: string;
+  wuxiaDifficulty: string;
+  type: string;
+  wuxiaType: string;
+  story: string;
+  category: string;
+  equipmentType: string;
+  bodyweight: boolean;
+  weighted: boolean;
+  rings: boolean;
+  primaryMuscles: string;
+  secondaryMuscles: string;
+};
+
+type LibraryExercise = {
+  id: string;
+  name: string;
+  wuxiaName: string | null;
+  difficulty: string;
+  type: string;
+  story: string | null;
+  targetGroup: string | null;
+};
+
 function normalizeNullableNumber(v: unknown, min: number, max: number): number | null {
   if (v == null || v === "") return null;
   const n = Number(v);
@@ -38,6 +72,27 @@ function parseCreatedAt(v: unknown): Date {
   if (typeof v !== "string") return new Date();
   const parsed = new Date(v);
   return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+}
+
+function normalizeText(v: unknown): string {
+  return String(v || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "")
+    .trim();
+}
+
+function addExerciseToMaps(
+  exercise: TargetExercise,
+  byId: Map<string, TargetExercise>,
+  byName: Map<string, TargetExercise>
+) {
+  byId.set(exercise.id, exercise);
+  const keys = [exercise.name, exercise.wuxiaName]
+    .map(normalizeText)
+    .filter(Boolean);
+  for (const key of keys) {
+    if (!byName.has(key)) byName.set(key, exercise);
+  }
 }
 
 // POST /api/progressions/logs/import
@@ -80,11 +135,67 @@ export async function POST(req: NextRequest) {
 
     const exercises = await prisma.progressionExercise.findMany({
       where: { userId },
-      select: { id: true, name: true },
+      select: { id: true, name: true, wuxiaName: true },
     });
 
-    const exerciseById = new Map(exercises.map((e) => [e.id, e]));
-    const exerciseByName = new Map(exercises.map((e) => [e.name.trim().toLowerCase(), e]));
+    const exerciseById = new Map<string, TargetExercise>();
+    const exerciseByName = new Map<string, TargetExercise>();
+    for (const ex of exercises) {
+      addExerciseToMaps(
+        { id: ex.id, name: ex.name, wuxiaName: ex.wuxiaName || "" },
+        exerciseById,
+        exerciseByName
+      );
+    }
+
+    const sourceIds = Array.from(
+      new Set(logs.map((l) => l.exerciseId).filter((v): v is string => typeof v === "string" && v.trim().length > 0))
+    );
+    const sourceById = new Map<string, SourceProgressionExercise>();
+    if (sourceIds.length > 0) {
+      const sourceExercises = await prisma.progressionExercise.findMany({
+        where: { id: { in: sourceIds } },
+        select: {
+          id: true,
+          name: true,
+          wuxiaName: true,
+          difficulty: true,
+          wuxiaDifficulty: true,
+          type: true,
+          wuxiaType: true,
+          story: true,
+          category: true,
+          equipmentType: true,
+          bodyweight: true,
+          weighted: true,
+          rings: true,
+          primaryMuscles: true,
+          secondaryMuscles: true,
+        },
+      });
+      for (const src of sourceExercises) {
+        sourceById.set(src.id, src);
+      }
+    }
+
+    const library = await prisma.exercise.findMany({
+      select: {
+        id: true,
+        name: true,
+        wuxiaName: true,
+        difficulty: true,
+        type: true,
+        story: true,
+        targetGroup: true,
+      },
+    });
+    const libraryByName = new Map<string, LibraryExercise>();
+    for (const lib of library) {
+      const keys = [lib.name, lib.wuxiaName || ""].map(normalizeText).filter(Boolean);
+      for (const key of keys) {
+        if (!libraryByName.has(key)) libraryByName.set(key, lib);
+      }
+    }
 
     const existingLevels = await prisma.userProgressionLevel.findMany({
       where: { userId },
@@ -100,20 +211,91 @@ export async function POST(req: NextRequest) {
 
     let imported = 0;
     let skipped = 0;
+    const skippedDetails: string[] = [];
+
+    const createTargetExerciseFromLibrary = async (lib: LibraryExercise): Promise<TargetExercise> => {
+      const created = await prisma.progressionExercise.create({
+        data: {
+          userId,
+          name: lib.name,
+          wuxiaName: lib.wuxiaName || "",
+          difficulty: lib.difficulty || "",
+          wuxiaDifficulty: lib.difficulty || "",
+          type: lib.type || "",
+          wuxiaType: lib.type || "",
+          story: lib.story || "",
+          category: (lib.targetGroup || "Uncategorized").slice(0, 100),
+          equipmentType: "bodyweight",
+          bodyweight: true,
+          weighted: false,
+          rings: false,
+          primaryMuscles: "",
+          secondaryMuscles: "",
+        },
+        select: { id: true, name: true, wuxiaName: true },
+      });
+      const target = { id: created.id, name: created.name, wuxiaName: created.wuxiaName || "" };
+      addExerciseToMaps(target, exerciseById, exerciseByName);
+      return target;
+    };
+
+    const createTargetExerciseFromSource = async (src: SourceProgressionExercise): Promise<TargetExercise> => {
+      const created = await prisma.progressionExercise.create({
+        data: {
+          userId,
+          name: src.name,
+          wuxiaName: src.wuxiaName || "",
+          difficulty: src.difficulty || "",
+          wuxiaDifficulty: src.wuxiaDifficulty || src.difficulty || "",
+          type: src.type || "",
+          wuxiaType: src.wuxiaType || src.type || "",
+          story: src.story || "",
+          category: (src.category || "Uncategorized").slice(0, 100),
+          equipmentType: src.equipmentType || "bodyweight",
+          bodyweight: src.bodyweight,
+          weighted: src.weighted,
+          rings: src.rings,
+          primaryMuscles: src.primaryMuscles || "",
+          secondaryMuscles: src.secondaryMuscles || "",
+        },
+        select: { id: true, name: true, wuxiaName: true },
+      });
+      const target = { id: created.id, name: created.name, wuxiaName: created.wuxiaName || "" };
+      addExerciseToMaps(target, exerciseById, exerciseByName);
+      return target;
+    };
 
     for (const rawLog of logs) {
-      let exercise = null as { id: string; name: string } | null;
+      let exercise = null as TargetExercise | null;
 
       if (rawLog.exerciseId && exerciseById.has(rawLog.exerciseId)) {
         exercise = exerciseById.get(rawLog.exerciseId) ?? null;
       }
 
       if (!exercise && rawLog.exerciseName) {
-        exercise = exerciseByName.get(rawLog.exerciseName.trim().toLowerCase()) ?? null;
+        const normalizedName = normalizeText(rawLog.exerciseName);
+        exercise = exerciseByName.get(normalizedName) ?? null;
+      }
+
+      if (!exercise && rawLog.exerciseId && sourceById.has(rawLog.exerciseId)) {
+        const src = sourceById.get(rawLog.exerciseId)!;
+        const maybeExisting = exerciseByName.get(normalizeText(src.name)) || exerciseByName.get(normalizeText(src.wuxiaName));
+        exercise = maybeExisting || await createTargetExerciseFromSource(src);
+      }
+
+      if (!exercise && rawLog.exerciseName) {
+        const lib = libraryByName.get(normalizeText(rawLog.exerciseName));
+        if (lib) {
+          const maybeExisting = exerciseByName.get(normalizeText(lib.name)) || exerciseByName.get(normalizeText(lib.wuxiaName));
+          exercise = maybeExisting || await createTargetExerciseFromLibrary(lib);
+        }
       }
 
       if (!exercise) {
         skipped++;
+        if (skippedDetails.length < 50) {
+          skippedDetails.push(`Unmatched exercise: ${rawLog.exerciseName || rawLog.exerciseId || "(unknown)"}`);
+        }
         continue;
       }
 
@@ -161,6 +343,7 @@ export async function POST(req: NextRequest) {
       success: true,
       imported,
       skipped,
+      skippedDetails: skippedDetails.length > 0 ? skippedDetails : undefined,
       replaced: replaceExisting,
     });
   } catch (error) {
