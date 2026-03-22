@@ -11,7 +11,7 @@ interface Cultivator {
   name: string;
   username: string;
   rank: number;
-  workoutCount: number;
+  sessionCount: number;
   checkInCount: number;
 }
 
@@ -70,7 +70,7 @@ function CultivatorCard({ cultivator, rank, isCurrentUser }: { cultivator: Culti
         <div className="space-y-1">
           <div className="flex justify-between text-xs">
             <span className="text-mist-dark">Sessions</span>
-            <span className="text-cloud-white font-bold">{cultivator.workoutCount}</span>
+            <span className="text-cloud-white font-bold">{cultivator.sessionCount}</span>
           </div>
           <div className="flex justify-between text-xs">
             <span className="text-mist-dark">Check-Ins</span>
@@ -100,17 +100,17 @@ export default function SectHallPage() {
         const data = await res.json();
         const users = data.users || [];
 
-        const cultivatorsData: Cultivator[] = users.map((u: { id: string; name: string; username: string; _count?: { workouts: number; checkIns: number } }, idx: number) => ({
+        const cultivatorsData: Cultivator[] = users.map((u: { id: string; name: string; username: string; sessionCount?: number; progressionLogCount?: number; _count?: { checkIns: number } }, idx: number) => ({
           id: u.id,
           name: u.name,
           username: u.username,
-          workoutCount: u._count?.workouts || 0,
+          sessionCount: u.sessionCount ?? u.progressionLogCount ?? 0,
           checkInCount: u._count?.checkIns || 0,
           rank: idx + 1,
         }));
 
-        // Sort by workout count descending
-        cultivatorsData.sort((a, b) => b.workoutCount - a.workoutCount);
+        // Sort by session count descending
+        cultivatorsData.sort((a, b) => b.sessionCount - a.sessionCount);
         cultivatorsData.forEach((c, idx) => { c.rank = idx + 1; });
 
         setCultivators(cultivatorsData);

@@ -355,6 +355,7 @@ function DisplaySettingsModal({ onClose }: { onClose: () => void }) {
                   </SettingRow>
                 </div>
               </div>
+
             </div>
           </div>
         </div>

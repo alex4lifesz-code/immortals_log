@@ -9,12 +9,14 @@ import PageLayout from "@/components/layout/PageLayout";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
+import { useAppContext } from "@/context/AppContext";
 import { formatDateWithPreference } from "@/lib/constants";
 
 interface User {
   id: string;
   name: string;
   username: string;
+  sessionCount?: number;
 }
 
 interface CheckInRow {
@@ -132,11 +134,11 @@ function DashboardSidebar({ stats, allUsers, userColors, onColorChange }: { stat
   );
 }
 
-function CalendarDay({ date, checkedInUsers, isToday, isPast, hasNote, hasFutureNote, onClick }: { date: Date; checkedInUsers: { id: string; name: string; color: string }[]; isToday: boolean; isPast?: boolean; hasNote?: boolean; hasFutureNote?: boolean; onClick?: () => void }) {
+function CalendarDay({ date, checkedInUsers, isToday, isPast, hasNote, hasFutureNote, compact, onClick }: { date: Date; checkedInUsers: { id: string; name: string; color: string }[]; isToday: boolean; isPast?: boolean; hasNote?: boolean; hasFutureNote?: boolean; compact: boolean; onClick?: () => void }) {
   const hasCheckIns = checkedInUsers.length > 0;
   return (
     <motion.div
-      whileHover={{ scale: 1.05 }}
+      whileHover={compact ? undefined : { scale: 1.05 }}
       onClick={onClick}
       className={`aspect-square flex flex-col items-center justify-center rounded-lg transition-all relative cursor-pointer ${
         isToday
@@ -149,16 +151,16 @@ function CalendarDay({ date, checkedInUsers, isToday, isPast, hasNote, hasFuture
       } ${isPast && !isToday ? 'opacity-50' : ''}`}
     >
       <div className="text-center">
-        <div className={`text-sm font-medium ${isPast && !isToday ? 'text-mist-mid' : 'text-cloud-white'}`}>{date.getDate()}</div>
-        {isToday && <div className="text-[10px] text-jade-glow font-bold">TODAY</div>}
+        <div className={`${compact ? "text-xs" : "text-sm"} font-medium ${isPast && !isToday ? 'text-mist-mid' : 'text-cloud-white'}`}>{date.getDate()}</div>
+        {isToday && <div className={`${compact ? "text-[8px]" : "text-[10px]"} text-jade-glow font-bold`}>TODAY</div>}
       </div>
       {hasCheckIns && (
-        <div className="absolute bottom-0.5 left-1 flex gap-[2px]">
+        <div className={`absolute ${compact ? "bottom-0 left-0.5" : "bottom-0.5 left-1"} flex gap-[2px]`}>
           {checkedInUsers.map((u) => (
             <span
               key={u.id}
               title={u.name}
-              className="text-[11px] leading-none font-bold drop-shadow-[0_0_3px_currentColor]"
+              className={`${compact ? "text-[9px]" : "text-[11px]"} leading-none font-bold drop-shadow-[0_0_3px_currentColor]`}
               style={{ color: u.color }}
             >
               ✓
@@ -167,16 +169,18 @@ function CalendarDay({ date, checkedInUsers, isToday, isPast, hasNote, hasFuture
         </div>
       )}
       {hasNote && (
-        <div className="absolute top-0.5 right-0.5 text-[8px] text-gold-glow">📝</div>
+        <div className={`absolute ${compact ? "top-0 right-0" : "top-0.5 right-0.5"} ${compact ? "text-[7px]" : "text-[8px]"} text-gold-glow`}>📝</div>
       )}
       {hasFutureNote && (
-        <div className="absolute bottom-0.5 right-0.5 text-[7px] font-bold text-jade-glow/70 uppercase leading-none drop-shadow-[0_0_3px_rgba(58,143,143,0.4)]">note</div>
+        <div className={`absolute ${compact ? "bottom-0 right-0" : "bottom-0.5 right-0.5"} ${compact ? "text-[6px]" : "text-[7px]"} font-bold text-jade-glow/70 uppercase leading-none drop-shadow-[0_0_3px_rgba(58,143,143,0.4)]`}>{compact ? "•" : "note"}</div>
       )}
     </motion.div>
   );
 }
 
 function Calendar({ checkInUsersByDate, currentMonth, setCurrentMonth, dayNotes, futureNoteDates, onDayClick, allUsers, userColors }: { checkInUsersByDate: Map<string, string[]>; currentMonth: Date; setCurrentMonth: (d: Date) => void; dayNotes?: Map<string, string>; futureNoteDates?: Set<string>; onDayClick?: (date: string) => void; allUsers: User[]; userColors: Record<string, string> }) {
+  const { isMobile, viewportMode } = useAppContext();
+  const compactMode = isMobile || viewportMode === "mobile";
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
   const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
   const days = [];
@@ -194,12 +198,12 @@ function Calendar({ checkInUsersByDate, currentMonth, setCurrentMonth, dayNotes,
   }
 
   return (
-    <GlowCard glow="jade" className="p-4 space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-bold text-cloud-white">
+    <GlowCard glow="jade" className={`${compactMode ? "p-2.5" : "p-4"} space-y-3 min-w-0 overflow-hidden`}>
+      <div className={`flex ${compactMode ? "flex-wrap gap-2" : "items-center justify-between"}`}>
+        <h3 className={`${compactMode ? "text-sm" : "text-lg"} font-bold text-cloud-white`}>
           {currentMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
         </h3>
-        <div className="flex gap-2">
+        <div className="flex gap-1.5 ml-auto">
           <GlowButton
             variant="ghost"
             size="sm"
@@ -209,7 +213,7 @@ function Calendar({ checkInUsersByDate, currentMonth, setCurrentMonth, dayNotes,
               )
             }
           >
-            ← Prev
+            {compactMode ? "←" : "← Prev"}
           </GlowButton>
           <GlowButton
             variant="ghost"
@@ -220,22 +224,22 @@ function Calendar({ checkInUsersByDate, currentMonth, setCurrentMonth, dayNotes,
               )
             }
           >
-            Next →
+            {compactMode ? "→" : "Next →"}
           </GlowButton>
         </div>
       </div>
 
       {/* Weekday headers */}
-      <div className="grid grid-cols-7 gap-2 mb-2">
+      <div className={`grid grid-cols-7 ${compactMode ? "gap-1 mb-1" : "gap-2 mb-2"}`}>
         {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-          <div key={day} className="text-center text-xs text-mist-dark uppercase font-semibold">
-            {day}
+          <div key={day} className={`text-center ${compactMode ? "text-[10px]" : "text-xs"} text-mist-dark uppercase font-semibold`}>
+            {compactMode ? day[0] : day}
           </div>
         ))}
       </div>
 
       {/* Calendar grid */}
-      <div className="grid grid-cols-7 gap-2">
+      <div className={`grid grid-cols-7 ${compactMode ? "gap-1" : "gap-2"} min-w-0`}>
         {days.map((date, i) => (
           <div key={i}>
             {date ? (
@@ -252,6 +256,7 @@ function Calendar({ checkInUsersByDate, currentMonth, setCurrentMonth, dayNotes,
                 isPast={formatDateLocal(date) < today}
                 hasNote={dayNotes?.has(formatDateLocal(date))}
                 hasFutureNote={futureNoteDates?.has(formatDateLocal(date))}
+                compact={compactMode}
                 onClick={() => onDayClick?.(formatDateLocal(date))}
               />
             ) : (
@@ -262,17 +267,17 @@ function Calendar({ checkInUsersByDate, currentMonth, setCurrentMonth, dayNotes,
       </div>
 
       {/* Legend */}
-      <div className="pt-4 border-t border-ink-light flex flex-wrap gap-3 text-xs">
+      <div className={`pt-3 border-t border-ink-light flex flex-wrap ${compactMode ? "gap-2 text-[10px]" : "gap-3 text-xs"}`}>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded border-2 border-jade-glow bg-jade-deep/30 shadow-[0_0_4px_rgba(58,143,143,0.2)]" />
           <span className="text-mist-mid">Today</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm font-bold text-jade-glow drop-shadow-[0_0_3px_rgba(58,143,143,0.6)]">✓</span>
-          <span className="text-mist-mid">Cultivator Check-In</span>
+          <span className="text-mist-mid">Check-In</span>
         </div>
         <div className="flex items-center gap-1">
-          {allUsers.slice(0, 4).map((u, idx) => (
+          {allUsers.slice(0, compactMode ? 3 : 4).map((u, idx) => (
             <span
               key={u.id}
               className="text-[10px] font-bold"
@@ -282,7 +287,7 @@ function Calendar({ checkInUsersByDate, currentMonth, setCurrentMonth, dayNotes,
               ✓
             </span>
           ))}
-          <span className="text-mist-mid ml-0.5">= per cultivator</span>
+          <span className="text-mist-mid ml-0.5">= cultivator</span>
         </div>
       </div>
     </GlowCard>
@@ -745,16 +750,14 @@ export default function DaoHallPage() {
 
       try {
         // Fetch check-ins, users, and future notes in parallel
-        const [checkinsRes, usersRes, workoutRes, exerciseRes, futureNotesRes] = await Promise.all([
+        const [checkinsRes, usersRes, exerciseRes, futureNotesRes] = await Promise.all([
           fetch("/api/checkins"),
           fetch("/api/users"),
-          fetch(`/api/workouts?userId=${user.id}`),
           fetch("/api/exercises"),
           fetch(`/api/checkins/notes?future=true&today=${formatDateLocal(new Date())}`),
         ]);
         const checkinsData = await checkinsRes.json();
         const usersData = await usersRes.json();
-        const workoutData = await workoutRes.json();
         const exerciseData = await exerciseRes.json();
         const futureNotesData = await futureNotesRes.json();
 
@@ -794,7 +797,7 @@ export default function DaoHallPage() {
           .map(([date, entries]) => ({ date, entries }));
         setCheckInRows(sortedRows);
 
-        const userWorkouts = (workoutData.workouts || []).filter((w: { userId: string }) => w.userId === user.id);
+        const currentUser = (usersData.users || []).find((candidate: { id: string; sessionCount?: number }) => candidate.id === user.id);
 
         // Calculate streak using current user's dates
         const today = new Date();
@@ -811,7 +814,7 @@ export default function DaoHallPage() {
         }
 
         setStats({
-          sessions: userWorkouts.length,
+          sessions: currentUser?.sessionCount ?? 0,
           techniques: exerciseData.exercises?.length || 0,
           streak,
         });

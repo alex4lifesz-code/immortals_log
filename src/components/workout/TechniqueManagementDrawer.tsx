@@ -5,13 +5,11 @@ import { motion, AnimatePresence, Reorder, useDragControls } from "framer-motion
 import { getDifficultyColorClass, getDifficultyGlowStyle } from "@/lib/difficulty-styles";
 import { getTypeColor } from "@/lib/constants";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
-import { getExerciseDisplayName, getExerciseSearchText, matchesLooseSearch } from "@/lib/exercise-name";
+import { getExerciseDisplayName, getExerciseSearchText, matchesLooseSearch, getTypeDisplayName, getDifficultyDisplayName, getDifficultyColorKey, getTypeColorKey } from "@/lib/exercise-name";
 import {
   DAYS_OF_WEEK,
   DAY_ABBREVIATIONS,
   DAY_LETTERS,
-  DIFFICULTY_LEVELS,
-  EXERCISE_TYPES,
   parseDayAssignments,
   toggleDayAssignment,
   isDayAssigned
@@ -22,7 +20,9 @@ interface Exercise {
   name: string;
   wuxiaName?: string;
   difficulty: string;
+  wuxiaDifficulty?: string;
   type: string;
+  wuxiaType?: string;
   targetGroup?: string;
   assignedDays?: string;
   story?: string;
@@ -51,9 +51,9 @@ function TechniqueRow({ exercise, onUpdateDayAssignments, focusedDay, isCompact 
   const [showTip, setShowTip] = useState(false);
   const { settings } = useDisplaySettings();
   const displayName = getExerciseDisplayName(exercise, settings.terminologyMode);
-  const difficultyColorClass = getDifficultyColorClass(exercise.difficulty);
-  const typeColor = getTypeColor(exercise.type);
-  const glowStyle = getDifficultyGlowStyle(exercise.difficulty);
+  const difficultyColorClass = getDifficultyColorClass(getDifficultyColorKey(exercise));
+  const typeColor = getTypeColor(getTypeColorKey(exercise));
+  const glowStyle = getDifficultyGlowStyle(getDifficultyColorKey(exercise));
 
   const handleDayToggle = async (dayIndex: number) => {
     setIsUpdating(true);
@@ -121,10 +121,10 @@ function TechniqueRow({ exercise, onUpdateDayAssignments, focusedDay, isCompact 
             {/* Realm + Path badges (realm first, then path) */}
             <div className="flex items-center gap-2 flex-wrap">
               <span className={`inline-flex items-center px-1.5 py-0.5 rounded ${isCompact ? 'text-[9px]' : 'text-[10px]'} font-medium ${difficultyColorClass} border border-current/20`}>
-                {exercise.difficulty}
+                {getDifficultyDisplayName(exercise, settings.terminologyMode)}
               </span>
               <span className={`inline-flex items-center px-1.5 py-0.5 rounded ${isCompact ? 'text-[9px]' : 'text-[10px]'} font-medium ${typeColor} border border-current/20 opacity-80`}>
-                {exercise.type}
+                {getTypeDisplayName(exercise, settings.terminologyMode)}
               </span>
               {exercise.targetGroup && (
                 <span className={`${isCompact ? 'text-[9px]' : 'text-[10px]'} text-mist-dark`}>
@@ -272,6 +272,25 @@ export default function TechniqueManagementDrawer({
   const [realmFilter, setRealmFilter] = useState(""); 
   const [orderedIds, setOrderedIds] = useState<string[]>([]);
   const [isCompactView, setIsCompactView] = useState(false);
+
+  // Dynamic filter options derived from actual exercises data
+  const availableRealms = useMemo(() => {
+    const seen = new Set<string>();
+    for (const ex of exercises) {
+      const d = (ex.difficulty || "").trim();
+      if (d) seen.add(d);
+    }
+    return Array.from(seen).sort((a, b) => a.localeCompare(b));
+  }, [exercises]);
+
+  const availablePaths = useMemo(() => {
+    const seen = new Set<string>();
+    for (const ex of exercises) {
+      const t = (ex.type || "").trim();
+      if (t) seen.add(t);
+    }
+    return Array.from(seen).sort((a, b) => a.localeCompare(b));
+  }, [exercises]);
 
   // Update day filter when selectedDayFilter prop changes
   useEffect(() => {
@@ -447,7 +466,7 @@ export default function TechniqueManagementDrawer({
                 />
               </div>
 
-              {/* Filter Controls — dark themed selects */}
+              {/* Filter Controls — dynamic selects derived from actual exercise data */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <select
                   value={realmFilter}
@@ -455,7 +474,7 @@ export default function TechniqueManagementDrawer({
                   className="bg-ink-deep border border-ink-light rounded-lg px-3 py-2 text-xs text-cloud-white outline-none transition-all duration-200 focus:border-jade-glow/50 focus:shadow-[0_0_8px_color-mix(in_srgb,var(--accent)_15%,transparent)] cursor-pointer"
                 >
                   <option value="">All Realms</option>
-                  {DIFFICULTY_LEVELS.map((d) => (
+                  {availableRealms.map((d) => (
                     <option key={d} value={d}>{d}</option>
                   ))}
                 </select>
@@ -466,7 +485,7 @@ export default function TechniqueManagementDrawer({
                   className="bg-ink-deep border border-ink-light rounded-lg px-3 py-2 text-xs text-cloud-white outline-none transition-all duration-200 focus:border-jade-glow/50 focus:shadow-[0_0_8px_color-mix(in_srgb,var(--accent)_15%,transparent)] cursor-pointer"
                 >
                   <option value="">All Paths</option>
-                  {EXERCISE_TYPES.map((t) => (
+                  {availablePaths.map((t) => (
                     <option key={t} value={t}>{t}</option>
                   ))}
                 </select>

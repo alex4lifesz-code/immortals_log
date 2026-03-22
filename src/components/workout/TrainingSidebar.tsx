@@ -7,14 +7,16 @@ import { getDifficultyColorClass, getDifficultyGlowStyleScaled } from "@/lib/dif
 import { getTypeColor, getDifficultyColor, getDifficultyGlow, getTargetGroupColor, parseDayAssignments } from "@/lib/constants";
 import { DAY_ABBREVIATIONS } from "@/lib/constants";
 import { useDisplaySettings, TechniqueDisplayMode, ActiveCardStyle } from "@/context/DisplaySettingsContext";
-import { getExerciseDisplayName, getExerciseSearchText, matchesLooseSearch } from "@/lib/exercise-name";
+import { getExerciseDisplayName, getExerciseSearchText, matchesLooseSearch, getTypeDisplayName, getDifficultyDisplayName, getDifficultyColorKey, getTypeColorKey } from "@/lib/exercise-name";
 
 interface Exercise {
   id: string;
   name: string;
   wuxiaName?: string;
   difficulty: string;
+  wuxiaDifficulty?: string;
   type: string;
+  wuxiaType?: string;
   targetGroup?: string;
   assignedDays?: string;
   story?: string;
@@ -59,23 +61,24 @@ function TechniqueCard({ exercise, isSelected, onSelect, delay, displayMode, com
     }
   }, [showConventionalName, handleClickOutside]);
 
-  const difficultyColorClass = getDifficultyColorClass(exercise.difficulty);
-  const typeColor = getTypeColor(exercise.type);
+  const difficultyColorClass = getDifficultyColorClass(getDifficultyColorKey(exercise));
+  const typeColor = getTypeColor(getTypeColorKey(exercise));
   const { settings: dsSettings } = useDisplaySettings();
   const displayName = getExerciseDisplayName(exercise, dsSettings.terminologyMode);
   const glowIntensity = dsSettings.glowIntensitySidebar ?? 100;
   const loreVisible = dsSettings.sidebarLoreVisible ?? true;
-  const glowStyle = getDifficultyGlowStyleScaled(exercise.difficulty, glowIntensity);
+  const glowStyle = getDifficultyGlowStyleScaled(getDifficultyColorKey(exercise), glowIntensity);
 
   const showIllumination = displayMode !== "name-only";
   const showRealm = displayMode === "name-illumination-realm" || displayMode === "name-illumination-realm-path";
   const showPath = displayMode === "name-illumination-realm-path";
 
   const isScrollStyle = cardStyle === "scroll-card";
+  const typeKey = getTypeColorKey(exercise);
   const typeEmoji =
-    exercise.type === "Upper Heaven" ? "☁️"
-    : exercise.type === "Lower Realms" ? "🔥"
-    : exercise.type === "Heart Meridian" ? "💚"
+    typeKey === "Upper Heaven" ? "☁️"
+    : typeKey === "Lower Realms" ? "🔥"
+    : typeKey === "Heart Meridian" ? "💚"
     : "⭐";
 
   if (compact) {
@@ -119,12 +122,12 @@ function TechniqueCard({ exercise, isSelected, onSelect, delay, displayMode, com
           {/* Inline badges */}
           {showRealm && (
             <span className={`shrink-0 text-[9px] font-normal ${difficultyColorClass} opacity-70`}>
-              {exercise.difficulty}
+              {getDifficultyDisplayName(exercise, dsSettings.terminologyMode)}
             </span>
           )}
           {showPath && (
             <span className={`shrink-0 text-[9px] font-normal ${typeColor} opacity-60`}>
-              {exercise.type}
+              {getTypeDisplayName(exercise, dsSettings.terminologyMode)}
             </span>
           )}
         </div>
@@ -158,7 +161,7 @@ function TechniqueCard({ exercise, isSelected, onSelect, delay, displayMode, com
             ${showConventionalName ? 'rounded-b-none' : ''}
             ${isSelected
               ? 'bg-jade-deep/30 border-jade-glow/50 shadow-lg shadow-jade-glow/10'
-              : `bg-ink-dark border-ink-light hover:border-jade/30 hover:shadow-[0_0_20px_rgba(58,143,143,0.4)] ${showIllumination && glowIntensity >= 100 ? getDifficultyGlow(exercise.difficulty) : ''}`
+              : `bg-ink-dark border-ink-light hover:border-jade/30 hover:shadow-[0_0_20px_rgba(58,143,143,0.4)] ${showIllumination && glowIntensity >= 100 ? getDifficultyGlow(getDifficultyColorKey(exercise)) : ''}`
             }
           `}
           style={!isSelected && showIllumination && glowIntensity > 0 && glowIntensity < 100 ? { boxShadow: `0 0 12px rgba(58,143,143,0.2), ${glowStyle.boxShadow || ''}` } : undefined}
@@ -184,13 +187,13 @@ function TechniqueCard({ exercise, isSelected, onSelect, delay, displayMode, com
               {(showRealm || showPath) && (
                 <div className="mt-1 flex items-center gap-1.5 flex-wrap">
                   {showRealm && (
-                    <span className={`text-[9px] font-normal px-1.5 py-0.5 rounded-full ${getDifficultyColor(exercise.difficulty)} bg-ink-dark/40 whitespace-nowrap border border-current/15`}>
-                      {exercise.difficulty}
+                    <span className={`text-[9px] font-normal px-1.5 py-0.5 rounded-full ${getDifficultyColor(getDifficultyColorKey(exercise))} bg-ink-dark/40 whitespace-nowrap border border-current/15`}>
+                      {getDifficultyDisplayName(exercise, dsSettings.terminologyMode)}
                     </span>
                   )}
                   {showPath && (
-                    <span className={`text-[9px] font-normal px-1.5 py-0.5 rounded-full ${getTypeColor(exercise.type)} bg-ink-dark/40 whitespace-nowrap border border-current/15`}>
-                      {exercise.type}
+                    <span className={`text-[9px] font-normal px-1.5 py-0.5 rounded-full ${getTypeColor(getTypeColorKey(exercise))} bg-ink-dark/40 whitespace-nowrap border border-current/15`}>
+                      {getTypeDisplayName(exercise, dsSettings.terminologyMode)}
                     </span>
                   )}
                   {showPath && exercise.targetGroup && (
@@ -273,12 +276,12 @@ function TechniqueCard({ exercise, isSelected, onSelect, delay, displayMode, com
           <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
             {showRealm && (
               <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-normal ${difficultyColorClass} border border-current/20 opacity-80`}>
-                {exercise.difficulty}
+                {getDifficultyDisplayName(exercise, dsSettings.terminologyMode)}
               </span>
             )}
             {showPath && (
               <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-normal ${typeColor} border border-current/20 opacity-70`}>
-                {exercise.type}
+                {getTypeDisplayName(exercise, dsSettings.terminologyMode)}
               </span>
             )}
           </div>

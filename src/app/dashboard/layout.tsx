@@ -11,17 +11,56 @@ import RightPanel from "@/components/navigation/RightPanel";
 import BottomBar from "@/components/navigation/BottomBar";
 import FloatingMobileSidebar from "@/components/navigation/FloatingMobileSidebar";
 import SetupWizard, { SETUP_WIZARD_COMPLETED_KEY } from "@/components/ui/SetupWizard";
+import { useAppContext } from "@/context/AppContext";
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
+  const { viewportMode, isNativeApp } = useAppContext();
   const [showWizard, setShowWizard] = useState(() => {
     if (typeof window === "undefined") return false;
     return !localStorage.getItem(SETUP_WIZARD_COMPLETED_KEY);
   });
+  const [mobilePreviewScale, setMobilePreviewScale] = useState(1);
+  const [previewBaseWidth, setPreviewBaseWidth] = useState<number | null>(null);
+
+  const isDesktopMobilePreview = viewportMode === "mobile" && !isNativeApp;
+
+  useEffect(() => {
+    if (!isDesktopMobilePreview) {
+      setMobilePreviewScale(1);
+      setPreviewBaseWidth(null);
+      return;
+    }
+
+    if (previewBaseWidth === null) {
+      setPreviewBaseWidth(window.innerWidth);
+      return;
+    }
+
+    const updateMobilePreviewScale = () => {
+      const widthRatio = window.innerWidth / previewBaseWidth;
+      const nextScale = Math.max(0.65, Math.min(1.65, widthRatio));
+
+      setMobilePreviewScale(Number(nextScale.toFixed(3)));
+    };
+
+    updateMobilePreviewScale();
+    window.addEventListener("resize", updateMobilePreviewScale);
+    return () => window.removeEventListener("resize", updateMobilePreviewScale);
+  }, [isDesktopMobilePreview, previewBaseWidth]);
 
   return (
     <>
       {showWizard && <SetupWizard onComplete={() => setShowWizard(false)} />}
-      <div className="h-screen flex flex-col overflow-hidden">
+      <div
+        className="h-screen flex flex-col overflow-hidden"
+        style={
+          isDesktopMobilePreview
+            ? {
+                zoom: mobilePreviewScale,
+              }
+            : undefined
+        }
+      >
         <TopBar />
         <div className="flex-1 flex overflow-hidden">
           <LeftSidebar />

@@ -16,12 +16,14 @@ interface AdminUser {
   username: string;
   name: string;
   createdAt: string;
-  _count?: { workouts: number; checkIns: number };
+  sessionCount?: number;
+  progressionLogCount?: number;
+  _count?: { checkIns: number };
 }
 
 interface SystemStats {
   totalUsers: number;
-  totalWorkouts: number;
+  totalProgressionLogs: number;
   totalExercises: number;
   totalCheckIns: number;
 }
@@ -30,9 +32,9 @@ function AdminSidebar() {
   return (
     <div className="space-y-3">
       <GlowCard glow="jade" hoverable={false}>
-        <h3 className="text-xs text-jade-glow uppercase mb-2">Admin Panel</h3>
+        <h3 className="text-xs text-jade-glow uppercase mb-2">Administrative Palace</h3>
         <p className="text-xs text-mist-dark">
-          Administrative dashboard for system management and user administration.
+          Central control chamber for user governance, exercise library operations, and system data management.
         </p>
       </GlowCard>
     </div>
@@ -45,7 +47,7 @@ export default function AdminPanelPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [stats, setStats] = useState<SystemStats>({
     totalUsers: 0,
-    totalWorkouts: 0,
+    totalProgressionLogs: 0,
     totalExercises: 0,
     totalCheckIns: 0,
   });
@@ -64,22 +66,22 @@ export default function AdminPanelPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [usersRes, workoutsRes, exercisesRes, checkinsRes] = await Promise.all([
+      const [usersRes, exercisesRes, checkinsRes] = await Promise.all([
         fetch("/api/users"),
-        fetch("/api/workouts?showAll=true"),
         fetch("/api/exercises"),
         fetch("/api/checkins"),
       ]);
 
       const usersData = await usersRes.json();
-      const workoutsData = await workoutsRes.json();
       const exercisesData = await exercisesRes.json();
       const checkinsData = await checkinsRes.json();
 
-      setUsers(usersData.users || []);
+      const usersList = usersData.users || [];
+      setUsers(usersList);
+      const totalLogs = usersList.reduce((sum: number, u: AdminUser) => sum + (u.progressionLogCount ?? 0), 0);
       setStats({
-        totalUsers: (usersData.users || []).length,
-        totalWorkouts: (workoutsData.workouts || []).length,
+        totalUsers: usersList.length,
+        totalProgressionLogs: totalLogs,
         totalExercises: (exercisesData.exercises || []).length,
         totalCheckIns: (checkinsData.checkins || []).length,
       });
@@ -216,9 +218,9 @@ export default function AdminPanelPage() {
                 <p className="text-2xl font-bold text-jade-glow mt-1">{stats.totalUsers}</p>
               </GlowCard>
               <GlowCard glow="blue">
-                <p className="text-xs text-mist-dark uppercase">Total Workouts</p>
+                <p className="text-xs text-mist-dark uppercase">Training Logs</p>
                 <p className="text-2xl font-bold text-mountain-blue-glow mt-1">
-                  {stats.totalWorkouts}
+                  {stats.totalProgressionLogs}
                 </p>
               </GlowCard>
               <GlowCard glow="gold">
@@ -288,6 +290,12 @@ export default function AdminPanelPage() {
           </GlowCard>
 
           {/* Data Management Section */}
+          <div>
+            <h3 className="text-sm text-jade-glow uppercase mb-3">Library And Records Control</h3>
+            <p className="text-xs text-mist-dark mb-3">
+              Upload, export, and purge operations for the shared Exercise Library are now managed here.
+            </p>
+          </div>
           <DataManagement />
         </div>
       )}
@@ -347,8 +355,8 @@ export default function AdminPanelPage() {
                 <p className="text-sm text-cloud-white mt-1">{selectedUser.username}</p>
               </div>
               <div>
-                <p className="text-xs text-mist-dark uppercase">Workouts</p>
-                <p className="text-sm text-blue-glow mt-1">{selectedUser._count?.workouts || 0}</p>
+                <p className="text-xs text-mist-dark uppercase">Sessions</p>
+                <p className="text-sm text-blue-glow mt-1">{selectedUser.sessionCount ?? selectedUser.progressionLogCount ?? 0}</p>
               </div>
               <div>
                 <p className="text-xs text-mist-dark uppercase">Check-Ins</p>

@@ -8,6 +8,7 @@ import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { useRouter, usePathname } from "next/navigation";
 import { NavItem } from "@/lib/constants";
 import { t } from "@/lib/terminology";
+import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
 
 function LeftSidebar() {
   const { getSortedNavItems, collapsed, isMobile, reorderNavItems } = useAppContext();
@@ -87,7 +88,11 @@ function LeftSidebar() {
         {user && (
           <div className="flex items-center gap-2 px-3 py-1.5 mb-1">
             <span className="text-xs">🧑</span>
-            <span className="text-xs text-cloud-white font-medium truncate">{user.name}</span>
+            <UserPhysiqueButton
+              userId={user.id}
+              userName={user.name}
+              className="text-xs text-cloud-white font-medium truncate hover:text-jade-glow transition-colors"
+            />
           </div>
         )}
         <button

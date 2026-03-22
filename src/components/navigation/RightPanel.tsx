@@ -11,7 +11,7 @@ import { memo, useState, useEffect, useCallback, useRef } from "react";
 interface QuickStats {
   todaySessions: number;
   todayExercises: number;
-  recentWorkouts: { name: string; date: string }[];
+  recentLogs: { name: string; date: string }[];
 }
 
 function RightPanel() {
@@ -21,7 +21,7 @@ function RightPanel() {
   const visible = settings.rightPanelVisible;
   const terminologyMode = settings.terminologyMode ?? "fantasy";
 
-  const [stats, setStats] = useState<QuickStats>({ todaySessions: 0, todayExercises: 0, recentWorkouts: [] });
+  const [stats, setStats] = useState<QuickStats>({ todaySessions: 0, todayExercises: 0, recentLogs: [] });
   const abortRef = useRef<AbortController | null>(null);
 
   const fetchStats = useCallback(async () => {
@@ -30,15 +30,16 @@ function RightPanel() {
     const controller = new AbortController();
     abortRef.current = controller;
     try {
-      const workoutRes = await fetch(`/api/workouts?userId=${encodeURIComponent(user.id)}`, { signal: controller.signal });
-      const workoutData = await workoutRes.json();
-      const workouts: { name: string; date: string }[] = (workoutData.workouts || []);
+      const res = await fetch(`/api/progressions/logs/export?userId=${encodeURIComponent(user.id)}`, { signal: controller.signal });
+      const data = await res.json();
+      const logs: { exerciseName: string; createdAt: string }[] = data.logs || [];
       const todayStr = new Date().toISOString().split("T")[0];
-      const todayWorkouts = workouts.filter(w => w.date && w.date.split("T")[0] === todayStr);
+      const todayLogs = logs.filter(l => l.createdAt && l.createdAt.split("T")[0] === todayStr);
+      const uniqueTodayExercises = new Set(todayLogs.map(l => l.exerciseName)).size;
       setStats({
-        todaySessions: todayWorkouts.length,
-        todayExercises: todayWorkouts.length,
-        recentWorkouts: workouts.slice(0, 3).map(w => ({ name: w.name, date: w.date })),
+        todaySessions: todayLogs.length,
+        todayExercises: uniqueTodayExercises,
+        recentLogs: logs.slice(-3).reverse().map(l => ({ name: l.exerciseName, date: l.createdAt })),
       });
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
@@ -112,17 +113,17 @@ function RightPanel() {
                 {/* Recent Activity */}
                 <div className="ink-border rounded-lg p-3 bg-ink-dark">
                   <h3 className="text-xs text-mountain-blue-glow mb-2">{t("Recent Activity", terminologyMode)}</h3>
-                  {stats.recentWorkouts.length === 0 ? (
+                  {stats.recentLogs.length === 0 ? (
                     <p className="text-xs text-mist-dark italic">
                       No recent cultivation records
                     </p>
                   ) : (
                     <div className="space-y-1.5">
-                      {stats.recentWorkouts.map((w, i) => (
+                      {stats.recentLogs.map((l, i) => (
                         <div key={i} className="flex justify-between text-xs">
-                          <span className="text-mist-light truncate mr-2">{w.name}</span>
+                          <span className="text-mist-light truncate mr-2">{l.name}</span>
                           <span className="text-mist-dark whitespace-nowrap text-[10px]">
-                            {new Date(w.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                            {new Date(l.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                           </span>
                         </div>
                       ))}

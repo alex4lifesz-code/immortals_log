@@ -10,9 +10,10 @@ import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings, TechniqueDisplayMode, ActiveCardStyle } from "@/context/DisplaySettingsContext";
 import { getDifficultyColor, getTypeColor, DAY_ABBREVIATIONS, parseDayAssignments } from "@/lib/constants";
 import { getDifficultyColorClass, getDifficultyGlowStyleScaled, getDifficultyStyle } from "@/lib/difficulty-styles";
-import { getExerciseDisplayName, matchesLooseSearchInFields } from "@/lib/exercise-name";
+import { getExerciseDisplayName, matchesLooseSearchInFields, getTypeDisplayName, getDifficultyDisplayName, getDifficultyColorKey, getTypeColorKey } from "@/lib/exercise-name";
 import { useAppContext } from "@/context/AppContext";
 import TechniqueManagementDrawer from "@/components/workout/TechniqueManagementDrawer";
+import { DEFAULT_USER_PHYSIQUE, loadUserPhysique, UserPhysiqueSettings } from "@/lib/user-physique";
 
 // ── Types ──
 
@@ -22,9 +23,12 @@ interface ProgressionTier {
   name: string;
   wuxiaName: string;
   difficulty: string;
+  wuxiaDifficulty: string;
+  wuxiaType: string;
   description: string;
   targetHold: number | null;
   targetReps: number | null;
+  targetRepsText?: string | null;
 }
 
 interface ProgressionVariation {
@@ -33,6 +37,8 @@ interface ProgressionVariation {
   wuxiaName: string;
   difficulty: string;
   description: string;
+  wuxiaDifficulty: string;
+  wuxiaType: string;
 }
 
 interface ProgressionModifier {
@@ -74,7 +80,9 @@ interface ProgressionExercise {
   name: string;
   wuxiaName: string;
   difficulty: string;
+  wuxiaDifficulty: string;
   type: string;
+  wuxiaType: string;
   story: string;
   tips: string;
   category: string;
@@ -104,11 +112,378 @@ function getExerciseIcon(type: string): string {
   return "🔱";
 }
 
+function parseCategoryTags(category: string | null | undefined): string[] {
+  if (!category) return [];
+  return category
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+function stripBwPercentHint(label: string): string {
+  // Remove notes like "(12-20% bw)" from displayed labels in log tables.
+  return label.replace(/\s*\([^)]*%?\s*bw[^)]*\)\s*/gi, " ").replace(/\s{2,}/g, " ").trim();
+}
+
+const RESISTANCE_BAND_TOKEN = /^RB:\s*(\d+(?:\.\d+)?)\s*kg$/i;
+const RESISTANCE_BAND_LEVEL_TOKEN = /^RBL:\s*(\d+)$/i;
+const RESISTANCE_BAND_OPTIONS = [2.5, 5, 7.5, 10, 12.5, 15, 20, 25, 30] as const;
+const MAX_RESISTANCE_BAND_KG = Math.max(...RESISTANCE_BAND_OPTIONS);
+
+function formatResistanceBandLabel(kg: number): string {
+  const normalized = Number.isInteger(kg) ? String(kg) : kg.toFixed(1).replace(/\.0$/, "");
+  return `-${normalized}kg`;
+}
+
+function getBandDimOpacity(kg: number | null | undefined): number {
+  if (typeof kg !== "number" || !Number.isFinite(kg) || kg <= 0) return 1;
+  const normalized = Math.max(0, Math.min(1, kg / MAX_RESISTANCE_BAND_KG));
+  return Math.max(0.08, 1 - normalized * 0.92);
+}
+
+function getBandSoftDimOpacity(kg: number | null | undefined): number {
+  if (typeof kg !== "number" || !Number.isFinite(kg) || kg <= 0) return 1;
+  const normalized = Math.max(0, Math.min(1, kg / MAX_RESISTANCE_BAND_KG));
+  return Math.max(0.78, 1 - normalized * 0.22);
+}
+
+function getBandAdjustedGlowStyle(glowStyle: React.CSSProperties, kg: number | null | undefined): React.CSSProperties {
+  if (typeof kg !== "number" || !Number.isFinite(kg) || kg <= 0) return glowStyle;
+  const factor = getBandDimOpacity(kg);
+  const boxShadow =
+    typeof glowStyle.boxShadow === "string"
+      ? glowStyle.boxShadow.replace(
+          /rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/g,
+          (_m: string, r: string, g: string, b: string, a: string) =>
+            `rgba(${r}, ${g}, ${b}, ${(parseFloat(a) * factor).toFixed(3)})`
+        )
+      : glowStyle.boxShadow;
+  // At very high assistance (e.g. 30kg), flatten glow so the dimming is obvious.
+  if (factor <= 0.12) {
+    return { ...glowStyle, boxShadow: "none" };
+  }
+  return { ...glowStyle, boxShadow };
+}
+
+function parseModifierWithBand(modifier: string | null | undefined): {
+  baseModifier: string | null;
+  resistanceBandKg: number | null;
+  displayLevelOverride: number | null;
+} {
+  if (!modifier) return { baseModifier: null, resistanceBandKg: null, displayLevelOverride: null };
+
+  const parts = modifier
+    .split("|")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  let resistanceBandKg: number | null = null;
+  let displayLevelOverride: number | null = null;
+  const baseParts: string[] = [];
+
+  for (const part of parts) {
+    const match = part.match(RESISTANCE_BAND_TOKEN);
+    if (match) {
+      const val = Number(match[1]);
+      if (Number.isFinite(val) && val > 0) resistanceBandKg = val;
+      continue;
+    }
+    const levelMatch = part.match(RESISTANCE_BAND_LEVEL_TOKEN);
+    if (levelMatch) {
+      const lvl = Number(levelMatch[1]);
+      if (Number.isFinite(lvl) && lvl > 0) displayLevelOverride = Math.floor(lvl);
+      continue;
+    }
+    baseParts.push(part);
+  }
+
+  return {
+    baseModifier: baseParts.length > 0 ? baseParts.join(" | ") : null,
+    resistanceBandKg,
+    displayLevelOverride,
+  };
+}
+
+function buildModifierWithBand(
+  baseModifier: string | null | undefined,
+  resistanceBandKg: number | null | undefined,
+  displayLevelOverride?: number | null,
+): string | null {
+  const parts: string[] = [];
+  const base = baseModifier?.trim();
+  if (base) parts.push(base);
+  if (typeof resistanceBandKg === "number" && Number.isFinite(resistanceBandKg) && resistanceBandKg > 0) {
+    parts.push(`RB:${resistanceBandKg}kg`);
+    if (typeof displayLevelOverride === "number" && Number.isFinite(displayLevelOverride) && displayLevelOverride > 0) {
+      parts.push(`RBL:${Math.floor(displayLevelOverride)}`);
+    }
+  }
+  return parts.length > 0 ? parts.join(" | ") : null;
+}
+
 // ── Helpers ──
 
-function getSelectedLevel(exercise: ProgressionExercise, defaults: Record<string, number>): number {
-  if (defaults[exercise.id]) return defaults[exercise.id];
+function getSelectedLevel(
+  exercise: ProgressionExercise,
+  defaults: Record<string, number>,
+  autoLevels: Record<string, number>
+): number {
+  if (Object.prototype.hasOwnProperty.call(defaults, exercise.id)) return defaults[exercise.id];
+  if (autoLevels[exercise.id]) return autoLevels[exercise.id];
   return exercise.userProgress[0]?.currentLevel ?? 1;
+}
+
+function averageWeightsFromLog(log: ProgressionLog): number | null {
+  const vals = [log.weight1, log.weight2, log.weight3].filter((v): v is number => typeof v === "number" && Number.isFinite(v) && v > 0);
+  if (vals.length === 0) return null;
+  return vals.reduce((sum, v) => sum + v, 0) / vals.length;
+}
+
+function recentAverageWeight(logs: ProgressionLog[], limit = 3): number | null {
+  const valid = [...logs]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .map(averageWeightsFromLog)
+    .filter((v): v is number => v != null)
+    .slice(0, limit);
+
+  if (valid.length === 0) return null;
+  return valid.reduce((sum, v) => sum + v, 0) / valid.length;
+}
+
+function scaleTargets(seed: number[], count: number): number[] {
+  if (count <= 1) return [seed[0]];
+  if (count === seed.length) return [...seed];
+
+  const out: number[] = [];
+  for (let i = 0; i < count; i++) {
+    const pos = (i * (seed.length - 1)) / (count - 1);
+    const lo = Math.floor(pos);
+    const hi = Math.ceil(pos);
+    if (lo === hi) {
+      out.push(seed[lo]);
+      continue;
+    }
+    const t = pos - lo;
+    out.push(seed[lo] + (seed[hi] - seed[lo]) * t);
+  }
+  return out;
+}
+
+function getGymTierTargets(gender: UserPhysiqueSettings["gender"], tierCount: number): number[] {
+  const seeds: Record<UserPhysiqueSettings["gender"], number[]> = {
+    male: [20, 35, 50, 65, 80, 95, 110, 125, 140, 160],
+    female: [15, 25, 35, 45, 55, 65, 75, 85, 95, 110],
+    other: [18, 30, 42, 54, 66, 78, 90, 102, 114, 126],
+  };
+
+  return scaleTargets(seeds[gender], tierCount);
+}
+
+function isGymWeightTrackedExercise(exercise: ProgressionExercise): boolean {
+  const equipment = (exercise.equipmentType || "").toLowerCase();
+  const gymEquipmentHints = ["dumbbell", "barbell", "machine", "cable", "weights", "plate", "smith"];
+  const looksGymByEquipment = gymEquipmentHints.some((hint) => equipment.includes(hint));
+  const explicitlyWeighted = exercise.weighted === true;
+
+  const logs = exercise.userProgress[0]?.logs ?? [];
+  const hasExternalWeightHistory = logs.some((log) => {
+    return [log.weight1, log.weight2, log.weight3].some((v) => typeof v === "number" && Number.isFinite(v) && v > 0);
+  });
+
+  return explicitlyWeighted || looksGymByEquipment || hasExternalWeightHistory;
+}
+
+function isGymCategoryExercise(exercise: ProgressionExercise): boolean {
+  const tags = parseCategoryTags(exercise.category).map((tag) => tag.toLowerCase().trim());
+  return tags.some((tag) => /\bgym\b/i.test(tag.replace(/[_-]+/g, " ")));
+}
+
+function getExerciseCategoryLabel(exercise: ProgressionExercise | undefined): "GYM" | "Cali" {
+  if (!exercise) return "Cali";
+  return isGymCategoryExercise(exercise) ? "GYM" : "Cali";
+}
+
+function parseTierWeightStandardKg(text: string, bodyWeightKg: number): number | null {
+  if (!text) return null;
+
+  const percentRange = text.match(/(\d+(?:\.\d+)?)\s*[-to]+\s*(\d+(?:\.\d+)?)\s*%\s*bw/i);
+  if (percentRange) {
+    const lowerPercent = Number(percentRange[1]);
+    if (Number.isFinite(lowerPercent) && lowerPercent > 0) return (lowerPercent / 100) * bodyWeightKg;
+  }
+
+  const percentSingle = text.match(/(\d+(?:\.\d+)?)\s*%\s*bw/i);
+  if (percentSingle) {
+    const p = Number(percentSingle[1]);
+    if (Number.isFinite(p) && p > 0) return (p / 100) * bodyWeightKg;
+  }
+
+  const kgRange = text.match(/(\d+(?:\.\d+)?)\s*[-to]+\s*(\d+(?:\.\d+)?)\s*kg/i);
+  if (kgRange) {
+    const lower = Number(kgRange[1]);
+    if (Number.isFinite(lower) && lower > 0) return lower;
+  }
+
+  const kgSingle = text.match(/(\d+(?:\.\d+)?)\s*kg/i);
+  if (kgSingle) {
+    const kg = Number(kgSingle[1]);
+    if (Number.isFinite(kg) && kg > 0) return kg;
+  }
+
+  const lbRange = text.match(/(\d+(?:\.\d+)?)\s*[-to]+\s*(\d+(?:\.\d+)?)\s*lb/i);
+  if (lbRange) {
+    const lowerLb = Number(lbRange[1]);
+    if (Number.isFinite(lowerLb) && lowerLb > 0) return lowerLb * 0.453592;
+  }
+
+  const lbSingle = text.match(/(\d+(?:\.\d+)?)\s*lb/i);
+  if (lbSingle) {
+    const lb = Number(lbSingle[1]);
+    if (Number.isFinite(lb) && lb > 0) return lb * 0.453592;
+  }
+
+  return null;
+}
+
+function getGymTierStandardKg(tier: ProgressionTier, bodyWeightKg: number): number | null {
+  const candidates = [tier.targetRepsText || "", tier.description || "", tier.name || ""];
+  for (const candidate of candidates) {
+    const parsed = parseTierWeightStandardKg(candidate, bodyWeightKg);
+    if (parsed != null) return parsed;
+  }
+  return null;
+}
+
+function supportsResistanceBandAssistance(exercise: ProgressionExercise): boolean {
+  const name = (exercise.name || "").toLowerCase();
+  const equipment = (exercise.equipmentType || "").toLowerCase();
+  const category = (exercise.category || "").toLowerCase();
+
+  const calisthenicsNameHints = [
+    "pull up",
+    "chin up",
+    "dip",
+    "push up",
+    "muscle up",
+    "front lever",
+    "back lever",
+    "planche",
+    "handstand",
+    "l-sit",
+    "dragon flag",
+    "human flag",
+  ];
+  const calisthenicsEquipmentHints = ["bar", "pull", "dip", "floor", "rings", "body", "parallette"];
+  const gymHints = ["dumbbell", "barbell", "machine", "cable", "plate", "smith"];
+
+  const looksCalisthenics =
+    exercise.bodyweight ||
+    exercise.rings ||
+    calisthenicsNameHints.some((hint) => name.includes(hint)) ||
+    calisthenicsEquipmentHints.some((hint) => equipment.includes(hint)) ||
+    category.includes("calisthenics");
+
+  if (looksCalisthenics) return true;
+
+  return !gymHints.some((hint) => equipment.includes(hint) || name.includes(hint));
+}
+
+function getBandAdjustedCalisthenicsLevel(
+  exercise: ProgressionExercise,
+  requestedLevel: number,
+  physique: UserPhysiqueSettings,
+  resistanceBandKg: number | null | undefined,
+): number {
+  if (!supportsResistanceBandAssistance(exercise)) return requestedLevel;
+  if (!physique.bodyWeightKg || physique.bodyWeightKg <= 0) return requestedLevel;
+  if (!resistanceBandKg || resistanceBandKg <= 0) return requestedLevel;
+  if (!exercise.tiers || exercise.tiers.length === 0) return requestedLevel;
+
+  const sorted = [...exercise.tiers].sort((a, b) => a.level - b.level);
+  const requestedIdx = Math.max(0, sorted.findIndex((t) => t.level === requestedLevel));
+
+  const assistancePct = (resistanceBandKg / physique.bodyWeightKg) * 100;
+  const levelsDown = Math.max(1, Math.round(assistancePct / 5));
+  const adjustedIdx = Math.max(0, requestedIdx - levelsDown);
+
+  return sorted[adjustedIdx]?.level ?? requestedLevel;
+}
+
+function getAutoGymLevelFromAverage(
+  exercise: ProgressionExercise,
+  physique: UserPhysiqueSettings,
+  avgWeight: number | null
+): number | null {
+  if (!isGymCategoryExercise(exercise)) return null;
+  if (!isGymWeightTrackedExercise(exercise)) return null;
+  if (!physique.bodyWeightKg || physique.bodyWeightKg <= 0) return null;
+  if (!exercise.tiers || exercise.tiers.length === 0) return null;
+  if (!avgWeight || avgWeight <= 0) return null;
+
+  const sortedTiers = [...exercise.tiers].sort((a, b) => a.level - b.level);
+  const explicitStandards = sortedTiers.map((tier) => getGymTierStandardKg(tier, physique.bodyWeightKg as number));
+
+  const hasExplicitStandards = explicitStandards.some((v) => v != null);
+
+  if (hasExplicitStandards) {
+    let picked = sortedTiers[0].level;
+    for (let i = 0; i < sortedTiers.length; i++) {
+      const standardKg = explicitStandards[i];
+      if (standardKg == null) continue;
+      if (avgWeight >= standardKg) picked = sortedTiers[i].level;
+    }
+    return picked;
+  }
+
+  const bwPercent = (avgWeight / physique.bodyWeightKg) * 100;
+  const targets = getGymTierTargets(physique.gender, sortedTiers.length);
+
+  let picked = sortedTiers[0].level;
+  for (let i = 0; i < sortedTiers.length; i++) {
+    if (bwPercent >= targets[i]) picked = sortedTiers[i].level;
+  }
+  return picked;
+}
+
+function getAutoGymLevelFromSet(
+  exercise: ProgressionExercise,
+  physique: UserPhysiqueSettings,
+  setData: {
+    weight1?: number | null;
+    weight2?: number | null;
+    weight3?: number | null;
+  },
+  bandKg?: number | null
+): number | null {
+  const bandOffset = (typeof bandKg === "number" && bandKg > 0) ? bandKg : 0;
+  const vals = [setData.weight1, setData.weight2, setData.weight3]
+    .filter((v): v is number => typeof v === "number" && Number.isFinite(v) && v > 0)
+    .map((v) => Math.max(0, v - bandOffset));
+  const avg = vals.length > 0 ? vals.reduce((sum, v) => sum + v, 0) / vals.length : null;
+  return getAutoGymLevelFromAverage(exercise, physique, avg);
+}
+
+function recentAverageWeightBandAdjusted(logs: ProgressionLog[], limit = 3): number | null {
+  const sorted = [...logs]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, limit);
+  const vals = sorted
+    .map((log) => {
+      const avg = averageWeightsFromLog(log);
+      if (avg == null) return null;
+      const { resistanceBandKg } = parseModifierWithBand(log.modifier);
+      const offset = (typeof resistanceBandKg === "number" && resistanceBandKg > 0) ? resistanceBandKg : 0;
+      return Math.max(0, avg - offset);
+    })
+    .filter((v): v is number => v != null);
+  if (vals.length === 0) return null;
+  return vals.reduce((sum, v) => sum + v, 0) / vals.length;
+}
+
+function getAutoGymLevel(exercise: ProgressionExercise, physique: UserPhysiqueSettings): number | null {
+  const logs = exercise.userProgress[0]?.logs ?? [];
+  const avgWeight = recentAverageWeightBandAdjusted(logs, 3);
+  return getAutoGymLevelFromAverage(exercise, physique, avgWeight);
 }
 
 function getTierName(exercise: ProgressionExercise, level: number): string {
@@ -116,8 +491,32 @@ function getTierName(exercise: ProgressionExercise, level: number): string {
   return tier ? tier.name : `Level ${level}`;
 }
 
+function tierUsesHoldTarget(tier: ProgressionTier): boolean {
+  if (tier.targetHold != null) return true;
+  // Upload pipeline appends "Target: ..." when the source JSON used targetHoldTime.
+  return /\btarget\s*:/i.test(tier.description || "");
+}
+
+function tierUsesWeightTarget(tier: ProgressionTier): boolean {
+  const hasRepsTarget =
+    tier.targetReps != null ||
+    (typeof tier.targetRepsText === "string" && tier.targetRepsText.trim().length > 0);
+  if (hasRepsTarget) return true;
+  // Upload pipeline appends this marker when source JSON used targetWeight.
+  return /\btarget\s*weight\s*:/i.test(tier.description || "");
+}
+
 function hasHoldBasedTiers(exercise: ProgressionExercise): boolean {
-  return exercise.tiers.some((t) => t.targetHold != null);
+  return exercise.tiers.some((t) => tierUsesHoldTarget(t));
+}
+
+function getTierInputMode(exercise: ProgressionExercise, level: number): "weight" | "hold" {
+  const tier = exercise.tiers.find((t) => t.level === level);
+  if (tier) {
+    if (tierUsesWeightTarget(tier)) return "weight";
+    if (tierUsesHoldTarget(tier)) return "hold";
+  }
+  return hasHoldBasedTiers(exercise) ? "hold" : "weight";
 }
 
 const DIFFICULTY_SCALE = [
@@ -148,7 +547,8 @@ function getWeightedDifficulty(
   if (variantName && exercise.variations) {
     const variation = exercise.variations.find(v => v.name === variantName);
     if (variation?.difficulty) {
-      const diffIdx = DIFFICULTY_SCALE.indexOf(variation.difficulty as typeof DIFFICULTY_SCALE[number]);
+      const varDiffKey = variation.wuxiaDifficulty || variation.difficulty;
+      const diffIdx = DIFFICULTY_SCALE.indexOf(varDiffKey as typeof DIFFICULTY_SCALE[number]);
       if (diffIdx !== -1) {
         score += ((diffIdx / (DIFFICULTY_SCALE.length - 1)) - 0.5) * 0.30;
       }
@@ -232,161 +632,193 @@ function ExerciseDetailModal({
   ).length;
   const progressPercent = totalTiers > 0 ? Math.round((Math.min(currentLevel - 1, totalTiers) / totalTiers) * 100) : 0;
 
-  const modalDiff = getWeightedDifficulty(exercise, currentLevel);
-  const diffColorClass = getDifficultyColorClass(modalDiff);
+  const modalDiffKey = getWeightedDifficulty(exercise, currentLevel);
+  const modalDiffDisplay = getDifficultyDisplayName(exercise, settings.terminologyMode) || modalDiffKey;
+  const diffColorClass = getDifficultyColorClass(modalDiffKey);
+  const primaryMuscles = exercise.primaryMuscles.split(",").map((m) => m.trim()).filter(Boolean);
+  const secondaryMuscles = exercise.secondaryMuscles.split(",").map((m) => m.trim()).filter(Boolean);
+  const categoryTags = parseCategoryTags(exercise.category);
+  const completionRate = totalTiers > 0 ? Math.round((completedTiers / totalTiers) * 100) : 0;
 
   return (
     <GlowModal
       isOpen={isOpen}
       onClose={onClose}
       title={getExerciseDisplayName(exercise, settings.terminologyMode)}
-      panelClassName="!max-w-2xl"
+      panelClassName="!max-w-3xl"
     >
-      <div className="space-y-3">
-        {/* Header badges */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-            {exercise.type && (
-              <span className="text-base">{getExerciseIcon(exercise.type)}</span>
+      <div className="space-y-4">
+        <section className="rounded-xl border border-jade/25 bg-gradient-to-br from-ink-mid/70 to-ink-dark/80 p-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 space-y-1.5">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xl">{getExerciseIcon(getTypeColorKey(exercise))}</span>
+                <h3 className="text-sm text-cloud-white font-semibold truncate">{getExerciseDisplayName(exercise, settings.terminologyMode)}</h3>
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${diffColorClass} bg-ink-dark/50 border border-current/30`}>
+                  {modalDiffDisplay}
+                </span>
+                {exercise.type && (
+                  <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${getTypeColor(getTypeColorKey(exercise))} bg-ink-dark/40 border border-current/15`}>
+                    {getTypeDisplayName(exercise, settings.terminologyMode)}
+                  </span>
+                )}
+                <EquipmentBadges exercise={exercise} />
+              </div>
+              {isFantasy && exercise.name && exercise.name !== exercise.wuxiaName && (
+                <p className="text-[11px] text-mist-mid">{exercise.name}</p>
+              )}
+              {exercise.story && (
+                <p className="text-[11px] text-mist-light/90 leading-relaxed">{exercise.story}</p>
+              )}
+            </div>
+            <div className="shrink-0 min-w-[98px] rounded-lg border border-jade/30 bg-ink-dark/60 px-2 py-1.5 text-center">
+              <p className="text-[9px] text-mist-dark uppercase tracking-wider">Completed</p>
+              <p className="text-sm text-jade-light font-semibold">{completedTiers}/{totalTiers}</p>
+              <p className="text-[10px] text-mist-mid">{completionRate}%</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="rounded-lg border border-ink-light/40 bg-ink-dark/40 p-2.5 space-y-2">
+            <p className="text-[10px] text-mist-light uppercase tracking-wider">Muscle Focus</p>
+            <div className="flex flex-wrap gap-1">
+              {primaryMuscles.map((m) => (
+                <span key={`p-${m}`} className="text-[10px] px-2 py-0.5 rounded bg-jade-deep/35 text-jade-light border border-jade/25">{m}</span>
+              ))}
+              {secondaryMuscles.map((m) => (
+                <span key={`s-${m}`} className="text-[10px] px-2 py-0.5 rounded bg-ink-mid/55 text-mist-light border border-ink-light/35">{m}</span>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-ink-light/40 bg-ink-dark/40 p-2.5 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] text-mist-light uppercase tracking-wider">Progress</p>
+              <p className="text-[10px] text-mist-mid">Lv.{currentLevel}</p>
+            </div>
+            <div className="h-1.5 bg-ink-mid rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-jade-deep to-jade-glow transition-all duration-500"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+            {categoryTags.length > 0 && (
+              <div className="flex flex-wrap gap-1 pt-0.5">
+                {categoryTags.map((tag) => (
+                  <span key={tag} className="text-[9px] px-1.5 py-0.5 rounded border border-gold-dim/25 text-gold/90 bg-gold-dim/10">{tag}</span>
+                ))}
+              </div>
             )}
-            {isFantasy && exercise.name && exercise.name !== exercise.wuxiaName && (
-              <span className="text-[11px] text-mist-mid">{exercise.name}</span>
-            )}
-            <span className={`text-[9px] font-semibold px-1.5 py-0 rounded-full ${diffColorClass} bg-ink-dark/50 border border-current/30`}>
-              {modalDiff}
-            </span>
-            {exercise.type && (
-              <span className={`text-[9px] font-medium px-1.5 py-0 rounded-full ${getTypeColor(exercise.type)} bg-ink-dark/40 border border-current/15`}>
-                {exercise.type}
-              </span>
-            )}
-            <EquipmentBadges exercise={exercise} />
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="text-[9px] text-mist-dark">{completedTiers}/{totalTiers}</span>
-          </div>
-        </div>
+        </section>
 
-        {/* Story */}
-        {exercise.story && (
-          <p className="text-[10px] text-mist-mid leading-relaxed italic">{exercise.story}</p>
-        )}
-
-        {/* Muscles */}
-        <div className="flex flex-wrap gap-1">
-          {exercise.primaryMuscles.split(",").filter(Boolean).map((m) => (
-            <span key={m.trim()} className="text-[9px] px-1.5 py-0.5 bg-jade-deep/40 text-jade-light rounded">{m.trim()}</span>
-          ))}
-          {exercise.secondaryMuscles.split(",").filter(Boolean).map((m) => (
-            <span key={m.trim()} className="text-[9px] px-1.5 py-0.5 bg-ink-mid/60 text-mist-light rounded">{m.trim()}</span>
-          ))}
-        </div>
-
-        {/* Progress bar */}
-        <div>
-          <div className="flex items-center justify-between mb-0.5">
-            <span className="text-[9px] text-mist-dark uppercase tracking-wider">Progress</span>
-            <span className="text-[9px] text-mist-dark">{progressPercent}%</span>
-          </div>
-          <div className="h-1 bg-ink-mid rounded-full overflow-hidden">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-jade-deep to-jade-glow transition-all duration-500"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Progression Tiers */}
-        <div>
-          <h4 className="text-[10px] text-mist-light uppercase tracking-wider mb-1">Progression Tiers</h4>
-          <div className="space-y-px">
+        <section>
+          <h4 className="text-[10px] text-mist-light uppercase tracking-wider mb-1.5">Progression Tiers</h4>
+          <div className="space-y-1.5">
             {exercise.tiers.map((tier) => {
               const isCompleted = logs.some((l) => l.level === tier.level && l.completed);
               const isCurrent = tier.level === currentLevel;
+              const weightFromDescription = (tier.description || "").match(/target\s*weight\s*:\s*([^\)]+)/i)?.[1]?.trim();
+              const targetRepsLabel = tier.targetReps != null
+                ? String(tier.targetReps)
+                : (typeof tier.targetRepsText === "string" ? tier.targetRepsText.trim() : "");
 
               return (
                 <div
                   key={tier.id}
-                  className={`flex items-start gap-2 py-1.5 px-2 rounded ${isCurrent ? "bg-ink-mid/20" : ""}`}
+                  className={`rounded-lg border px-2.5 py-2 transition-colors ${
+                    isCurrent
+                      ? "bg-ink-mid/30 border-gold/35"
+                      : isCompleted
+                        ? "bg-jade-deep/10 border-jade/20"
+                        : "bg-ink-dark/35 border-ink-light/30"
+                  }`}
                 >
-                  <div className="pt-px">
-                    <LevelStatus tierLevel={tier.level} currentLevel={currentLevel} logs={logs} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[10px] text-mist-dark font-mono">Lv.{tier.level}</span>
-                      <span className={`text-xs font-medium ${isCompleted ? "text-jade-light" : isCurrent ? "text-gold" : "text-cloud-white"}`}>
-                        {getExerciseDisplayName(tier, settings.terminologyMode)}
-                      </span>
-                      {tier.difficulty && (
-                        <span className={`text-[8px] px-1 py-0 rounded-full ${getDifficultyColor(tier.difficulty)} bg-ink-dark/40 border border-current/15`}>
-                          {tier.difficulty}
-                        </span>
-                      )}
+                  <div className="flex items-start gap-2">
+                    <div className="pt-px">
+                      <LevelStatus tierLevel={tier.level} currentLevel={currentLevel} logs={logs} />
                     </div>
-                    {isFantasy && tier.wuxiaName && tier.name !== tier.wuxiaName && (
-                      <p className="text-[9px] text-mist-dark">{tier.name}</p>
-                    )}
-                    {tier.description && <p className="text-[10px] text-mist-mid leading-snug">{tier.description}</p>}
-                    {(tier.targetHold != null || tier.targetReps != null) && (
-                      <div className="flex gap-2 mt-0.5">
-                        {tier.targetHold != null && <span className="text-[9px] text-mountain-blue-glow">Hold: {tier.targetHold}s</span>}
-                        {tier.targetReps != null && <span className="text-[9px] text-mountain-blue-glow">Reps: {tier.targetReps}</span>}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[10px] text-mist-dark font-mono">Lv.{tier.level}</span>
+                        <span className={`text-xs font-medium ${isCompleted ? "text-jade-light" : isCurrent ? "text-gold" : "text-cloud-white"}`}>
+                          {getExerciseDisplayName(tier, settings.terminologyMode)}
+                        </span>
+                        {(tier.difficulty || tier.wuxiaDifficulty) && (
+                          <span className={`text-[9px] px-1.5 py-0 rounded-full ${getDifficultyColor(getDifficultyColorKey(tier))} bg-ink-dark/40 border border-current/15`}>
+                            {getDifficultyDisplayName(tier, settings.terminologyMode)}
+                          </span>
+                        )}
                       </div>
-                    )}
+                      {isFantasy && tier.wuxiaName && tier.name !== tier.wuxiaName && (
+                        <p className="text-[10px] text-mist-dark">{tier.name}</p>
+                      )}
+                      {tier.description && <p className="text-[10px] text-mist-mid leading-snug mt-0.5">{tier.description}</p>}
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {tier.targetHold != null && (
+                          <span className="text-[9px] text-mountain-blue-glow bg-mountain-blue/10 border border-mountain-blue/25 rounded px-1.5 py-0.5">Hold {tier.targetHold}s</span>
+                        )}
+                        {targetRepsLabel && (
+                          <span className="text-[9px] text-jade-light bg-jade-deep/20 border border-jade/25 rounded px-1.5 py-0.5">Reps {targetRepsLabel}</span>
+                        )}
+                        {weightFromDescription && (
+                          <span className="text-[9px] text-gold bg-gold-dim/10 border border-gold-dim/30 rounded px-1.5 py-0.5">Weight {weightFromDescription}</span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-
                 </div>
               );
             })}
           </div>
-        </div>
+        </section>
 
         {/* Variations */}
         {exercise.variations.length > 0 && (
-          <div className="pt-2 border-t border-ink-light/40">
-            <h4 className="text-[10px] text-mist-light uppercase tracking-wider mb-1">Variations</h4>
-            <div className="space-y-1">
+          <section className="pt-2 border-t border-ink-light/40">
+            <h4 className="text-[10px] text-mist-light uppercase tracking-wider mb-1.5">Variations</h4>
+            <div className="grid grid-cols-1 gap-1.5">
               {exercise.variations.map((v) => (
-                <div key={v.id} className="text-[11px] flex items-center gap-1.5">
+                <div key={v.id} className="text-[11px] flex items-center gap-1.5 rounded-md border border-ink-light/30 bg-ink-dark/35 px-2 py-1.5">
                   <span className="text-mountain-blue-glow shrink-0">◇</span>
-                  <span className="text-cloud-white">{getExerciseDisplayName(v, settings.terminologyMode)}</span>
+                  <span className="text-cloud-white flex-1 min-w-0 truncate">{getExerciseDisplayName(v, settings.terminologyMode)}</span>
                   {v.difficulty && (
-                    <span className={`text-[8px] px-1 py-0 rounded-full ${getDifficultyColor(v.difficulty)} bg-ink-dark/40 border border-current/15`}>
-                      {v.difficulty}
+                    <span className={`text-[9px] px-1.5 py-0 rounded-full ${getDifficultyColor(getDifficultyColorKey(v))} bg-ink-dark/40 border border-current/15`}>
+                      {getDifficultyDisplayName(v, settings.terminologyMode)}
                     </span>
                   )}
                   {isFantasy && v.wuxiaName && v.name !== v.wuxiaName && (
-                    <span className="text-mist-dark text-[9px]">({v.name})</span>
+                    <span className="text-mist-dark text-[10px]">({v.name})</span>
                   )}
-                  {v.description && <span className="text-mist-dark text-[9px]">— {v.description}</span>}
+                  {v.description && <span className="text-mist-dark text-[10px]">- {v.description}</span>}
                 </div>
               ))}
             </div>
-          </div>
+          </section>
         )}
 
         {/* Modifiers */}
         {exercise.modifiers.length > 0 && (
-          <div className="pt-2 border-t border-ink-light/40">
-            <h4 className="text-[10px] text-mist-light uppercase tracking-wider mb-1">Modifiers</h4>
-            <div className="space-y-0.5">
+          <section className="pt-2 border-t border-ink-light/40">
+            <h4 className="text-[10px] text-mist-light uppercase tracking-wider mb-1.5">Modifiers</h4>
+            <div className="space-y-1">
               {exercise.modifiers.map((m) => (
-                <div key={m.id} className="text-[11px] flex items-center gap-1.5">
+                <div key={m.id} className="text-[11px] flex items-center gap-1.5 rounded-md border border-ink-light/30 bg-ink-dark/35 px-2 py-1.5">
                   <span className={m.available ? "text-jade-glow" : "text-mist-dark"}>{m.available ? "●" : "○"}</span>
-                  <span className="text-cloud-white capitalize">{m.type}</span>
+                  <span className="text-cloud-white capitalize flex-1 min-w-0">{m.type}</span>
                   {m.difficultyMod !== 0 && <span className="text-gold text-[9px] font-mono">{m.difficultyMod > 0 ? "+" : ""}{m.difficultyMod}</span>}
-                  {m.notes && <span className="text-mist-dark text-[9px]">({m.notes})</span>}
+                  {m.notes && <span className="text-mist-dark text-[10px]">({m.notes})</span>}
                 </div>
               ))}
             </div>
-          </div>
+          </section>
         )}
 
         {/* Tips */}
         {parseTips(exercise.tips).length > 0 && (
-          <div className="pt-2 border-t border-ink-light/40">
-            <h4 className="text-[10px] text-mist-light uppercase tracking-wider mb-1">Cultivation Tips</h4>
+          <section className="pt-2 border-t border-ink-light/40">
+            <h4 className="text-[10px] text-mist-light uppercase tracking-wider mb-1.5">Cultivation Tips</h4>
             <ul className="space-y-0.5">
               {parseTips(exercise.tips).map((tip, i) => (
                 <li key={i} className="text-[11px] text-mist-mid flex gap-1.5">
@@ -395,7 +827,7 @@ function ExerciseDetailModal({
                 </li>
               ))}
             </ul>
-          </div>
+          </section>
         )}
       </div>
     </GlowModal>
@@ -410,6 +842,7 @@ interface FlatLogEntry {
   exerciseName: string;
   exerciseId: string;
   level: number;
+  levelNameLevel: number;
   tierName: string;
   weight1: number | null;
   reps1: number | null;
@@ -421,6 +854,7 @@ interface FlatLogEntry {
   holdTime2: number | null;
   holdTime3: number | null;
   modifier: string | null;
+  resistanceBandKg: number | null;
   variant: string | null;
   notes: string | null;
   completed: boolean;
@@ -435,13 +869,15 @@ function flattenLogs(exercises: ProgressionExercise[]): FlatLogEntry[] {
     if (!progress) continue;
     for (const log of progress.logs) {
       const logHasHold = log.holdTime != null || log.holdTime2 != null || log.holdTime3 != null;
+      const parsed = parseModifierWithBand(log.modifier);
       entries.push({
         logId: log.id,
         date: log.createdAt,
         exerciseName: ex.name,
         exerciseId: ex.id,
         level: log.level,
-        tierName: getTierName(ex, log.level),
+        levelNameLevel: parsed.displayLevelOverride ?? log.level,
+        tierName: stripBwPercentHint(getTierName(ex, parsed.displayLevelOverride ?? log.level)),
         weight1: log.weight1,
         reps1: log.reps1,
         weight2: log.weight2,
@@ -451,7 +887,8 @@ function flattenLogs(exercises: ProgressionExercise[]): FlatLogEntry[] {
         holdTime: log.holdTime,
         holdTime2: log.holdTime2,
         holdTime3: log.holdTime3,
-        modifier: log.modifier,
+        modifier: parsed.baseModifier,
+        resistanceBandKg: parsed.resistanceBandKg,
         variant: log.variant,
         notes: log.notes,
         completed: log.completed,
@@ -481,20 +918,38 @@ function displayVal(v: number | null): string {
   return v != null ? String(v) : "—";
 }
 
+function abbreviateVariantText(text: string): string {
+  const words = text
+    .trim()
+    .split(/[^A-Za-z0-9]+/)
+    .filter(Boolean);
+
+  if (words.length >= 2) {
+    return words.slice(0, 4).map((w) => w[0].toUpperCase()).join("");
+  }
+
+  const compact = words[0] ?? text.trim();
+  return compact.slice(0, 6).toUpperCase();
+}
+
 function TrainingLogTable({
   exercises,
-  onViewExercise,
+  physique,
+  selectedExerciseId,
+  onSelectExercise,
   onRefresh,
   userId,
 }: {
   exercises: ProgressionExercise[];
-  onViewExercise: (exerciseId: string) => void;
+  physique: UserPhysiqueSettings;
+  selectedExerciseId: string | null;
+  onSelectExercise: (exerciseId: string | null) => void;
   onRefresh: () => void;
   userId: string;
 }) {
-  const allEntries = flattenLogs(exercises);
-  // Filter out hold-based entries — they go in the separate hold table
-  const entries = allEntries.filter(e => !e.hasHold);
+  const allEntries = useMemo(() => flattenLogs(exercises), [exercises]);
+  // Show only selected exercise when a filter is active.
+  const entries = allEntries.filter(e => !e.hasHold && (!selectedExerciseId || e.exerciseId === selectedExerciseId));
   const { settings } = useDisplaySettings();
   const { isMobile } = useAppContext();
 
@@ -503,18 +958,21 @@ function TrainingLogTable({
     weight1: number | null; reps1: number | null;
     weight2: number | null; reps2: number | null;
     weight3: number | null; reps3: number | null;
-    modifier: string | null; variant: string | null; notes: string | null;
+    level: number;
+    modifier: string | null; resistanceBandKg: number | null; variant: string | null; notes: string | null;
   }>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ logId: string; exerciseName: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [levelPicker, setLevelPicker] = useState<{ logId: string; exerciseId: string } | null>(null);
 
   const logMode = settings.progressionLogMode ?? "name-illumination-realm";
   const compactSetting = settings.progressionLogCompact ?? "auto";
   const glowIntensity = settings.glowIntensityProgressionLog ?? 100;
   const columnColors = settings.progressionColumnColorsEnabled ?? true;
   const columnGrouped = settings.progressionColumnOrderGrouped ?? false;
+  const variationDisplay = settings.progressionVariationDisplay ?? "abbreviation";
 
   const effectiveCompact = compactSetting === "compact" || (compactSetting === "auto" && isMobile);
 
@@ -526,7 +984,11 @@ function TrainingLogTable({
   const exerciseLookup = new Map(exercises.map(e => [e.id, e]));
 
   const anyModifier = entries.some(e => e.modifier);
-  const anyVariant = entries.some(e => e.variant);
+  const anyBand = true;
+  const selectedExerciseHasVariations = selectedExerciseId
+    ? (exerciseLookup.get(selectedExerciseId)?.variations?.length ?? 0) > 0
+    : false;
+  const anyVariant = isEditMode || entries.some(e => e.variant) || selectedExerciseHasVariations;
 
   const getZeroValueStyle = (value: number | null, colType: string): React.CSSProperties | undefined => {
     if (value === 0) return { backgroundColor: 'var(--ink-mid)', color: 'var(--mist-dark)' };
@@ -547,11 +1009,24 @@ function TrainingLogTable({
     if (!isEditMode) {
       const newData: typeof editingData = {};
       entries.forEach(entry => {
+        const ex = exerciseLookup.get(entry.exerciseId);
+        const autoFromSet = ex
+          ? getAutoGymLevelFromSet(ex, physique, {
+              weight1: entry.weight1,
+              weight2: entry.weight2,
+              weight3: entry.weight3,
+            }, entry.resistanceBandKg)
+          : null;
+        const effectiveLevel =
+          ex && isGymCategoryExercise(ex)
+            ? (autoFromSet ?? entry.level)
+            : entry.level;
         newData[entry.logId] = {
           weight1: entry.weight1, reps1: entry.reps1,
           weight2: entry.weight2, reps2: entry.reps2,
           weight3: entry.weight3, reps3: entry.reps3,
-          modifier: entry.modifier, variant: entry.variant, notes: entry.notes,
+          level: effectiveLevel,
+          modifier: entry.modifier, resistanceBandKg: entry.resistanceBandKg, variant: entry.variant, notes: entry.notes,
         };
       });
       setEditingData(newData);
@@ -566,7 +1041,19 @@ function TrainingLogTable({
   const handleSaveChanges = async () => {
     setIsSaving(true);
     try {
-      const updates = Object.entries(editingData).map(([id, data]) => ({ id, ...data }));
+      const updates = Object.entries(editingData).map(([id, data]) => ({
+        id,
+        level: data.level,
+        weight1: data.weight1,
+        reps1: data.reps1,
+        weight2: data.weight2,
+        reps2: data.reps2,
+        weight3: data.weight3,
+        reps3: data.reps3,
+        modifier: buildModifierWithBand(data.modifier, data.resistanceBandKg, data.level),
+        variant: data.variant,
+        notes: data.notes,
+      }));
       const res = await fetch("/api/progressions/logs/update", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -685,6 +1172,7 @@ function TrainingLogTable({
             <tr className="border-b-2 border-jade-glow/50 bg-ink-mid/40 text-mist-light">
               <th className={`${effectiveCompact ? 'py-1 px-1' : 'py-2 px-1.5'} text-left font-semibold uppercase tracking-wider text-[11px]`}>Date</th>
               <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} text-center font-semibold uppercase tracking-wider text-[11px]`}>Lvl</th>
+              <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} text-center font-semibold uppercase tracking-wider text-[11px]`}>Category</th>
               <th className={`${effectiveCompact ? 'py-1 px-1' : 'py-2 px-1.5'} text-left font-semibold uppercase tracking-wider text-[11px]`}>Exercise</th>
               {dataColumnLabels.map((label, idx) => (
                 <th
@@ -698,6 +1186,9 @@ function TrainingLogTable({
               {anyModifier && (
                 <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} text-center font-semibold uppercase tracking-wider text-[11px] text-amber-400`}>Mod</th>
               )}
+              {anyBand && (
+                <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} text-center font-semibold uppercase tracking-wider text-[11px] text-sky-300`}>Band</th>
+              )}
               {anyVariant && (
                 <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} text-center font-semibold uppercase tracking-wider text-[11px] text-purple-400`}>Variant</th>
               )}
@@ -708,30 +1199,66 @@ function TrainingLogTable({
           <tbody>
             {entries.length === 0 ? (
               <tr>
-                <td colSpan={10 + (anyModifier ? 1 : 0) + (anyVariant ? 1 : 0) + (isEditMode ? 1 : 0)} className="py-6 text-center text-mist-mid text-sm">
+                <td colSpan={11 + (anyModifier ? 1 : 0) + (anyBand ? 1 : 0) + (anyVariant ? 1 : 0) + (isEditMode ? 1 : 0)} className="py-6 text-center text-mist-mid text-sm">
                   No training data logged yet. Select an exercise from the sidebar to log your first set.
                 </td>
               </tr>
             ) : (
-              <AnimatePresence>
-                {entries.map((entry, i) => {
+              <AnimatePresence initial={false}>
+                {entries.map((entry) => {
                   const ex = exerciseLookup.get(entry.exerciseId);
-                  const tier = ex?.tiers.find(t => t.level === entry.level);
-                  const tierDifficulty = ex ? getWeightedDifficulty(ex, entry.level, entry.variant, entry.modifier) : '';
+                  const editData = editingData[entry.logId];
+                  const autoFromSet = ex
+                    ? getAutoGymLevelFromSet(ex, physique, {
+                        weight1: entry.weight1,
+                        weight2: entry.weight2,
+                        weight3: entry.weight3,
+                      }, entry.resistanceBandKg)
+                    : null;
+                  const effectiveLevel =
+                    ex && isGymCategoryExercise(ex)
+                      ? (autoFromSet ?? entry.level)
+                      : entry.level;
+                  const previewLevel = isEditMode && editData ? editData.level : effectiveLevel;
+                  const activeModifier = isEditMode && editData ? editData.modifier : entry.modifier;
+                  const activeVariant = isEditMode && editData ? editData.variant : entry.variant;
+                  const tier = ex?.tiers.find(t => t.level === previewLevel);
+                  const displayTier = ex?.tiers.find(t => t.level === entry.levelNameLevel);
+                  const tierDifficulty = ex ? getWeightedDifficulty(ex, previewLevel, activeVariant, activeModifier) : '';
+                  const tierDifficultyDisplay = getDifficultyDisplayName(
+                    { difficulty: tierDifficulty, wuxiaDifficulty: tierDifficulty },
+                    settings.terminologyMode
+                  ) || tierDifficulty;
                   const diffColorClass = tierDifficulty ? getDifficultyColorClass(tierDifficulty) : '';
                   const exerciseGlow = tierDifficulty ? getDifficultyGlowStyleScaled(tierDifficulty, glowIntensity) : {};
-                  const entryDisplayName = tier
-                    ? getExerciseDisplayName(tier, settings.terminologyMode)
-                    : ex ? getExerciseDisplayName(ex, settings.terminologyMode) : entry.exerciseName;
-                  const editData = editingData[entry.logId];
+                  const activeBand = isEditMode && editData ? editData.resistanceBandKg : entry.resistanceBandKg;
+                  const isBandAssistedCali = getExerciseCategoryLabel(ex) === "Cali" && typeof activeBand === "number" && activeBand > 0;
+                  const displayGlowStyle = isBandAssistedCali
+                    ? getBandAdjustedGlowStyle(exerciseGlow as React.CSSProperties, activeBand)
+                    : exerciseGlow;
+                  const softDimStyle = isBandAssistedCali
+                    ? ({ opacity: getBandSoftDimOpacity(activeBand) } as React.CSSProperties)
+                    : undefined;
+                  const entryDisplayName = isEditMode && ex
+                    ? stripBwPercentHint(getExerciseDisplayName(tier || ex, settings.terminologyMode))
+                    : displayTier
+                    ? stripBwPercentHint(getExerciseDisplayName(displayTier, settings.terminologyMode))
+                    : ex ? stripBwPercentHint(getExerciseDisplayName(ex, settings.terminologyMode)) : stripBwPercentHint(entry.exerciseName);
+                  const shownLevel = previewLevel;
+                  const exerciseVariantOptions = (ex?.variations ?? []).map((v) => v.name).filter(Boolean);
+                  const selectedVariantValue = editData?.variant ?? "";
+                  const variantSelectOptions =
+                    selectedVariantValue && !exerciseVariantOptions.includes(selectedVariantValue)
+                      ? [...exerciseVariantOptions, selectedVariantValue]
+                      : exerciseVariantOptions;
 
                   return (
                     <motion.tr
                       key={entry.logId}
-                      initial={{ opacity: 0, y: -5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -5 }}
-                      transition={{ delay: i * 0.02 }}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.12, ease: "easeOut" }}
                       className={`border-b transition-all duration-200 ${
                         isEditMode
                           ? "border-jade-glow/20 bg-jade-deep/10 hover:bg-jade-deep/15"
@@ -740,21 +1267,36 @@ function TrainingLogTable({
                     >
                       <td className={`${effectiveCompact ? 'px-1 py-1' : 'px-1.5 py-1.5'} text-mist-light text-xs align-middle whitespace-nowrap`}>{formatDate(entry.date)}</td>
                       <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} text-center align-middle`}>
-                        <span className="text-[10px] text-gold" title={entry.tierName}>{entry.level}</span>
+                        <span className="text-[10px] text-gold" title={stripBwPercentHint(tier?.name || entry.tierName)}>{shownLevel}</span>
+                      </td>
+                      <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} text-center align-middle`}>
+                        <span className={`text-[10px] font-semibold ${getExerciseCategoryLabel(ex) === "GYM" ? "text-gold" : "text-jade-light"}`}>
+                          {getExerciseCategoryLabel(ex)}
+                        </span>
                       </td>
                       <td
-                        className={`${effectiveCompact ? 'px-1 py-1' : 'px-1.5 py-1.5'} align-middle whitespace-normal cursor-pointer hover:bg-jade-deep/10 rounded transition-colors`}
-                        style={{ minWidth: "120px", maxWidth: "260px", wordBreak: "break-word" }}
-                        onClick={() => !isEditMode && onViewExercise(entry.exerciseId)}
+                        className={`${effectiveCompact ? 'px-1 py-1' : 'px-1.5 py-1.5'} align-middle whitespace-nowrap cursor-pointer hover:bg-jade-deep/10 rounded transition-colors ${isEditMode ? 'ring-1 ring-jade-glow/20' : ''}`}
+                        style={{ minWidth: "120px" }}
+                        onClick={() => {
+                          if (isEditMode) {
+                            setLevelPicker({ logId: entry.logId, exerciseId: entry.exerciseId });
+                            return;
+                          }
+                          onSelectExercise(entry.exerciseId === selectedExerciseId ? null : entry.exerciseId);
+                        }}
                       >
                         {!showIllumination ? (
-                          <span className="text-xs text-cloud-white" title={entryDisplayName}>
+                          <span className="text-xs text-cloud-white" style={softDimStyle} title={entryDisplayName}>
                             {entryDisplayName}
                           </span>
                         ) : (
                           <div
                             className="px-2 py-1 rounded border inline-flex items-center gap-1.5"
-                            style={glowIntensity > 0 ? exerciseGlow as React.CSSProperties : undefined}
+                            style={
+                              glowIntensity > 0
+                                ? ({ ...(displayGlowStyle as React.CSSProperties), ...(softDimStyle || {}) } as React.CSSProperties)
+                                : softDimStyle
+                            }
                             title={entryDisplayName}
                           >
                             <span className={`text-xs font-normal ${diffColorClass}`}>
@@ -763,11 +1305,11 @@ function TrainingLogTable({
                             {showRealm && ex && (
                               <>
                                 <span className={`inline-flex items-center px-1 py-0 rounded text-[9px] font-medium ${diffColorClass} border border-current/20 opacity-80`}>
-                                  {tierDifficulty}
+                                  {tierDifficultyDisplay}
                                 </span>
                                 {showPath && ex.type && (
-                                  <span className={`inline-flex items-center px-1 py-0 rounded text-[9px] font-medium ${getTypeColor(ex.type)} border border-current/20 opacity-70`}>
-                                    {ex.type}
+                                  <span className={`inline-flex items-center px-1 py-0 rounded text-[9px] font-medium ${getTypeColor(getTypeColorKey(ex))} border border-current/20 opacity-70`}>
+                                    {getTypeDisplayName(ex, settings.terminologyMode)}
                                   </span>
                                 )}
                               </>
@@ -824,25 +1366,62 @@ function TrainingLogTable({
                             />
                           </td>
                         ) : (
-                          <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} text-center text-amber-400 text-xs truncate max-w-[80px] align-middle`} title={entry.modifier || ""}>
+                          <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} text-center text-amber-400 text-xs whitespace-nowrap align-middle`} title={entry.modifier || ""}>
                             {entry.modifier || "—"}
+                          </td>
+                        )
+                      )}
+                      {anyBand && (
+                        isEditMode && editData ? (
+                          <td className="px-1 py-1.5 text-center align-middle">
+                            <select
+                              value={editData.resistanceBandKg != null ? String(editData.resistanceBandKg) : ""}
+                              onChange={(e) =>
+                                handleEditChange(
+                                  entry.logId,
+                                  "resistanceBandKg",
+                                  e.target.value ? parseFloat(e.target.value) : null
+                                )
+                              }
+                              className="w-full min-w-[70px] bg-ink-deep border border-jade-glow/30 rounded px-1 py-1 text-sky-300 text-center text-xs outline-none transition-all duration-200 focus:border-jade-glow focus:shadow-[0_0_8px_rgba(58,143,143,0.4)]"
+                            >
+                              <option value="">—</option>
+                              {RESISTANCE_BAND_OPTIONS.map((kg) => (
+                                <option key={kg} value={String(kg)}>
+                                  {formatResistanceBandLabel(kg)}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                        ) : (
+                          <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} text-center text-sky-300 text-xs whitespace-nowrap align-middle`}>
+                            {entry.resistanceBandKg != null ? formatResistanceBandLabel(entry.resistanceBandKg) : "—"}
                           </td>
                         )
                       )}
                       {anyVariant && (
                         isEditMode && editData ? (
                           <td className="px-1 py-1.5 text-center align-middle">
-                            <input
-                              type="text"
+                            <select
                               value={editData.variant ?? ""}
                               onChange={(e) => handleEditChange(entry.logId, "variant", e.target.value || null)}
-                              placeholder="—"
-                              className="w-full min-w-[52px] bg-ink-deep border border-jade-glow/30 rounded px-1 py-1 text-purple-400 text-center text-xs outline-none transition-all duration-200 focus:border-jade-glow focus:shadow-[0_0_8px_rgba(58,143,143,0.4)]"
-                            />
+                              className="w-full min-w-[70px] bg-ink-deep border border-jade-glow/30 rounded px-1 py-1 text-purple-400 text-center text-xs outline-none transition-all duration-200 focus:border-jade-glow focus:shadow-[0_0_8px_rgba(58,143,143,0.4)]"
+                            >
+                              <option value="">—</option>
+                              {variantSelectOptions.map((variantName) => (
+                                <option key={variantName} value={variantName}>
+                                  {variantName}
+                                </option>
+                              ))}
+                            </select>
                           </td>
                         ) : (
-                          <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} text-center text-purple-400 text-xs truncate max-w-[80px] align-middle`} title={entry.variant || ""}>
-                            {entry.variant || "—"}
+                          <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} text-center text-purple-400 text-xs whitespace-nowrap align-middle`} title={entry.variant || ""}>
+                            {entry.variant
+                              ? variationDisplay === "full"
+                                ? entry.variant
+                                : abbreviateVariantText(entry.variant)
+                              : "—"}
                           </td>
                         )
                       )}
@@ -857,7 +1436,7 @@ function TrainingLogTable({
                           />
                         </td>
                       ) : (
-                        <td className={`${effectiveCompact ? 'px-1 py-1' : 'px-1.5 py-1.5'} text-mist-light text-xs truncate max-w-[180px] align-middle`} title={entry.notes || ""}>
+                        <td className={`${effectiveCompact ? 'px-1 py-1' : 'px-1.5 py-1.5'} text-mist-light text-xs whitespace-nowrap align-middle`} title={entry.notes || ""}>
                           {entry.notes || "—"}
                           {entry.completed && <span className="text-jade-glow ml-1">✦</span>}
                         </td>
@@ -935,6 +1514,64 @@ function TrainingLogTable({
         </>
       )}
     </AnimatePresence>
+
+    <AnimatePresence>
+      {levelPicker && (() => {
+        const ex = exerciseLookup.get(levelPicker.exerciseId);
+        if (!ex) return null;
+        const tiers = [...ex.tiers].sort((a, b) => a.level - b.level);
+        const current = editingData[levelPicker.logId]?.level
+          ?? entries.find((e) => e.logId === levelPicker.logId)?.level
+          ?? 1;
+
+        return (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px]"
+              onClick={() => setLevelPicker(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[360px] max-w-[92vw] bg-ink-deep border border-ink-light rounded-xl shadow-2xl p-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-sm font-semibold text-cloud-white mb-3">Change Progression Tier</h3>
+              <p className="text-[11px] text-mist-light mb-3">{stripBwPercentHint(getExerciseDisplayName(ex, settings.terminologyMode))}</p>
+              <div className="max-h-[280px] overflow-y-auto space-y-1 pr-1">
+                {tiers.map((t) => {
+                  const active = t.level === current;
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => {
+                        handleEditChange(levelPicker.logId, "level", t.level);
+                        setLevelPicker(null);
+                      }}
+                      className={`w-full text-left px-2.5 py-2 rounded border transition-colors ${active ? "border-jade-glow/50 bg-jade-deep/20 text-jade-light" : "border-ink-light/40 bg-ink-mid/20 text-mist-light hover:border-jade-glow/35 hover:bg-jade-deep/10"}`}
+                    >
+                      <span className="text-[11px] font-semibold">Lv.{t.level} - {stripBwPercentHint(getExerciseDisplayName(t, settings.terminologyMode))}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-3 flex justify-end">
+                <button
+                  onClick={() => setLevelPicker(null)}
+                  className="px-3 py-1.5 text-xs rounded border border-ink-light text-mist-light hover:bg-ink-mid/30"
+                >
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </>
+        );
+      })()}
+    </AnimatePresence>
     </>
   );
 }
@@ -943,17 +1580,19 @@ function TrainingLogTable({
 
 function HoldTrainingLogTable({
   exercises,
-  onViewExercise,
+  selectedExerciseId,
+  onSelectExercise,
   onRefresh,
   userId,
 }: {
   exercises: ProgressionExercise[];
-  onViewExercise: (exerciseId: string) => void;
+  selectedExerciseId: string | null;
+  onSelectExercise: (exerciseId: string | null) => void;
   onRefresh: () => void;
   userId: string;
 }) {
-  const allEntries = flattenLogs(exercises);
-  const entries = allEntries.filter(e => e.hasHold);
+  const allEntries = useMemo(() => flattenLogs(exercises), [exercises]);
+  const entries = allEntries.filter(e => e.hasHold && (!selectedExerciseId || e.exerciseId === selectedExerciseId));
   const { settings } = useDisplaySettings();
   const { isMobile } = useAppContext();
 
@@ -962,18 +1601,21 @@ function HoldTrainingLogTable({
     reps1: number | null; holdTime: number | null;
     reps2: number | null; holdTime2: number | null;
     reps3: number | null; holdTime3: number | null;
-    modifier: string | null; variant: string | null; notes: string | null;
+    level: number;
+    modifier: string | null; resistanceBandKg: number | null; variant: string | null; notes: string | null;
   }>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ logId: string; exerciseName: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [levelPicker, setLevelPicker] = useState<{ logId: string; exerciseId: string } | null>(null);
 
   const logMode = settings.progressionLogMode ?? "name-illumination-realm";
   const compactSetting = settings.progressionLogCompact ?? "auto";
   const glowIntensity = settings.glowIntensityProgressionLog ?? 100;
   const columnColors = settings.progressionColumnColorsEnabled ?? true;
   const columnGrouped = settings.progressionColumnOrderGrouped ?? false;
+  const variationDisplay = settings.progressionVariationDisplay ?? "abbreviation";
 
   const effectiveCompact = compactSetting === "compact" || (compactSetting === "auto" && isMobile);
 
@@ -984,7 +1626,11 @@ function HoldTrainingLogTable({
   const exerciseLookup = new Map(exercises.map(e => [e.id, e]));
 
   const anyModifier = entries.some(e => e.modifier);
-  const anyVariant = entries.some(e => e.variant);
+  const anyBand = true;
+  const selectedExerciseHasVariations = selectedExerciseId
+    ? (exerciseLookup.get(selectedExerciseId)?.variations?.length ?? 0) > 0
+    : false;
+  const anyVariant = isEditMode || entries.some(e => e.variant) || selectedExerciseHasVariations;
 
   const getZeroValueStyle = (value: number | null, colType: string): React.CSSProperties | undefined => {
     if (value === 0) return { backgroundColor: 'var(--ink-mid)', color: 'var(--mist-dark)' };
@@ -1008,7 +1654,8 @@ function HoldTrainingLogTable({
           reps1: entry.reps1, holdTime: entry.holdTime,
           reps2: entry.reps2, holdTime2: entry.holdTime2,
           reps3: entry.reps3, holdTime3: entry.holdTime3,
-          modifier: entry.modifier, variant: entry.variant, notes: entry.notes,
+          level: entry.level,
+          modifier: entry.modifier, resistanceBandKg: entry.resistanceBandKg, variant: entry.variant, notes: entry.notes,
         };
       });
       setEditingData(newData);
@@ -1025,11 +1672,12 @@ function HoldTrainingLogTable({
     try {
       const updates = Object.entries(editingData).map(([id, data]) => ({
         id,
+        level: data.level,
         weight1: null, weight2: null, weight3: null,
         reps1: data.reps1, holdTime: data.holdTime,
         reps2: data.reps2, holdTime2: data.holdTime2,
         reps3: data.reps3, holdTime3: data.holdTime3,
-        modifier: data.modifier, variant: data.variant, notes: data.notes,
+        modifier: buildModifierWithBand(data.modifier, data.resistanceBandKg, data.level), variant: data.variant, notes: data.notes,
       }));
       const res = await fetch("/api/progressions/logs/update", {
         method: "POST",
@@ -1037,7 +1685,7 @@ function HoldTrainingLogTable({
         body: JSON.stringify({ updates, userId }),
       });
       if (res.ok) {
-        setSaveMessage({ type: "success", text: "Hold training logs updated!" });
+        setSaveMessage({ type: "success", text: "Timed hold logs updated!" });
         setIsEditMode(false);
         setEditingData({});
         onRefresh();
@@ -1084,20 +1732,20 @@ function HoldTrainingLogTable({
 
   const holdFields = columnGrouped
     ? [
-        { key: "holdTime", label: "H1", type: "hold" },
-        { key: "holdTime2", label: "H2", type: "hold" },
-        { key: "holdTime3", label: "H3", type: "hold" },
-        { key: "reps1", label: "R1", type: "reps" },
-        { key: "reps2", label: "R2", type: "reps" },
-        { key: "reps3", label: "R3", type: "reps" },
+        { key: "holdTime", label: "T1", type: "hold" },
+        { key: "holdTime2", label: "T2", type: "hold" },
+        { key: "holdTime3", label: "T3", type: "hold" },
+        { key: "reps1", label: "W1", type: "reps" },
+        { key: "reps2", label: "W2", type: "reps" },
+        { key: "reps3", label: "W3", type: "reps" },
       ] as const
     : [
-        { key: "holdTime", label: "H1", type: "hold" },
-        { key: "reps1", label: "R1", type: "reps" },
-        { key: "holdTime2", label: "H2", type: "hold" },
-        { key: "reps2", label: "R2", type: "reps" },
-        { key: "holdTime3", label: "H3", type: "hold" },
-        { key: "reps3", label: "R3", type: "reps" },
+        { key: "holdTime", label: "T1", type: "hold" },
+        { key: "reps1", label: "W1", type: "reps" },
+        { key: "holdTime2", label: "T2", type: "hold" },
+        { key: "reps2", label: "W2", type: "reps" },
+        { key: "holdTime3", label: "T3", type: "hold" },
+        { key: "reps3", label: "W3", type: "reps" },
       ] as const;
 
   return (
@@ -1145,6 +1793,7 @@ function HoldTrainingLogTable({
             <tr className="border-b-2 border-mountain-blue-glow/50 bg-ink-mid/40 text-mist-light">
               <th className={`${effectiveCompact ? 'py-1 px-1' : 'py-2 px-1.5'} text-left font-semibold uppercase tracking-wider text-[11px]`}>Date</th>
               <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} text-center font-semibold uppercase tracking-wider text-[11px]`}>Lvl</th>
+              <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} text-center font-semibold uppercase tracking-wider text-[11px]`}>Category</th>
               <th className={`${effectiveCompact ? 'py-1 px-1' : 'py-2 px-1.5'} text-left font-semibold uppercase tracking-wider text-[11px]`}>Exercise</th>
               {holdFields.map((field) => (
                 <th
@@ -1158,6 +1807,9 @@ function HoldTrainingLogTable({
               {anyModifier && (
                 <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} text-center font-semibold uppercase tracking-wider text-[11px] text-amber-400`}>Mod</th>
               )}
+              {anyBand && (
+                <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} text-center font-semibold uppercase tracking-wider text-[11px] text-sky-300`}>Band</th>
+              )}
               {anyVariant && (
                 <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} text-center font-semibold uppercase tracking-wider text-[11px] text-purple-400`}>Variant</th>
               )}
@@ -1166,25 +1818,50 @@ function HoldTrainingLogTable({
             </tr>
           </thead>
           <tbody>
-            <AnimatePresence>
+            <AnimatePresence initial={false}>
               {entries.map((entry, i) => {
                 const ex = exerciseLookup.get(entry.exerciseId);
-                const tier = ex?.tiers.find(t => t.level === entry.level);
-                const tierDifficulty = ex ? getWeightedDifficulty(ex, entry.level, entry.variant, entry.modifier) : '';
+                const editData = editingData[entry.logId];
+                const previewLevel = isEditMode && editData ? editData.level : entry.level;
+                const activeModifier = isEditMode && editData ? editData.modifier : entry.modifier;
+                const activeVariant = isEditMode && editData ? editData.variant : entry.variant;
+                const tier = ex?.tiers.find(t => t.level === previewLevel);
+                const displayTier = ex?.tiers.find(t => t.level === entry.levelNameLevel);
+                const tierDifficulty = ex ? getWeightedDifficulty(ex, previewLevel, activeVariant, activeModifier) : '';
+                const tierDifficultyDisplay = getDifficultyDisplayName(
+                  { difficulty: tierDifficulty, wuxiaDifficulty: tierDifficulty },
+                  settings.terminologyMode
+                ) || tierDifficulty;
                 const diffColorClass = tierDifficulty ? getDifficultyColorClass(tierDifficulty) : '';
                 const exerciseGlow = tierDifficulty ? getDifficultyGlowStyleScaled(tierDifficulty, glowIntensity) : {};
-                const entryDisplayName = tier
-                  ? getExerciseDisplayName(tier, settings.terminologyMode)
-                  : ex ? getExerciseDisplayName(ex, settings.terminologyMode) : entry.exerciseName;
-                const editData = editingData[entry.logId];
+                const activeBand = isEditMode && editData ? editData.resistanceBandKg : entry.resistanceBandKg;
+                const isBandAssistedCali = getExerciseCategoryLabel(ex) === "Cali" && typeof activeBand === "number" && activeBand > 0;
+                const displayGlowStyle = isBandAssistedCali
+                  ? getBandAdjustedGlowStyle(exerciseGlow as React.CSSProperties, activeBand)
+                  : exerciseGlow;
+                const softDimStyle = isBandAssistedCali
+                  ? ({ opacity: getBandSoftDimOpacity(activeBand) } as React.CSSProperties)
+                  : undefined;
+                const entryDisplayName = isEditMode && ex
+                  ? stripBwPercentHint(getExerciseDisplayName(tier || ex, settings.terminologyMode))
+                  : displayTier
+                  ? stripBwPercentHint(getExerciseDisplayName(displayTier, settings.terminologyMode))
+                  : ex ? stripBwPercentHint(getExerciseDisplayName(ex, settings.terminologyMode)) : stripBwPercentHint(entry.exerciseName);
+                const shownLevel = previewLevel;
+                const exerciseVariantOptions = (ex?.variations ?? []).map((v) => v.name).filter(Boolean);
+                const selectedVariantValue = editData?.variant ?? "";
+                const variantSelectOptions =
+                  selectedVariantValue && !exerciseVariantOptions.includes(selectedVariantValue)
+                    ? [...exerciseVariantOptions, selectedVariantValue]
+                    : exerciseVariantOptions;
 
                 return (
                   <motion.tr
                     key={entry.logId}
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -5 }}
-                    transition={{ delay: i * 0.02 }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.12, ease: "easeOut" }}
                     className={`border-b transition-all duration-200 ${
                       isEditMode
                         ? "border-jade-glow/20 bg-jade-deep/10 hover:bg-jade-deep/15"
@@ -1193,21 +1870,36 @@ function HoldTrainingLogTable({
                   >
                     <td className={`${effectiveCompact ? 'px-1 py-1' : 'px-1.5 py-1.5'} text-mist-light text-xs align-middle whitespace-nowrap`}>{formatDate(entry.date)}</td>
                     <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} text-center align-middle`}>
-                      <span className="text-[10px] text-gold" title={entry.tierName}>{entry.level}</span>
+                      <span className="text-[10px] text-gold" title={stripBwPercentHint(tier?.name || entry.tierName)}>{shownLevel}</span>
+                    </td>
+                    <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} text-center align-middle`}>
+                      <span className={`text-[10px] font-semibold ${getExerciseCategoryLabel(ex) === "GYM" ? "text-gold" : "text-jade-light"}`}>
+                        {getExerciseCategoryLabel(ex)}
+                      </span>
                     </td>
                     <td
-                      className={`${effectiveCompact ? 'px-1 py-1' : 'px-1.5 py-1.5'} align-middle whitespace-normal cursor-pointer hover:bg-jade-deep/10 rounded transition-colors`}
-                      style={{ minWidth: "120px", maxWidth: "260px", wordBreak: "break-word" }}
-                      onClick={() => !isEditMode && onViewExercise(entry.exerciseId)}
+                      className={`${effectiveCompact ? 'px-1 py-1' : 'px-1.5 py-1.5'} align-middle whitespace-nowrap cursor-pointer hover:bg-jade-deep/10 rounded transition-colors ${isEditMode ? 'ring-1 ring-jade-glow/20' : ''}`}
+                      style={{ minWidth: "120px" }}
+                      onClick={() => {
+                        if (isEditMode) {
+                          setLevelPicker({ logId: entry.logId, exerciseId: entry.exerciseId });
+                          return;
+                        }
+                        onSelectExercise(entry.exerciseId === selectedExerciseId ? null : entry.exerciseId);
+                      }}
                     >
                       {!showIllumination ? (
-                        <span className="text-xs text-cloud-white" title={entryDisplayName}>
+                        <span className="text-xs text-cloud-white" style={softDimStyle} title={entryDisplayName}>
                           {entryDisplayName}
                         </span>
                       ) : (
                         <div
                           className="px-2 py-1 rounded border inline-flex items-center gap-1.5"
-                          style={glowIntensity > 0 ? exerciseGlow as React.CSSProperties : undefined}
+                          style={
+                            glowIntensity > 0
+                              ? ({ ...(displayGlowStyle as React.CSSProperties), ...(softDimStyle || {}) } as React.CSSProperties)
+                              : softDimStyle
+                          }
                           title={entryDisplayName}
                         >
                           <span className={`text-xs font-normal ${diffColorClass}`}>
@@ -1216,11 +1908,11 @@ function HoldTrainingLogTable({
                           {showRealm && ex && (
                             <>
                               <span className={`inline-flex items-center px-1 py-0 rounded text-[9px] font-medium ${diffColorClass} border border-current/20 opacity-80`}>
-                                {tierDifficulty}
+                                {tierDifficultyDisplay}
                               </span>
                               {showPath && ex.type && (
-                                <span className={`inline-flex items-center px-1 py-0 rounded text-[9px] font-medium ${getTypeColor(ex.type)} border border-current/20 opacity-70`}>
-                                  {ex.type}
+                                <span className={`inline-flex items-center px-1 py-0 rounded text-[9px] font-medium ${getTypeColor(getTypeColorKey(ex))} border border-current/20 opacity-70`}>
+                                  {getTypeDisplayName(ex, settings.terminologyMode)}
                                 </span>
                               )}
                             </>
@@ -1277,25 +1969,64 @@ function HoldTrainingLogTable({
                           />
                         </td>
                       ) : (
-                        <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} text-center text-amber-400 text-xs truncate max-w-[80px] align-middle`} title={entry.modifier || ""}>
+                        <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} text-center text-amber-400 text-xs whitespace-nowrap align-middle`} title={entry.modifier || ""}>
                           {entry.modifier || "—"}
                         </td>
                       )
                     )}
-                    {isEditMode && editData ? (
-                      <td className="px-1 py-1.5 text-center align-middle">
-                        <input
-                          type="text"
-                          value={editData.variant ?? ""}
-                          onChange={(e) => handleEditChange(entry.logId, "variant", e.target.value || null)}
-                          placeholder="—"
-                          className="w-full min-w-[52px] bg-ink-deep border border-jade-glow/30 rounded px-1 py-1 text-purple-400 text-center text-xs outline-none transition-all duration-200 focus:border-jade-glow focus:shadow-[0_0_8px_rgba(58,143,143,0.4)]"
-                        />
-                      </td>
-                    ) : (
-                      <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} text-center text-purple-400 text-xs truncate max-w-[80px] align-middle`} title={entry.variant || ""}>
-                        {entry.variant || "—"}
-                      </td>
+                    {anyBand && (
+                      isEditMode && editData ? (
+                        <td className="px-1 py-1.5 text-center align-middle">
+                          <select
+                            value={editData.resistanceBandKg != null ? String(editData.resistanceBandKg) : ""}
+                            onChange={(e) =>
+                              handleEditChange(
+                                entry.logId,
+                                "resistanceBandKg",
+                                e.target.value ? parseFloat(e.target.value) : null
+                              )
+                            }
+                            className="w-full min-w-[70px] bg-ink-deep border border-jade-glow/30 rounded px-1 py-1 text-sky-300 text-center text-xs outline-none transition-all duration-200 focus:border-jade-glow focus:shadow-[0_0_8px_rgba(58,143,143,0.4)]"
+                          >
+                            <option value="">—</option>
+                            {RESISTANCE_BAND_OPTIONS.map((kg) => (
+                              <option key={kg} value={String(kg)}>
+                                {formatResistanceBandLabel(kg)}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                      ) : (
+                        <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} text-center text-sky-300 text-xs whitespace-nowrap align-middle`}>
+                          {entry.resistanceBandKg != null ? formatResistanceBandLabel(entry.resistanceBandKg) : "—"}
+                        </td>
+                      )
+                    )}
+                    {anyVariant && (
+                      isEditMode && editData ? (
+                        <td className="px-1 py-1.5 text-center align-middle">
+                          <select
+                            value={editData.variant ?? ""}
+                            onChange={(e) => handleEditChange(entry.logId, "variant", e.target.value || null)}
+                            className="w-full min-w-[70px] bg-ink-deep border border-jade-glow/30 rounded px-1 py-1 text-purple-400 text-center text-xs outline-none transition-all duration-200 focus:border-jade-glow focus:shadow-[0_0_8px_rgba(58,143,143,0.4)]"
+                          >
+                            <option value="">—</option>
+                            {variantSelectOptions.map((variantName) => (
+                              <option key={variantName} value={variantName}>
+                                {variantName}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                      ) : (
+                        <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} text-center text-purple-400 text-xs whitespace-nowrap align-middle`} title={entry.variant || ""}>
+                          {entry.variant
+                            ? variationDisplay === "full"
+                              ? entry.variant
+                              : abbreviateVariantText(entry.variant)
+                            : "—"}
+                        </td>
+                      )
                     )}
                     {isEditMode && editData ? (
                       <td className="px-1.5 py-1.5 align-middle">
@@ -1308,7 +2039,7 @@ function HoldTrainingLogTable({
                         />
                       </td>
                     ) : (
-                      <td className={`${effectiveCompact ? 'px-1 py-1' : 'px-1.5 py-1.5'} text-mist-light text-xs truncate max-w-[180px] align-middle`} title={entry.notes || ""}>
+                      <td className={`${effectiveCompact ? 'px-1 py-1' : 'px-1.5 py-1.5'} text-mist-light text-xs whitespace-nowrap align-middle`} title={entry.notes || ""}>
                         {entry.notes || "—"}
                         {entry.completed && <span className="text-jade-glow ml-1">✦</span>}
                       </td>
@@ -1385,6 +2116,64 @@ function HoldTrainingLogTable({
         </>
       )}
     </AnimatePresence>
+
+    <AnimatePresence>
+      {levelPicker && (() => {
+        const ex = exerciseLookup.get(levelPicker.exerciseId);
+        if (!ex) return null;
+        const tiers = [...ex.tiers].sort((a, b) => a.level - b.level);
+        const current = editingData[levelPicker.logId]?.level
+          ?? entries.find((e) => e.logId === levelPicker.logId)?.level
+          ?? 1;
+
+        return (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px]"
+              onClick={() => setLevelPicker(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[360px] max-w-[92vw] bg-ink-deep border border-ink-light rounded-xl shadow-2xl p-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-sm font-semibold text-cloud-white mb-3">Change Progression Tier</h3>
+              <p className="text-[11px] text-mist-light mb-3">{stripBwPercentHint(getExerciseDisplayName(ex, settings.terminologyMode))}</p>
+              <div className="max-h-[280px] overflow-y-auto space-y-1 pr-1">
+                {tiers.map((t) => {
+                  const active = t.level === current;
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => {
+                        handleEditChange(levelPicker.logId, "level", t.level);
+                        setLevelPicker(null);
+                      }}
+                      className={`w-full text-left px-2.5 py-2 rounded border transition-colors ${active ? "border-jade-glow/50 bg-jade-deep/20 text-jade-light" : "border-ink-light/40 bg-ink-mid/20 text-mist-light hover:border-jade-glow/35 hover:bg-jade-deep/10"}`}
+                    >
+                      <span className="text-[11px] font-semibold">Lv.{t.level} - {stripBwPercentHint(getExerciseDisplayName(t, settings.terminologyMode))}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-3 flex justify-end">
+                <button
+                  onClick={() => setLevelPicker(null)}
+                  className="px-3 py-1.5 text-xs rounded border border-ink-light text-mist-light hover:bg-ink-mid/30"
+                >
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </>
+        );
+      })()}
+    </AnimatePresence>
     </>
   );
 }
@@ -1405,7 +2194,7 @@ function InlineLogForm({
     weight1?: number; reps1?: number;
     weight2?: number; reps2?: number;
     weight3?: number; reps3?: number;
-    holdTime?: number; holdTime2?: number; holdTime3?: number; modifier?: string; variant?: string; notes?: string;
+    holdTime?: number; holdTime2?: number; holdTime3?: number; modifier?: string; resistanceBandKg?: number; variant?: string; notes?: string;
   }) => Promise<void>;
   onChangeLevel: (exerciseId: string, level: number) => void;
   onDismiss: (exerciseId: string) => void;
@@ -1422,11 +2211,20 @@ function InlineLogForm({
   const [hold3, setHold3] = useState("");
   const [notes, setNotes] = useState("");
   const [selectedModifier, setSelectedModifier] = useState("");
+  const [selectedResistanceBand, setSelectedResistanceBand] = useState("");
   const [selectedVariation, setSelectedVariation] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [saved, setSaved] = useState(false);
   const [shakeError, setShakeError] = useState(false);
-  const [inputMode, setInputMode] = useState<"weight" | "hold">("weight");
+  const [weightUnit, setWeightUnit] = useState<"kg" | "lbs">("kg");
+  const [inputMode, setInputMode] = useState<"weight" | "hold">(() => getTierInputMode(exercise, selectedLevel));
+  const [timerRunning, setTimerRunning] = useState(false);
+  const [timerStartedAt, setTimerStartedAt] = useState<number | null>(null);
+  const [timerElapsedMs, setTimerElapsedMs] = useState(0);
+  const [timerTick, setTimerTick] = useState(0);
+  const [showTimerModal, setShowTimerModal] = useState(false);
+  const [timerTarget, setTimerTarget] = useState<"hold" | "hold2" | "hold3">("hold");
+  const [timerReps, setTimerReps] = useState("");
   const showHold = inputMode === "hold";
   const { settings } = useDisplaySettings();
 
@@ -1444,11 +2242,92 @@ function InlineLogForm({
   const diffColorClass = getDifficultyColorClass(getWeightedDifficulty(exercise, selectedLevel, selectedVariation || undefined, selectedModifier || undefined));
   const glowStyle = getDifficultyGlowStyleScaled(getWeightedDifficulty(exercise, selectedLevel, selectedVariation || undefined, selectedModifier || undefined), glowIntensity);
   const currentDifficulty = getWeightedDifficulty(exercise, selectedLevel, selectedVariation || undefined, selectedModifier || undefined);
+  const currentDifficultyDisplay = getDifficultyDisplayName(
+    { difficulty: currentDifficulty, wuxiaDifficulty: currentDifficulty },
+    settings.terminologyMode
+  ) || currentDifficulty;
   const displayName = getExerciseDisplayName(exercise, settings.terminologyMode);
-  const typeEmoji = exercise.type === "Upper Heaven" ? "☁️"
-    : exercise.type === "Lower Realms" ? "🔥"
-    : exercise.type === "Heart Meridian" ? "💚"
+  const typeKey = getTypeColorKey(exercise);
+  const typeEmoji = typeKey === "Upper Heaven" ? "☁️"
+    : typeKey === "Lower Realms" ? "🔥"
+    : typeKey === "Heart Meridian" ? "💚"
     : "⭐";
+  const showResistanceBand = supportsResistanceBandAssistance(exercise);
+
+  useEffect(() => {
+    setInputMode(getTierInputMode(exercise, selectedLevel));
+    setTimerRunning(false);
+    setTimerStartedAt(null);
+    setTimerElapsedMs(0);
+    setTimerTick(0);
+  }, [exercise.id, selectedLevel]);
+
+  useEffect(() => {
+    if (!timerRunning) return;
+    const id = window.setInterval(() => setTimerTick(Date.now()), 200);
+    return () => window.clearInterval(id);
+  }, [timerRunning]);
+
+  const liveTimerMs = timerElapsedMs + (timerRunning && timerStartedAt ? (timerTick - timerStartedAt) : 0);
+  const liveTimerSeconds = Math.max(0, Math.round(liveTimerMs / 1000));
+  const timerMinutes = Math.floor(liveTimerSeconds / 60).toString().padStart(2, "0");
+  const timerSeconds = (liveTimerSeconds % 60).toString().padStart(2, "0");
+  const timerMillis = Math.max(0, Math.floor(liveTimerMs % 1000)).toString().padStart(3, "0");
+
+  const resetTimer = () => {
+    setTimerRunning(false);
+    setTimerStartedAt(null);
+    setTimerElapsedMs(0);
+    setTimerTick(0);
+  };
+
+  const getNextTimerTarget = (): "hold" | "hold2" | "hold3" => {
+    if (!hold) return "hold";
+    if (!hold2) return "hold2";
+    return "hold3";
+  };
+
+  const closeTimerModal = () => {
+    resetTimer();
+    setShowTimerModal(false);
+    setTimerTarget(getNextTimerTarget());
+    setTimerReps("");
+  };
+
+  const handleTimerButton = () => {
+    if (!timerRunning) {
+      setTimerStartedAt(Date.now());
+      setTimerTick(Date.now());
+      setTimerRunning(true);
+      return;
+    }
+
+    const now = Date.now();
+    const totalMs = timerElapsedMs + (timerStartedAt ? now - timerStartedAt : 0);
+    const seconds = Math.max(1, Math.round(totalMs / 1000));
+    setTimerElapsedMs(totalMs);
+    setTimerStartedAt(null);
+    setTimerRunning(false);
+
+    // Stopping auto-writes to selected target, then advances target without closing.
+    if (timerTarget === "hold") {
+      setHold(String(seconds));
+      if (timerReps.trim()) setR1(timerReps.trim());
+      setTimerTarget("hold2");
+    } else if (timerTarget === "hold2") {
+      setHold2(String(seconds));
+      if (timerReps.trim()) setR2(timerReps.trim());
+      setTimerTarget("hold3");
+    } else {
+      setHold3(String(seconds));
+      if (timerReps.trim()) setR3(timerReps.trim());
+      setTimerTarget("hold3");
+    }
+
+    resetTimer();
+    setTimerReps("");
+    if (shakeError) setShakeError(false);
+  };
 
   const handleSubmit = async () => {
     const primaryMissing = showHold ? (!hold && !r1) : (!w1 && !r1);
@@ -1457,26 +2336,33 @@ function InlineLogForm({
       setTimeout(() => setShakeError(false), 500);
       return;
     }
-    const hasData = w1 || r1 || w2 || r2 || w3 || r3 || hold || hold2 || hold3 || notes || selectedModifier || selectedVariation;
+    const hasData = w1 || r1 || w2 || r2 || w3 || r3 || hold || hold2 || hold3 || notes || selectedModifier || selectedResistanceBand || selectedVariation;
     if (!hasData) return;
     setSubmitting(true);
     setSaved(false);
     try {
+      const toKg = (v: string): number => {
+        const n = parseFloat(v);
+        return weightUnit === "lbs" ? Math.round(n * 453.592) / 1000 : n;
+      };
+      const resistanceBandKg = selectedResistanceBand ? parseFloat(selectedResistanceBand) : undefined;
       await onSubmit(exercise.id, selectedLevel, {
-        weight1: w1 ? parseFloat(w1) : undefined,
+        weight1: w1 ? toKg(w1) : undefined,
         reps1: r1 ? parseInt(r1) : undefined,
-        weight2: w2 ? parseFloat(w2) : undefined,
+        weight2: w2 ? toKg(w2) : undefined,
         reps2: r2 ? parseInt(r2) : undefined,
-        weight3: w3 ? parseFloat(w3) : undefined,
+        weight3: w3 ? toKg(w3) : undefined,
         reps3: r3 ? parseInt(r3) : undefined,
         holdTime: hold ? parseInt(hold) : undefined,
         holdTime2: hold2 ? parseInt(hold2) : undefined,
         holdTime3: hold3 ? parseInt(hold3) : undefined,
-        modifier: selectedModifier || undefined,
+        modifier: buildModifierWithBand(selectedModifier || undefined, resistanceBandKg, selectedLevel) ?? undefined,
+        resistanceBandKg: resistanceBandKg ?? undefined,
         variant: selectedVariation || undefined,
         notes: notes || undefined,
       });
-      setW1(""); setR1(""); setW2(""); setR2(""); setW3(""); setR3(""); setHold(""); setHold2(""); setHold3(""); setNotes(""); setSelectedModifier(""); setSelectedVariation("");
+      setW1(""); setR1(""); setW2(""); setR2(""); setW3(""); setR3(""); setHold(""); setHold2(""); setHold3(""); setNotes(""); setSelectedModifier(""); setSelectedResistanceBand(""); setSelectedVariation("");
+      resetTimer();
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (err) {
@@ -1530,11 +2416,11 @@ function InlineLogForm({
                 border: `1px solid ${diffStyle.glowColor}30`,
               }}
             >
-              {currentDifficulty}
+              {currentDifficultyDisplay}
             </span>
             {showPath && exercise.type && (
-              <span className={`text-[9px] font-medium px-1.5 py-0 rounded-full ${getTypeColor(exercise.type)} bg-ink-dark/40 border border-current/15 shrink-0`}>
-                {exercise.type}
+              <span className={`text-[9px] font-medium px-1.5 py-0 rounded-full ${getTypeColor(typeKey)} bg-ink-dark/40 border border-current/15 shrink-0`}>
+                {getTypeDisplayName(exercise, settings.terminologyMode)}
               </span>
             )}
             {showPath && <EquipmentBadges exercise={exercise} />}
@@ -1569,7 +2455,11 @@ function InlineLogForm({
           {/* Level selector */}
           <select
             value={selectedLevel}
-            onChange={(e) => onChangeLevel(exercise.id, Number(e.target.value))}
+            onChange={(e) => {
+              const nextLevel = Number(e.target.value);
+              setInputMode(getTierInputMode(exercise, nextLevel));
+              onChangeLevel(exercise.id, nextLevel);
+            }}
             className="bg-ink-dark border rounded px-2 py-1 text-xs outline-none transition-colors cursor-pointer"
             style={{
               borderColor: `${diffStyle.glowColor}30`,
@@ -1600,24 +2490,50 @@ function InlineLogForm({
           {/* Spacer */}
           <div className="flex-1" />
 
+          {/* kg / lbs toggle — weight mode only */}
+          {!showHold && (
+            <div className="flex rounded-md overflow-hidden border border-ink-light/30">
+              <button
+                onClick={() => setWeightUnit("kg")}
+                className={`px-2 py-1 text-[10px] font-semibold transition-all duration-200 border-r border-ink-light/30 ${
+                  weightUnit === "kg"
+                    ? "bg-jade-deep/55 text-cloud-white"
+                    : "bg-ink-mid/60 text-mist-light hover:bg-ink-mid/80 hover:text-cloud-white"
+                }`}
+              >
+                kg
+              </button>
+              <button
+                onClick={() => setWeightUnit("lbs")}
+                className={`px-2 py-1 text-[10px] font-semibold transition-all duration-200 ${
+                  weightUnit === "lbs"
+                    ? "bg-jade-deep/55 text-cloud-white"
+                    : "bg-ink-mid/60 text-mist-light hover:bg-ink-mid/80 hover:text-cloud-white"
+                }`}
+              >
+                lbs
+              </button>
+            </div>
+          )}
+
           {/* Mode toggle */}
           <div className="flex rounded-md overflow-hidden border border-ink-light/30">
             <button
-              onClick={() => { setInputMode("weight"); setW1(""); setW2(""); setW3(""); setR1(""); setR2(""); setR3(""); setHold(""); setHold2(""); setHold3(""); }}
+              onClick={() => { setInputMode("weight"); setW1(""); setW2(""); setW3(""); setR1(""); setR2(""); setR3(""); setHold(""); setHold2(""); setHold3(""); resetTimer(); }}
               className={`px-2.5 py-1 text-[10px] font-semibold transition-all duration-200 border-r ${
                 inputMode === "weight"
-                  ? "bg-jade-deep/40 text-jade-light border-jade/20"
-                  : "bg-ink-dark/60 text-mist-dark/60 border-ink-light/20 hover:text-mist-light"
+                  ? "bg-jade-deep/55 text-cloud-white border-jade/40 shadow-[inset_0_0_0_1px_rgba(58,143,143,0.25)]"
+                  : "bg-ink-mid/60 text-mist-light border-ink-light/30 hover:bg-ink-mid/80 hover:text-cloud-white"
               }`}
             >
               Weight
             </button>
             <button
-              onClick={() => { setInputMode("hold"); setW1(""); setW2(""); setW3(""); setR1(""); setR2(""); setR3(""); setHold(""); setHold2(""); setHold3(""); }}
+              onClick={() => { setInputMode("hold"); setW1(""); setW2(""); setW3(""); setR1(""); setR2(""); setR3(""); setHold(""); setHold2(""); setHold3(""); resetTimer(); }}
               className={`px-2.5 py-1 text-[10px] font-semibold transition-all duration-200 ${
                 inputMode === "hold"
-                  ? "bg-mountain-blue/20 text-mountain-blue-glow"
-                  : "bg-ink-dark/60 text-mist-dark/60 hover:text-mist-light"
+                  ? "bg-mountain-blue/30 text-cloud-white shadow-[inset_0_0_0_1px_rgba(94,184,232,0.35)]"
+                  : "bg-ink-mid/60 text-mist-light hover:bg-ink-mid/80 hover:text-cloud-white"
               }`}
             >
               Hold
@@ -1626,7 +2542,7 @@ function InlineLogForm({
         </div>
 
         {/* Optional modifiers row */}
-        {((exercise.modifiers && exercise.modifiers.length > 0) || (exercise.variations && exercise.variations.length > 0)) && (
+        {((exercise.modifiers && exercise.modifiers.length > 0) || showResistanceBand || (exercise.variations && exercise.variations.length > 0)) && (
           <div className="flex items-center gap-2 mb-2.5 pl-2 flex-wrap">
             {exercise.modifiers && exercise.modifiers.length > 0 && (
               <select
@@ -1639,6 +2555,21 @@ function InlineLogForm({
                 {exercise.modifiers.filter(m => m.available).map((m) => (
                   <option key={m.id} value={m.type}>
                     {m.type}{m.difficultyMod !== 0 ? ` (${m.difficultyMod > 0 ? "+" : ""}${m.difficultyMod})` : ""}
+                  </option>
+                ))}
+              </select>
+            )}
+            {showResistanceBand && (
+              <select
+                value={selectedResistanceBand}
+                onChange={(e) => setSelectedResistanceBand(e.target.value)}
+                className="bg-ink-dark border border-ink-light/20 rounded px-2 py-1 text-xs text-sky-300 outline-none
+                           focus:border-sky-300/40 transition-colors cursor-pointer"
+              >
+                <option value="">No resistance band</option>
+                {RESISTANCE_BAND_OPTIONS.map((kg) => (
+                  <option key={kg} value={String(kg)}>
+                    Resistance band {formatResistanceBandLabel(kg)}
                   </option>
                 ))}
               </select>
@@ -1667,21 +2598,21 @@ function InlineLogForm({
             {/* Column headers */}
             {!showHold ? (
               <>
-                <div className="text-[9px] text-center uppercase tracking-widest font-semibold pb-0.5" style={{ color: 'var(--col-weight)', opacity: 0.7 }}>W1</div>
-                <div className="text-[9px] text-center uppercase tracking-widest font-semibold pb-0.5" style={{ color: 'var(--col-reps)', opacity: 0.7 }}>R1</div>
-                <div className="text-[9px] text-center uppercase tracking-widest font-semibold pb-0.5" style={{ color: 'var(--col-weight)', opacity: 0.7 }}>W2</div>
-                <div className="text-[9px] text-center uppercase tracking-widest font-semibold pb-0.5" style={{ color: 'var(--col-reps)', opacity: 0.7 }}>R2</div>
-                <div className="text-[9px] text-center uppercase tracking-widest font-semibold pb-0.5" style={{ color: 'var(--col-weight)', opacity: 0.7 }}>W3</div>
-                <div className="text-[9px] text-center uppercase tracking-widest font-semibold pb-0.5" style={{ color: 'var(--col-reps)', opacity: 0.7 }}>R3</div>
+                <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: diffStyle.glowColor, opacity: 0.95 }}>W1</div>
+                <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: 'var(--col-reps)', opacity: 0.95 }}>R1</div>
+                <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: diffStyle.glowColor, opacity: 0.95 }}>W2</div>
+                <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: 'var(--col-reps)', opacity: 0.95 }}>R2</div>
+                <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: diffStyle.glowColor, opacity: 0.95 }}>W3</div>
+                <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: 'var(--col-reps)', opacity: 0.95 }}>R3</div>
               </>
             ) : (
               <>
-                <div className="text-[9px] text-center uppercase tracking-widest font-semibold text-mountain-blue-glow/70 pb-0.5">H1</div>
-                <div className="text-[9px] text-center uppercase tracking-widest font-semibold pb-0.5" style={{ color: 'var(--col-reps)', opacity: 0.7 }}>R1</div>
-                <div className="text-[9px] text-center uppercase tracking-widest font-semibold text-mountain-blue-glow/70 pb-0.5">H2</div>
-                <div className="text-[9px] text-center uppercase tracking-widest font-semibold pb-0.5" style={{ color: 'var(--col-reps)', opacity: 0.7 }}>R2</div>
-                <div className="text-[9px] text-center uppercase tracking-widest font-semibold text-mountain-blue-glow/70 pb-0.5">H3</div>
-                <div className="text-[9px] text-center uppercase tracking-widest font-semibold pb-0.5" style={{ color: 'var(--col-reps)', opacity: 0.7 }}>R3</div>
+                <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: diffStyle.glowColor, opacity: 0.95 }}>T1</div>
+                <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: 'var(--col-reps)', opacity: 0.95 }}>W1</div>
+                <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: diffStyle.glowColor, opacity: 0.95 }}>T2</div>
+                <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: 'var(--col-reps)', opacity: 0.95 }}>W2</div>
+                <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: diffStyle.glowColor, opacity: 0.95 }}>T3</div>
+                <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: 'var(--col-reps)', opacity: 0.95 }}>W3</div>
               </>
             )}
             <div className="text-[9px] text-center uppercase tracking-widest font-semibold text-mist-dark/50 pb-0.5">Notes</div>
@@ -1690,41 +2621,41 @@ function InlineLogForm({
             {!showHold ? (
               <>
                 <input type="number" min="0" step="0.5" value={w1} onChange={(e) => { setW1(e.target.value); if (shakeError) setShakeError(false); }} placeholder="—"
-                  className={`w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-colors duration-200 bg-ink-dark border border-ink-light/30 text-jade-light placeholder:text-mist-dark/30 focus:border-jade-glow/50 focus:bg-ink-mid/40${shakeError ? ' animate-shake' : ''}`}
-                  style={{ borderColor: shakeError ? 'rgba(220,50,50,0.7)' : 'rgba(58,143,143,0.15)' }} />
+                  className={`w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-colors duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:bg-ink-mid/40${shakeError ? ' animate-shake' : ''}`}
+                  style={{ borderColor: shakeError ? 'rgba(220,50,50,0.7)' : `${diffStyle.glowColor}40` }} />
                 <input type="number" min="0" max="500" value={r1} onChange={(e) => { setR1(e.target.value); if (shakeError) setShakeError(false); }} placeholder="—"
-                  className={`w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-colors duration-200 bg-ink-dark border border-ink-light/30 text-gold placeholder:text-mist-dark/30 focus:border-gold/50 focus:bg-ink-mid/40${shakeError ? ' animate-shake' : ''}`}
+                  className={`w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-colors duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:border-gold/50 focus:bg-ink-mid/40${shakeError ? ' animate-shake' : ''}`}
                   style={{ borderColor: shakeError ? 'rgba(220,50,50,0.7)' : 'rgba(196,168,74,0.15)' }} />
                 <input type="number" min="0" step="0.5" value={w2} onChange={(e) => setW2(e.target.value)} placeholder="—"
-                  className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/30 text-jade-light placeholder:text-mist-dark/30 focus:border-jade-glow/50 focus:bg-ink-mid/40"
-                  style={{ borderColor: 'rgba(58,143,143,0.15)' }} />
+                  className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:bg-ink-mid/40"
+                  style={{ borderColor: `${diffStyle.glowColor}40` }} />
                 <input type="number" min="0" max="500" value={r2} onChange={(e) => setR2(e.target.value)} placeholder="—"
-                  className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/30 text-gold placeholder:text-mist-dark/30 focus:border-gold/50 focus:bg-ink-mid/40"
+                  className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:border-gold/50 focus:bg-ink-mid/40"
                   style={{ borderColor: 'rgba(196,168,74,0.15)' }} />
                 <input type="number" min="0" step="0.5" value={w3} onChange={(e) => setW3(e.target.value)} placeholder="—"
-                  className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/30 text-jade-light placeholder:text-mist-dark/30 focus:border-jade-glow/50 focus:bg-ink-mid/40"
-                  style={{ borderColor: 'rgba(58,143,143,0.15)' }} />
+                  className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:bg-ink-mid/40"
+                  style={{ borderColor: `${diffStyle.glowColor}40` }} />
                 <input type="number" min="0" max="500" value={r3} onChange={(e) => setR3(e.target.value)} placeholder="—"
-                  className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/30 text-gold placeholder:text-mist-dark/30 focus:border-gold/50 focus:bg-ink-mid/40"
+                  className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:border-gold/50 focus:bg-ink-mid/40"
                   style={{ borderColor: 'rgba(196,168,74,0.15)' }} />
               </>
             ) : (
               <>
-                <input type="number" min="0" value={hold} onChange={(e) => { setHold(e.target.value); if (shakeError) setShakeError(false); }} placeholder="sec"
-                  className={`w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-colors duration-200 bg-ink-dark border border-mountain-blue/20 text-mountain-blue-glow placeholder:text-mist-dark/30 focus:border-mountain-blue-glow/50 focus:bg-ink-mid/40${shakeError ? ' animate-shake' : ''}`}
+                <input type="number" min="0" value={hold} onChange={(e) => { setHold(e.target.value); if (shakeError) setShakeError(false); }} placeholder="s"
+                  className={`w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-colors duration-200 bg-ink-dark border border-mountain-blue/20 text-cloud-white placeholder:text-mist-dark/30 focus:border-mountain-blue-glow/50 focus:bg-ink-mid/40${shakeError ? ' animate-shake' : ''}`}
                   style={shakeError ? { borderColor: 'rgba(220,50,50,0.7)' } : undefined} />
                 <input type="number" min="0" max="500" value={r1} onChange={(e) => { setR1(e.target.value); if (shakeError) setShakeError(false); }} placeholder="—"
-                  className={`w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-colors duration-200 bg-ink-dark border border-ink-light/30 text-gold placeholder:text-mist-dark/30 focus:border-gold/50 focus:bg-ink-mid/40${shakeError ? ' animate-shake' : ''}`}
+                  className={`w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-colors duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:border-gold/50 focus:bg-ink-mid/40${shakeError ? ' animate-shake' : ''}`}
                   style={{ borderColor: shakeError ? 'rgba(220,50,50,0.7)' : 'rgba(196,168,74,0.15)' }} />
-                <input type="number" min="0" value={hold2} onChange={(e) => setHold2(e.target.value)} placeholder="sec"
-                  className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-mountain-blue/20 text-mountain-blue-glow placeholder:text-mist-dark/30 focus:border-mountain-blue-glow/50 focus:bg-ink-mid/40" />
+                <input type="number" min="0" value={hold2} onChange={(e) => setHold2(e.target.value)} placeholder="s"
+                  className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-mountain-blue/20 text-cloud-white placeholder:text-mist-dark/30 focus:border-mountain-blue-glow/50 focus:bg-ink-mid/40" />
                 <input type="number" min="0" max="500" value={r2} onChange={(e) => setR2(e.target.value)} placeholder="—"
-                  className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/30 text-gold placeholder:text-mist-dark/30 focus:border-gold/50 focus:bg-ink-mid/40"
+                  className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:border-gold/50 focus:bg-ink-mid/40"
                   style={{ borderColor: 'rgba(196,168,74,0.15)' }} />
-                <input type="number" min="0" value={hold3} onChange={(e) => setHold3(e.target.value)} placeholder="sec"
-                  className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-mountain-blue/20 text-mountain-blue-glow placeholder:text-mist-dark/30 focus:border-mountain-blue-glow/50 focus:bg-ink-mid/40" />
+                <input type="number" min="0" value={hold3} onChange={(e) => setHold3(e.target.value)} placeholder="s"
+                  className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-mountain-blue/20 text-cloud-white placeholder:text-mist-dark/30 focus:border-mountain-blue-glow/50 focus:bg-ink-mid/40" />
                 <input type="number" min="0" max="500" value={r3} onChange={(e) => setR3(e.target.value)} placeholder="—"
-                  className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/30 text-gold placeholder:text-mist-dark/30 focus:border-gold/50 focus:bg-ink-mid/40"
+                  className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:border-gold/50 focus:bg-ink-mid/40"
                   style={{ borderColor: 'rgba(196,168,74,0.15)' }} />
               </>
             )}
@@ -1745,6 +2676,17 @@ function InlineLogForm({
               ✦ Saved
             </motion.span>
           )}
+          {showHold && (
+            <button
+              type="button"
+              onClick={() => { setShowTimerModal(true); setTimerTarget(getNextTimerTarget()); setTimerReps(""); resetTimer(); }}
+              className="px-3 py-1.5 text-[10px] font-bold rounded-md border text-cloud-white bg-mountain-blue/35 hover:bg-mountain-blue/45 border-mountain-blue-glow/70 shadow-[0_0_10px_rgba(94,184,232,0.45)] hover:shadow-[0_0_16px_rgba(94,184,232,0.6)] transition-all"
+              style={{ boxShadow: `0 0 10px ${diffStyle.glowColor}66, inset 0 0 0 1px ${diffStyle.glowColor}40` }}
+              title="Open compact hold timer"
+            >
+              Start Timer
+            </button>
+          )}
           <motion.button
             onClick={handleSubmit}
             disabled={submitting}
@@ -1763,6 +2705,100 @@ function InlineLogForm({
             {submitting ? "Saving…" : saved ? "✦ Logged!" : "Log Set"}
           </motion.button>
         </div>
+
+        {showTimerModal && showHold && (
+          <div className="absolute inset-0 z-30 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-[2px] p-2" onClick={closeTimerModal}>
+            <div
+              className="w-full max-w-[300px] rounded-lg border bg-ink-deep/95 p-3"
+              style={{
+                borderColor: `${diffStyle.glowColor}80`,
+                boxShadow: `0 0 20px ${diffStyle.glowColor}40, 0 16px 30px rgba(0,0,0,0.55), inset 0 0 0 1px ${diffStyle.glowColor}20`,
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: diffStyle.glowColor }}>Hold Timer</p>
+                <button
+                  type="button"
+                  onClick={closeTimerModal}
+                  className="text-mist-dark hover:text-mist-light text-xs px-1"
+                  title="Close timer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="flex rounded-md border overflow-hidden mb-2" style={{ borderColor: `${diffStyle.glowColor}55` }}>
+                {([
+                  { key: "hold", label: "T1", rep: "R1" },
+                  { key: "hold2", label: "T2", rep: "R2" },
+                  { key: "hold3", label: "T3", rep: "R3" },
+                ] as const).map((slot, idx) => (
+                  <button
+                    key={slot.key}
+                    type="button"
+                    onClick={() => setTimerTarget(slot.key)}
+                    className={`flex-1 py-1 text-[10px] font-semibold text-center ${idx > 0 ? "border-l border-ink-light/30" : ""}`}
+                    style={slot.key === timerTarget ? {
+                      background: `${diffStyle.glowColor}2e`,
+                      color: diffStyle.glowColor,
+                    } : { color: "var(--mist-dark)" }}
+                  >
+                    <div>{slot.label}</div>
+                    <div className="text-[9px] opacity-80">
+                      {slot.key === "hold"
+                        ? `${hold || "-"}s${r1 ? ` • ${r1}r` : ""}`
+                        : slot.key === "hold2"
+                          ? `${hold2 || "-"}s${r2 ? ` • ${r2}r` : ""}`
+                          : `${hold3 || "-"}s${r3 ? ` • ${r3}r` : ""}`}
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              <div className="mb-2">
+                <span className="block text-center sm:text-left text-[12px] font-mono font-semibold mb-2" style={{ color: diffStyle.glowColor }}>{timerMinutes}:{timerSeconds}.{timerMillis}</span>
+              </div>
+
+              <div className="mb-3">
+                <label className="text-[10px] text-mist-dark block mb-1">
+                  Reps for {timerTarget === "hold" ? "R1" : timerTarget === "hold2" ? "R2" : "R3"} (optional)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="500"
+                  value={timerReps}
+                  onChange={(e) => setTimerReps(e.target.value)}
+                  placeholder="—"
+                  className="w-full rounded border border-ink-light/30 bg-ink-dark px-2 py-1 text-xs text-gold outline-none focus:border-gold/50"
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={resetTimer}
+                  className="flex-1 py-1 rounded border border-ink-light/30 text-[10px] text-mist-dark hover:text-mist-light"
+                >
+                  Reset
+                </button>
+                <button
+                  type="button"
+                  onClick={handleTimerButton}
+                  className={`flex-1 py-1 rounded border text-[10px] font-semibold transition-all ${timerRunning ? "text-crimson-light border-crimson/50 bg-crimson-deep/20 shadow-[0_0_8px_rgba(197,70,70,0.35)]" : ""}`}
+                  style={!timerRunning ? {
+                    borderColor: `${diffStyle.glowColor}88`,
+                    background: `${diffStyle.glowColor}26`,
+                    color: diffStyle.glowColor,
+                  } : undefined}
+                >
+                  {timerRunning ? "Stop Timer" : "Start Timer"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </motion.div>
   );
@@ -1787,6 +2823,7 @@ function ProgressionSidebar({
   types,
   equipmentTypes,
   levelDefaults,
+  autoLevelByExerciseId,
   selectedDayFilter,
   setSelectedDayFilter,
   onDrawerOpen,
@@ -1807,6 +2844,7 @@ function ProgressionSidebar({
   types: string[];
   equipmentTypes: string[];
   levelDefaults: Record<string, number>;
+  autoLevelByExerciseId: Record<string, number>;
   selectedDayFilter: number | null;
   setSelectedDayFilter: (v: number | null) => void;
   onDrawerOpen: () => void;
@@ -1838,6 +2876,13 @@ function ProgressionSidebar({
   const useThemeColor = settings.progressionSidebarUseThemeColor ?? true;
   const expandTiers = settings.progressionSidebarExpandTiers ?? true;
 
+  const hiddenSidebarExerciseNames = new Set([
+    "dumbbell bicep curl",
+    "leg curl",
+    "leg extension",
+    "seated cable row",
+  ]);
+
   const showIllumination = displayMode !== "name-only";
   const showRealm = displayMode === "name-illumination-realm" || displayMode === "name-illumination-realm-path";
   const showPath = displayMode === "name-illumination-realm-path";
@@ -1857,13 +2902,20 @@ function ProgressionSidebar({
 
   // Apply filters
   const filtered = exercises.filter((e) => {
+    if (hiddenSidebarExerciseNames.has(String(e.name || "").trim().toLowerCase())) {
+      return false;
+    }
+
     // Day filter
     if (selectedDayFilter !== null) {
       if (!e.assignedDays || e.assignedDays.trim() === "") return false;
       const assignedDays = e.assignedDays.split(',').map(d => parseInt(d.trim())).filter(d => !isNaN(d));
       if (!assignedDays.includes(selectedDayFilter)) return false;
     }
-    if (filterCategory && e.category !== filterCategory) return false;
+    if (filterCategory) {
+      const tags = parseCategoryTags(e.category);
+      if (!tags.includes(filterCategory)) return false;
+    }
     if (filterType && e.type !== filterType) return false;
     if (filterEquipment) {
       const tags = getEquipmentTags(e);
@@ -1873,6 +2925,8 @@ function ProgressionSidebar({
       return matchesLooseSearchInFields(searchTerm, [
         e.name,
         e.wuxiaName,
+        e.primaryMuscles,
+        e.secondaryMuscles,
       ]);
     }
     return true;
@@ -1904,13 +2958,13 @@ function ProgressionSidebar({
         return bCount - aCount;
       }
       case "level-high": {
-        const aLvl = levelDefaults[a.id] || (a.userProgress[0]?.currentLevel ?? 1);
-        const bLvl = levelDefaults[b.id] || (b.userProgress[0]?.currentLevel ?? 1);
+        const aLvl = levelDefaults[a.id] || autoLevelByExerciseId[a.id] || (a.userProgress[0]?.currentLevel ?? 1);
+        const bLvl = levelDefaults[b.id] || autoLevelByExerciseId[b.id] || (b.userProgress[0]?.currentLevel ?? 1);
         return bLvl - aLvl;
       }
       case "level-low": {
-        const aLvl = levelDefaults[a.id] || (a.userProgress[0]?.currentLevel ?? 1);
-        const bLvl = levelDefaults[b.id] || (b.userProgress[0]?.currentLevel ?? 1);
+        const aLvl = levelDefaults[a.id] || autoLevelByExerciseId[a.id] || (a.userProgress[0]?.currentLevel ?? 1);
+        const bLvl = levelDefaults[b.id] || autoLevelByExerciseId[b.id] || (b.userProgress[0]?.currentLevel ?? 1);
         return aLvl - bLvl;
       }
       case "selected": {
@@ -1926,35 +2980,19 @@ function ProgressionSidebar({
 
   const [showFilters, setShowFilters] = useState(true);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
-  const [searchCollapsedIds, setSearchCollapsedIds] = useState<Set<string>>(new Set());
 
   const activeFiltersCount = (filterCategory ? 1 : 0) + (filterType ? 1 : 0) + (filterEquipment ? 1 : 0);
   const searchQuery = searchTerm.trim();
   const isSearchActive = searchQuery.length > 0;
   const canCollapseAll = sorted.some((exercise) => expandedIds.has(exercise.id));
 
-  useEffect(() => {
-    if (!isSearchActive) {
-      setSearchCollapsedIds(new Set());
-    }
-  }, [isSearchActive]);
-
   const toggleExpand = useCallback((id: string) => {
-    if (isSearchActive) {
-      setSearchCollapsedIds((prev) => {
-        const next = new Set(prev);
-        if (next.has(id)) next.delete(id); else next.add(id);
-        return next;
-      });
-      return;
-    }
-
     setExpandedIds(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
-  }, [isSearchActive]);
+  }, []);
 
   const sortOptions = [
     { key: "a-z", label: "A–Z", icon: "↕" },
@@ -2315,20 +3353,19 @@ function ProgressionSidebar({
             {sorted.map((exercise, idx) => {
               const isActive = selectedIds.has(exercise.id);
               const currentLevel = exercise.userProgress[0]?.currentLevel ?? 1;
-              const effectiveLevel = levelDefaults[exercise.id] || currentLevel;
-              const typeColor = getTypeColor(exercise.type);
+              const effectiveLevel = levelDefaults[exercise.id] || autoLevelByExerciseId[exercise.id] || currentLevel;
+              const typeColor = getTypeColor(getTypeColorKey(exercise));
               const displayName = getExerciseDisplayName(exercise, settings.terminologyMode);
-              const typeEmoji = exercise.type === "Upper Heaven" ? "☁️"
-                : exercise.type === "Lower Realms" ? "🔥"
-                : exercise.type === "Heart Meridian" ? "💚"
+              const typeKey = getTypeColorKey(exercise);
+              const typeEmoji = typeKey === "Upper Heaven" ? "☁️"
+                : typeKey === "Lower Realms" ? "🔥"
+                : typeKey === "Heart Meridian" ? "💚"
                 : "⭐";
               const levelDifficulty = getWeightedDifficulty(exercise, effectiveLevel);
               const levelDiffColor = 'text-jade-glow';
               const glowStyle = {};
               const logCount = exercise.userProgress[0]?.logs?.length ?? 0;
-              const isExpanded = expandTiers && (isSearchActive
-                ? !searchCollapsedIds.has(exercise.id)
-                : expandedIds.has(exercise.id));
+              const isExpanded = expandTiers && expandedIds.has(exercise.id);
               const isSearchMatch = isSearchActive && matchesLooseSearchInFields(searchQuery, [
                 exercise.name,
                 exercise.wuxiaName,
@@ -2507,7 +3544,7 @@ function ProgressionSidebar({
                             </span>
                             {showPath && (
                               <span className={`text-[8px] px-1.5 py-0 rounded ${typeColor} bg-ink-dark/30 border border-current/15 opacity-70`}>
-                                {exercise.type}
+                                {getTypeDisplayName(exercise, settings.terminologyMode)}
                               </span>
                             )}
                             <EquipmentBadges exercise={exercise} />
@@ -2574,7 +3611,7 @@ function ProgressionSidebar({
                       <div className="flex items-center gap-1 mt-0.5 pl-1 flex-wrap">
                         {showPath && (
                           <span className={`inline-flex items-center px-1.5 py-0 rounded text-[8px] ${typeColor} opacity-60`}>
-                            {exercise.type}
+                            {getTypeDisplayName(exercise, settings.terminologyMode)}
                           </span>
                         )}
                         <EquipmentBadges exercise={exercise} />
@@ -2778,12 +3815,34 @@ export default function ProgressionPage() {
   const [detailExercise, setDetailExercise] = useState<ProgressionExercise | null>(null);
   const [levelDefaults, setLevelDefaults] = useState<Record<string, number>>({});
   const [selectedExerciseIds, setSelectedExerciseIds] = useState<Set<string>>(new Set());
+  const [selectedLogExerciseId, setSelectedLogExerciseId] = useState<string | null>(null);
   const [showColorGuide, setShowColorGuide] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedDayFilter, setSelectedDayFilter] = useState<number | null>(null);
   const [exerciseOrder, setExerciseOrder] = useState<string[]>([]);
+  const [physique, setPhysique] = useState<UserPhysiqueSettings>(DEFAULT_USER_PHYSIQUE);
 
   const userId = user?.id;
+
+  // ── User physique settings (used for gym auto-tiering) ──
+  useEffect(() => {
+    if (!userId) {
+      setPhysique(DEFAULT_USER_PHYSIQUE);
+      return;
+    }
+
+    setPhysique(loadUserPhysique(userId));
+
+    const handlePhysiqueUpdate = (event: Event) => {
+      const custom = event as CustomEvent<{ userId?: string }>;
+      if (!custom.detail?.userId || custom.detail.userId === userId) {
+        setPhysique(loadUserPhysique(userId));
+      }
+    };
+
+    window.addEventListener("user-physique-updated", handlePhysiqueUpdate as EventListener);
+    return () => window.removeEventListener("user-physique-updated", handlePhysiqueUpdate as EventListener);
+  }, [userId]);
 
   // ── Persist level defaults in localStorage ──
   useEffect(() => {
@@ -2890,13 +3949,29 @@ export default function ProgressionPage() {
     weight1?: number; reps1?: number;
     weight2?: number; reps2?: number;
     weight3?: number; reps3?: number;
-    holdTime?: number; holdTime2?: number; holdTime3?: number; modifier?: string; variant?: string; notes?: string;
+    holdTime?: number; holdTime2?: number; holdTime3?: number; modifier?: string; resistanceBandKg?: number; variant?: string; notes?: string;
   }) => {
     if (!userId) return;
+
+    const exercise = exercises.find((e) => e.id === exerciseId);
+    const autoLevel = exercise
+      ? getAutoGymLevelFromSet(exercise, physique, {
+          weight1: data.weight1,
+          weight2: data.weight2,
+          weight3: data.weight3,
+        }, data.resistanceBandKg)
+      : null;
+    const effectiveLevel =
+      exercise && isGymCategoryExercise(exercise)
+        ? (autoLevel ?? level)
+        : level;
+
+    const { resistanceBandKg: _ignoredResistanceBand, ...logData } = data;
+
     const res = await fetch(`/api/progressions/${exerciseId}/log`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, level, ...data }),
+      body: JSON.stringify({ userId, level: effectiveLevel, ...logData }),
     });
     if (!res.ok) {
       const text = await res.text();
@@ -2946,7 +4021,18 @@ export default function ProgressionPage() {
   };
 
   // ── Derived data ──
-  const categories = [...new Set(exercises.map((e) => e.category))].sort();
+  const autoLevelByExerciseId = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const ex of exercises) {
+      const level = getAutoGymLevel(ex, physique);
+      if (level != null) map[ex.id] = level;
+    }
+    return map;
+  }, [exercises, physique]);
+
+  const categories = [
+    ...new Set(exercises.flatMap((e) => parseCategoryTags(e.category))),
+  ].sort();
   const types = [...new Set(exercises.map((e) => e.type).filter((t): t is string => !!t && t.trim().length > 0))].sort();
   const equipmentTypes = [...new Set(exercises.flatMap(getEquipmentTags))].sort();
 
@@ -2976,6 +4062,7 @@ export default function ProgressionPage() {
       types={types}
       equipmentTypes={equipmentTypes}
       levelDefaults={levelDefaults}
+      autoLevelByExerciseId={autoLevelByExerciseId}
       selectedDayFilter={selectedDayFilter}
       setSelectedDayFilter={setSelectedDayFilter}
       onDrawerOpen={handleDrawerOpen}
@@ -3027,7 +4114,7 @@ export default function ProgressionPage() {
                     <InlineLogForm
                       key={exercise.id}
                       exercise={exercise}
-                      selectedLevel={getSelectedLevel(exercise, levelDefaults)}
+                      selectedLevel={getSelectedLevel(exercise, levelDefaults, autoLevelByExerciseId)}
                       onSubmit={handleLog}
                       onChangeLevel={updateLevelDefault}
                       onDismiss={dismissExercise}
@@ -3041,15 +4128,38 @@ export default function ProgressionPage() {
 
           {/* Training Log Table */}
           <section>
-            <h3 className="text-xs text-mist-light uppercase tracking-wider mb-3">Training Log</h3>
-            <TrainingLogTable exercises={exercises} onViewExercise={handleViewExercise} onRefresh={fetchExercises} userId={userId || ''} />
+            <div className="flex items-center justify-between mb-3 gap-2">
+              <h3 className="text-xs text-mist-light uppercase tracking-wider">Training Log</h3>
+              {selectedLogExerciseId && (
+                <button
+                  onClick={() => setSelectedLogExerciseId(null)}
+                  className="text-[10px] px-2 py-1 rounded border border-jade/40 text-jade-light hover:bg-jade-deep/20"
+                >
+                  Clear Exercise Filter
+                </button>
+              )}
+            </div>
+            <TrainingLogTable
+              exercises={exercises}
+              physique={physique}
+              selectedExerciseId={selectedLogExerciseId}
+              onSelectExercise={setSelectedLogExerciseId}
+              onRefresh={fetchExercises}
+              userId={userId || ''}
+            />
           </section>
 
-          {/* Hold Training Log Table */}
+          {/* Timed Hold Log Table */}
           {exercises.some(hasHoldBasedTiers) && (
             <section>
-              <h3 className="text-xs text-mountain-blue-glow uppercase tracking-wider mb-3">Hold Training Log</h3>
-              <HoldTrainingLogTable exercises={exercises} onViewExercise={handleViewExercise} onRefresh={fetchExercises} userId={userId || ''} />
+              <h3 className="text-xs text-mountain-blue-glow uppercase tracking-wider mb-3">Timed Hold Log</h3>
+              <HoldTrainingLogTable
+                exercises={exercises}
+                selectedExerciseId={selectedLogExerciseId}
+                onSelectExercise={setSelectedLogExerciseId}
+                onRefresh={fetchExercises}
+                userId={userId || ''}
+              />
             </section>
           )}
         </div>
@@ -3074,7 +4184,9 @@ export default function ProgressionPage() {
           name: e.name,
           wuxiaName: e.wuxiaName,
           difficulty: e.difficulty,
+          wuxiaDifficulty: e.wuxiaDifficulty,
           type: e.type,
+          wuxiaType: e.wuxiaType,
           story: e.story,
           assignedDays: e.assignedDays,
         }))}

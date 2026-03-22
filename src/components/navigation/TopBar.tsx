@@ -7,6 +7,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import DisplaySettingsPopup from "@/components/workout/DisplaySettingsPopup";
+import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
 import { t } from "@/lib/terminology";
 
 function TopBar() {
@@ -92,7 +93,11 @@ function TopBar() {
           {user && (
             <div className="flex items-center gap-1.5">
               <span className="text-xs text-mist-dark">🧑</span>
-              <span className="text-xs font-semibold text-cloud-white">{user.name}</span>
+              <UserPhysiqueButton
+                userId={user.id}
+                userName={user.name}
+                className="text-xs font-semibold text-cloud-white hover:text-jade-glow transition-colors"
+              />
             </div>
           )}
         </div>

@@ -7,7 +7,7 @@ import GlowButton from "@/components/ui/GlowButton";
 import GlowCard from "@/components/ui/GlowCard";
 import { useAppContext } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
-import { useDisplaySettings, TechniqueDisplayMode, RecentSessionsCompactMode, DateFormatOption, ActiveCardStyle } from "@/context/DisplaySettingsContext";
+import { useDisplaySettings, TechniqueDisplayMode, RecentSessionsCompactMode, DateFormatOption, ActiveCardStyle, VariationDisplayMode } from "@/context/DisplaySettingsContext";
 import PresetSlots from "@/components/ui/PresetSlots";
 import SetupWizard from "@/components/ui/SetupWizard";
 import { t } from "@/lib/terminology";
@@ -30,7 +30,7 @@ function SettingRow({
 }
 
 function SettingsSidebar({ onLogout }: { onLogout: () => void }) {
-  const { themeStyle } = useAppContext();
+  const { themeStyle, viewportMode } = useAppContext();
   const { settings } = useDisplaySettings();
 
   const themeLabels: Record<string, string> = {
@@ -101,6 +101,7 @@ function SettingsSidebar({ onLogout }: { onLogout: () => void }) {
           <SettingRow label="Card Compact" value={(settings.progressionCardCompact ?? false) ? "On" : "Off"} color={(settings.progressionCardCompact ?? false) ? "text-gold" : "text-mist-dark"} />
           <SettingRow label="Log" value={modeLabels[settings.progressionLogMode] || settings.progressionLogMode} color="text-gold" />
           <SettingRow label="Log Compact" value={settings.progressionLogCompact ?? "auto"} color="text-gold" />
+          <SettingRow label="Variation Text" value={(settings.progressionVariationDisplay ?? "abbreviation") === "full" ? "Full" : "Abbrev"} color="text-gold" />
           <SettingRow label="Sidebar Glow" value={`${settings.glowIntensityProgressionSidebar ?? 100}%`} color={(settings.glowIntensityProgressionSidebar ?? 100) > 0 ? "text-gold" : "text-mist-dark"} />
           <SettingRow label="Card Glow" value={`${settings.glowIntensityProgressionCards ?? 100}%`} color={(settings.glowIntensityProgressionCards ?? 100) > 0 ? "text-gold" : "text-mist-dark"} />
           <SettingRow label="Log Glow" value={`${settings.glowIntensityProgressionLog ?? 100}%`} color={(settings.glowIntensityProgressionLog ?? 100) > 0 ? "text-gold" : "text-mist-dark"} />
@@ -111,6 +112,7 @@ function SettingsSidebar({ onLogout }: { onLogout: () => void }) {
       <div className="ink-border rounded-lg p-3 bg-ink-dark">
         <h3 className="text-[10px] text-mountain-blue-glow uppercase tracking-wider mb-2 font-semibold">⚙️ Layout</h3>
         <div className="divide-y divide-ink-light/20">
+          <SettingRow label="Viewport" value={viewportMode === "auto" ? "Auto" : viewportMode === "mobile" ? "Mobile" : "Desktop"} color="text-mountain-blue-glow" />
           <SettingRow label="Panel Position" value={settings.sidebarPosition === "left" ? "Left" : "Right"} color="text-mountain-blue-glow" />
           <SettingRow label="Quick View" value={settings.rightPanelVisible ? "Visible" : "Hidden"} color={settings.rightPanelVisible ? "text-mountain-blue-glow" : "text-mist-dark"} />
           <SettingRow label="Date Format" value={dateLabels[settings.dateFormat] || settings.dateFormat} color="text-mountain-blue-glow" />
@@ -140,6 +142,8 @@ export default function SettingsPage() {
   const {
     themeStyle,
     setThemeStyle,
+    viewportMode,
+    setViewportMode,
   } = useAppContext();
   const { settings, updateSettings, resetSettings } = useDisplaySettings();
   const [showWizard, setShowWizard] = useState(false);
@@ -488,6 +492,43 @@ export default function SettingsPage() {
               <p className="text-[10px] text-mist-dark mb-3 pl-1">Panel positioning, visibility, and interface options</p>
               <div className="space-y-2 pl-1">
                 <div className="flex items-center justify-between gap-3 py-1.5">
+                  <span className="text-[11px] text-mist-light shrink-0">Viewport mode</span>
+                  <div className="flex rounded-md border border-ink-light overflow-hidden">
+                    {([
+                      { value: "mobile" as const, label: "📱 Mobile" },
+                      { value: "desktop" as const, label: "🖥️ Desktop" },
+                    ]).map((opt, idx) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => setViewportMode(opt.value)}
+                        className={`px-2.5 py-1 text-[10px] font-medium transition-all ${
+                          viewportMode === opt.value
+                            ? "bg-jade-deep/30 text-jade-glow border-jade-glow/30"
+                            : "text-mist-dark hover:text-mist-light hover:bg-ink-mid/20"
+                        } ${idx > 0 ? "border-l border-ink-light" : ""}`}
+                        aria-pressed={viewportMode === opt.value}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-3 py-1.5">
+                  <span className="text-[11px] text-mist-light shrink-0">Follow device automatically</span>
+                  <button
+                    type="button"
+                    onClick={() => setViewportMode("auto")}
+                    className={`text-[10px] px-2.5 py-1 rounded-md border transition-all ${
+                      viewportMode === "auto"
+                        ? "border-jade-glow/40 bg-jade-deep/20 text-jade-glow"
+                        : "border-ink-light text-mist-dark hover:text-mist-light hover:border-mist-dark"
+                    }`}
+                    aria-pressed={viewportMode === "auto"}
+                  >
+                    {viewportMode === "auto" ? "Auto Mode Active" : "Switch to Auto"}
+                  </button>
+                </div>
+                <div className="flex items-center justify-between gap-3 py-1.5">
                   <span className="text-[11px] text-mist-light shrink-0">Panel position</span>
                   <div className="flex rounded-md border border-ink-light overflow-hidden">
                     {([{ value: "left", label: "◧ Left" }, { value: "right", label: "◨ Right" }]).map((opt, idx) => (
@@ -727,6 +768,24 @@ export default function SettingsPage() {
                         onClick={() => updateSettings({ progressionLogCompact: opt.value as RecentSessionsCompactMode })}
                         className={`px-2.5 py-1 text-[10px] font-medium transition-all ${
                           (settings.progressionLogCompact ?? "auto") === opt.value
+                            ? "bg-gold-dim/20 text-gold border-gold/30"
+                            : "text-mist-dark hover:text-mist-light hover:bg-ink-mid/20"
+                        } ${idx > 0 ? "border-l border-ink-light" : ""}`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-3 py-1.5">
+                  <span className="text-[11px] text-mist-light shrink-0">Variation text</span>
+                  <div className="flex rounded-md border border-ink-light overflow-hidden">
+                    {([{ value: "abbreviation", label: "Abbrev" }, { value: "full", label: "Full" }] as const).map((opt, idx) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => updateSettings({ progressionVariationDisplay: opt.value as VariationDisplayMode })}
+                        className={`px-2.5 py-1 text-[10px] font-medium transition-all ${
+                          (settings.progressionVariationDisplay ?? "abbreviation") === opt.value
                             ? "bg-gold-dim/20 text-gold border-gold/30"
                             : "text-mist-dark hover:text-mist-light hover:bg-ink-mid/20"
                         } ${idx > 0 ? "border-l border-ink-light" : ""}`}

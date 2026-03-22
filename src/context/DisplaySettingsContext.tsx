@@ -19,6 +19,8 @@ export type FontOption = "system" | "roboto" | "cinzel" | "noto-serif" | "crimso
 
 export type TerminologyMode = "fantasy" | "normal";
 
+export type VariationDisplayMode = "abbreviation" | "full";
+
 export interface DisplaySettings {
   // Active technique cards: display mode (same as sidebar/sessions)
   activeCardMode: TechniqueDisplayMode;
@@ -103,6 +105,8 @@ export interface DisplaySettings {
   progressionColumnColorsEnabled: boolean;
   // Progression log column order grouped
   progressionColumnOrderGrouped: boolean;
+  // Progression log variation display mode
+  progressionVariationDisplay: VariationDisplayMode;
 }
 
 const DEFAULT_SETTINGS: DisplaySettings = {
@@ -148,6 +152,7 @@ const DEFAULT_SETTINGS: DisplaySettings = {
   glowIntensityProgressionLog: 100,
   progressionColumnColorsEnabled: true,
   progressionColumnOrderGrouped: false,
+  progressionVariationDisplay: "abbreviation",
 };
 
 const STORAGE_KEY = "cultivateos-display-settings";

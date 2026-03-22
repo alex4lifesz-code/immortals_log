@@ -1,1136 +1,528 @@
-"use client";
+﻿"use client";
 
-import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import PageLayout from "@/components/layout/PageLayout";
-import GlowButton from "@/components/ui/GlowButton";
-import GlowInput from "@/components/ui/GlowInput";
-import { GlowSelect } from "@/components/ui/GlowInput";
 import GlowCard from "@/components/ui/GlowCard";
-import { GlowModal } from "@/components/ui/GlowCard";
+import GlowButton from "@/components/ui/GlowButton";
+import GlowInput, { GlowSelect } from "@/components/ui/GlowInput";
+import { useAuth } from "@/context/AuthContext";
 import { useAppContext } from "@/context/AppContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
-import { useAuth } from "@/context/AuthContext";
-import { getExerciseDisplayName, getExerciseSearchText } from "@/lib/exercise-name";
-import {
-  DIFFICULTY_LEVELS,
-  TARGET_GROUPS,
-  getDifficultyColor,
-  getDifficultyGlow,
-  getTypeColor,
-  getTargetGroupColor,
-} from "@/lib/constants";
-
-const FAVOURITES_KEY = "cultivateos-favourite-techniques";
+import { DIFFICULTY_LEVELS, EXERCISE_TYPES } from "@/lib/constants";
+import { getExerciseDisplayName, matchesLooseSearch } from "@/lib/exercise-name";
+import { t } from "@/lib/terminology";
 
 interface Exercise {
   id: string;
   name: string;
-  wuxiaName?: string;
+  wuxiaName?: string | null;
   difficulty: string;
   type: string;
-  story?: string;
-  targetGroup?: string;
+  story?: string | null;
+  targetGroup?: string | null;
+  createdAt?: string;
 }
 
-function ExercisesSidebar({
-  onAdd,
-  onSearch,
-  searchTerm,
-  filterDifficulty,
-  setFilterDifficulty,
-  filterType,
-  setFilterType,
-  availableTypes,
-  total,
-  exercises: _exercises,
-  favouriteIds,
-  onToggleFavourite: _onToggleFavourite,
-  filterFavourites,
-  setFilterFavourites,
-  onDismissSidebar,
-  onUploadProgression,
-  onRemoveAllProgressions,
-  progressionCount,
-}: {
-  onAdd: () => void;
-  onSearch: (term: string) => void;
-  searchTerm: string;
-  filterDifficulty: string;
-  setFilterDifficulty: (v: string) => void;
-  filterType: string;
-  setFilterType: (v: string) => void;
-  availableTypes: string[];
-  total: number;
-  exercises: Exercise[];
-  favouriteIds: Set<string>;
-  onToggleFavourite: (id: string) => void;
-  filterFavourites: boolean;
-  setFilterFavourites: (v: boolean) => void;
-  onDismissSidebar: () => void;
-  onUploadProgression: () => void;
-  onRemoveAllProgressions: () => void;
-  progressionCount: number;
-}) {
-  const [showFilters, setShowFilters] = useState(true);
-  const [sortMode, setSortMode] = useState<string>(() => {
-    if (typeof window === "undefined") return "a-z";
-    try { return localStorage.getItem("cultivateos-exercises-sidebar-sort") || "a-z"; } catch { return "a-z"; }
-  });
+interface ProgressionTier {
+  id: string;
+  level: number;
+  name: string;
+  wuxiaName?: string;
+  description?: string;
+  targetHold?: number | null;
+  targetReps?: number | null;
+  targetRepsText?: string;
+}
 
-  useEffect(() => {
-    try { localStorage.setItem("cultivateos-exercises-sidebar-sort", sortMode); } catch {}
-  }, [sortMode]);
+interface ProgressionExercise {
+  id: string;
+  name: string;
+  wuxiaName?: string;
+  category?: string;
+  equipmentType?: string;
+  primaryMuscles?: string;
+  secondaryMuscles?: string;
+  story?: string;
+  tiers?: ProgressionTier[];
+}
 
-  const activeFiltersCount = (filterDifficulty ? 1 : 0) + (filterType ? 1 : 0) + (filterFavourites ? 1 : 0);
+type SortMode = "featured" | "name-asc" | "name-desc" | "difficulty" | "newest";
 
-  return (
-    <div className="h-full flex flex-col">
-      {/* ── Toolbar ── */}
-      <div className="px-3 pt-2.5 pb-2 shrink-0 space-y-2">
-        {/* Search */}
-        <div className="relative">
-          <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-mist-dark pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <input
-            type="text"
-            placeholder="Search techniques..."
-            value={searchTerm}
-            onChange={(e) => {
-              onSearch(e.target.value);
-            }}
-            onKeyDown={(e: React.KeyboardEvent) => {
-              if (e.key === "Enter") onDismissSidebar();
-            }}
-            className="w-full bg-ink-dark/80 border border-ink-light/50 rounded-lg pl-8 pr-8 py-1.5 text-[11px] text-cloud-white placeholder:text-mist-dark/70 outline-none transition-all duration-200 focus:border-jade-glow/60 focus:bg-ink-dark"
-          />
-          {searchTerm && (
-            <button
-              onClick={() => onSearch("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-mist-dark hover:text-cloud-white transition-colors"
-            >
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          )}
-        </div>
+function toLower(value: string | null | undefined): string {
+  return (value || "").toLowerCase();
+}
 
-        {/* Action bar */}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={onAdd}
-            className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium border border-jade/30 text-jade-light bg-jade-deep/15 hover:bg-jade-deep/30 hover:border-jade/50 transition-all duration-150"
-            title="Add new technique"
-          >
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-            Add
-          </button>
-          <button
-            onClick={onUploadProgression}
-            className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium border border-jade/30 text-jade-light bg-jade-deep/15 hover:bg-jade-deep/30 hover:border-jade/50 transition-all duration-150"
-            title="Upload progression JSON file"
-          >
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5-5m0 0l5 5m-5-5v12" /></svg>
-            Upload
-          </button>
-          {progressionCount > 0 && (
-            <button
-              onClick={onRemoveAllProgressions}
-              className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium border border-crimson/20 text-crimson-light/70 hover:bg-crimson-deep/15 hover:border-crimson/40 hover:text-crimson-light transition-all duration-150"
-              title="Remove all progressions"
-            >
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-            </button>
-          )}
+function parseCsv(raw: string | null | undefined): string[] {
+  return (raw || "")
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
+}
 
-          <div className="flex-1" />
+function getDifficultyIndex(value: string): number {
+  const idx = DIFFICULTY_LEVELS.findIndex((d) => d === value);
+  return idx === -1 ? 999 : idx;
+}
 
-          <button
-            onClick={() => setFilterFavourites(!filterFavourites)}
-            className={`w-7 h-7 rounded-md flex items-center justify-center text-[11px] border transition-all duration-150 ${
-              filterFavourites
-                ? 'bg-gold-dim/20 border-gold-dim/50 text-gold'
-                : 'border-ink-light/40 text-mist-dark hover:text-mist-light hover:border-ink-light/60'
-            }`}
-            title={filterFavourites ? "Show all" : `Favourites${favouriteIds.size > 0 ? ` (${favouriteIds.size})` : ""}`}
-          >
-            {filterFavourites ? "★" : "☆"}
-          </button>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`w-7 h-7 rounded-md flex items-center justify-center border transition-all duration-150 ${
-              showFilters
-                ? 'bg-jade-deep/25 border-jade/40 text-jade-glow'
-                : 'border-ink-light/40 text-mist-dark hover:text-mist-light hover:border-ink-light/60'
-            }`}
-            title={showFilters ? "Hide filters" : "Show filters"}
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
-          </button>
-        </div>
-      </div>
+function dualNames(exercise: Exercise, mode: "fantasy" | "normal") {
+  const conventional = (exercise.name || "").trim();
+  const cultivation = (exercise.wuxiaName || "").trim();
 
-      {/* ── Collapsible Filters + Sort ── */}
-      <AnimatePresence initial={false}>
-        {showFilters && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: "easeInOut" }}
-            className="overflow-hidden shrink-0"
-          >
-            <div className="px-3 pb-2 space-y-2">
-              {/* Realm / Difficulty */}
-              <div>
-                <div className="flex items-center gap-1.5 mb-1">
-                  <span className="text-[9px] text-mist-dark/80 uppercase tracking-widest font-medium">Realm</span>
-                  {filterDifficulty && (
-                    <button onClick={() => setFilterDifficulty("")} className="text-[9px] text-jade-glow/70 hover:text-jade-glow transition-colors">clear</button>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  <button
-                    onClick={() => setFilterDifficulty("")}
-                    className={`text-[10px] px-2 py-0.5 rounded-md transition-all duration-150 border ${
-                      !filterDifficulty
-                        ? "bg-jade-deep/40 text-jade-glow border-jade/40 shadow-[0_0_6px_rgba(58,143,143,0.15)]"
-                        : "bg-transparent text-mist-dark border-ink-light/30 hover:text-mist-light hover:border-ink-light/50"
-                    }`}
-                  >
-                    All
-                  </button>
-                  {DIFFICULTY_LEVELS.map((d) => (
-                    <button
-                      key={d}
-                      onClick={() => setFilterDifficulty(filterDifficulty === d ? "" : d)}
-                      className={`text-[10px] px-2 py-0.5 rounded-md transition-all duration-150 border ${
-                        filterDifficulty === d
-                          ? "bg-jade-deep/40 text-jade-glow border-jade/40 shadow-[0_0_6px_rgba(58,143,143,0.15)]"
-                          : "bg-transparent text-mist-dark border-ink-light/30 hover:text-mist-light hover:border-ink-light/50"
-                      }`}
-                    >
-                      {d.split(" ")[0]}
-                    </button>
-                  ))}
-                </div>
-              </div>
+  if (mode === "fantasy") {
+    return {
+      primary: cultivation || conventional,
+      secondaryLabel: "Conventional",
+      secondary: conventional,
+    };
+  }
 
-              {/* Type */}
-              <div>
-                <div className="flex items-center gap-1.5 mb-1">
-                  <span className="text-[9px] text-mist-dark/80 uppercase tracking-widest font-medium">Type</span>
-                  {filterType && (
-                    <button onClick={() => setFilterType("")} className="text-[9px] text-jade-glow/70 hover:text-jade-glow transition-colors">clear</button>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  <button
-                    onClick={() => setFilterType("")}
-                    className={`text-[10px] px-2 py-0.5 rounded-md transition-all duration-150 border ${
-                      !filterType
-                        ? "bg-jade-deep/40 text-jade-glow border-jade/40 shadow-[0_0_6px_rgba(58,143,143,0.15)]"
-                        : "bg-transparent text-mist-dark border-ink-light/30 hover:text-mist-light hover:border-ink-light/50"
-                    }`}
-                  >
-                    All
-                  </button>
-                  {availableTypes.map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setFilterType(filterType === t ? "" : t)}
-                      className={`text-[10px] px-2 py-0.5 rounded-md transition-all duration-150 border ${
-                        filterType === t
-                          ? "bg-jade-deep/40 text-jade-glow border-jade/40 shadow-[0_0_6px_rgba(58,143,143,0.15)]"
-                          : "bg-transparent text-mist-dark border-ink-light/30 hover:text-mist-light hover:border-ink-light/50"
-                      }`}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Sort */}
-              <div>
-                <span className="text-[9px] text-mist-dark/80 uppercase tracking-widest font-medium block mb-1">Sort By</span>
-                <select
-                  value={sortMode}
-                  onChange={(e) => setSortMode(e.target.value)}
-                  className="w-full bg-ink-dark/80 border border-ink-light/40 rounded-md px-2 py-1 text-[11px] text-cloud-white outline-none transition-all duration-150 focus:border-jade-glow/50 appearance-none cursor-pointer"
-                  style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 6px center', backgroundRepeat: 'no-repeat', backgroundSize: '16px', paddingRight: '28px' }}
-                >
-                  <option value="a-z">A–Z</option>
-                  <option value="z-a">Z–A</option>
-                  <option value="recent">Recent</option>
-                  <option value="difficulty">Difficulty</option>
-                  <option value="favourites">Favourites First</option>
-                </select>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ── Divider with stats ── */}
-      <div className="px-3 py-1.5 border-y border-ink-light/20 bg-ink-dark/30 shrink-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] text-mist-light/90 font-medium">
-              {total} technique{total !== 1 ? "s" : ""}
-            </span>
-            {activeFiltersCount > 0 && (
-              <span className="text-[9px] text-jade-glow/80 bg-jade-deep/20 px-1.5 py-0 rounded-full border border-jade/20">
-                {activeFiltersCount} filter{activeFiltersCount !== 1 ? "s" : ""}
-              </span>
-            )}
-          </div>
-          {favouriteIds.size > 0 && (
-            <span className="text-[10px] text-gold/70 font-medium">★ {favouriteIds.size}</span>
-          )}
-        </div>
-      </div>
-
-      {/* Spacer so content below scrolls cleanly */}
-      <div className="flex-1" />
-    </div>
-  );
+  return {
+    primary: conventional || cultivation,
+    secondaryLabel: "Cultivation",
+    secondary: cultivation,
+  };
 }
 
 export default function ExercisesPage() {
-  const { isMobile, setMobileSidebarOpen } = useAppContext();
-  const { settings } = useDisplaySettings();
   const { user } = useAuth();
+  const { isMobile } = useAppContext();
+  const router = useRouter();
+  const { settings } = useDisplaySettings();
+
+  const terminologyMode = settings.terminologyMode;
+
   const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [progressions, setProgressions] = useState<ProgressionExercise[]>([]);
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const [query, setQuery] = useState("");
   const [filterDifficulty, setFilterDifficulty] = useState("");
   const [filterType, setFilterType] = useState("");
+  const [filterCategory, setFilterCategory] = useState("");
+  const [filterMuscle, setFilterMuscle] = useState("");
+  const [filterEquipment, setFilterEquipment] = useState("");
+  const [filterProgressionOnly, setFilterProgressionOnly] = useState(false);
 
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showDetailModal, setShowDetailModal] = useState<Exercise | null>(null);
-  const [showConventionalInDetail, setShowConventionalInDetail] = useState(false);
-  const [hoveredExercise, setHoveredExercise] = useState<string | null>(null);
-  const [favouriteIds, setFavouriteIds] = useState<Set<string>>(new Set());
-  const [filterFavourites, setFilterFavourites] = useState(false);
+  const [sortMode, setSortMode] = useState<SortMode>("featured");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [visibleCount, setVisibleCount] = useState(24);
 
-  // Progression upload state
-  const [showUploadModal, setShowUploadModal] = useState(false);
-  const [showConfirmRemove, setShowConfirmRemove] = useState(false);
-  const [uploadError, setUploadError] = useState("");
-  const [uploadSuccess, setUploadSuccess] = useState("");
-  const [progressionCount, setProgressionCount] = useState(0);
-  const modalFileInputRef = useRef<HTMLInputElement>(null);
-
-  const userId = user?.id;
-
-  // New exercise form
-  const [newName, setNewName] = useState("");
-  const [newWuxiaName, setNewWuxiaName] = useState("");
-  const [newDifficulty, setNewDifficulty] = useState<string>(DIFFICULTY_LEVELS[0]);
-  const [newType, setNewType] = useState("");
-  const [newStory, setNewStory] = useState("");
-  const [newTarget, setNewTarget] = useState("");
-
-  const availableTypes = useMemo(() => {
-    const seen = new Set<string>();
-    for (const ex of exercises) {
-      const t = (ex.type || "").trim();
-      if (t) seen.add(t);
+  const progressionLookup = useMemo(() => {
+    const map = new Map<string, ProgressionExercise>();
+    for (const p of progressions) {
+      map.set(toLower(p.name), p);
+      if (p.wuxiaName) map.set(toLower(p.wuxiaName), p);
     }
-    return Array.from(seen).sort((a, b) => a.localeCompare(b));
-  }, [exercises]);
+    return map;
+  }, [progressions]);
 
-  // Load favourites from localStorage
-  useEffect(() => {
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    setError("");
+
     try {
-      const saved = localStorage.getItem(FAVOURITES_KEY);
-      if (saved) setFavouriteIds(new Set(JSON.parse(saved)));
-    } catch { /* ignore corrupted data */ }
-  }, []);
+      const [exerciseRes, progressionRes] = await Promise.all([
+        fetch("/api/exercises"),
+        user?.id ? fetch(`/api/progressions?userId=${encodeURIComponent(user.id)}`) : Promise.resolve(null),
+      ]);
 
-  const toggleFavourite = useCallback((id: string) => {
-    setFavouriteIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      localStorage.setItem(FAVOURITES_KEY, JSON.stringify([...next]));
-      return next;
-    });
-  }, []);
+      if (!exerciseRes.ok) throw new Error("Failed to load exercises.");
 
-  const getDifficultyBorderColor = (difficulty: string) => {
-    if (difficulty === "Mortal") return "#22c55e";
-    if (difficulty === "Foundation Establishment") return "#f59e0b";
-    if (difficulty === "Core Formation") return "#ef4444";
-    if (difficulty === "Nascent Soul") return "#8b5cf6";
-    if (difficulty === "Soul Splitting") return "#ec4899";
-    if (difficulty === "Tribulation Transcendence") return "#c4a84a";
-    return "#f9a8d4";
-  };
+      const exerciseData = await exerciseRes.json();
+      setExercises(Array.isArray(exerciseData.exercises) ? exerciseData.exercises : []);
 
-  const fetchExercises = useCallback(async () => {
-    try {
-      const res = await fetch("/api/exercises");
-      const data = await res.json();
-      setExercises(data.exercises || []);
-    } catch (err) {
-      console.error("Failed to fetch exercises:", err);
+      if (progressionRes && progressionRes.ok) {
+        const progressionData = await progressionRes.json();
+        setProgressions(Array.isArray(progressionData.exercises) ? progressionData.exercises : []);
+      } else {
+        setProgressions([]);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load atlas.");
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
-    fetchExercises();
-  }, [fetchExercises]);
+    fetchData();
+  }, [fetchData]);
 
-  useEffect(() => {
-    const handleExercisesUpdated = () => {
-      fetchExercises();
-    };
-
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === "exercises-library-updated-at") {
-        fetchExercises();
-      }
-    };
-
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") {
-        fetchExercises();
-      }
-    };
-
-    window.addEventListener("exercises-library-updated", handleExercisesUpdated);
-    window.addEventListener("storage", handleStorage);
-    document.addEventListener("visibilitychange", handleVisibility);
-    return () => {
-      window.removeEventListener("exercises-library-updated", handleExercisesUpdated);
-      window.removeEventListener("storage", handleStorage);
-      document.removeEventListener("visibilitychange", handleVisibility);
-    };
-  }, [fetchExercises]);
-
-  const filteredExercises = exercises.filter((e) => {
-    const matchSearch =
-      getExerciseSearchText(e).includes(searchTerm.toLowerCase()) ||
-      (e.story || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (e.targetGroup || "").toLowerCase().includes(searchTerm.toLowerCase());
-    const matchDifficulty = !filterDifficulty || e.difficulty === filterDifficulty;
-    const matchType = !filterType || e.type === filterType;
-    const matchFavourites = !filterFavourites || favouriteIds.has(e.id);
-    return matchSearch && matchDifficulty && matchType && matchFavourites;
-  });
-
-  // --- Progression upload/delete logic ---
-  const fetchProgressionCount = useCallback(async () => {
-    if (!userId) return;
-    try {
-      const res = await fetch(`/api/progressions?userId=${encodeURIComponent(userId)}`);
-      const data = await res.json();
-      const arr = data.exercises ?? data;
-      setProgressionCount(Array.isArray(arr) ? arr.length : 0);
-    } catch { setProgressionCount(0); }
-  }, [userId]);
-
-  useEffect(() => {
-    fetchProgressionCount();
-  }, [fetchProgressionCount]);
-
-  const processFile = useCallback(async (file: File) => {
-    if (!userId) return;
-    setUploadError("");
-    setUploadSuccess("");
-    try {
-      const text = await file.text();
-      const json = JSON.parse(text);
-      const exercisesArr: Record<string, unknown>[] = Array.isArray(json) ? json : json.exercises;
-      if (!Array.isArray(exercisesArr) || exercisesArr.length === 0) {
-        setUploadError("Invalid format — expected an array of exercises.");
-        return;
-      }
-
-      // 1) Import into Exercise library so they show on this page
-      const libraryPayload = exercisesArr.map((ex) => {
-        const tiers = (ex.progressions || ex.tiers) as { difficulty?: string }[] | undefined;
-        const maxDifficulty = tiers?.length
-          ? tiers[tiers.length - 1]?.difficulty || "Mortal"
-          : (ex.difficulty as string) || "Mortal";
-        return {
-          name: ex.name,
-          wuxiaName: ex.wuxiaName || "",
-          difficulty: maxDifficulty,
-          type: ex.type || "Unified Realm",
-          story: ex.story || "",
-          targetGroup: ex.category || "",
-        };
-      });
-      const libRes = await fetch("/api/exercises/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ exercises: libraryPayload }),
-      });
-      const libData = await libRes.json();
-      if (!libRes.ok) {
-        setUploadError(libData.error || "Library import failed");
-        return;
-      }
-
-      // 2) Import into Progression system for tier tracking
-      const progRes = await fetch("/api/progressions/upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, exercises: exercisesArr }),
-      });
-      const progData = await progRes.json();
-      if (!progRes.ok) {
-        setUploadError(progData.error || "Progression import failed (library import succeeded)");
-        return;
-      }
-
-      const imported = libData.imported ?? 0;
-      const skipped = (libData.skipped ?? 0) + (progData.skipped ?? 0);
-      let msg = `Imported ${imported} exercise${imported !== 1 ? "s" : ""}`;
-      if (skipped > 0) msg += ` (${skipped > imported ? Math.ceil(skipped / 2) : skipped} duplicate${skipped !== 1 ? "s" : ""} skipped)`;
-      setUploadSuccess(msg);
-      fetchExercises();
-      fetchProgressionCount();
-      window.dispatchEvent(new Event("progression-exercises-updated"));
-    } catch (err: unknown) {
-      setUploadError(err instanceof Error ? err.message : "Invalid JSON");
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    for (const ex of exercises) {
+      for (const item of parseCsv(ex.targetGroup)) set.add(item);
+      const prog = progressionLookup.get(toLower(ex.name)) || (ex.wuxiaName ? progressionLookup.get(toLower(ex.wuxiaName)) : undefined);
+      for (const item of parseCsv(prog?.category)) set.add(item);
     }
-  }, [userId, fetchExercises, fetchProgressionCount]);
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [exercises, progressionLookup]);
 
-  const handleRemoveAllProgressions = useCallback(async () => {
-    if (!userId) return;
-    try {
-      // Remove progression data
-      await fetch(`/api/progressions?userId=${encodeURIComponent(userId)}`, { method: "DELETE" });
-      // Remove exercise library entries
-      await fetch("/api/exercises", { method: "DELETE" });
-      setProgressionCount(0);
-      setShowConfirmRemove(false);
-      fetchExercises();
-      window.dispatchEvent(new Event("progression-exercises-updated"));
-    } catch (err) { console.error("Failed to remove exercises:", err); }
-  }, [userId, fetchExercises]);
-
-  const addExercise = async () => {
-    if (!newName.trim() || !newType.trim()) return;
-    try {
-      const res = await fetch("/api/exercises", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: newName,
-          wuxiaName: newWuxiaName,
-          difficulty: newDifficulty,
-          type: newType,
-          story: newStory,
-          targetGroup: newTarget,
-        }),
-      });
-      if (res.ok) {
-        setShowAddModal(false);
-        setNewName("");
-        setNewWuxiaName("");
-        setNewStory("");
-        setNewTarget("");
-        fetchExercises();
-      }
-    } catch (err) {
-      console.error("Failed to add exercise:", err);
+  const muscles = useMemo(() => {
+    const set = new Set<string>();
+    for (const p of progressions) {
+      for (const item of parseCsv(p.primaryMuscles)) set.add(item);
+      for (const item of parseCsv(p.secondaryMuscles)) set.add(item);
     }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [progressions]);
+
+  const equipment = useMemo(() => {
+    const set = new Set<string>();
+    for (const p of progressions) {
+      for (const item of parseCsv(p.equipmentType)) set.add(item);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [progressions]);
+
+  const matchFacet = (values: string[], filter: string): boolean => {
+    if (!filter.trim()) return true;
+    const needle = toLower(filter.trim());
+    return values.some((v) => toLower(v).includes(needle));
   };
 
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const filtered = useMemo(() => {
+    const q = query.trim();
 
-  const deleteExercise = async (id: string) => {
-    try {
-      await fetch(`/api/exercises/${id}`, { method: "DELETE" });
-      fetchExercises();
-      setShowDetailModal(null);
-      setShowConventionalInDetail(false);
-      setShowDeleteConfirm(null);
-    } catch (err) {
-      console.error("Failed to delete exercise:", err);
+    return exercises.filter((ex) => {
+      const prog = progressionLookup.get(toLower(ex.name)) || (ex.wuxiaName ? progressionLookup.get(toLower(ex.wuxiaName)) : undefined);
+      const hasProg = !!prog;
+
+      if (filterProgressionOnly && !hasProg) return false;
+      if (filterDifficulty && ex.difficulty !== filterDifficulty) return false;
+      if (filterType && ex.type !== filterType) return false;
+
+      if (!matchFacet([...parseCsv(ex.targetGroup), ...parseCsv(prog?.category)], filterCategory)) return false;
+      if (!matchFacet([...parseCsv(prog?.primaryMuscles), ...parseCsv(prog?.secondaryMuscles)], filterMuscle)) return false;
+      if (!matchFacet(parseCsv(prog?.equipmentType), filterEquipment)) return false;
+
+      if (!q) return true;
+
+      const searchable = [
+        ex.name,
+        ex.wuxiaName || "",
+        ex.story || "",
+        ex.type,
+        ex.targetGroup || "",
+        prog?.category || "",
+        prog?.equipmentType || "",
+        prog?.primaryMuscles || "",
+        prog?.secondaryMuscles || "",
+        prog?.story || "",
+        ...(prog?.tiers || []).map((tier) => `${tier.level} ${tier.name} ${tier.wuxiaName || ""} ${tier.description || ""}`),
+      ].join(" ");
+
+      return searchable.toLowerCase().includes(q.toLowerCase()) || matchesLooseSearch(searchable, q);
+    });
+  }, [
+    exercises,
+    progressionLookup,
+    query,
+    filterDifficulty,
+    filterType,
+    filterCategory,
+    filterMuscle,
+    filterEquipment,
+    filterProgressionOnly,
+  ]);
+
+  const sorted = useMemo(() => {
+    const list = [...filtered];
+
+    if (sortMode === "name-asc") {
+      list.sort((a, b) => getExerciseDisplayName(a, terminologyMode).localeCompare(getExerciseDisplayName(b, terminologyMode)));
+      return list;
     }
+
+    if (sortMode === "name-desc") {
+      list.sort((a, b) => getExerciseDisplayName(b, terminologyMode).localeCompare(getExerciseDisplayName(a, terminologyMode)));
+      return list;
+    }
+
+    if (sortMode === "difficulty") {
+      list.sort((a, b) => getDifficultyIndex(a.difficulty) - getDifficultyIndex(b.difficulty));
+      return list;
+    }
+
+    if (sortMode === "newest") {
+      list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+      return list;
+    }
+
+    list.sort((a, b) => {
+      const ap = progressionLookup.get(toLower(a.name)) || (a.wuxiaName ? progressionLookup.get(toLower(a.wuxiaName)) : undefined);
+      const bp = progressionLookup.get(toLower(b.name)) || (b.wuxiaName ? progressionLookup.get(toLower(b.wuxiaName)) : undefined);
+      const as = (ap ? 2 : 0) + (a.story ? 1 : 0) + (parseCsv(a.targetGroup).length > 0 ? 1 : 0);
+      const bs = (bp ? 2 : 0) + (b.story ? 1 : 0) + (parseCsv(b.targetGroup).length > 0 ? 1 : 0);
+      if (as !== bs) return bs - as;
+      return getExerciseDisplayName(a, terminologyMode).localeCompare(getExerciseDisplayName(b, terminologyMode));
+    });
+
+    return list;
+  }, [filtered, sortMode, terminologyMode, progressionLookup]);
+
+  const visibleExercises = useMemo(() => sorted.slice(0, visibleCount), [sorted, visibleCount]);
+
+  const activeFilterCount =
+    (query ? 1 : 0) +
+    (filterDifficulty ? 1 : 0) +
+    (filterType ? 1 : 0) +
+    (filterCategory ? 1 : 0) +
+    (filterMuscle ? 1 : 0) +
+    (filterEquipment ? 1 : 0) +
+    (filterProgressionOnly ? 1 : 0);
+
+  const applyInteractiveFilter = (kind: "difficulty" | "type" | "category" | "muscle" | "equipment" | "query", value: string) => {
+    if (!value.trim()) return;
+    setVisibleCount(24);
+    if (kind === "difficulty") setFilterDifficulty(value);
+    if (kind === "type") setFilterType(value);
+    if (kind === "category") setFilterCategory(value);
+    if (kind === "muscle") setFilterMuscle(value);
+    if (kind === "equipment") setFilterEquipment(value);
+    if (kind === "query") setQuery(value);
   };
+
+  const quickTagClass = "rounded border border-ink-light/25 px-2 py-1 text-xs text-mist-light hover:border-jade/40 hover:text-jade-light";
+
+  const sidebar = (
+    <div className="space-y-4">
+      <GlowCard glow="none" className="border border-jade/25 bg-ink-dark/50">
+        <div className="space-y-3 p-3">
+          <div className="text-xs uppercase tracking-[0.18em] text-gold/70">Atlas Filters</div>
+
+          <GlowInput
+            label="Search"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setVisibleCount(24);
+            }}
+            placeholder="Search title, lore, category, muscles, equipment"
+          />
+
+          <GlowSelect label="Difficulty" value={filterDifficulty} onChange={(e) => { setFilterDifficulty(e.target.value); setVisibleCount(24); }} options={[{ value: "", label: "All" }, ...DIFFICULTY_LEVELS.map((d) => ({ value: d, label: t(d, "normal") }))]} />
+          <GlowSelect label="Type" value={filterType} onChange={(e) => { setFilterType(e.target.value); setVisibleCount(24); }} options={[{ value: "", label: "All" }, ...EXERCISE_TYPES.map((d) => ({ value: d, label: t(d, "normal") }))]} />
+
+          <GlowSelect
+            label="Category"
+            value={filterCategory}
+            onChange={(e) => { setFilterCategory(e.target.value); setVisibleCount(24); }}
+            options={[{ value: "", label: "All" }, ...categories.map((item) => ({ value: item, label: item }))]}
+          />
+
+          <GlowSelect
+            label="Muscle"
+            value={filterMuscle}
+            onChange={(e) => { setFilterMuscle(e.target.value); setVisibleCount(24); }}
+            options={[{ value: "", label: "All" }, ...muscles.map((item) => ({ value: item, label: item }))]}
+          />
+
+          <GlowSelect
+            label="Equipment"
+            value={filterEquipment}
+            onChange={(e) => { setFilterEquipment(e.target.value); setVisibleCount(24); }}
+            options={[{ value: "", label: "All" }, ...equipment.map((item) => ({ value: item, label: item }))]}
+          />
+
+          <label className="flex items-center gap-2 text-sm text-mist-light">
+            <input type="checkbox" checked={filterProgressionOnly} onChange={(e) => { setFilterProgressionOnly(e.target.checked); setVisibleCount(24); }} />
+            Show only cultivation pathways
+          </label>
+
+          <GlowButton
+            variant="ghost"
+            onClick={() => {
+              setQuery("");
+              setFilterDifficulty("");
+              setFilterType("");
+              setFilterCategory("");
+              setFilterMuscle("");
+              setFilterEquipment("");
+              setFilterProgressionOnly(false);
+              setVisibleCount(24);
+            }}
+          >
+            Clear Seals
+          </GlowButton>
+        </div>
+      </GlowCard>
+
+      <GlowCard glow="none" className="border border-gold/25 bg-ink-dark/50">
+        <div className="space-y-1 p-3 text-sm">
+          <div className="text-gold/80">Total scrolls: {exercises.length}</div>
+          <div className="text-mist-light">Matching scrolls: {sorted.length}</div>
+          <div className="text-jade-light">With pathways: {sorted.filter((ex) => progressionLookup.has(toLower(ex.name)) || (ex.wuxiaName ? progressionLookup.has(toLower(ex.wuxiaName)) : false)).length}</div>
+          <div className="text-mist-dark">Active seals: {activeFilterCount}</div>
+        </div>
+      </GlowCard>
+    </div>
+  );
 
   return (
-    <PageLayout
-      title="Technique Scroll"
-      subtitle="A comprehensive library of martial cultivation techniques"
-      sidebarLabel="Categories"
-      sidebar={
-        <ExercisesSidebar
-          onAdd={() => setShowAddModal(true)}
-          onSearch={setSearchTerm}
-          searchTerm={searchTerm}
-          filterDifficulty={filterDifficulty}
-          setFilterDifficulty={setFilterDifficulty}
-          filterType={filterType}
-          setFilterType={setFilterType}
-          availableTypes={availableTypes}
-          total={exercises.length}
-          exercises={exercises}
-          favouriteIds={favouriteIds}
-          onToggleFavourite={toggleFavourite}
-          filterFavourites={filterFavourites}
-          setFilterFavourites={setFilterFavourites}
-          onDismissSidebar={() => setMobileSidebarOpen(false)}
-          onUploadProgression={() => { setUploadError(""); setUploadSuccess(""); setShowUploadModal(true); }}
-          onRemoveAllProgressions={() => setShowConfirmRemove(true)}
-          progressionCount={progressionCount}
-        />
-      }
-    >
-      {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-            className="text-3xl"
-          >
-            ☯
-          </motion.div>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {/* Main content search bar — mobile only; desktop uses sidebar search */}
-          {isMobile && (
-            <div className="mb-4">
-              <GlowInput
-                placeholder="Search techniques..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-          )}
+    <PageLayout title={t("Technique Scroll", terminologyMode)} subtitle="Lore Atlas Explorer" sidebar={sidebar} sidebarLabel="Explore">
+      <div className="space-y-4">
+        <GlowCard glow="none" className="border border-gold/25 bg-[linear-gradient(165deg,rgba(35,28,22,0.85),rgba(18,16,14,0.9))]">
+          <div className="space-y-2 p-4">
+            <div className="text-xs uppercase tracking-[0.2em] text-gold/80">Grand Archive</div>
+            <h2 className="text-xl font-semibold text-cloud-white">Wuxia Technique Lore Atlas</h2>
+            <p className="text-sm leading-relaxed text-mist-light">
+              Traverse collected martial records by realm, path, and discipline. Every badge and lore tag can be clicked to refine the atlas.
+            </p>
+          </div>
+        </GlowCard>
 
-          {filteredExercises.length === 0 ? (
-        <div className="text-center py-16">
-          <motion.div
-            animate={{ y: [0, -8, 0] }}
-            transition={{ duration: 4, repeat: Infinity }}
-            className="text-5xl mb-4"
-          >
-            📜
-          </motion.div>
-          <h3 className="text-lg text-cloud-white mb-2">
-            {exercises.length === 0
-              ? "The Scroll Library is Empty"
-              : "No Techniques Found"}
-          </h3>
-          <p className="text-sm text-mist-mid mb-6">
-            {exercises.length === 0
-              ? "Add techniques manually or import a JSON scroll to populate your library."
-              : "Try adjusting your search or filters."}
-          </p>
-          {exercises.length === 0 && (
-            <div className="flex gap-3 justify-center">
-              <GlowButton
-                variant="jade"
-                glow
-                onClick={() => setShowAddModal(true)}
-              >
-                ✦ Add Technique
-              </GlowButton>
-            </div>
-          )}
-        </div>
-      ) : (
-        <>
-
-          {filteredExercises.map((exercise, i) => (
-            <motion.div
-              key={exercise.id}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.03, type: "spring", stiffness: 260, damping: 22 }}
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.99 }}
-              onMouseEnter={() => setHoveredExercise(exercise.id)}
-              onMouseLeave={() => setHoveredExercise(null)}
-            >
-              <GlowCard
-                glow={
-                  exercise.difficulty === "Heavenly Dao"
-                    ? "gold"
-                    : exercise.difficulty === "Immortal"
-                    ? "gold"
-                    : exercise.difficulty.includes("Tribulation")
-                    ? "crimson"
-                    : "jade"
-                }
-                onClick={() => setShowDetailModal(exercise)}
-                className={`transition-all duration-300 min-h-[172px] shadow-[0_0_12px_rgba(58,143,143,0.2)] ${
-                  hoveredExercise === exercise.id
-                    ? `${getDifficultyGlow(exercise.difficulty)} shadow-[0_0_20px_rgba(58,143,143,0.4)]`
-                    : ""
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3 h-full">
-                  <div className="flex items-start gap-3 min-w-0">
-                    <span className="text-lg pt-0.5 opacity-80">
-                      {exercise.type === "Upper Heaven"
-                        ? "☁️"
-                        : exercise.type === "Lower Realms"
-                        ? "🔥"
-                        : exercise.type === "Heart Meridian"
-                        ? "💚"
-                        : "⭐"}
-                    </span>
-                    <div className="flex flex-col min-w-0 h-full">
-                      <h3 className="text-sm font-semibold text-cloud-white truncate leading-snug tracking-wide">
-                        {getExerciseDisplayName(exercise, settings.terminologyMode)}
-                      </h3>
-                      <div className="mt-1.5 flex items-center gap-1.5 flex-nowrap overflow-hidden">
-                        <span
-                          className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${getDifficultyColor(exercise.difficulty)} bg-ink-dark/40 whitespace-nowrap border border-current/15`}
-                        >
-                          {exercise.difficulty}
-                        </span>
-                        <span
-                          className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${getTypeColor(exercise.type)} bg-ink-dark/40 whitespace-nowrap border border-current/15`}
-                        >
-                          {exercise.type}
-                        </span>
-                        {exercise.targetGroup && (
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full ${getTargetGroupColor(exercise.targetGroup)} bg-ink-dark/40 truncate border border-current/10`}>
-                            {exercise.targetGroup}
-                          </span>
-                        )}
-                      </div>
-                      <p className="mt-2.5 text-[11px] text-mist-mid leading-relaxed lore-clamp">
-                        {exercise.story?.trim() || <span className="italic text-mist-dark">No lore inscribed yet.</span>}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-center gap-2 pt-1">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); toggleFavourite(exercise.id); }}
-                      className={`text-base transition-all duration-200 hover:scale-125 ${
-                        favouriteIds.has(exercise.id) ? "text-gold opacity-100" : "text-mist-dark/40 opacity-60 hover:opacity-100"
-                      }`}
-                      aria-label={favouriteIds.has(exercise.id) ? "Remove from favourites" : "Add to favourites"}
-                    >
-                      {favouriteIds.has(exercise.id) ? "★" : "☆"}
-                    </button>
-                    <span className="text-mist-dark/60 text-xs">→</span>
-                  </div>
-                </div>
-              </GlowCard>
-            </motion.div>
-          ))}
-        </>
-      )}
-        </div>
-      )}
-
-      {/* Add Exercise Modal */}
-      <GlowModal
-        isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        title="Inscribe New Technique"
-      >
-        <div className="space-y-3">
-          <GlowInput
-            label="Exercise Name (Conventional)"
-            placeholder="Name of the exercise..."
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-          />
-          <GlowInput
-            label="Technique Name (Wuxia, Optional)"
-            placeholder="Wuxia-themed name..."
-            value={newWuxiaName}
-            onChange={(e) => setNewWuxiaName(e.target.value)}
-          />
-          <GlowSelect
-            label="Cultivation Realm"
-            value={newDifficulty}
-            onChange={(e) => setNewDifficulty(e.target.value)}
-            options={DIFFICULTY_LEVELS.map((d) => ({ value: d, label: d }))}
-          />
-          <GlowInput
-            label="Path"
-            placeholder="e.g. barbell, machine, cardio..."
-            value={newType}
-            onChange={(e) => setNewType(e.target.value)}
-          />
-          <GlowSelect
-            label="Target Group"
-            value={newTarget}
-            onChange={(e) => setNewTarget(e.target.value)}
-            options={[
-              { value: "", label: "Select Target Group (Optional)" },
-              ...TARGET_GROUPS.map((tg) => ({ value: tg, label: tg }))
-            ]}
-          />
-          <GlowInput
-            label="Target Group"
-            placeholder="e.g. Chest, Legs, Full Body..."
-            value={newTarget}
-            onChange={(e) => setNewTarget(e.target.value)}
-          />
-          <div className="space-y-1">
-            <label className="block text-xs text-mist-light tracking-wider uppercase">
-              Technique Lore
-            </label>
-            <textarea
-              placeholder="The story behind this technique..."
-              value={newStory}
-              onChange={(e) => setNewStory(e.target.value)}
-              rows={3}
-              className="w-full bg-ink-dark border border-ink-light rounded-lg px-3 py-2 text-sm text-cloud-white placeholder:text-mist-dark outline-none transition-all duration-300 resize-none focus:border-jade-glow focus:shadow-[0_0_12px_rgba(58,143,143,0.3)]"
+        <GlowCard glow="none" className="border border-ink-light/20 bg-ink-dark/40">
+          <div className="grid grid-cols-1 gap-3 p-3 md:grid-cols-3">
+            <GlowSelect
+              label="Sort"
+              value={sortMode}
+              onChange={(e) => setSortMode(e.target.value as SortMode)}
+              options={[
+                { value: "featured", label: "Featured Scrolls" },
+                { value: "name-asc", label: "Name A-Z" },
+                { value: "name-desc", label: "Name Z-A" },
+                { value: "difficulty", label: "Difficulty" },
+                { value: "newest", label: "Newest" },
+              ]}
             />
-          </div>
-          <GlowButton variant="jade" glow className="w-full" onClick={addExercise}>
-            ✦ Inscribe Technique
-          </GlowButton>
-        </div>
-      </GlowModal>
 
-      {/* Detail Modal */}
-      <GlowModal
-        isOpen={!!showDetailModal}
-        onClose={() => { setShowDetailModal(null); setShowConventionalInDetail(false); }}
-        title=""
-        hideHeader
-        panelClassName="max-w-2xl max-h-[90vh] min-h-[40vh] overflow-y-auto sidebar-scroll"
-        contentClassName="p-0"
-        glowColor={showDetailModal ? getDifficultyBorderColor(showDetailModal.difficulty) : undefined}
-      >
-        {showDetailModal && (() => {
-          const accentColor = getDifficultyBorderColor(showDetailModal.difficulty);
-          return (
-            <div className="relative">
-              {/* Warm parchment background */}
-              <div
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  background: `linear-gradient(170deg, ${accentColor}08 0%, transparent 30%, ${accentColor}04 100%)`,
-                }}
-              />
+            <GlowSelect
+              label="View"
+              value={viewMode}
+              onChange={(e) => setViewMode(e.target.value as "grid" | "list")}
+              options={[
+                { value: "grid", label: "Scroll Cards" },
+                { value: "list", label: "Archive List" },
+              ]}
+            />
 
-              {/* ─── Close Button ─── */}
-              <div className="sticky top-0 z-20 flex justify-end px-6 pt-5">
-                <motion.button
-                  whileHover={{ scale: 1.15, rotate: 90 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => { setShowDetailModal(null); setShowConventionalInDetail(false); }}
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-ink-dark/80 backdrop-blur-sm border border-ink-light/50 text-mist-dark hover:text-cloud-white hover:border-mist-mid transition-all duration-200"
-                  aria-label="Close technique details"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </motion.button>
-              </div>
-
-              {/* ─── Title Section ─── */}
-              <div className="px-8 sm:px-12 pt-2 pb-6 text-center relative">
-                {/* Decorative top rule */}
-                <div
-                  className="h-px w-20 mx-auto mb-6 opacity-60"
-                  style={{ background: `linear-gradient(to right, transparent, ${accentColor}, transparent)` }}
-                />
-
-                <h2
-                  className="text-2xl sm:text-3xl font-bold tracking-wide leading-tight"
-                  style={{
-                    fontFamily: "'Cinzel', 'Georgia', serif",
-                    color: accentColor,
-                    textShadow: `0 0 30px ${accentColor}30`,
-                    letterSpacing: '0.04em',
-                  }}
-                >
-                  {getExerciseDisplayName(showDetailModal, settings.terminologyMode)}
-                </h2>
-                {showDetailModal.wuxiaName && settings.terminologyMode === "normal" && (
-                  <p className="mt-2 text-xs text-mist-mid">Wuxia title: {showDetailModal.wuxiaName}</p>
-                )}
-                {showDetailModal.wuxiaName && settings.terminologyMode === "fantasy" && (
-                  <div className="mt-2 flex items-center justify-center gap-2">
-                    <button
-                      onClick={() => setShowConventionalInDetail(!showConventionalInDetail)}
-                      className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-all duration-200 ${showConventionalInDetail ? 'bg-jade-glow/20 text-jade-glow border border-jade-glow/40' : 'bg-ink-light/30 text-mist-dark hover:text-mist-light hover:bg-ink-light/50 border border-ink-light/40'}`}
-                      title="Show conventional name"
-                    >
-                      i
-                    </button>
-                    {showConventionalInDetail && (
-                      <p className="text-xs text-mist-mid">Conventional name: {showDetailModal.name}</p>
-                    )}
-                  </div>
-                )}
-
-                {/* Decorative bottom rule */}
-                <div
-                  className="h-px w-20 mx-auto mt-6 opacity-60"
-                  style={{ background: `linear-gradient(to right, transparent, ${accentColor}, transparent)` }}
-                />
-
-                <p
-                  className="mt-4 text-[11px] text-mist-dark uppercase tracking-[0.35em]"
-                  style={{ fontFamily: "'Cinzel', serif" }}
-                >
-                  Technique Scroll
-                </p>
-              </div>
-
-              {/* ─── Metadata Strip ─── */}
-              <div
-                className="mx-6 sm:mx-10 px-5 py-4 rounded-lg flex flex-wrap items-center justify-center gap-x-6 gap-y-3"
-                style={{
-                  background: `linear-gradient(135deg, ${accentColor}08, transparent, ${accentColor}05)`,
-                  borderTop: `1px solid ${accentColor}20`,
-                  borderBottom: `1px solid ${accentColor}20`,
-                }}
-              >
-                {/* Cultivation Realm */}
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-mist-dark uppercase tracking-widest" style={{ fontFamily: "'Cinzel', serif" }}>
-                    Realm
-                  </span>
-                  <span
-                    className="text-xs font-semibold px-3 py-1 rounded-full border"
-                    style={{
-                      color: accentColor,
-                      borderColor: `${accentColor}40`,
-                      backgroundColor: `${accentColor}10`,
-                      fontFamily: "'Cinzel', serif",
-                    }}
-                  >
-                    {showDetailModal.difficulty}
-                  </span>
-                </div>
-
-                {/* Separator dot */}
-                <span className="text-ink-light text-[6px] hidden sm:inline">●</span>
-
-                {/* Dao Path */}
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-mist-dark uppercase tracking-widest" style={{ fontFamily: "'Cinzel', serif" }}>
-                    Path
-                  </span>
-                  <span
-                    className="text-xs font-medium px-3 py-1 rounded-full border"
-                    style={{
-                      color: '#c9b697',
-                      borderColor: '#8b735540',
-                      backgroundColor: '#8b735510',
-                      fontFamily: "'Cinzel', serif",
-                    }}
-                  >
-                    {showDetailModal.type}
-                  </span>
-                </div>
-
-                {/* Focus Region */}
-                {showDetailModal.targetGroup && (
-                  <>
-                    <span className="text-ink-light text-[6px] hidden sm:inline">●</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-mist-dark uppercase tracking-widest" style={{ fontFamily: "'Cinzel', serif" }}>
-                        Focus
-                      </span>
-                      <span
-                        className="text-xs font-medium px-3 py-1 rounded-full border"
-                        style={{
-                          color: '#a89478',
-                          borderColor: '#8b735530',
-                          backgroundColor: '#8b735508',
-                          fontFamily: "'Cinzel', serif",
-                        }}
-                      >
-                        {showDetailModal.targetGroup}
-                      </span>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {/* ─── Lore / Story Section ─── */}
-              {showDetailModal.story ? (
-                <div className="px-8 sm:px-12 pt-10 pb-8">
-                  {/* Section heading */}
-                  <div className="text-center mb-8">
-                    <p
-                      className="text-[11px] uppercase tracking-[0.4em] font-semibold"
-                      style={{
-                        color: `${accentColor}cc`,
-                        fontFamily: "'Cinzel', serif",
-                      }}
-                    >
-                      Ancient Lore
-                    </p>
-                    <div
-                      className="h-px w-16 mx-auto mt-3 opacity-40"
-                      style={{ background: `linear-gradient(to right, transparent, ${accentColor}, transparent)` }}
-                    />
-                  </div>
-
-                  {/* Prose body — optimised for extended reading */}
-                  <div className="max-w-prose mx-auto">
-                    {showDetailModal.story.split(/\n\n+/).map((paragraph, i) => (
-                      <p
-                        key={i}
-                        className="first-letter:text-[1.5em] first-letter:font-semibold first-letter:leading-[1]"
-                        style={{
-                          color: '#d4c5b0',
-                          fontFamily: "'Libre Baskerville', 'Georgia', 'Times New Roman', serif",
-                          fontSize: '0.95rem',
-                          lineHeight: '2',
-                          textIndent: i > 0 ? '2em' : undefined,
-                          marginBottom: '1.5em',
-                          textAlign: 'justify',
-                          wordBreak: 'break-word',
-                          hyphens: 'auto',
-                        }}
-                      >
-                        {paragraph.trim()}
-                      </p>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="px-8 sm:px-12 py-12 text-center">
-                  <p className="text-sm text-mist-dark italic" style={{ fontFamily: "'Libre Baskerville', 'Georgia', serif" }}>
-                    No lore has been inscribed for this technique.
-                  </p>
-                </div>
-              )}
-
-              {/* ─── Footer Actions ─── */}
-              <div
-                className="px-8 sm:px-12 py-5 flex justify-center"
-                style={{ borderTop: `1px solid ${accentColor}15` }}
-              >
-                {showDeleteConfirm === showDetailModal.id ? (
-                  <div className="flex flex-col items-center gap-3 w-full max-w-xs">
-                    <p className="text-xs text-crimson-light text-center">Are you sure you want to remove this technique? This action cannot be undone.</p>
-                    <div className="flex gap-2 w-full">
-                      <GlowButton
-                        variant="crimson"
-                        size="sm"
-                        onClick={() => deleteExercise(showDetailModal.id)}
-                        className="flex-1 font-medium text-xs"
-                        style={{ fontFamily: "'Cinzel', serif" }}
-                      >
-                        Confirm Remove
-                      </GlowButton>
-                      <GlowButton
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowDeleteConfirm(null)}
-                        className="flex-1 font-medium text-xs"
-                        style={{ fontFamily: "'Cinzel', serif" }}
-                      >
-                        Cancel
-                      </GlowButton>
-                    </div>
-                  </div>
-                ) : (
-                  <GlowButton
-                    variant="crimson"
-                    size="sm"
-                    onClick={() => setShowDeleteConfirm(showDetailModal.id)}
-                    className="font-medium text-xs"
-                    style={{ fontFamily: "'Cinzel', serif" }}
-                  >
-                    Remove Technique
-                  </GlowButton>
-                )}
-              </div>
+            <div className="flex items-end gap-2">
+              <GlowButton variant="blue" className="w-full" onClick={fetchData}>Refresh Atlas</GlowButton>
             </div>
-          );
-        })()}
-      </GlowModal>
-
-      {/* ─── Progression Upload Modal ─── */}
-      <GlowModal
-        isOpen={showUploadModal}
-        onClose={() => setShowUploadModal(false)}
-        title="Upload Technique Scroll"
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-mist-light">
-            Upload a JSON scroll to populate the <span className="text-jade-glow font-medium">Exercise Library</span> and <span className="text-jade-glow font-medium">Progression</span> tracker.
-          </p>
-          <input
-            ref={modalFileInputRef}
-            type="file"
-            accept=".json"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) processFile(file);
-              e.target.value = "";
-            }}
-          />
-          <GlowButton
-            variant="jade"
-            glow
-            className="w-full"
-            onClick={() => modalFileInputRef.current?.click()}
-          >
-            📤 Select JSON File
-          </GlowButton>
-          {uploadError && (
-            <p className="text-xs text-crimson-light bg-crimson-dark/10 border border-crimson-dark/20 rounded px-3 py-2">{uploadError}</p>
-          )}
-          {uploadSuccess && (
-            <p className="text-xs text-jade-glow bg-jade-glow/10 border border-jade-glow/20 rounded px-3 py-2">{uploadSuccess}</p>
-          )}
-          <div className="bg-ink-dark/50 border border-ink-light/20 rounded-lg p-3">
-            <p className="text-[10px] text-mist-dark font-medium uppercase tracking-wider mb-2">Expected Format</p>
-            <pre className="text-[10px] text-mist-mid leading-relaxed overflow-x-auto sidebar-scroll">
-{`{
-  "exercises": [
-    {
-      "name": "Push Up",
-      "category": "Upper Body",
-      "tiers": [
-        {
-          "tier": 1,
-          "variations": [
-            { "name": "Wall Push Up", "reps": "3x10" }
-          ]
-        }
-      ]
-    }
-  ]
-}`}
-            </pre>
           </div>
-        </div>
-      </GlowModal>
+        </GlowCard>
 
-      {/* ─── Remove All Progressions Confirmation ─── */}
-      <GlowModal
-        isOpen={showConfirmRemove}
-        onClose={() => setShowConfirmRemove(false)}
-        title="Purge All Exercises"
-      >
-        <div className="space-y-4 text-center">
-          <p className="text-sm text-crimson-light">
-            This will permanently remove all exercises from the library and <span className="font-bold">{progressionCount}</span> progression exercise{progressionCount !== 1 ? "s" : ""} with all training logs.
-          </p>
-          <p className="text-xs text-mist-dark">This action cannot be undone.</p>
-          <div className="flex gap-3 justify-center pt-2">
-            <GlowButton variant="crimson" glow onClick={handleRemoveAllProgressions}>
-              Purge All
-            </GlowButton>
-            <GlowButton variant="ghost" onClick={() => setShowConfirmRemove(false)}>
-              Cancel
-            </GlowButton>
+        {activeFilterCount > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {query && <button className={quickTagClass} onClick={() => setQuery("")}>Search: {query}</button>}
+            {filterDifficulty && <button className={quickTagClass} onClick={() => setFilterDifficulty("")}>Difficulty: {t(filterDifficulty, "normal")}</button>}
+            {filterType && <button className={quickTagClass} onClick={() => setFilterType("")}>Type: {t(filterType, "normal")}</button>}
+            {filterCategory && <button className={quickTagClass} onClick={() => setFilterCategory("")}>Category: {filterCategory}</button>}
+            {filterMuscle && <button className={quickTagClass} onClick={() => setFilterMuscle("")}>Muscle: {filterMuscle}</button>}
+            {filterEquipment && <button className={quickTagClass} onClick={() => setFilterEquipment("")}>Equipment: {filterEquipment}</button>}
+            {filterProgressionOnly && <button className={quickTagClass} onClick={() => setFilterProgressionOnly(false)}>Pathways only</button>}
           </div>
-        </div>
-      </GlowModal>
+        )}
+
+        {error && <div className="rounded border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">{error}</div>}
+
+        {isLoading ? (
+          <div className="rounded border border-ink-light/20 bg-ink-dark/40 p-8 text-center text-mist-dark">Loading exercise explorer...</div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between text-sm text-mist-dark">
+              <div>Showing {Math.min(visibleExercises.length, sorted.length)} of {sorted.length} matching scrolls</div>
+              <div>{isMobile ? "Tap a scroll to open details" : "Click a scroll to open details"}</div>
+            </div>
+
+            {viewMode === "grid" ? (
+              <div className="grid grid-cols-1 gap-2">
+                {visibleExercises.map((exercise) => {
+                  const progression = progressionLookup.get(toLower(exercise.name)) || (exercise.wuxiaName ? progressionLookup.get(toLower(exercise.wuxiaName)) : undefined);
+                  const names = dualNames(exercise, terminologyMode);
+
+                  return (
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      key={exercise.id}
+                      onClick={() => router.push(`/dashboard/exercises/${exercise.id}`)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          router.push(`/dashboard/exercises/${exercise.id}`);
+                        }
+                      }}
+                      className="cursor-pointer rounded border border-ink-light/20 bg-[linear-gradient(170deg,rgba(25,23,21,0.75),rgba(17,16,15,0.8))] px-3 py-2 text-left transition-all hover:border-jade/35"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm font-medium text-cloud-white">{names.primary || "Unnamed Technique"}</div>
+                          {names.secondary && names.secondary !== names.primary && (
+                            <div className="truncate text-xs text-mist-light">{names.secondaryLabel}: {names.secondary}</div>
+                          )}
+                          <p className="mt-1 line-clamp-1 text-xs text-mist-dark">{exercise.story || progression?.story || "No lore available."}</p>
+                        </div>
+
+                        <div className="flex shrink-0 flex-wrap justify-end gap-1 text-xs text-mist-dark">
+                          <button className="rounded border border-gold/30 bg-gold/10 px-1.5 py-0.5 text-gold" onClick={(e) => { e.stopPropagation(); applyInteractiveFilter("difficulty", exercise.difficulty); }}>{exercise.difficulty}</button>
+                          <button className="rounded border border-jade/30 bg-jade-deep/15 px-1.5 py-0.5 text-jade-light" onClick={(e) => { e.stopPropagation(); applyInteractiveFilter("type", exercise.type); }}>{exercise.type}</button>
+                          {progression && <button className="rounded border border-jade-glow/30 px-1.5 py-0.5 text-jade-light" onClick={(e) => { e.stopPropagation(); setFilterProgressionOnly(true); }}>Pathway</button>}
+                        </div>
+                      </div>
+
+                      <div className="mt-1 flex flex-wrap gap-2 text-xs text-mist-dark">
+                        {(exercise.targetGroup || progression?.category) && <button className="hover:text-jade-light" onClick={(e) => { e.stopPropagation(); applyInteractiveFilter("category", exercise.targetGroup || progression?.category || ""); }}>Category: {exercise.targetGroup || progression?.category}</button>}
+                        {progression?.primaryMuscles && <button className="hover:text-jade-light" onClick={(e) => { e.stopPropagation(); applyInteractiveFilter("muscle", progression.primaryMuscles || ""); }}>Primary: {progression.primaryMuscles}</button>}
+                        {progression?.equipmentType && <button className="hover:text-jade-light" onClick={(e) => { e.stopPropagation(); applyInteractiveFilter("equipment", progression.equipmentType || ""); }}>Equipment: {progression.equipmentType}</button>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded border border-gold/20 bg-ink-dark/40">
+                <table className="w-full text-sm">
+                  <thead className="bg-ink-dark/80 text-gold/80">
+                    <tr>
+                      <th className="p-2 text-left">Scroll</th>
+                      <th className="p-2 text-left">Realm</th>
+                      <th className="p-2 text-left">Path</th>
+                      <th className="p-2 text-left">Discipline</th>
+                      <th className="p-2 text-left">Pathway</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleExercises.map((exercise) => {
+                      const progression = progressionLookup.get(toLower(exercise.name)) || (exercise.wuxiaName ? progressionLookup.get(toLower(exercise.wuxiaName)) : undefined);
+                      const names = dualNames(exercise, terminologyMode);
+                      return (
+                        <tr
+                          key={exercise.id}
+                          className="cursor-pointer border-t border-ink-light/15 hover:bg-ink-dark/60"
+                          onClick={() => router.push(`/dashboard/exercises/${exercise.id}`)}
+                        >
+                          <td className="p-2">
+                            <div className="text-cloud-white">{names.primary || "Unnamed Technique"}</div>
+                            {names.secondary && names.secondary !== names.primary && <div className="text-xs text-mist-light">{names.secondaryLabel}: {names.secondary}</div>}
+                          </td>
+                          <td className="p-2"><button className="hover:text-jade-light" onClick={(e) => { e.stopPropagation(); applyInteractiveFilter("difficulty", exercise.difficulty); }}>{exercise.difficulty}</button></td>
+                          <td className="p-2"><button className="hover:text-jade-light" onClick={(e) => { e.stopPropagation(); applyInteractiveFilter("type", exercise.type); }}>{exercise.type}</button></td>
+                          <td className="p-2"><button className="hover:text-jade-light" onClick={(e) => { e.stopPropagation(); applyInteractiveFilter("category", exercise.targetGroup || progression?.category || ""); }}>{exercise.targetGroup || progression?.category || "-"}</button></td>
+                          <td className="p-2"><button className="hover:text-jade-light" onClick={(e) => { e.stopPropagation(); setFilterProgressionOnly(true); }}>{progression ? `${(progression.tiers || []).length} tiers` : "-"}</button></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {visibleExercises.length < sorted.length && (
+              <div className="flex justify-center pt-2">
+                <GlowButton variant="ghost" onClick={() => setVisibleCount((count) => count + 24)}>
+                  Open More Scrolls
+                </GlowButton>
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </PageLayout>
   );
 }

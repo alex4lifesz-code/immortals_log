@@ -35,17 +35,13 @@ async function main() {
   const deletedCheckins = await prisma.checkIn.deleteMany();
   console.log(`    → ${deletedCheckins.count} check-in(s) removed`);
 
-  console.log('  Deleting simplified workout exercises...');
-  const deletedSimplified = await prisma.simplifiedWorkoutExercise.deleteMany();
-  console.log(`    → ${deletedSimplified.count} record(s) removed`);
+  console.log('  Deleting progression logs...');
+  const deletedLogs = await prisma.progressionLog.deleteMany();
+  console.log(`    → ${deletedLogs.count} log(s) removed`);
 
-  console.log('  Deleting detailed workout exercises...');
-  const deletedDetailed = await prisma.detailedWorkoutExercise.deleteMany();
-  console.log(`    → ${deletedDetailed.count} record(s) removed`);
-
-  console.log('  Deleting workouts...');
-  const deletedWorkouts = await prisma.workout.deleteMany();
-  console.log(`    → ${deletedWorkouts.count} workout(s) removed`);
+  console.log('  Deleting user progression levels...');
+  const deletedLevels = await prisma.userProgressionLevel.deleteMany();
+  console.log(`    → ${deletedLevels.count} level(s) removed`);
 
   console.log('  Deleting user settings...');
   const deletedSettings = await prisma.userSettings.deleteMany();

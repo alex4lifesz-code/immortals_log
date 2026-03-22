@@ -1,8 +1,19 @@
 import { TerminologyMode } from "@/context/DisplaySettingsContext";
+import { t } from "@/lib/terminology";
 
 export interface ExerciseNameLike {
   name?: string | null;
   wuxiaName?: string | null;
+}
+
+export interface ExerciseTypeLike {
+  type?: string | null;
+  wuxiaType?: string | null;
+}
+
+export interface ExerciseDifficultyLike {
+  difficulty?: string | null;
+  wuxiaDifficulty?: string | null;
 }
 
 function normalizeSearchText(text: string): string {
@@ -33,6 +44,46 @@ export function getExerciseDisplayName(
     return exercise.name?.trim() || exercise.wuxiaName?.trim() || "Unknown Exercise";
   }
   return exercise.wuxiaName?.trim() || exercise.name?.trim() || "Unknown Technique";
+}
+
+/** Returns the type label to display based on the current terminology mode. */
+export function getTypeDisplayName(
+  exercise: ExerciseTypeLike,
+  terminologyMode: TerminologyMode
+): string {
+  if (terminologyMode === "normal") {
+    const raw = exercise.type?.trim() || exercise.wuxiaType?.trim() || "";
+    return raw ? t(raw, "normal") : "";
+  }
+  return exercise.wuxiaType?.trim() || exercise.type?.trim() || "";
+}
+
+/** Returns the difficulty label to display based on the current terminology mode. */
+export function getDifficultyDisplayName(
+  exercise: ExerciseDifficultyLike,
+  terminologyMode: TerminologyMode
+): string {
+  if (terminologyMode === "normal") {
+    const raw = exercise.difficulty?.trim() || exercise.wuxiaDifficulty?.trim() || "";
+    return raw ? t(raw, "normal") : "";
+  }
+  return exercise.wuxiaDifficulty?.trim() || exercise.difficulty?.trim() || "";
+}
+
+/**
+ * Returns the wuxia difficulty key to use for color/glow lookups.
+ * Always uses wuxiaDifficulty when available so color mapping stays consistent.
+ */
+export function getDifficultyColorKey(exercise: ExerciseDifficultyLike): string {
+  return exercise.wuxiaDifficulty?.trim() || exercise.difficulty?.trim() || "";
+}
+
+/**
+ * Returns the wuxia type key to use for icon/color lookups.
+ * Always uses wuxiaType when available so icon mapping stays consistent.
+ */
+export function getTypeColorKey(exercise: ExerciseTypeLike): string {
+  return exercise.wuxiaType?.trim() || exercise.type?.trim() || "";
 }
 
 export function getExerciseSearchText(exercise: ExerciseNameLike): string {

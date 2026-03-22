@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+const ARCHIVED_TARGET_GROUP = "__archived__";
+
+function isAdminRequest(req: NextRequest): boolean {
+  return (req.headers.get("x-user-role") || "").toLowerCase() === "admin";
+}
+
 export async function GET() {
   try {
     const exercises = await prisma.exercise.findMany({
+      where: {
+        NOT: {
+          targetGroup: ARCHIVED_TARGET_GROUP,
+        },
+      },
       orderBy: { createdAt: "desc" },
     });
     return NextResponse.json({ exercises });
@@ -15,6 +26,10 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    if (!isAdminRequest(req)) {
+      return NextResponse.json({ error: "Admin privileges required" }, { status: 403 });
+    }
+
     const body = await req.json();
     const name = String(body.name || body.originalName || "").trim().slice(0, 200);
     const wuxiaName = String(body.wuxiaName || body.name || "").trim().slice(0, 200);
@@ -38,9 +53,28 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const exercise = await prisma.exercise.create({
-      data: { name, wuxiaName: wuxiaName || null, difficulty, type, story, targetGroup },
+    // SQLite doesn't support mode:"insensitive", so fetch candidates and filter in JS
+    const archivedCandidates = await prisma.exercise.findMany({
+      where: { targetGroup: ARCHIVED_TARGET_GROUP },
     });
+    const archivedMatch = archivedCandidates.find(
+      (ex) => ex.name.toLowerCase() === name.toLowerCase()
+    ) ?? null;
+
+    const exercise = archivedMatch
+      ? await prisma.exercise.update({
+          where: { id: archivedMatch.id },
+          data: {
+            wuxiaName: wuxiaName || null,
+            difficulty,
+            type,
+            story,
+            targetGroup: targetGroup || null,
+          },
+        })
+      : await prisma.exercise.create({
+          data: { name, wuxiaName: wuxiaName || null, difficulty, type, story, targetGroup },
+        });
 
     return NextResponse.json({ exercise });
   } catch (error) {
@@ -49,15 +83,24 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function DELETE() {
+export async function DELETE(req: NextRequest) {
   try {
-    // Delete all simplified workout exercises first (foreign key constraint)
-    await prisma.simplifiedWorkoutExercise.deleteMany({});
-    // Then delete all exercises
-    const result = await prisma.exercise.deleteMany({});
+    if (!isAdminRequest(req)) {
+      return NextResponse.json({ error: "Admin privileges required" }, { status: 403 });
+    }
+
+    const deleteResult = await prisma.exercise.deleteMany({
+      where: {
+        NOT: {
+          targetGroup: ARCHIVED_TARGET_GROUP,
+        },
+      },
+    });
+
     return NextResponse.json({
-      message: `All ${result.count} technique(s) removed`,
-      deleted: result.count,
+      message: `Library purged. ${deleteResult.count} technique(s) deleted.`,
+      deleted: deleteResult.count,
+      archived: 0,
     });
   } catch (error) {
     console.error("Exercise bulk delete error:", error);

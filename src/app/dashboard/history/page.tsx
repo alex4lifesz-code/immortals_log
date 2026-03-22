@@ -7,50 +7,47 @@ import GlowCard from "@/components/ui/GlowCard";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { formatDateWithPreference } from "@/lib/constants";
-import { getExerciseDisplayName } from "@/lib/exercise-name";
 import ExerciseHistoryModal from "@/components/workout/ExerciseHistoryModal";
 
-interface WorkoutExercise {
-  id: string;
-  exercise: { id: string; name: string; wuxiaName?: string | null; difficulty: string };
-  sets?: number;
-  reps?: number;
-  weight?: number;
-  weight1?: number;
-  reps1?: number;
-  weight2?: number;
-  reps2?: number;
-  weight3?: number;
-  reps3?: number;
-  mode?: "simplified" | "detailed";
+interface ProgressionLogEntry {
+  exerciseId: string;
+  exerciseName: string;
+  level: number;
+  weight1?: number | null;
+  reps1?: number | null;
+  weight2?: number | null;
+  reps2?: number | null;
+  weight3?: number | null;
+  reps3?: number | null;
+  holdTime?: number | null;
+  holdTime2?: number | null;
+  holdTime3?: number | null;
+  modifier?: string | null;
+  variant?: string | null;
+  notes?: string | null;
+  completed?: boolean;
+  createdAt: string;
 }
 
-interface Workout {
-  id: string;
-  userId: string;
-  name: string;
+// Group logs by date for display
+interface DaySession {
   date: string;
-  simplifiedExercises?: WorkoutExercise[];
-  detailedExercises?: WorkoutExercise[];
+  logs: ProgressionLogEntry[];
 }
 
 interface ExerciseStats {
   id: string;
   name: string;
-  wuxiaName?: string | null;
   count: number;
   totalWeight: number;
-  difficulty: string;
 }
 
 function HistorySidebar({
   stats,
   exerciseStats,
-  terminologyMode,
 }: {
   stats: { total: number; thisWeek: number; thisMonth: number };
   exerciseStats: ExerciseStats[];
-  terminologyMode: "fantasy" | "normal";
 }) {
   const topExercise = exerciseStats[0];
   
@@ -60,7 +57,7 @@ function HistorySidebar({
         <h3 className="text-xs text-jade-glow mb-2 uppercase font-semibold">Statistics</h3>
         <div className="space-y-2">
           <div className="flex justify-between text-xs">
-            <span className="text-mist-mid">Total Sessions</span>
+            <span className="text-mist-mid">Total Logs</span>
             <span className="text-cloud-white font-bold">{stats.total}</span>
           </div>
           <div className="flex justify-between text-xs">
@@ -78,8 +75,8 @@ function HistorySidebar({
         <div className="ink-border rounded-lg p-3 bg-jade-deep/20 border-jade-glow/50">
           <h3 className="text-xs text-jade-glow uppercase font-semibold mb-2">🏆 Favorite Technique</h3>
           <div className="space-y-1">
-            <p className="text-sm font-bold text-cloud-white">{getExerciseDisplayName(topExercise, terminologyMode)}</p>
-            <p className="text-xs text-jade-glow">{topExercise.count} repetitions</p>
+            <p className="text-sm font-bold text-cloud-white">{topExercise.name}</p>
+            <p className="text-xs text-jade-glow">{topExercise.count} entries</p>
             {topExercise.totalWeight > 0 && (
               <p className="text-xs text-mist-dark">{topExercise.totalWeight.toLocaleString()} kg total</p>
             )}
@@ -121,7 +118,8 @@ export default function HistoryPage() {
   const { user } = useAuth();
   const { settings } = useDisplaySettings();
   const dateFormat = settings.dateFormat || "dd-mmm-yyyy";
-  const [workouts, setWorkouts] = useState<Workout[]>([]);
+  const [allLogs, setAllLogs] = useState<ProgressionLogEntry[]>([]);
+  const [daySessions, setDaySessions] = useState<DaySession[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ total: 0, thisWeek: 0, thisMonth: 0 });
   const [exerciseStats, setExerciseStats] = useState<ExerciseStats[]>([]);
@@ -135,75 +133,62 @@ export default function HistoryPage() {
   const [historyModal, setHistoryModal] = useState<{ exerciseId: string; exerciseName: string } | null>(null);
 
   useEffect(() => {
-    const fetchWorkouts = async () => {
+    const fetchLogs = async () => {
       if (!user?.id) return;
       try {
-        const res = await fetch(`/api/workouts?userId=${user.id}&showAll=true`);
+        const res = await fetch(`/api/progressions/logs/export?userId=${encodeURIComponent(user.id)}`);
         const data = await res.json();
-        const userWorkouts = data.workouts || [];
+        const logs: ProgressionLogEntry[] = data.logs || [];
         
-        setWorkouts(userWorkouts);
+        setAllLogs(logs);
+
+        // Group logs by date (descending)
+        const grouped = new Map<string, ProgressionLogEntry[]>();
+        for (const log of logs) {
+          const dateKey = log.createdAt.split("T")[0];
+          if (!grouped.has(dateKey)) grouped.set(dateKey, []);
+          grouped.get(dateKey)!.push(log);
+        }
+        const sessions: DaySession[] = Array.from(grouped.entries())
+          .map(([date, logs]) => ({ date, logs }))
+          .sort((a, b) => b.date.localeCompare(a.date));
+        setDaySessions(sessions);
 
         // Calculate stats
         const now = new Date();
         const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-        const thisWeek = userWorkouts.filter(
-          (w: Workout) => new Date(w.date) >= oneWeekAgo
+        const thisWeek = logs.filter(
+          (l) => new Date(l.createdAt) >= oneWeekAgo
         ).length;
 
-        const thisMonth = userWorkouts.filter(
-          (w: Workout) => new Date(w.date) >= oneMonthAgo
+        const thisMonth = logs.filter(
+          (l) => new Date(l.createdAt) >= oneMonthAgo
         ).length;
 
         setStats({
-          total: userWorkouts.length,
+          total: logs.length,
           thisWeek,
           thisMonth,
         });
 
         // Calculate exercise frequency
         const exerciseMap = new Map<string, ExerciseStats>();
-        userWorkouts.forEach((workout: Workout) => {
-          // Process simplified exercises
-          (workout.simplifiedExercises || []).forEach((ex: WorkoutExercise) => {
-            const key = ex.exercise.name;
-            if (!exerciseMap.has(key)) {
-              exerciseMap.set(key, {
-                id: ex.exercise.id,
-                name: ex.exercise.name,
-                wuxiaName: ex.exercise.wuxiaName,
-                count: 0,
-                totalWeight: 0,
-                difficulty: ex.exercise.difficulty,
-              });
-            }
-            const stats = exerciseMap.get(key)!;
-            stats.count++;
-            if (ex.weight) stats.totalWeight += ex.weight * (ex.sets || 1) * (ex.reps || 1);
-          });
-          
-          // Process detailed exercises
-          (workout.detailedExercises || []).forEach((ex: WorkoutExercise) => {
-            const key = ex.exercise.name;
-            if (!exerciseMap.has(key)) {
-              exerciseMap.set(key, {
-                id: ex.exercise.id,
-                name: ex.exercise.name,
-                wuxiaName: ex.exercise.wuxiaName,
-                count: 0,
-                totalWeight: 0,
-                difficulty: ex.exercise.difficulty,
-              });
-            }
-            const stats = exerciseMap.get(key)!;
-            stats.count++;
-            // Sum weights from all three sets
-            const totalWeight = (ex.weight1 || 0) + (ex.weight2 || 0) + (ex.weight3 || 0);
-            stats.totalWeight += totalWeight;
-          });
-        });
+        for (const log of logs) {
+          const key = log.exerciseName;
+          if (!exerciseMap.has(key)) {
+            exerciseMap.set(key, {
+              id: log.exerciseId,
+              name: log.exerciseName,
+              count: 0,
+              totalWeight: 0,
+            });
+          }
+          const s = exerciseMap.get(key)!;
+          s.count++;
+          s.totalWeight += (log.weight1 || 0) + (log.weight2 || 0) + (log.weight3 || 0);
+        }
 
         const sortedExercises = Array.from(exerciseMap.values()).sort((a, b) => b.count - a.count);
         setExerciseStats(sortedExercises);
@@ -212,23 +197,23 @@ export default function HistoryPage() {
         const topExercises = sortedExercises.slice(0, 5);
         setChartData(
           topExercises.map((ex) => ({
-            label: getExerciseDisplayName(ex, settings.terminologyMode),
+            label: ex.name,
             value: ex.count,
             color: "from-jade-glow to-jade-light",
           }))
         );
 
       } catch (err) {
-        console.error("Failed to fetch workouts:", err);
+        console.error("Failed to fetch progression logs:", err);
       } finally {
         setLoading(false);
       }
     };
 
     if (user) {
-      fetchWorkouts();
+      fetchLogs();
     }
-  }, [user, dateFormat, settings.terminologyMode]);
+  }, [user, dateFormat]);
 
   // Fetch check-ins and users
   useEffect(() => {
@@ -305,7 +290,7 @@ export default function HistoryPage() {
     <PageLayout
       title="Ancient Records"
       subtitle="Review your past cultivation sessions"
-      sidebar={<HistorySidebar stats={stats} exerciseStats={exerciseStats} terminologyMode={settings.terminologyMode} />}
+      sidebar={<HistorySidebar stats={stats} exerciseStats={exerciseStats} />}
       sidebarLabel="Stats"
     >
       {loading ? (
@@ -318,7 +303,7 @@ export default function HistoryPage() {
             ☯
           </motion.div>
         </div>
-      ) : workouts.length === 0 ? (
+      ) : daySessions.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16">
           <motion.div
             animate={{ y: [0, -8, 0] }}
@@ -433,10 +418,10 @@ export default function HistoryPage() {
                   for (let day = 1; day <= daysInMonth; day++) {
                     const date = new Date(year, month, day);
                     const dateString = date.toISOString().split('T')[0];
-                    const dayWorkouts = workouts.filter(w => 
-                      new Date(w.date).toISOString().split('T')[0] === dateString
+                    const dayLogs = allLogs.filter(l => 
+                      l.createdAt.split('T')[0] === dateString
                     );
-                    const hasWorkouts = dayWorkouts.length > 0;
+                    const hasLogs = dayLogs.length > 0;
                     const isToday = new Date().toISOString().split('T')[0] === dateString;
                     
                     days.push(
@@ -449,14 +434,14 @@ export default function HistoryPage() {
                           setShowDatePopup(true);
                         }}
                         className={`aspect-square rounded-lg flex flex-col items-center justify-center text-xs transition-all relative cursor-pointer
-                          ${hasWorkouts 
+                          ${hasLogs 
                             ? 'bg-gold-deep/30 border-2 border-gold-glow/50 hover:border-gold-glow hover:shadow-lg hover:shadow-gold-glow/30' 
                             : 'bg-ink-mid/30 border border-ink-light/20 hover:border-jade-glow/50 text-mist-mid hover:text-cloud-white'
                           }
                           ${isToday ? 'ring-2 ring-jade-glow ring-offset-2 ring-offset-ink-deep' : ''}
                         `}
                       >
-                        <span className={hasWorkouts ? 'text-gold-light font-bold' : ''}>
+                        <span className={hasLogs ? 'text-gold-light font-bold' : ''}>
                           {day}
                         </span>
                       </motion.button>
@@ -500,8 +485,8 @@ export default function HistoryPage() {
                   >
                     {(() => {
                       const dateString = selectedDate.toISOString().split('T')[0];
-                      const dayWorkouts = workouts.filter(w => 
-                        new Date(w.date).toISOString().split('T')[0] === dateString
+                      const dayLogs = allLogs.filter(l => 
+                        l.createdAt.split('T')[0] === dateString
                       );
 
                       return (
@@ -697,64 +682,38 @@ export default function HistoryPage() {
                             return null;
                           })()}
 
-                          {/* Workout Sessions */}
+                          {/* Training Logs */}
                           <div className="space-y-4">
                             <h3 
                               className="text-center text-sm uppercase tracking-[0.3em] text-gold-glow font-bold mb-4"
                               style={{ fontFamily: "'Cinzel', serif" }}
                             >
-                              Training Sessions
+                              Training Logs
                             </h3>
-                            {dayWorkouts.map((workout, i) => (
-                              <motion.div
-                                key={workout.id}
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: i * 0.1 }}
-                                className="p-4 rounded-lg bg-gradient-to-r from-gold-deep/10 to-crimson-deep/10 border border-gold-glow/20"
-                              >
-                                <div className="flex justify-between items-start mb-3">
-                                  <div>
-                                    <h4 className="text-base font-bold text-cloud-white" style={{ fontFamily: "'Cinzel', serif" }}>
-                                      {workout.name}
-                                    </h4>
-                                    <p className="text-xs text-mist-dark mt-1">
-                                      {new Date(workout.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </p>
-                                  </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                  {[
-                                    ...(workout.simplifiedExercises || []).map(ex => ({ ...ex, mode: "simplified" as const })),
-                                    ...(workout.detailedExercises || []).map(ex => ({ ...ex, mode: "detailed" as const }))
-                                  ].map((ex) => (
-                                    <div
-                                      key={ex.id}
-                                      className="flex items-center justify-between text-xs bg-ink-dark/50 px-3 py-2 rounded border border-ink-light/30 cursor-pointer hover:border-jade-glow/30 hover:bg-jade-deep/10 transition-all"
-                                      onClick={() => setHistoryModal({ exerciseId: ex.exercise.id || ex.id, exerciseName: getExerciseDisplayName(ex.exercise, settings.terminologyMode) })}
-                                    >
-                                      <span className="text-jade-light font-medium">{getExerciseDisplayName(ex.exercise, settings.terminologyMode)}</span>
-                                      <div className="flex items-center gap-3 text-mist-mid flex-wrap">
-                                        {ex.mode === "simplified" ? (
-                                          <>
-                                            {ex.reps1 && <span className="text-purple-300">Set 1: {ex.weight1 || "—"}kg × {ex.reps1}</span>}
-                                            {ex.reps2 && <span className="text-purple-300">Set 2: {ex.weight2 || "—"}kg × {ex.reps2}</span>}
-                                            {ex.reps3 && <span className="text-purple-300">Set 3: {ex.weight3 || "—"}kg × {ex.reps3}</span>}
-                                          </>
-                                        ) : (
-                                          <>
-                                            {ex.reps1 && <span className="text-purple-300">Set 1: {ex.weight1 || "—"}kg × {ex.reps1}</span>}
-                                            {ex.reps2 && <span className="text-purple-300">Set 2: {ex.weight2 || "—"}kg × {ex.reps2}</span>}
-                                            {ex.reps3 && <span className="text-purple-300">Set 3: {ex.weight3 || "—"}kg × {ex.reps3}</span>}
-                                          </>
-                                        )}
-                                      </div>
+                            {dayLogs.length === 0 ? (
+                              <p className="text-center text-xs text-mist-dark italic">No training logs for this date.</p>
+                            ) : (
+                              <div className="space-y-2">
+                                {dayLogs.map((log, i) => (
+                                  <motion.div
+                                    key={i}
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: i * 0.05 }}
+                                    className="flex items-center justify-between text-xs bg-ink-dark/50 px-3 py-2 rounded border border-ink-light/30 cursor-pointer hover:border-jade-glow/30 hover:bg-jade-deep/10 transition-all"
+                                    onClick={() => setHistoryModal({ exerciseId: log.exerciseId, exerciseName: log.exerciseName })}
+                                  >
+                                    <span className="text-jade-light font-medium">{log.exerciseName} <span className="text-mist-dark">Lv.{log.level}</span></span>
+                                    <div className="flex items-center gap-3 text-mist-mid flex-wrap">
+                                      {log.reps1 && <span className="text-purple-300">Set 1: {log.weight1 || "—"}kg × {log.reps1}</span>}
+                                      {log.reps2 && <span className="text-purple-300">Set 2: {log.weight2 || "—"}kg × {log.reps2}</span>}
+                                      {log.reps3 && <span className="text-purple-300">Set 3: {log.weight3 || "—"}kg × {log.reps3}</span>}
+                                      {log.holdTime && <span className="text-blue-300">Hold: {log.holdTime}s</span>}
                                     </div>
-                                  ))}
-                                </div>
-                              </motion.div>
-                            ))}
+                                  </motion.div>
+                                ))}
+                              </div>
+                            )}
                           </div>
 
                           {/* Footer Decoration */}
@@ -776,19 +735,12 @@ export default function HistoryPage() {
             )}
           </AnimatePresence>
 
-          {/* Workout List */}
+          {/* Training Log List */}
           <div className="space-y-3">
             <h3 className="text-sm font-semibold text-jade-glow uppercase">Recent Sessions</h3>
-            {workouts.map((workout, i) => {
-              // Combine exercises from both tables
-              const allExercises = [
-                ...(workout.simplifiedExercises || []).map(ex => ({ ...ex, mode: "simplified" as const })),
-                ...(workout.detailedExercises || []).map(ex => ({ ...ex, mode: "detailed" as const }))
-              ];
-              
-              return (
+            {daySessions.map((session, i) => (
                 <motion.div
-                  key={workout.id}
+                  key={session.date}
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.3 + i * 0.03 }}
@@ -797,48 +749,34 @@ export default function HistoryPage() {
                     <div className="flex justify-between items-start mb-3">
                       <div>
                         <h3 className="text-sm font-semibold text-cloud-white">
-                          {workout.name}
+                          Training Session
                         </h3>
                         <p className="text-xs text-mist-dark mt-1">
-                          {formatDateWithPreference(new Date(workout.date), dateFormat)} at{" "}
-                          {new Date(workout.date).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                          {formatDateWithPreference(new Date(session.date), dateFormat)}
                         </p>
                       </div>
                       <div className="text-right">
                         <div className="text-xs text-mist-dark">
-                          {allExercises.length} techniques
+                          {session.logs.length} log{session.logs.length !== 1 ? "s" : ""}
                         </div>
                       </div>
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                      {allExercises.slice(0, 5).map((ex) => {
-                        // Calculate display weight based on mode
-                        let displayWeight: string;
-                        if (ex.mode === "simplified") {
-                          displayWeight = ex.weight ? `${ex.weight} kg` : "—";
-                        } else {
-                          const totalWeight = (ex.weight1 || 0) + (ex.weight2 || 0) + (ex.weight3 || 0);
-                          displayWeight = totalWeight > 0 ? `${totalWeight} kg` : "—";
-                        }
+                      {session.logs.slice(0, 5).map((log, j) => {
+                        const totalWeight = (log.weight1 || 0) + (log.weight2 || 0) + (log.weight3 || 0);
+                        const displayWeight = totalWeight > 0 ? `${totalWeight} kg` : "—";
                         
                         return (
                           <div
-                            key={ex.id}
+                            key={j}
                             className="text-xs bg-ink-dark px-2 py-1 rounded text-cloud-white flex items-center gap-1 cursor-pointer hover:bg-jade-deep/20 hover:ring-1 hover:ring-jade-glow/30 transition-all"
-                            title={`Tap to view history for ${getExerciseDisplayName(ex.exercise, settings.terminologyMode)}`}
-                            onClick={() => setHistoryModal({ exerciseId: ex.exercise.id || ex.id, exerciseName: getExerciseDisplayName(ex.exercise, settings.terminologyMode) })}
+                            title={`Tap to view history for ${log.exerciseName}`}
+                            onClick={() => setHistoryModal({ exerciseId: log.exerciseId, exerciseName: log.exerciseName })}
                           >
-                            <span>{getExerciseDisplayName(ex.exercise, settings.terminologyMode)}</span>
-                            <span className={`text-[9px] px-1 py-0.5 rounded ${
-                              ex.mode === "simplified"
-                                ? "bg-blue-500/30 text-blue-300"
-                                : "bg-purple-500/30 text-purple-300"
-                            }`}>
-                              {ex.mode === "simplified" ? "S" : "D"}
+                            <span>{log.exerciseName}</span>
+                            <span className="text-[9px] px-1 py-0.5 rounded bg-jade-deep/30 text-jade-glow">
+                              Lv.{log.level}
                             </span>
                             <span className="text-mist-dark ml-1">
                               ({displayWeight})
@@ -846,16 +784,15 @@ export default function HistoryPage() {
                           </div>
                         );
                       })}
-                      {allExercises.length > 5 && (
+                      {session.logs.length > 5 && (
                         <div className="text-xs bg-ink-dark px-2 py-1 rounded text-mist-dark">
-                          +{allExercises.length - 5} more
+                          +{session.logs.length - 5} more
                         </div>
                       )}
                     </div>
                   </GlowCard>
                 </motion.div>
-            );
-          })}
+            ))}
           </div>
         </div>
       )}

@@ -27,7 +27,7 @@ const NAV_ICON_MAP: Record<string, ReactNode> = {
 };
 
 function BottomBar() {
-  const { getSortedNavItems, isMobile, viewportMode, isNativeApp, setMobileSidebarOpen, mobileSidebarOpen, activeDrawerClose } = useAppContext();
+  const { getSortedNavItems, isMobile, viewportMode, setMobileSidebarOpen, mobileSidebarOpen, activeDrawerClose } = useAppContext();
   const { logout, user } = useAuth();
   const { settings } = useDisplaySettings();
   const terminologyMode = settings.terminologyMode ?? "fantasy";
@@ -68,7 +68,9 @@ function BottomBar() {
     setMenuOpen(prev => !prev);
   }, []);
 
-  if (!isNativeApp || !effectiveMobile) return null;
+  // Show the APK-style bottom nav whenever mobile viewport is active,
+  // including manual "Mobile mode" on web.
+  if (!effectiveMobile) return null;
 
   // Build nav button order: [item0, item1, FAB, item2, More]
   return (

@@ -11,39 +11,41 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Exercise ID is required" }, { status: 400 });
     }
 
-    const whereClause: { exerciseId: string; workout?: { userId: string } } = { exerciseId };
+    // Query progression logs for this exercise via UserProgressionLevel
+    const whereClause: { exerciseId: string; userId?: string } = { exerciseId };
     if (userId) {
-      whereClause.workout = { userId };
+      whereClause.userId = userId;
     }
 
-    const history = await prisma.simplifiedWorkoutExercise.findMany({
+    const levels = await prisma.userProgressionLevel.findMany({
       where: whereClause,
       include: {
-        workout: {
-          select: {
-            date: true,
-            name: true,
-          },
+        logs: {
+          orderBy: { createdAt: "desc" },
+          take: 50,
         },
       },
-      orderBy: { workout: { date: "desc" } },
-      take: 50,
     });
 
-    return NextResponse.json({
-      history: history.map((entry) => ({
-        id: entry.id,
-        date: entry.workout.date,
-        weight1: entry.weight1,
-        reps1: entry.reps1,
-        weight2: entry.weight2,
-        reps2: entry.reps2,
-        weight3: entry.weight3,
-        reps3: entry.reps3,
-        holdTime: entry.holdTime,
-        notes: entry.notes,
-      })),
-    });
+    const history = levels.flatMap((level) =>
+      level.logs.map((log) => ({
+        id: log.id,
+        date: log.createdAt,
+        weight1: log.weight1,
+        reps1: log.reps1,
+        weight2: log.weight2,
+        reps2: log.reps2,
+        weight3: log.weight3,
+        reps3: log.reps3,
+        holdTime: log.holdTime,
+        notes: log.notes,
+      }))
+    );
+
+    // Sort by date descending and limit to 50
+    history.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    return NextResponse.json({ history: history.slice(0, 50) });
   } catch (error) {
     console.error("Exercise history fetch error:", error);
     return NextResponse.json({ error: "Failed to fetch exercise history" }, { status: 500 });

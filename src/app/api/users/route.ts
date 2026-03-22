@@ -3,22 +3,52 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        username: true,
-        name: true,
-        createdAt: true,
-        _count: {
-          select: {
-            workouts: true,
-            checkIns: true,
+    const [users, progressionLevels] = await Promise.all([
+      prisma.user.findMany({
+        select: {
+          id: true,
+          username: true,
+          name: true,
+          createdAt: true,
+          _count: {
+            select: {
+              checkIns: true,
+            },
           },
         },
-      },
-      orderBy: { createdAt: "asc" },
+        orderBy: { createdAt: "asc" },
+      }),
+      prisma.userProgressionLevel.findMany({
+        select: {
+          userId: true,
+          _count: {
+            select: {
+              logs: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    const progressionLogCounts = new Map<string, number>();
+    for (const level of progressionLevels) {
+      progressionLogCounts.set(
+        level.userId,
+        (progressionLogCounts.get(level.userId) ?? 0) + level._count.logs,
+      );
+    }
+
+    const enrichedUsers = users.map((user) => {
+      const progressionLogCount = progressionLogCounts.get(user.id) ?? 0;
+
+      return {
+        ...user,
+        progressionLogCount,
+        sessionCount: progressionLogCount,
+      };
     });
-    return NextResponse.json({ users });
+
+    return NextResponse.json({ users: enrichedUsers });
   } catch (error) {
     console.error("Users fetch error:", error);
     return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 });

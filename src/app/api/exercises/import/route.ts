@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+const ARCHIVED_TARGET_GROUP = "__archived__";
+
+function isAdminRequest(req: NextRequest): boolean {
+  return (req.headers.get("x-user-role") || "").toLowerCase() === "admin";
+}
+
 export async function POST(req: NextRequest) {
   try {
+    if (!isAdminRequest(req)) {
+      return NextResponse.json({ error: "Admin privileges required" }, { status: 403 });
+    }
+
     const { exercises } = await req.json();
 
     if (!Array.isArray(exercises) || exercises.length === 0) {
@@ -11,17 +21,6 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-
-    const validDifficulties = [
-      "Mortal",
-      "Foundation Establishment",
-      "Core Formation",
-      "Nascent Soul",
-      "Soul Splitting",
-      "Tribulation Transcendence",
-      "Immortal",
-      "Heavenly Dao",
-    ];
 
     const validExercises = [];
     const errors = [];
@@ -33,10 +32,6 @@ export async function POST(req: NextRequest) {
 
       if (!conventionalName) {
         errors.push(`Exercise ${i + 1}: missing name`);
-        continue;
-      }
-      if (ex.difficulty && !validDifficulties.includes(ex.difficulty)) {
-        errors.push(`Exercise ${i + 1}: invalid difficulty "${ex.difficulty}"`);
         continue;
       }
       validExercises.push({
@@ -56,12 +51,31 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Skip duplicates by name
-    const existing = await prisma.exercise.findMany({ select: { name: true } });
-    const existingNames = new Set(existing.map(e => e.name.trim().toLowerCase()));
-    const newExercises = validExercises.filter(e => !existingNames.has(e.name.trim().toLowerCase()));
+    const existing = await prisma.exercise.findMany({
+      select: {
+        id: true,
+        name: true,
+        targetGroup: true,
+      },
+    });
+    const existingByName = new Map(existing.map(e => [e.name.trim().toLowerCase(), e]));
 
-    if (newExercises.length === 0) {
+    const newExercises = [];
+    const resurrectExercises = [];
+    for (const ex of validExercises) {
+      const key = ex.name.trim().toLowerCase();
+      const match = existingByName.get(key);
+      if (!match) {
+        newExercises.push(ex);
+        continue;
+      }
+
+      if (match.targetGroup === ARCHIVED_TARGET_GROUP) {
+        resurrectExercises.push({ id: match.id, ...ex });
+      }
+    }
+
+    if (newExercises.length === 0 && resurrectExercises.length === 0) {
       return NextResponse.json({
         imported: 0,
         skipped: validExercises.length,
@@ -69,13 +83,36 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const result = await prisma.exercise.createMany({
-      data: newExercises,
-    });
+    let createdCount = 0;
+    if (newExercises.length > 0) {
+      const result = await prisma.exercise.createMany({
+        data: newExercises,
+      });
+      createdCount = result.count;
+    }
+
+    if (resurrectExercises.length > 0) {
+      await prisma.$transaction(
+        resurrectExercises.map((ex) =>
+          prisma.exercise.update({
+            where: { id: ex.id },
+            data: {
+              wuxiaName: ex.wuxiaName || null,
+              difficulty: ex.difficulty,
+              type: ex.type,
+              story: ex.story || null,
+              targetGroup: ex.targetGroup || null,
+            },
+          })
+        )
+      );
+    }
+
+    const imported = createdCount + resurrectExercises.length;
 
     return NextResponse.json({
-      imported: result.count,
-      skipped: validExercises.length - newExercises.length > 0 ? validExercises.length - newExercises.length : undefined,
+      imported,
+      skipped: validExercises.length - imported > 0 ? validExercises.length - imported : undefined,
       errors: errors.length > 0 ? errors : undefined,
     });
   } catch (error) {

@@ -11,8 +11,9 @@ interface UserOption {
   id: string;
   username: string;
   name: string;
+  sessionCount?: number;
+  progressionLogCount?: number;
   _count?: {
-    workouts: number;
     checkIns: number;
   };
 }
@@ -43,9 +44,10 @@ export default function DataManagement() {
   const targetUserId = selectedUserId || user?.id || "";
   const targetUser = allUsers.find(u => u.id === targetUserId);
   const targetUserName = targetUser?.name || user?.name || "Unknown";
-  const targetUserSessionCount = targetUser?._count?.workouts ?? 0;
+  const targetUserSessionCount = targetUser?.sessionCount ?? targetUser?.progressionLogCount ?? 0;
+  const targetUserProgressionLogCount = targetUser?.progressionLogCount ?? 0;
 
-  // Training sessions state
+  // Training log state
   const xlsxInputRef = useRef<HTMLInputElement>(null);
   const [importStatus, setImportStatus] = useState<{ type: "idle" | "loading" | "success" | "error"; message: string }>({ type: "idle", message: "" });
   const [removeStatus, setRemoveStatus] = useState<{ type: "idle" | "loading" | "success" | "error"; message: string }>({ type: "idle", message: "" });
@@ -69,7 +71,7 @@ export default function DataManagement() {
   const [removeCheckinStatus, setRemoveCheckinStatus] = useState<{ type: "idle" | "loading" | "success" | "error"; message: string }>({ type: "idle", message: "" });
   const [showRemoveCheckinConfirm, setShowRemoveCheckinConfirm] = useState(false);
 
-  // ── Training Sessions Import ──
+  // ── Training Log Import ──
   const handleXlsxImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !targetUserId) return;
@@ -107,19 +109,24 @@ export default function DataManagement() {
       };
 
       const dateKey = resolveKey(["date", "day", "datum"]);
-      let exerciseKey = resolveKey(["exercise", "name", "technique", "movement", "workout"]);
+      let exerciseKey = resolveKey(["exercise", "name", "technique", "movement"]);
+      const levelKey = resolveKey(["level", "lvl"]);
       const w1Key = resolveKey(["w1", "weight1", "weight 1"]);
       const r1Key = resolveKey(["r1", "reps1", "reps 1"]);
       const w2Key = resolveKey(["w2", "weight2", "weight 2"]);
       const r2Key = resolveKey(["r2", "reps2", "reps 2"]);
       const w3Key = resolveKey(["w3", "weight3", "weight 3"]);
       const r3Key = resolveKey(["r3", "reps3", "reps 3"]);
-      const holdKey = resolveKey(["holdtime", "hold", "hold time", "hold_time", "holdsec", "hold (sec)", "hold(sec)"]);
+      const holdKey = resolveKey(["t1", "hold1", "holdtime1", "hold time 1", "hold", "hold time", "hold_time", "holdsec", "hold (sec)", "hold(sec)"]);
+      const hold2Key = resolveKey(["t2", "hold2", "holdtime2", "hold time 2"]);
+      const hold3Key = resolveKey(["t3", "hold3", "holdtime3", "hold time 3"]);
+      const modifierKey = resolveKey(["modifier", "mod"]);
+      const variantKey = resolveKey(["variant", "variation"]);
       const notesKey = resolveKey(["notes", "note", "comment", "comments"]);
 
       // Fallback: if exercise column not found, use the first unmatched column
       if (!exerciseKey) {
-        const matched = new Set([dateKey, w1Key, r1Key, w2Key, r2Key, w3Key, r3Key, holdKey, notesKey].filter(Boolean));
+        const matched = new Set([dateKey, levelKey, w1Key, r1Key, w2Key, r2Key, w3Key, r3Key, holdKey, hold2Key, hold3Key, modifierKey, variantKey, notesKey].filter(Boolean));
         const unmatched = firstRowKeys.filter((k) => !matched.has(k));
         if (unmatched.length === 1) {
           exerciseKey = unmatched[0];
@@ -131,34 +138,46 @@ export default function DataManagement() {
         return;
       }
 
-      // Map header names using resolved keys
-      const sessions = rows.map((row) => {
+      // Map header names to progression log format
+      const logs = rows.map((row) => {
+        const dateVal = dateKey ? row[dateKey] : "";
+        let createdAt: string | undefined;
+        if (dateVal) {
+          const d = new Date(String(dateVal));
+          if (!isNaN(d.getTime())) createdAt = d.toISOString();
+        }
         return {
-          date: dateKey ? row[dateKey] : "",
-          exercise: exerciseKey ? row[exerciseKey] : "",
-          w1: w1Key ? row[w1Key] : "",
-          r1: r1Key ? row[r1Key] : "",
-          w2: w2Key ? row[w2Key] : "",
-          r2: r2Key ? row[r2Key] : "",
-          w3: w3Key ? row[w3Key] : "",
-          r3: r3Key ? row[r3Key] : "",
-          holdTime: holdKey ? row[holdKey] : "",
-          notes: notesKey ? row[notesKey] : "",
+          exerciseName: exerciseKey ? String(row[exerciseKey] ?? "") : "",
+          level: levelKey ? Number(row[levelKey]) || 1 : 1,
+          weight1: w1Key ? (row[w1Key] !== "" ? Number(row[w1Key]) : null) : null,
+          reps1: r1Key ? (row[r1Key] !== "" ? Number(row[r1Key]) : null) : null,
+          weight2: w2Key ? (row[w2Key] !== "" ? Number(row[w2Key]) : null) : null,
+          reps2: r2Key ? (row[r2Key] !== "" ? Number(row[r2Key]) : null) : null,
+          weight3: w3Key ? (row[w3Key] !== "" ? Number(row[w3Key]) : null) : null,
+          reps3: r3Key ? (row[r3Key] !== "" ? Number(row[r3Key]) : null) : null,
+          holdTime: holdKey ? (row[holdKey] !== "" ? Number(row[holdKey]) : null) : null,
+          holdTime2: hold2Key ? (row[hold2Key] !== "" ? Number(row[hold2Key]) : null) : null,
+          holdTime3: hold3Key ? (row[hold3Key] !== "" ? Number(row[hold3Key]) : null) : null,
+          modifier: modifierKey ? String(row[modifierKey] ?? "").trim() || null : null,
+          variant: variantKey ? String(row[variantKey] ?? "").trim() || null : null,
+          notes: notesKey ? String(row[notesKey] ?? "") || null : null,
+          completed: true,
+          ...(createdAt ? { createdAt } : {}),
         };
       });
 
-      setImportStatus({ type: "loading", message: `Importing ${sessions.length} sessions...` });
+      setImportStatus({ type: "loading", message: `Importing ${logs.length} training log entr${logs.length === 1 ? "y" : "ies"}...` });
 
-      const res = await fetch("/api/workouts/import", {
+      const res = await fetch("/api/progressions/logs/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: targetUserId, sessions }),
+        body: JSON.stringify({ userId: targetUserId, logs, replaceExisting: false }),
       });
 
       const result = await res.json();
 
       if (res.ok) {
-        let msg = `Imported ${result.imported} session(s)${result.skipped ? `, ${result.skipped} skipped` : ""}`;
+        let msg = `Imported ${result.imported} training log entr${result.imported === 1 ? "y" : "ies"}${result.skipped ? `, ${result.skipped} skipped` : ""}`;
         if (result.errors && result.errors.length > 0) {
           msg += `\n${result.errors.join("\n")}`;
         }
@@ -173,66 +192,69 @@ export default function DataManagement() {
     }
   };
 
-  // ── Remove All Training Sessions ──
+  // ── Remove All Training Logs ──
   const handleRemoveAll = async () => {
     if (!targetUserId) return;
     setShowRemoveConfirm(false);
-    setRemoveStatus({ type: "loading", message: "Removing all sessions..." });
+    setRemoveStatus({ type: "loading", message: "Removing all training log entries..." });
 
     try {
-      const res = await fetch("/api/workouts/import", {
-        method: "DELETE",
+      const res = await fetch("/api/progressions/logs/import", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: targetUserId }),
+        body: JSON.stringify({ userId: targetUserId, logs: [], replaceExisting: true }),
       });
 
       const result = await res.json();
 
       if (res.ok) {
-        setRemoveStatus({ type: "success", message: result.message || "All sessions removed" });
+        setRemoveStatus({ type: "success", message: "All training log entries removed" });
       } else {
-        setRemoveStatus({ type: "error", message: result.error || "Failed to remove sessions" });
+        setRemoveStatus({ type: "error", message: result.error || "Failed to remove training logs" });
       }
     } catch (err: unknown) {
       setRemoveStatus({ type: "error", message: err instanceof Error ? err.message : "An error occurred" });
     }
   };
 
-  // ── Export Training Sessions ──
+  // ── Export Training Logs ──
   const handleExportSessions = async () => {
     if (!targetUserId) return;
-    setSessionExportStatus({ type: "loading", message: "Fetching sessions..." });
+    setSessionExportStatus({ type: "loading", message: "Fetching training log entries..." });
     try {
-      const res = await fetch(`/api/workouts?userId=${targetUserId}`);
+      const res = await fetch(`/api/progressions/logs/export?userId=${targetUserId}`);
       const data = await res.json();
-      const workouts = data.workouts || [];
+      const logs = data.logs || [];
 
-      if (workouts.length === 0) {
-        setSessionExportStatus({ type: "error", message: "No sessions to export" });
+      if (logs.length === 0) {
+        setSessionExportStatus({ type: "error", message: "No training logs to export" });
         return;
       }
 
       // Build flat rows for XLSX
-      const rows = workouts.flatMap((w: { date?: string; simplifiedExercises?: { exercise?: { name?: string }; weight1?: number | null; reps1?: number | null; weight2?: number | null; reps2?: number | null; weight3?: number | null; reps3?: number | null; holdTime?: number | null; notes?: string | null }[] }) =>
-        (w.simplifiedExercises || []).map((se) => ({
-          Date: w.date ? new Date(w.date).toISOString().split("T")[0] : "",
-          Exercise: se.exercise?.name || "Unknown",
-          W1: se.weight1 ?? "",
-          R1: se.reps1 ?? "",
-          W2: se.weight2 ?? "",
-          R2: se.reps2 ?? "",
-          W3: se.weight3 ?? "",
-          R3: se.reps3 ?? "",
-          Hold: se.holdTime ?? "",
-          Notes: se.notes || "",
-        }))
-      );
+      const rows = logs.map((log: { exerciseName?: string; level?: number | null; weight1?: number | null; reps1?: number | null; weight2?: number | null; reps2?: number | null; weight3?: number | null; reps3?: number | null; holdTime?: number | null; holdTime2?: number | null; holdTime3?: number | null; modifier?: string | null; variant?: string | null; notes?: string | null; createdAt?: string }) => ({
+        Date: log.createdAt ? new Date(log.createdAt).toISOString().split("T")[0] : "",
+        Level: log.level ?? 1,
+        Exercise: log.exerciseName || "Unknown",
+        W1: log.weight1 ?? "",
+        R1: log.reps1 ?? "",
+        W2: log.weight2 ?? "",
+        R2: log.reps2 ?? "",
+        W3: log.weight3 ?? "",
+        R3: log.reps3 ?? "",
+        T1: log.holdTime ?? "",
+        T2: log.holdTime2 ?? "",
+        T3: log.holdTime3 ?? "",
+        Modifier: log.modifier || "",
+        Variant: log.variant || "",
+        Notes: log.notes || "",
+      }));
 
       const ws = XLSX.utils.json_to_sheet(rows);
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Training Sessions");
-      XLSX.writeFile(wb, `training-sessions-${new Date().toISOString().split("T")[0]}.xlsx`);
-      setSessionExportStatus({ type: "success", message: `Exported ${rows.length} record(s)` });
+      XLSX.utils.book_append_sheet(wb, ws, "Training Log");
+      XLSX.writeFile(wb, `training-log-${new Date().toISOString().split("T")[0]}.xlsx`);
+      setSessionExportStatus({ type: "success", message: `Exported ${rows.length} training log entr${rows.length === 1 ? "y" : "ies"}` });
     } catch (err: unknown) {
       setSessionExportStatus({ type: "error", message: err instanceof Error ? err.message : "Export failed" });
     }
@@ -240,11 +262,65 @@ export default function DataManagement() {
 
   // ── Technique Import ──
   const handleTechniqueImport = async () => {
+    if (!targetUserId) {
+      setTechniqueImportError("Please select a target user before importing techniques.");
+      setTechniqueImportStatus({ type: "error", message: "Target user is required" });
+      return;
+    }
+
     setTechniqueImportError("");
     setTechniqueImportStatus({ type: "loading", message: "Importing..." });
     try {
       const data = JSON.parse(techniqueImportText);
-      const exercises = Array.isArray(data) ? data : [data];
+      const exercises = Array.isArray(data)
+        ? data
+        : (data && Array.isArray(data.exercises) ? data.exercises : [data]);
+
+      if (!Array.isArray(exercises) || exercises.length === 0) {
+        setTechniqueImportError("Invalid format: expected an array of techniques.");
+        setTechniqueImportStatus({ type: "error", message: "Invalid format" });
+        return;
+      }
+
+      // Import into exercise library so techniques are visible in Technique Scroll.
+      const libraryPayload = exercises.map((ex: Record<string, unknown>) => {
+        const category = Array.isArray(ex.category)
+          ? ex.category.map((v) => String(v).trim()).filter(Boolean).join(", ")
+          : String(ex.category || ex.targetGroup || "").trim();
+        const tiers = (ex.progressions || ex.tiers) as { difficulty?: string; wuxiaDifficulty?: string }[] | undefined;
+        const lastTier = tiers?.length ? tiers[tiers.length - 1] : undefined;
+        const maxDifficulty =
+          lastTier?.wuxiaDifficulty ||
+          lastTier?.difficulty ||
+          (ex.wuxiaDifficulty as string) ||
+          (ex.difficulty as string) ||
+          "Mortal";
+
+        return {
+          name: ex.name,
+          wuxiaName: ex.wuxiaName || "",
+          difficulty: maxDifficulty,
+          type: (ex.wuxiaType as string) || (ex.type as string) || "Unified Realm",
+          story: ex.story || "",
+          targetGroup: category,
+        };
+      });
+
+      const libRes = await fetch("/api/exercises/import", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-role": user?.role || "",
+        },
+        body: JSON.stringify({ exercises: libraryPayload }),
+      });
+
+      const libResult = await libRes.json();
+      if (!libRes.ok) {
+        setTechniqueImportError(libResult.error || "Library import failed");
+        setTechniqueImportStatus({ type: "error", message: libResult.error || "Library import failed" });
+        return;
+      }
 
       const res = await fetch("/api/progressions/upload", {
         method: "POST",
@@ -254,18 +330,27 @@ export default function DataManagement() {
 
       if (res.ok) {
         const result = await res.json();
-        const msg = `Imported ${result.imported} technique(s)${result.errors?.length ? `, ${result.errors.length} warning(s)` : ""}`;
+        const imported = libResult.imported ?? 0;
+        const skipped = (libResult.skipped ?? 0) + (result.skipped ?? 0);
+        let msg = `Imported ${imported} technique(s)`;
+        if (skipped > 0) msg += ` (${skipped > imported ? Math.ceil(skipped / 2) : skipped} duplicate(s) skipped)`;
+        if (result.errors?.length) msg += `, ${result.errors.length} warning(s)`;
         setTechniqueImportStatus({ type: "success", message: msg });
         if (typeof window !== "undefined") {
           window.dispatchEvent(new Event("exercises-library-updated"));
+          window.dispatchEvent(new Event("progression-exercises-updated"));
           localStorage.setItem("exercises-library-updated-at", String(Date.now()));
         }
         setShowTechniqueImportModal(false);
         setTechniqueImportText("");
       } else {
         const err = await res.json();
-        setTechniqueImportError(err.error || "Import failed");
-        setTechniqueImportStatus({ type: "error", message: err.error || "Import failed" });
+        const details = Array.isArray(err.details) && err.details.length > 0
+          ? `\n${err.details.join("\n")}`
+          : "";
+        const msg = `${err.error || "Progression import failed (library import succeeded)"}${details}`;
+        setTechniqueImportError(msg);
+        setTechniqueImportStatus({ type: "error", message: msg });
       }
     } catch {
       setTechniqueImportError("Invalid JSON format. Please check your scroll.");
@@ -327,7 +412,12 @@ export default function DataManagement() {
     setShowRemoveTechniqueConfirm(false);
     setRemoveTechniqueStatus({ type: "loading", message: "Removing all techniques..." });
     try {
-      const res = await fetch("/api/exercises", { method: "DELETE" });
+      const res = await fetch("/api/exercises", {
+        method: "DELETE",
+        headers: {
+          "x-user-role": user?.role || "",
+        },
+      });
       const result = await res.json();
       if (res.ok) {
         setRemoveTechniqueStatus({ type: "success", message: result.message || "All techniques removed" });
@@ -591,7 +681,7 @@ export default function DataManagement() {
           <div className="mb-4 pb-4 border-b border-ink-light/50">
             <label className="text-xs text-mist-light font-medium mb-1 block">Target Cultivator</label>
             <p className="text-[10px] text-mist-dark mb-2">
-              Select which cultivator&apos;s data to import, export, or delete training sessions for.
+              Select which cultivator&apos;s training log to import into, export from, or clear.
             </p>
             <select
               value={selectedUserId}
@@ -600,21 +690,21 @@ export default function DataManagement() {
             >
               {allUsers.map((u) => (
                 <option key={u.id} value={u.id}>
-                  {u.name} ({u.username}) - {u._count?.workouts ?? 0} sessions{u.id === user?.id ? " - You" : ""}
+                  {u.name} ({u.username}) - {u.sessionCount ?? u.progressionLogCount ?? 0} log entries{u.id === user?.id ? " - You" : ""}
                 </option>
               ))}
             </select>
             <p className="text-[10px] text-mist-dark mt-2">
-              Current selection: <span className="text-mist-light">{targetUserName}</span> with <span className="text-jade-light">{targetUserSessionCount}</span> recorded training session(s).
+              Current selection: <span className="text-mist-light">{targetUserName}</span> with <span className="text-jade-light">{targetUserSessionCount}</span> recorded progression log(s).
             </p>
           </div>
         )}
 
-        {/* ── Training Sessions Section ── */}
-        <p className="text-xs text-mist-light font-medium mb-2">Training Sessions {targetUserId !== user?.id && <span className="text-gold">— {targetUserName}</span>}</p>
+        {/* ── Training Log Section ── */}
+        <p className="text-xs text-mist-light font-medium mb-2">Training Log {targetUserId !== user?.id && <span className="text-gold">— {targetUserName}</span>}</p>
         <p className="text-xs text-mist-dark mb-3">
-          Import historical training data from XLSX spreadsheets, export existing records, or purge all sessions.
-          Expected columns: <span className="text-mist-light font-mono">Date, Exercise, W1, R1, W2, R2, W3, R3, Hold, Notes</span>
+          Import or export the current Training Log format used on the workout page. Import appends entries to the selected user&apos;s log, export downloads the same log structure, and remove clears all saved log entries for that user.
+          Expected columns: <span className="text-mist-light font-mono">Date, Level, Exercise, W1, R1, W2, R2, W3, R3, T1, T2, T3, Modifier, Variant, Notes</span>
         </p>
         <div className="space-y-3">
           {/* Import XLSX */}
@@ -625,7 +715,7 @@ export default function DataManagement() {
               onClick={() => xlsxInputRef.current?.click()}
               disabled={importStatus.type === "loading"}
             >
-              {importStatus.type === "loading" ? "Importing..." : "📥 Import XLSX"}
+              {importStatus.type === "loading" ? "Importing..." : "📥 Import Training Log XLSX"}
             </GlowButton>
             <input
               ref={xlsxInputRef}
@@ -645,7 +735,7 @@ export default function DataManagement() {
             )}
           </div>
 
-          {/* Export Sessions */}
+          {/* Export Training Logs */}
           <div className="flex items-center gap-3">
             <GlowButton
               variant="ghost"
@@ -653,7 +743,7 @@ export default function DataManagement() {
               onClick={handleExportSessions}
               disabled={sessionExportStatus.type === "loading"}
             >
-              {sessionExportStatus.type === "loading" ? "Exporting..." : "📤 Export Sessions"}
+              {sessionExportStatus.type === "loading" ? "Exporting..." : "📤 Export Training Log XLSX"}
             </GlowButton>
             {sessionExportStatus.type !== "idle" && (
               <p className={`text-xs ${
@@ -666,7 +756,7 @@ export default function DataManagement() {
             )}
           </div>
 
-          {/* Remove All Sessions */}
+          {/* Remove All Training Logs */}
           <div className="flex items-center gap-3 pt-2 border-t border-ink-light/30">
             <GlowButton
               variant="crimson"
@@ -674,7 +764,7 @@ export default function DataManagement() {
               onClick={() => setShowRemoveConfirm(true)}
               disabled={removeStatus.type === "loading"}
             >
-              {removeStatus.type === "loading" ? "Removing..." : "🗑 Remove All Sessions"}
+              {removeStatus.type === "loading" ? "Removing..." : "🗑 Remove All Training Logs"}
             </GlowButton>
             {removeStatus.type !== "idle" && (
               <p className={`text-xs ${
@@ -842,7 +932,7 @@ export default function DataManagement() {
         </div>
       </GlowCard>
 
-      {/* Remove All Sessions Confirmation Modal */}
+      {/* Remove All Training Logs Confirmation Modal */}
       <GlowModal
         isOpen={showRemoveConfirm}
         onClose={() => setShowRemoveConfirm(false)}
@@ -850,7 +940,7 @@ export default function DataManagement() {
       >
         <div className="space-y-4">
           <p className="text-sm text-mist-light">
-            This will permanently delete <span className="text-crimson-light font-semibold">all</span> recorded training sessions for <span className="text-crimson-light font-semibold">{targetUserName}</span>. This action cannot be undone.
+            This will permanently delete <span className="text-crimson-light font-semibold">all</span> training log entries for <span className="text-crimson-light font-semibold">{targetUserName}</span>. This action cannot be undone.
           </p>
           <div className="flex gap-3">
             <GlowButton
@@ -998,7 +1088,7 @@ export default function DataManagement() {
       >
         <div className="space-y-4">
           <p className="text-sm text-mist-light">
-            This will permanently delete <span className="text-crimson-light font-semibold">all</span> techniques from your Technique Scroll library. Associated workout data referencing these techniques will also be removed. This action cannot be undone.
+            This will purge <span className="text-crimson-light font-semibold">all</span> visible techniques from the Technique Scroll library. This action cannot be undone.
           </p>
           <div className="flex gap-3">
             <GlowButton

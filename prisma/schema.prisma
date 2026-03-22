@@ -1,4 +1,4 @@
-// Cultivation Workout App - Database Schema
+// Cultivation Progression App - Database Schema
 
 generator client {
   provider = "prisma-client"
@@ -19,7 +19,6 @@ model User {
   updatedAt DateTime @updatedAt
 
   checkIns     CheckIn[]
-  workouts     Workout[]
   settings     UserSettings?
   checkInNotes CheckInNote[]
 }
@@ -59,66 +58,6 @@ model Exercise {
   targetGroup String?
   assignedDays String @default("") // Comma-separated list of days: "0,1,2" for Sun,Mon,Tue
   createdAt   DateTime @default(now())
-
-  simplifiedWorkouts SimplifiedWorkoutExercise[]
-  detailedWorkouts   DetailedWorkoutExercise[]
-}
-
-model Workout {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name      String
-  date      DateTime @default(now())
-  notes     String?
-  targetGroups String? // Auto-assigned comma-separated muscle groups derived from exercises
-  createdAt DateTime @default(now())
-
-  simplifiedExercises SimplifiedWorkoutExercise[]
-  detailedExercises   DetailedWorkoutExercise[]
-
-  @@index([userId])
-}
-
-model SimplifiedWorkoutExercise {
-  id         String   @id @default(cuid())
-  workoutId  String
-  workout    Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
-  exerciseId String
-  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
-  weight1    Float?
-  reps1      Int?
-  weight2    Float?
-  reps2      Int?
-  weight3    Float?
-  reps3      Int?
-  holdTime   Int?
-  notes      String?
-  order      Int      @default(0)
-  createdAt  DateTime @default(now())
-
-  @@index([workoutId])
-  @@index([exerciseId])
-}
-
-model DetailedWorkoutExercise {
-  id         String   @id @default(cuid())
-  workoutId  String
-  workout    Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
-  exerciseId String
-  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
-  weight1    Float?
-  reps1      Int?
-  weight2    Float?
-  reps2      Int?
-  weight3    Float?
-  reps3      Int?
-  notes      String?
-  order      Int      @default(0)
-  createdAt  DateTime @default(now())
-
-  @@index([workoutId])
-  @@index([exerciseId])
 }
 
 model CheckInNote {
@@ -141,8 +80,10 @@ model ProgressionExercise {
   id              String   @id @default(cuid())
   name            String
   wuxiaName       String   @default("")
-  difficulty      String   @default("")
-  type            String   @default("")
+  difficulty      String   @default("")   // Wuxia difficulty name (e.g. "Mortal", "Foundation Establishment")
+  wuxiaDifficulty String   @default("")   // Explicit wuxia difficulty from new JSON format
+  type            String   @default("")   // Wuxia type / cultivation path (e.g. "Upper Heaven")
+  wuxiaType       String   @default("")   // Explicit wuxia type from new JSON format
   story           String   @default("")
   tips            String   @default("")   // JSON array stored as string
   category        String
@@ -152,6 +93,12 @@ model ProgressionExercise {
   rings           Boolean  @default(false)
   primaryMuscles  String                  // comma-separated
   secondaryMuscles String  @default("")   // comma-separated
+  prerequisites   String   @default("[]") // JSON array of {name, minimumReps, minimumHold, notes}
+  cues            String   @default("[]") // JSON array of coaching cue strings
+  commonMistakes  String   @default("[]") // JSON array of {mistake, correction}
+  breathing       String   @default("")
+  safetyConsiderations String @default("[]") // JSON array of strings
+  competitionStandards String @default("{}")  // JSON object
   assignedDays    String   @default("")   // Comma-separated list of days: "0,1,2" for Sun,Mon,Tue
   createdAt       DateTime @default(now())
   userId          String
@@ -171,10 +118,13 @@ model ProgressionTier {
   level         Int
   name          String
   wuxiaName     String   @default("")
-  difficulty    String   @default("")
+  difficulty    String   @default("")   // Wuxia difficulty name
+  wuxiaDifficulty String @default("")
+  wuxiaType     String   @default("")
   description   String   @default("")
   targetHold    Int?                      // target hold time in seconds
-  targetReps    Int?                      // target reps if applicable
+  targetReps    Int?                      // target reps (numeric) if applicable
+  targetRepsText String  @default("")    // target reps as string like "3-5" or "5-8"
 
   @@index([exerciseId])
 }
@@ -185,7 +135,9 @@ model ProgressionVariation {
   exercise      ProgressionExercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
   name          String
   wuxiaName     String   @default("")
-  difficulty    String   @default("")
+  difficulty    String   @default("")   // Wuxia difficulty name
+  wuxiaDifficulty String @default("")
+  wuxiaType     String   @default("")
   description   String   @default("")
 
   @@index([exerciseId])
@@ -195,10 +147,12 @@ model ProgressionModifier {
   id                String   @id @default(cuid())
   exerciseId        String
   exercise          ProgressionExercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
-  type              String              // "rings" | "weighted"
+  type              String              // "rings" | "weighted" | "slow tempo" | "supinated grip" | custom
   available         Boolean  @default(false)
   difficultyMod     Float    @default(0) // e.g. +0.5 difficulty bump
   notes             String   @default("")
+  method            String   @default("")  // e.g. "Ankle weights or weight vest"
+  difficultyIncrease String  @default("") // e.g. "+1 level per 5% bodyweight added"
 
   @@index([exerciseId])
 }

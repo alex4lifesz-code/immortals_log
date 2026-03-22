@@ -61,7 +61,25 @@ export type DifficultyLevel = (typeof DIFFICULTY_LEVELS)[number];
 export type ExerciseType = (typeof EXERCISE_TYPES)[number];
 export type TargetGroup = (typeof TARGET_GROUPS)[number];
 
+function normalizeDifficultyKey(difficulty: string): string {
+  const raw = (difficulty || "").trim();
+  const lower = raw.toLowerCase();
+
+  const aliases: Record<string, string> = {
+    beginner: "Mortal",
+    intermediate: "Core Formation",
+    advanced: "Nascent Soul",
+    expert: "Soul Splitting",
+    elite: "Heavenly Dao",
+    master: "Immortal",
+    grandmaster: "Heavenly Dao",
+  };
+
+  return aliases[lower] || raw;
+}
+
 export function getDifficultyColor(difficulty: string): string {
+  const key = normalizeDifficultyKey(difficulty);
   const colors: Record<string, string> = {
     "Mortal": "text-difficulty-green",
     "Foundation Establishment": "text-difficulty-amber",
@@ -72,10 +90,11 @@ export function getDifficultyColor(difficulty: string): string {
     "Immortal": "text-difficulty-light-pink",
     "Heavenly Dao": "text-cyan-300",
   };
-  return colors[difficulty] || "text-mist-light";
+  return colors[key] || "text-mist-light";
 }
 
 export function getDifficultyGlow(difficulty: string): string {
+  const key = normalizeDifficultyKey(difficulty);
   const glows: Record<string, string> = {
     "Mortal": "glow-difficulty-green",
     "Foundation Establishment": "glow-difficulty-amber",
@@ -86,7 +105,7 @@ export function getDifficultyGlow(difficulty: string): string {
     "Immortal": "glow-difficulty-light-pink",
     "Heavenly Dao": "glow-difficulty-cyan",
   };
-  return glows[difficulty] || "";
+  return glows[key] || "";
 }
 
 export function getTypeColor(type: string): string {

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 
 interface LogUpdate {
   id: string;
+  level?: number | null;
   weight1: number | null;
   reps1: number | null;
   weight2: number | null;
@@ -60,6 +61,12 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ error: `${field} must be between 0 and 9999` }, { status: 400 });
         }
       }
+
+      if (update.level !== null && update.level !== undefined) {
+        if (!Number.isFinite(update.level) || update.level < 1 || update.level > 999) {
+          return NextResponse.json({ error: "level must be between 1 and 999" }, { status: 400 });
+        }
+      }
     }
 
     // Verify ownership: all logs must belong to the user
@@ -84,6 +91,7 @@ export async function POST(req: NextRequest) {
       prisma.progressionLog.update({
         where: { id: update.id },
         data: {
+          level: update.level != null ? Math.floor(update.level) : undefined,
           weight1: update.weight1,
           reps1: update.reps1,
           weight2: update.weight2,
