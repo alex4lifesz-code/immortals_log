@@ -1,6 +1,6 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
-const SERVER_URL = process.env.CAPACITOR_SERVER_URL || "http://192.168.1.108:3000";
+const SERVER_URL = process.env.CAPACITOR_SERVER_URL || "http://192.168.1.105:3000/";
 
 const config: CapacitorConfig = {
   appId: "com.wuxia.cultivation",

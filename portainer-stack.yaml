@@ -9,7 +9,7 @@
 #
 # Required environment variables (set in Portainer):
 #   APP_PORT       — Host port for the application (default: 3000)
-#   APP_VERSION    — Image tag / version label (default: 2.2.0)
+#   APP_VERSION    — Image tag / version label (default: latest)
 #
 # Optional environment variables:
 #   RESET_DB       — Set to "true" to wipe and rebuild the database from scratch
@@ -19,7 +19,7 @@
 services:
   # ── Application ──────────────────────────────
   app:
-    image: ghcr.io/alex4lifesz-code/wuxia-log:${APP_VERSION:-2.2.0}
+    image: ghcr.io/alex4lifesz-code/wuxia-log:${APP_VERSION:-latest}
     container_name: wuxia-cultivation-tracker
     restart: always
     ports:
@@ -66,7 +66,7 @@ services:
         tag: "wuxia-{{.Name}}"
     labels:
       com.centurylabs.description: "Wuxia Cultivation Workout Tracker"
-      com.centurylabs.version: "${APP_VERSION:-2.1.0}"
+      com.centurylabs.version: "${APP_VERSION:-latest}"
       com.centurylabs.maintainer: "Century Labs"
       com.centurylabs.environment: "production"
       # Portainer metadata
