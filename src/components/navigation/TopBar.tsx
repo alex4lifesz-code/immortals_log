@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useState, memo } from "react";
+import { useState, useEffect, memo } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -16,8 +16,24 @@ function TopBar() {
   const { settings } = useDisplaySettings();
   const router = useRouter();
   const pathname = usePathname();
-  const items = getSortedNavItems();
+  const isAdmin = user?.role === "admin";
+  const items = getSortedNavItems().filter(item => (item.id !== "admin" || isAdmin));
+  const [isCompactDesktop, setIsCompactDesktop] = useState(false);
   const [elevated] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const updateCompactDesktop = () => {
+      setIsCompactDesktop(window.innerWidth <= 1280);
+    };
+
+    updateCompactDesktop();
+    window.addEventListener("resize", updateCompactDesktop);
+    return () => window.removeEventListener("resize", updateCompactDesktop);
+  }, []);
+
+  const visibleDesktopItems = isCompactDesktop ? items : items.slice(0, 4);
 
   // Mobile: no stats panel needed
   if (collapsed) {
@@ -67,7 +83,7 @@ function TopBar() {
         {/* Navigation Items — desktop only */}
         {!isMobile && (
           <div className="flex items-center gap-1">
-            {items.slice(0, 4).map((item) => (
+            {visibleDesktopItems.map((item) => (
               <motion.button
                 key={item.id}
                 whileHover={{ scale: 1.05 }}

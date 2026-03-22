@@ -7,7 +7,18 @@ import GlowButton from "@/components/ui/GlowButton";
 import GlowCard from "@/components/ui/GlowCard";
 import { useAppContext } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
-import { useDisplaySettings, TechniqueDisplayMode, RecentSessionsCompactMode, DateFormatOption, ActiveCardStyle, VariationDisplayMode } from "@/context/DisplaySettingsContext";
+import {
+  useDisplaySettings,
+  TechniqueDisplayMode,
+  RecentSessionsCompactMode,
+  DateFormatOption,
+  ActiveCardStyle,
+  VariationDisplayMode,
+  ProgressionVisibleColumnKey,
+  ProgressionHoldVisibleColumnKey,
+  DEFAULT_PROGRESSION_VISIBLE_COLUMNS,
+  DEFAULT_PROGRESSION_HOLD_VISIBLE_COLUMNS,
+} from "@/context/DisplaySettingsContext";
 import PresetSlots from "@/components/ui/PresetSlots";
 import SetupWizard from "@/components/ui/SetupWizard";
 import { t } from "@/lib/terminology";
@@ -27,6 +38,44 @@ function SettingRow({
       <span className={`text-[10px] font-medium ${color}`}>{value}</span>
     </div>
   );
+}
+
+const PROGRESSION_LOG_COLUMN_OPTIONS: Array<{ key: ProgressionVisibleColumnKey; label: string }> = [
+  { key: "date", label: "Date" },
+  { key: "level", label: "Level" },
+  { key: "category", label: "Category" },
+  { key: "weight1", label: "W1" },
+  { key: "weight2", label: "W2" },
+  { key: "weight3", label: "W3" },
+  { key: "reps1", label: "R1" },
+  { key: "reps2", label: "R2" },
+  { key: "reps3", label: "R3" },
+  { key: "modifier", label: "Modifier" },
+  { key: "band", label: "Band" },
+  { key: "variant", label: "Variant" },
+  { key: "notes", label: "Notes" },
+];
+
+const PROGRESSION_HOLD_COLUMN_OPTIONS: Array<{ key: ProgressionHoldVisibleColumnKey; label: string }> = [
+  { key: "date", label: "Date" },
+  { key: "level", label: "Level" },
+  { key: "category", label: "Category" },
+  { key: "holdTime", label: "T1" },
+  { key: "holdTime2", label: "T2" },
+  { key: "holdTime3", label: "T3" },
+  { key: "reps1", label: "W1" },
+  { key: "reps2", label: "W2" },
+  { key: "reps3", label: "W3" },
+  { key: "modifier", label: "Modifier" },
+  { key: "band", label: "Band" },
+  { key: "variant", label: "Variant" },
+  { key: "notes", label: "Notes" },
+];
+
+function getColumnOptionLabelClass(label: string) {
+  return /^(W|R|T)\d$/.test(label)
+    ? "inline-flex min-w-[2.25rem] justify-center font-semibold tabular-nums tracking-[0.08em]"
+    : "inline-flex min-w-0";
 }
 
 function SettingsSidebar({ onLogout }: { onLogout: () => void }) {
@@ -147,6 +196,22 @@ export default function SettingsPage() {
   } = useAppContext();
   const { settings, updateSettings, resetSettings } = useDisplaySettings();
   const [showWizard, setShowWizard] = useState(false);
+  const visibleProgressionColumns = settings.progressionVisibleColumns ?? DEFAULT_PROGRESSION_VISIBLE_COLUMNS;
+  const visibleHoldColumns = settings.progressionHoldVisibleColumns ?? DEFAULT_PROGRESSION_HOLD_VISIBLE_COLUMNS;
+
+  const toggleProgressionColumn = (key: ProgressionVisibleColumnKey) => {
+    const next = visibleProgressionColumns.includes(key)
+      ? visibleProgressionColumns.filter((column) => column !== key)
+      : [...visibleProgressionColumns, key];
+    updateSettings({ progressionVisibleColumns: next });
+  };
+
+  const toggleHoldColumn = (key: ProgressionHoldVisibleColumnKey) => {
+    const next = visibleHoldColumns.includes(key)
+      ? visibleHoldColumns.filter((column) => column !== key)
+      : [...visibleHoldColumns, key];
+    updateSettings({ progressionHoldVisibleColumns: next });
+  };
 
   return (
     <PageLayout
@@ -805,12 +870,50 @@ export default function SettingsPage() {
                   <div className="min-w-0">
                     <span className="text-[11px] text-mist-light shrink-0 block">Column order</span>
                     <span className="text-[9px] text-mist-dark block mt-0.5">
-                      {(settings.progressionColumnOrderGrouped ?? false) ? "W1, W2, W3, R1, R2, R3 (grouped)" : "W1, R1, W2, R2, W3, R3 (paired)"}
+                      {(settings.progressionColumnOrderGrouped ?? true) ? "W1, W2, W3, R1, R2, R3 (grouped)" : "W1, R1, W2, R2, W3, R3 (paired)"}
                     </span>
                   </div>
-                  <button type="button" role="switch" aria-checked={settings.progressionColumnOrderGrouped ?? false} onClick={() => updateSettings({ progressionColumnOrderGrouped: !(settings.progressionColumnOrderGrouped ?? false) })} className={`relative shrink-0 w-8 h-[18px] rounded-full transition-colors ${(settings.progressionColumnOrderGrouped ?? false) ? "bg-gold" : "bg-ink-light"}`}>
-                    <span className={`absolute top-[2px] left-[2px] w-[14px] h-[14px] rounded-full bg-cloud-white shadow transition-transform ${(settings.progressionColumnOrderGrouped ?? false) ? "translate-x-[14px]" : "translate-x-0"}`} />
+                  <button type="button" role="switch" aria-checked={settings.progressionColumnOrderGrouped ?? true} onClick={() => updateSettings({ progressionColumnOrderGrouped: !(settings.progressionColumnOrderGrouped ?? true) })} className={`relative shrink-0 w-8 h-[18px] rounded-full transition-colors ${(settings.progressionColumnOrderGrouped ?? true) ? "bg-gold" : "bg-ink-light"}`}>
+                    <span className={`absolute top-[2px] left-[2px] w-[14px] h-[14px] rounded-full bg-cloud-white shadow transition-transform ${(settings.progressionColumnOrderGrouped ?? true) ? "translate-x-[14px]" : "translate-x-0"}`} />
                   </button>
+                </div>
+                <div className="py-1.5">
+                  <div className="min-w-0 mb-2">
+                    <span className="text-[11px] text-mist-light block">Visible columns</span>
+                    <span className="text-[9px] text-mist-dark block mt-0.5">Exercise always stays visible in both logs</span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                    {PROGRESSION_LOG_COLUMN_OPTIONS.map((option) => (
+                      <label key={option.key} className="flex items-center gap-2 rounded-md border border-ink-light/70 px-2 py-1.5 text-[10px] text-mist-light hover:border-gold/30 hover:bg-ink-mid/15 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={visibleProgressionColumns.includes(option.key)}
+                          onChange={() => toggleProgressionColumn(option.key)}
+                          className="h-3.5 w-3.5 rounded border-ink-light bg-ink-dark text-gold focus:ring-gold/40"
+                        />
+                        <span className={getColumnOptionLabelClass(option.label)}>{option.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div className="py-1.5">
+                  <div className="min-w-0 mb-2">
+                    <span className="text-[11px] text-mist-light block">Timed hold columns</span>
+                    <span className="text-[9px] text-mist-dark block mt-0.5">Control the secondary hold log separately</span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                    {PROGRESSION_HOLD_COLUMN_OPTIONS.map((option) => (
+                      <label key={option.key} className="flex items-center gap-2 rounded-md border border-ink-light/70 px-2 py-1.5 text-[10px] text-mist-light hover:border-gold/30 hover:bg-ink-mid/15 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={visibleHoldColumns.includes(option.key)}
+                          onChange={() => toggleHoldColumn(option.key)}
+                          className="h-3.5 w-3.5 rounded border-ink-light bg-ink-dark text-gold focus:ring-gold/40"
+                        />
+                        <span className={getColumnOptionLabelClass(option.label)}>{option.label}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
                 <div className="py-1">
                   <div className="flex items-center justify-between mb-1">

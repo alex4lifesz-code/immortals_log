@@ -22,6 +22,68 @@ export type TerminologyMode = "fantasy" | "normal";
 
 export type VariationDisplayMode = "abbreviation" | "full";
 
+export type ProgressionVisibleColumnKey =
+  | "date"
+  | "level"
+  | "category"
+  | "weight1"
+  | "weight2"
+  | "weight3"
+  | "reps1"
+  | "reps2"
+  | "reps3"
+  | "modifier"
+  | "band"
+  | "variant"
+  | "notes";
+
+export type ProgressionHoldVisibleColumnKey =
+  | "date"
+  | "level"
+  | "category"
+  | "holdTime"
+  | "holdTime2"
+  | "holdTime3"
+  | "reps1"
+  | "reps2"
+  | "reps3"
+  | "modifier"
+  | "band"
+  | "variant"
+  | "notes";
+
+export const DEFAULT_PROGRESSION_VISIBLE_COLUMNS: ProgressionVisibleColumnKey[] = [
+  "date",
+  "level",
+  "category",
+  "weight1",
+  "weight2",
+  "weight3",
+  "reps1",
+  "reps2",
+  "reps3",
+  "modifier",
+  "band",
+  "variant",
+  "notes",
+];
+
+export const DEFAULT_PROGRESSION_HOLD_VISIBLE_COLUMNS: ProgressionHoldVisibleColumnKey[] = [
+  "date",
+  "level",
+  "category",
+  "holdTime",
+  "holdTime2",
+  "holdTime3",
+  "reps1",
+  "reps2",
+  "reps3",
+  "modifier",
+  "band",
+  "variant",
+  "notes",
+];
+
 export interface DisplaySettings {
   // Active technique cards: display mode (same as sidebar/sessions)
   activeCardMode: TechniqueDisplayMode;
@@ -106,6 +168,10 @@ export interface DisplaySettings {
   progressionColumnColorsEnabled: boolean;
   // Progression log column order grouped
   progressionColumnOrderGrouped: boolean;
+  // Progression log visible columns (exercise always stays visible)
+  progressionVisibleColumns: ProgressionVisibleColumnKey[];
+  // Timed hold log visible columns (exercise always stays visible)
+  progressionHoldVisibleColumns: ProgressionHoldVisibleColumnKey[];
   // Progression log variation display mode
   progressionVariationDisplay: VariationDisplayMode;
 }
@@ -149,10 +215,12 @@ const DEFAULT_SETTINGS: DisplaySettings = {
   glowIntensityProgressionCards: 100,
   progressionCardLoreVisible: true,
   progressionLogMode: "name-illumination-realm",
-  progressionLogCompact: "auto",
+  progressionLogCompact: "compact",
   glowIntensityProgressionLog: 100,
   progressionColumnColorsEnabled: true,
-  progressionColumnOrderGrouped: false,
+  progressionColumnOrderGrouped: true,
+  progressionVisibleColumns: DEFAULT_PROGRESSION_VISIBLE_COLUMNS,
+  progressionHoldVisibleColumns: DEFAULT_PROGRESSION_HOLD_VISIBLE_COLUMNS,
   progressionVariationDisplay: "abbreviation",
 };
 

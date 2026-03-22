@@ -1,14 +1,15 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, memo } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import GlowButton from "@/components/ui/GlowButton";
 import GlowCard from "@/components/ui/GlowCard";
 import { GlowModal } from "@/components/ui/GlowCard";
 import { useAuth } from "@/context/AuthContext";
-import { useDisplaySettings } from "@/context/DisplaySettingsContext";
+import { useDisplaySettings, DEFAULT_PROGRESSION_VISIBLE_COLUMNS, DEFAULT_PROGRESSION_HOLD_VISIBLE_COLUMNS } from "@/context/DisplaySettingsContext";
 import { getDifficultyColor, getTypeColor, DAY_ABBREVIATIONS, parseDayAssignments } from "@/lib/constants";
+import { formatDateWithPreference } from "@/lib/constants";
 import { getDifficultyColorClass, getDifficultyGlowStyleScaled, getDifficultyStyle } from "@/lib/difficulty-styles";
 import { getExerciseDisplayName, matchesLooseSearchInFields, getTypeDisplayName, getDifficultyDisplayName, getDifficultyColorKey, getTypeColorKey } from "@/lib/exercise-name";
 import { useAppContext } from "@/context/AppContext";
@@ -99,6 +100,16 @@ interface ProgressionExercise {
   userProgress: UserProgress[];
 }
 
+interface ReadyToLogQueueItem {
+  id: string;
+  exerciseId: string;
+}
+
+interface LogTableFilter {
+  exerciseId: string;
+  levelNameLevel: number | null;
+}
+
 function parseTips(tips: string): string[] {
   if (!tips) return [];
   try { const arr = JSON.parse(tips); return Array.isArray(arr) ? arr : []; } catch { return []; }
@@ -123,6 +134,13 @@ function parseCategoryTags(category: string | null | undefined): string[] {
 function stripBwPercentHint(label: string): string {
   // Remove notes like "(12-20% bw)" from displayed labels in log tables.
   return label.replace(/\s*\([^)]*%?\s*bw[^)]*\)\s*/gi, " ").replace(/\s{2,}/g, " ").trim();
+}
+
+function createReadyToLogQueueItemId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `q_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
 const RESISTANCE_BAND_TOKEN = /^RB:\s*(\d+(?:\.\d+)?)\s*kg$/i;
@@ -228,6 +246,7 @@ function getSelectedLevel(
   defaults: Record<string, number>,
   autoLevels: Record<string, number>
 ): number {
+  if (isGymCategoryExercise(exercise) && autoLevels[exercise.id]) return autoLevels[exercise.id];
   if (Object.prototype.hasOwnProperty.call(defaults, exercise.id)) return defaults[exercise.id];
   if (autoLevels[exercise.id]) return autoLevels[exercise.id];
   return exercise.userProgress[0]?.currentLevel ?? 1;
@@ -869,7 +888,7 @@ function flattenLogs(exercises: ProgressionExercise[]): FlatLogEntry[] {
   return entries;
 }
 
-function formatDate(dateString: string): string {
+function formatDate(dateString: string, dateFormat: "dd-mm-yyyy" | "dd-mmm-yyyy" | "dd-mm-yy" | "dd-mmm-yy"): string {
   const date = new Date(dateString);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -880,7 +899,7 @@ function formatDate(dateString: string): string {
   if (diffMins < 60) return `${diffMins}m ago`;
   if (diffHours < 24) return `${diffHours}h ago`;
   if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  return formatDateWithPreference(date, dateFormat);
 }
 
 function displayVal(v: number | null): string {
@@ -904,21 +923,37 @@ function abbreviateVariantText(text: string): string {
 function TrainingLogTable({
   exercises,
   physique,
-  selectedExerciseId,
+  selectedLogFilter,
   onSelectExercise,
   onRefresh,
   userId,
 }: {
   exercises: ProgressionExercise[];
   physique: UserPhysiqueSettings;
-  selectedExerciseId: string | null;
-  onSelectExercise: (exerciseId: string | null) => void;
+  selectedLogFilter: LogTableFilter | null;
+  onSelectExercise: (filter: LogTableFilter | null) => void;
   onRefresh: () => void;
   userId: string;
 }) {
   const allEntries = useMemo(() => flattenLogs(exercises), [exercises]);
-  // Show only selected exercise when a filter is active.
-  const entries = allEntries.filter(e => !e.hasHold && (!selectedExerciseId || e.exerciseId === selectedExerciseId));
+  const tableEntries = useMemo(() => allEntries.filter((entry) => !entry.hasHold), [allEntries]);
+  const exerciseLookup = useMemo(() => new Map(exercises.map((exercise) => [exercise.id, exercise])), [exercises]);
+
+  const isSelectedGymExercise = selectedLogFilter
+    ? (() => {
+        const selectedExercise = exerciseLookup.get(selectedLogFilter.exerciseId);
+        return selectedExercise ? isGymCategoryExercise(selectedExercise) : false;
+      })()
+    : false;
+
+  // Show only selected progression tier when a filter is active.
+  const entries = allEntries.filter(
+    (entry) =>
+      !entry.hasHold &&
+      (!selectedLogFilter ||
+        (entry.exerciseId === selectedLogFilter.exerciseId &&
+          (isSelectedGymExercise || entry.levelNameLevel === selectedLogFilter.levelNameLevel)))
+  );
   const { settings } = useDisplaySettings();
   const { isMobile } = useAppContext();
 
@@ -937,11 +972,21 @@ function TrainingLogTable({
   const [levelPicker, setLevelPicker] = useState<{ logId: string; exerciseId: string } | null>(null);
 
   const logMode = settings.progressionLogMode ?? "name-illumination-realm";
-  const compactSetting = settings.progressionLogCompact ?? "auto";
+  const compactSetting = settings.progressionLogCompact ?? "compact";
   const glowIntensity = settings.glowIntensityProgressionLog ?? 100;
   const columnColors = settings.progressionColumnColorsEnabled ?? true;
-  const columnGrouped = settings.progressionColumnOrderGrouped ?? false;
+  const columnGrouped = settings.progressionColumnOrderGrouped ?? true;
   const variationDisplay = settings.progressionVariationDisplay ?? "abbreviation";
+  const dateFormat = settings.dateFormat || "dd-mmm-yyyy";
+  const visibleColumnKeys = settings.progressionVisibleColumns ?? DEFAULT_PROGRESSION_VISIBLE_COLUMNS;
+  const visibleColumnSet = useMemo(() => new Set(visibleColumnKeys), [visibleColumnKeys]);
+  const showDate = visibleColumnSet.has("date");
+  const showLevel = visibleColumnSet.has("level");
+  const showCategory = visibleColumnSet.has("category");
+  const showModifier = visibleColumnSet.has("modifier");
+  const showBand = visibleColumnSet.has("band");
+  const showVariant = visibleColumnSet.has("variant");
+  const showNotes = visibleColumnSet.has("notes");
 
   const effectiveCompact = compactSetting === "compact" || (compactSetting === "auto" && isMobile);
 
@@ -950,14 +995,10 @@ function TrainingLogTable({
   const showPath = logMode === "name-illumination-realm-path";
 
   // Build exercise lookup for display
-  const exerciseLookup = new Map(exercises.map(e => [e.id, e]));
 
-  const anyModifier = entries.some(e => e.modifier);
+  const anyModifier = tableEntries.some((entry) => entry.modifier);
   const anyBand = true;
-  const selectedExerciseHasVariations = selectedExerciseId
-    ? (exerciseLookup.get(selectedExerciseId)?.variations?.length ?? 0) > 0
-    : false;
-  const anyVariant = isEditMode || entries.some(e => e.variant) || selectedExerciseHasVariations;
+  const anyVariant = isEditMode || tableEntries.some((entry) => entry.variant);
 
   const getZeroValueStyle = (value: number | null, colType: string): React.CSSProperties | undefined => {
     if (value === 0) return { backgroundColor: 'var(--ink-mid)', color: 'var(--mist-dark)' };
@@ -965,14 +1006,6 @@ function TrainingLogTable({
     if (columnColors && colType === 'reps') return { backgroundColor: 'var(--col-reps-bg)' };
     return undefined;
   };
-
-  // Clear save message after 5 seconds
-  useEffect(() => {
-    if (saveMessage) {
-      const timer = setTimeout(() => setSaveMessage(null), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [saveMessage]);
 
   const handleEditModeToggle = () => {
     if (!isEditMode) {
@@ -1040,6 +1073,7 @@ function TrainingLogTable({
     } catch {
       setSaveMessage({ type: "error", text: "Network error — unable to save changes" });
     } finally {
+      setIsEditMode(false);
       setIsSaving(false);
     }
   };
@@ -1085,6 +1119,21 @@ function TrainingLogTable({
     ? ["weight", "weight", "weight", "reps", "reps", "reps"]
     : ["weight", "reps", "weight", "reps", "weight", "reps"];
 
+  const visibleDataColumns = dataColumns.filter((col) => visibleColumnSet.has(col));
+  const visibleDataColumnLabels = dataColumnLabels.filter((_label, idx) => visibleColumnSet.has(dataColumns[idx]));
+  const visibleDataColumnTypes = dataColumnTypes.filter((_type, idx) => visibleColumnSet.has(dataColumns[idx]));
+  const emptyRowColSpan =
+    (showDate ? 1 : 0) +
+    (showLevel ? 1 : 0) +
+    (showCategory ? 1 : 0) +
+    1 +
+    visibleDataColumns.length +
+    (anyModifier && showModifier ? 1 : 0) +
+    (anyBand && showBand ? 1 : 0) +
+    (anyVariant && showVariant ? 1 : 0) +
+    (showNotes ? 1 : 0) +
+    (isEditMode ? 1 : 0);
+
   const fieldMeta: Record<string, { type: "weight" | "reps"; min: string; max?: string; step?: string }> = {
     weight1: { type: "weight", min: "0", step: "0.5" },
     weight2: { type: "weight", min: "0", step: "0.5" },
@@ -1096,10 +1145,10 @@ function TrainingLogTable({
 
   return (
     <>
-    <GlowCard className="!p-0 overflow-hidden" glow="jade" hoverable={false}>
+    <GlowCard className="w-full !p-0" glow="jade" hoverable={false}>
       {/* Edit header bar */}
       {entries.length > 0 && (
-        <div className="flex items-center justify-between px-3 py-2 border-b border-ink-light">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-jade-glow/20">
           <div className="flex items-center gap-2">
             {saveMessage && (
               <motion.span
@@ -1135,40 +1184,40 @@ function TrainingLogTable({
         </div>
       )}
 
-      <div className="overflow-x-auto" style={{ WebkitOverflowScrolling: "touch" }}>
+      <div className="overflow-x-auto -mx-4 px-4" style={{ WebkitOverflowScrolling: "touch" }}>
         <table className={`text-xs border-collapse w-full`} style={{ whiteSpace: "nowrap", minWidth: effectiveCompact ? "400px" : (isEditMode ? "720px" : "650px") }}>
           <thead>
-            <tr className="border-b-2 border-jade-glow/50 bg-ink-mid/40 text-mist-light">
-              <th className={`${effectiveCompact ? 'py-1 px-1' : 'py-2 px-1.5'} text-left font-semibold uppercase tracking-wider text-[11px]`}>Date</th>
-              <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} text-center font-semibold uppercase tracking-wider text-[11px]`}>Lvl</th>
-              <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} text-center font-semibold uppercase tracking-wider text-[11px]`}>Category</th>
+            <tr className="border-b border-jade-glow/30 text-mist-dark">
+              {showDate && <th className={`${effectiveCompact ? 'py-1 px-1' : 'py-2 px-1.5'} w-[6.5rem] min-w-[6.5rem] text-left font-semibold uppercase tracking-wider text-[11px]`}>Date</th>}
+              {showLevel && <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} w-[3.25rem] min-w-[3.25rem] text-center font-semibold uppercase tracking-wider text-[11px]`}>Lvl</th>}
+              {showCategory && <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} w-[5.25rem] min-w-[5.25rem] text-center font-semibold uppercase tracking-wider text-[11px]`}>Category</th>}
               <th className={`${effectiveCompact ? 'py-1 px-1' : 'py-2 px-1.5'} text-left font-semibold uppercase tracking-wider text-[11px]`}>Exercise</th>
-              {dataColumnLabels.map((label, idx) => (
+              {visibleDataColumnLabels.map((label, idx) => (
                 <th
                   key={label + idx}
-                  className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} text-center font-semibold uppercase tracking-wider text-[11px]`}
-                  style={columnColors ? { color: dataColumnTypes[idx] === "weight" ? "var(--col-weight)" : "var(--col-reps)" } : undefined}
+                  className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} w-[3.25rem] min-w-[3.25rem] text-center font-semibold tabular-nums uppercase tracking-wider text-[11px]`}
+                  style={columnColors ? { color: visibleDataColumnTypes[idx] === "weight" ? "var(--col-weight)" : "var(--col-reps)" } : undefined}
                 >
                   {label}
                 </th>
               ))}
-              {anyModifier && (
-                <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} text-center font-semibold uppercase tracking-wider text-[11px] text-amber-400`}>Mod</th>
+              {anyModifier && showModifier && (
+                <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} w-[4.5rem] min-w-[4.5rem] text-center font-semibold uppercase tracking-wider text-[11px] text-amber-400`}>Mod</th>
               )}
-              {anyBand && (
-                <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} text-center font-semibold uppercase tracking-wider text-[11px] text-sky-300`}>Band</th>
+              {anyBand && showBand && (
+                <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} w-[5rem] min-w-[5rem] text-center font-semibold uppercase tracking-wider text-[11px] text-sky-300`}>Band</th>
               )}
-              {anyVariant && (
-                <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} text-center font-semibold uppercase tracking-wider text-[11px] text-purple-400`}>Variant</th>
+              {anyVariant && showVariant && (
+                <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} w-[6.5rem] min-w-[6.5rem] text-center font-semibold uppercase tracking-wider text-[11px] text-purple-400`}>Variant</th>
               )}
-              <th className={`${effectiveCompact ? 'py-1 px-1' : 'py-2 px-1.5'} text-left font-semibold uppercase tracking-wider text-[11px]`}>Notes</th>
+              {showNotes && <th className={`${effectiveCompact ? 'py-1 px-1' : 'py-2 px-1.5'} w-[9rem] min-w-[9rem] text-left font-semibold uppercase tracking-wider text-[11px]`}>Notes</th>}
               {isEditMode && <th className="px-1 py-2 text-center font-semibold text-mist-glow text-[11px] align-middle">⋮</th>}
             </tr>
           </thead>
           <tbody>
             {entries.length === 0 ? (
               <tr>
-                <td colSpan={11 + (anyModifier ? 1 : 0) + (anyBand ? 1 : 0) + (anyVariant ? 1 : 0) + (isEditMode ? 1 : 0)} className="py-6 text-center text-mist-mid text-sm">
+                <td colSpan={emptyRowColSpan} className="py-6 text-center text-mist-mid text-sm">
                   No training data logged yet. Select an exercise from the sidebar to log your first set.
                 </td>
               </tr>
@@ -1228,30 +1277,46 @@ function TrainingLogTable({
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.12, ease: "easeOut" }}
-                      className={`border-b transition-all duration-200 ${
+                      className={`border-b transition-all duration-100 ${
                         isEditMode
-                          ? "border-jade-glow/20 bg-jade-deep/10 hover:bg-jade-deep/15"
-                          : "border-ink-light hover:bg-ink-mid/15"
+                          ? "border-jade-glow/15 bg-jade-deep/5 hover:bg-jade-deep/10"
+                          : "border-ink-light/50 hover:bg-ink-mid/10"
                       }`}
                     >
-                      <td className={`${effectiveCompact ? 'px-1 py-1' : 'px-1.5 py-1.5'} text-mist-light text-xs align-middle whitespace-nowrap`}>{formatDate(entry.date)}</td>
-                      <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} text-center align-middle`}>
-                        <span className="text-[10px] text-gold" title={stripBwPercentHint(tier?.name || entry.tierName)}>{shownLevel}</span>
-                      </td>
-                      <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} text-center align-middle`}>
-                        <span className={`text-[10px] font-semibold ${getExerciseCategoryLabel(ex) === "GYM" ? "text-gold" : "text-jade-light"}`}>
-                          {getExerciseCategoryLabel(ex)}
-                        </span>
-                      </td>
+                      {showDate && <td className={`${effectiveCompact ? 'px-1 py-1' : 'px-1.5 py-1.5'} w-[6.5rem] min-w-[6.5rem] text-mist-light text-xs align-middle whitespace-nowrap`}>{formatDate(entry.date, dateFormat)}</td>}
+                      {showLevel && (
+                        <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} w-[3.25rem] min-w-[3.25rem] text-center align-middle`}>
+                          <span className="text-[10px] text-gold" title={stripBwPercentHint(tier?.name || entry.tierName)}>{shownLevel}</span>
+                        </td>
+                      )}
+                      {showCategory && (
+                        <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} w-[5.25rem] min-w-[5.25rem] text-center align-middle`}>
+                          <span className={`text-[10px] font-semibold ${getExerciseCategoryLabel(ex) === "GYM" ? "text-gold" : "text-jade-light"}`}>
+                            {getExerciseCategoryLabel(ex)}
+                          </span>
+                        </td>
+                      )}
                       <td
-                        className={`${effectiveCompact ? 'px-1 py-1' : 'px-1.5 py-1.5'} align-middle whitespace-nowrap cursor-pointer hover:bg-jade-deep/10 rounded transition-colors ${isEditMode ? 'ring-1 ring-jade-glow/20' : ''}`}
+                        className={`${effectiveCompact ? 'px-1 py-1' : 'px-1.5 py-1.5'} align-middle whitespace-nowrap cursor-pointer hover:bg-jade-deep/10 transition-colors ${isEditMode ? 'ring-1 ring-jade-glow/20' : ''}`}
                         style={{ minWidth: "120px" }}
                         onClick={() => {
                           if (isEditMode) {
                             setLevelPicker({ logId: entry.logId, exerciseId: entry.exerciseId });
                             return;
                           }
-                          onSelectExercise(entry.exerciseId === selectedExerciseId ? null : entry.exerciseId);
+                          const nextFilter: LogTableFilter = {
+                            exerciseId: entry.exerciseId,
+                            levelNameLevel: (
+                              (() => {
+                                const clickedExercise = exerciseLookup.get(entry.exerciseId);
+                                return clickedExercise && isGymCategoryExercise(clickedExercise) ? null : entry.levelNameLevel;
+                              })()
+                            ),
+                          };
+                          const isSameFilter =
+                            selectedLogFilter?.exerciseId === nextFilter.exerciseId &&
+                            selectedLogFilter?.levelNameLevel === nextFilter.levelNameLevel;
+                          onSelectExercise(isSameFilter ? null : nextFilter);
                         }}
                       >
                         {!showIllumination ? (
@@ -1260,7 +1325,7 @@ function TrainingLogTable({
                           </span>
                         ) : (
                           <div
-                            className="px-2 py-1 rounded border inline-flex items-center gap-1.5"
+                            className="px-2 py-1 rounded-md border inline-flex items-center gap-1.5"
                             style={
                               glowIntensity > 0
                                 ? ({ ...(displayGlowStyle as React.CSSProperties), ...(softDimStyle || {}) } as React.CSSProperties)
@@ -1286,12 +1351,12 @@ function TrainingLogTable({
                           </div>
                         )}
                       </td>
-                      {dataColumns.map((col, idx) => {
+                      {visibleDataColumns.map((col, idx) => {
                         const meta = fieldMeta[col];
                         if (isEditMode && editData) {
                           const editVal = editData[col as keyof typeof editData];
                           return (
-                            <td key={col + idx} className="px-1 py-1.5 text-center align-middle">
+                            <td key={col + idx} className="w-[3.25rem] min-w-[3.25rem] px-1 py-1.5 text-center align-middle">
                               <input
                                 type="number"
                                 min={meta.min}
@@ -1316,16 +1381,16 @@ function TrainingLogTable({
                         return (
                           <td
                             key={col + idx}
-                            className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} text-center text-cloud-white text-xs align-middle`}
-                            style={getZeroValueStyle(entry[col], dataColumnTypes[idx])}
+                            className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} w-[3.25rem] min-w-[3.25rem] text-center text-cloud-white text-xs align-middle`}
+                            style={getZeroValueStyle(entry[col], visibleDataColumnTypes[idx])}
                           >
                             {displayVal(entry[col])}
                           </td>
                         );
                       })}
-                      {anyModifier && (
+                      {anyModifier && showModifier && (
                         isEditMode && editData ? (
-                          <td className="px-1 py-1.5 text-center align-middle">
+                          <td className="w-[4.5rem] min-w-[4.5rem] px-1 py-1.5 text-center align-middle">
                             <input
                               type="text"
                               value={editData.modifier ?? ""}
@@ -1335,14 +1400,14 @@ function TrainingLogTable({
                             />
                           </td>
                         ) : (
-                          <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} text-center text-amber-400 text-xs whitespace-nowrap align-middle`} title={entry.modifier || ""}>
+                          <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} w-[4.5rem] min-w-[4.5rem] text-center text-amber-400 text-xs whitespace-nowrap align-middle`} title={entry.modifier || ""}>
                             {entry.modifier || "—"}
                           </td>
                         )
                       )}
-                      {anyBand && (
+                      {anyBand && showBand && (
                         isEditMode && editData ? (
-                          <td className="px-1 py-1.5 text-center align-middle">
+                          <td className="w-[5rem] min-w-[5rem] px-1 py-1.5 text-center align-middle">
                             <select
                               value={editData.resistanceBandKg != null ? String(editData.resistanceBandKg) : ""}
                               onChange={(e) =>
@@ -1363,14 +1428,14 @@ function TrainingLogTable({
                             </select>
                           </td>
                         ) : (
-                          <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} text-center text-sky-300 text-xs whitespace-nowrap align-middle`}>
+                          <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} w-[5rem] min-w-[5rem] text-center text-sky-300 text-xs whitespace-nowrap align-middle`}>
                             {entry.resistanceBandKg != null ? formatResistanceBandLabel(entry.resistanceBandKg) : "—"}
                           </td>
                         )
                       )}
-                      {anyVariant && (
+                      {anyVariant && showVariant && (
                         isEditMode && editData ? (
-                          <td className="px-1 py-1.5 text-center align-middle">
+                          <td className="w-[6.5rem] min-w-[6.5rem] px-1 py-1.5 text-center align-middle">
                             <select
                               value={editData.variant ?? ""}
                               onChange={(e) => handleEditChange(entry.logId, "variant", e.target.value || null)}
@@ -1385,7 +1450,7 @@ function TrainingLogTable({
                             </select>
                           </td>
                         ) : (
-                          <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} text-center text-purple-400 text-xs whitespace-nowrap align-middle`} title={entry.variant || ""}>
+                          <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} w-[6.5rem] min-w-[6.5rem] text-center text-purple-400 text-xs whitespace-nowrap align-middle`} title={entry.variant || ""}>
                             {entry.variant
                               ? variationDisplay === "full"
                                 ? entry.variant
@@ -1394,21 +1459,23 @@ function TrainingLogTable({
                           </td>
                         )
                       )}
-                      {isEditMode && editData ? (
-                        <td className="px-1.5 py-1.5 align-middle">
-                          <input
-                            type="text"
-                            value={editData.notes ?? ""}
-                            onChange={(e) => handleEditChange(entry.logId, "notes", e.target.value || null)}
-                            placeholder="Add notes..."
-                            className="w-full min-w-[100px] bg-ink-deep border border-jade-glow/30 rounded px-2 py-1 text-cloud-white text-xs placeholder:text-mist-dark outline-none transition-all duration-200 focus:border-jade-glow focus:shadow-[0_0_8px_rgba(58,143,143,0.4)]"
-                          />
-                        </td>
-                      ) : (
-                        <td className={`${effectiveCompact ? 'px-1 py-1' : 'px-1.5 py-1.5'} text-mist-light text-xs whitespace-nowrap align-middle`} title={entry.notes || ""}>
-                          {entry.notes || "—"}
-                          {entry.completed && <span className="text-jade-glow ml-1">✦</span>}
-                        </td>
+                      {showNotes && (
+                        isEditMode && editData ? (
+                          <td className="w-[9rem] min-w-[9rem] px-1.5 py-1.5 align-middle">
+                            <input
+                              type="text"
+                              value={editData.notes ?? ""}
+                              onChange={(e) => handleEditChange(entry.logId, "notes", e.target.value || null)}
+                              placeholder="Add notes..."
+                              className="w-full min-w-[100px] bg-ink-deep border border-jade-glow/30 rounded px-2 py-1 text-cloud-white text-xs placeholder:text-mist-dark outline-none transition-all duration-200 focus:border-jade-glow focus:shadow-[0_0_8px_rgba(58,143,143,0.4)]"
+                            />
+                          </td>
+                        ) : (
+                          <td className={`${effectiveCompact ? 'px-1 py-1' : 'px-1.5 py-1.5'} w-[9rem] min-w-[9rem] text-mist-light text-xs whitespace-nowrap align-middle`} title={entry.notes || ""}>
+                            {entry.notes || "—"}
+                            {entry.completed && <span className="text-jade-glow ml-1">✦</span>}
+                          </td>
+                        )
                       )}
                       {isEditMode && (
                         <td className="px-1 py-1.5 text-center align-middle">
@@ -1549,22 +1616,37 @@ function TrainingLogTable({
 
 function HoldTrainingLogTable({
   exercises,
-  selectedExerciseId,
+  selectedLogFilter,
   onSelectExercise,
   onRefresh,
   userId,
 }: {
   exercises: ProgressionExercise[];
-  selectedExerciseId: string | null;
-  onSelectExercise: (exerciseId: string | null) => void;
+  selectedLogFilter: LogTableFilter | null;
+  onSelectExercise: (filter: LogTableFilter | null) => void;
   onRefresh: () => void;
   userId: string;
 }) {
   const allEntries = useMemo(() => flattenLogs(exercises), [exercises]);
-  const entries = allEntries.filter(e => e.hasHold && (!selectedExerciseId || e.exerciseId === selectedExerciseId));
+  const tableEntries = useMemo(() => allEntries.filter((entry) => entry.hasHold), [allEntries]);
+  const exerciseLookup = useMemo(() => new Map(exercises.map((exercise) => [exercise.id, exercise])), [exercises]);
+
+  const isSelectedGymExercise = selectedLogFilter
+    ? (() => {
+        const selectedExercise = exerciseLookup.get(selectedLogFilter.exerciseId);
+        return selectedExercise ? isGymCategoryExercise(selectedExercise) : false;
+      })()
+    : false;
+
+  const entries = allEntries.filter(
+    (entry) =>
+      entry.hasHold &&
+      (!selectedLogFilter ||
+        (entry.exerciseId === selectedLogFilter.exerciseId &&
+          (isSelectedGymExercise || entry.levelNameLevel === selectedLogFilter.levelNameLevel)))
+  );
   const { settings } = useDisplaySettings();
   const { isMobile } = useAppContext();
-
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingData, setEditingData] = useState<Record<string, {
     reps1: number | null; holdTime: number | null;
@@ -1580,11 +1662,21 @@ function HoldTrainingLogTable({
   const [levelPicker, setLevelPicker] = useState<{ logId: string; exerciseId: string } | null>(null);
 
   const logMode = settings.progressionLogMode ?? "name-illumination-realm";
-  const compactSetting = settings.progressionLogCompact ?? "auto";
+  const compactSetting = settings.progressionLogCompact ?? "compact";
   const glowIntensity = settings.glowIntensityProgressionLog ?? 100;
   const columnColors = settings.progressionColumnColorsEnabled ?? true;
-  const columnGrouped = settings.progressionColumnOrderGrouped ?? false;
+  const columnGrouped = settings.progressionColumnOrderGrouped ?? true;
   const variationDisplay = settings.progressionVariationDisplay ?? "abbreviation";
+  const dateFormat = settings.dateFormat || "dd-mmm-yyyy";
+  const visibleColumnKeys = settings.progressionHoldVisibleColumns ?? DEFAULT_PROGRESSION_HOLD_VISIBLE_COLUMNS;
+  const visibleColumnSet = useMemo(() => new Set(visibleColumnKeys), [visibleColumnKeys]);
+  const showDate = visibleColumnSet.has("date");
+  const showLevel = visibleColumnSet.has("level");
+  const showCategory = visibleColumnSet.has("category");
+  const showModifier = visibleColumnSet.has("modifier");
+  const showBand = visibleColumnSet.has("band");
+  const showVariant = visibleColumnSet.has("variant");
+  const showNotes = visibleColumnSet.has("notes");
 
   const effectiveCompact = compactSetting === "compact" || (compactSetting === "auto" && isMobile);
 
@@ -1592,14 +1684,9 @@ function HoldTrainingLogTable({
   const showRealm = logMode === "name-illumination-realm" || logMode === "name-illumination-realm-path";
   const showPath = logMode === "name-illumination-realm-path";
 
-  const exerciseLookup = new Map(exercises.map(e => [e.id, e]));
-
-  const anyModifier = entries.some(e => e.modifier);
+  const anyModifier = tableEntries.some((entry) => entry.modifier);
   const anyBand = true;
-  const selectedExerciseHasVariations = selectedExerciseId
-    ? (exerciseLookup.get(selectedExerciseId)?.variations?.length ?? 0) > 0
-    : false;
-  const anyVariant = isEditMode || entries.some(e => e.variant) || selectedExerciseHasVariations;
+  const anyVariant = isEditMode || tableEntries.some((entry) => entry.variant);
 
   const getZeroValueStyle = (value: number | null, colType: string): React.CSSProperties | undefined => {
     if (value === 0) return { backgroundColor: 'var(--ink-mid)', color: 'var(--mist-dark)' };
@@ -1607,13 +1694,6 @@ function HoldTrainingLogTable({
     if (columnColors && colType === 'hold') return { backgroundColor: 'rgba(94, 184, 232, 0.08)' };
     return undefined;
   };
-
-  useEffect(() => {
-    if (saveMessage) {
-      const timer = setTimeout(() => setSaveMessage(null), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [saveMessage]);
 
   const handleEditModeToggle = () => {
     if (!isEditMode) {
@@ -1665,6 +1745,7 @@ function HoldTrainingLogTable({
     } catch {
       setSaveMessage({ type: "error", text: "Network error — unable to save changes" });
     } finally {
+      setIsEditMode(false);
       setIsSaving(false);
     }
   };
@@ -1717,11 +1798,13 @@ function HoldTrainingLogTable({
         { key: "reps3", label: "W3", type: "reps" },
       ] as const;
 
+  const visibleHoldFields = holdFields.filter((field) => visibleColumnSet.has(field.key));
+
   return (
     <>
-    <GlowCard className="!p-0 overflow-hidden" glow="jade" hoverable={false}>
+    <GlowCard className="w-full !p-0" glow="jade" hoverable={false}>
       {/* Edit header bar */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-ink-light">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-jade-glow/20">
         <div className="flex items-center gap-2">
           {saveMessage && (
             <motion.span
@@ -1756,33 +1839,33 @@ function HoldTrainingLogTable({
         </div>
       </div>
 
-      <div className="overflow-x-auto" style={{ WebkitOverflowScrolling: "touch" }}>
+      <div className="overflow-x-auto -mx-4 px-4" style={{ WebkitOverflowScrolling: "touch" }}>
         <table className={`text-xs border-collapse w-full`} style={{ whiteSpace: "nowrap", minWidth: effectiveCompact ? "450px" : (isEditMode ? "720px" : "650px") }}>
           <thead>
-            <tr className="border-b-2 border-mountain-blue-glow/50 bg-ink-mid/40 text-mist-light">
-              <th className={`${effectiveCompact ? 'py-1 px-1' : 'py-2 px-1.5'} text-left font-semibold uppercase tracking-wider text-[11px]`}>Date</th>
-              <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} text-center font-semibold uppercase tracking-wider text-[11px]`}>Lvl</th>
-              <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} text-center font-semibold uppercase tracking-wider text-[11px]`}>Category</th>
+            <tr className="border-b border-jade-glow/30 text-mist-dark">
+              {showDate && <th className={`${effectiveCompact ? 'py-1 px-1' : 'py-2 px-1.5'} w-[6.5rem] min-w-[6.5rem] text-left font-semibold uppercase tracking-wider text-[11px]`}>Date</th>}
+              {showLevel && <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} w-[3.25rem] min-w-[3.25rem] text-center font-semibold uppercase tracking-wider text-[11px]`}>Lvl</th>}
+              {showCategory && <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} w-[5.25rem] min-w-[5.25rem] text-center font-semibold uppercase tracking-wider text-[11px]`}>Category</th>}
               <th className={`${effectiveCompact ? 'py-1 px-1' : 'py-2 px-1.5'} text-left font-semibold uppercase tracking-wider text-[11px]`}>Exercise</th>
-              {holdFields.map((field) => (
+              {visibleHoldFields.map((field) => (
                 <th
                   key={field.key}
-                  className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} text-center ${field.type === 'hold' ? 'font-bold' : 'font-semibold'} uppercase tracking-wider text-[11px]`}
+                  className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} w-[3.25rem] min-w-[3.25rem] text-center ${field.type === 'hold' ? 'font-bold' : 'font-semibold'} tabular-nums uppercase tracking-wider text-[11px]`}
                   style={columnColors ? { color: field.type === 'hold' ? '#5eb8e8' : 'var(--col-reps)' } : undefined}
                 >
                   {field.label}
                 </th>
               ))}
-              {anyModifier && (
-                <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} text-center font-semibold uppercase tracking-wider text-[11px] text-amber-400`}>Mod</th>
+              {anyModifier && showModifier && (
+                <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} w-[4.5rem] min-w-[4.5rem] text-center font-semibold uppercase tracking-wider text-[11px] text-amber-400`}>Mod</th>
               )}
-              {anyBand && (
-                <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} text-center font-semibold uppercase tracking-wider text-[11px] text-sky-300`}>Band</th>
+              {anyBand && showBand && (
+                <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} w-[5rem] min-w-[5rem] text-center font-semibold uppercase tracking-wider text-[11px] text-sky-300`}>Band</th>
               )}
-              {anyVariant && (
-                <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} text-center font-semibold uppercase tracking-wider text-[11px] text-purple-400`}>Variant</th>
+              {anyVariant && showVariant && (
+                <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} w-[6.5rem] min-w-[6.5rem] text-center font-semibold uppercase tracking-wider text-[11px] text-purple-400`}>Variant</th>
               )}
-              <th className={`${effectiveCompact ? 'py-1 px-1' : 'py-2 px-1.5'} text-left font-semibold uppercase tracking-wider text-[11px]`}>Notes</th>
+              {showNotes && <th className={`${effectiveCompact ? 'py-1 px-1' : 'py-2 px-1.5'} w-[9rem] min-w-[9rem] text-left font-semibold uppercase tracking-wider text-[11px]`}>Notes</th>}
               {isEditMode && <th className="px-1 py-2 text-center font-semibold text-mist-glow text-[11px] align-middle">⋮</th>}
             </tr>
           </thead>
@@ -1831,30 +1914,46 @@ function HoldTrainingLogTable({
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.12, ease: "easeOut" }}
-                    className={`border-b transition-all duration-200 ${
+                    className={`border-b transition-all duration-100 ${
                       isEditMode
-                        ? "border-jade-glow/20 bg-jade-deep/10 hover:bg-jade-deep/15"
-                        : "border-ink-light hover:bg-ink-mid/15"
+                        ? "border-jade-glow/15 bg-jade-deep/5 hover:bg-jade-deep/10"
+                        : "border-ink-light/50 hover:bg-ink-mid/10"
                     }`}
                   >
-                    <td className={`${effectiveCompact ? 'px-1 py-1' : 'px-1.5 py-1.5'} text-mist-light text-xs align-middle whitespace-nowrap`}>{formatDate(entry.date)}</td>
-                    <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} text-center align-middle`}>
-                      <span className="text-[10px] text-gold" title={stripBwPercentHint(tier?.name || entry.tierName)}>{shownLevel}</span>
-                    </td>
-                    <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} text-center align-middle`}>
-                      <span className={`text-[10px] font-semibold ${getExerciseCategoryLabel(ex) === "GYM" ? "text-gold" : "text-jade-light"}`}>
-                        {getExerciseCategoryLabel(ex)}
-                      </span>
-                    </td>
+                    {showDate && <td className={`${effectiveCompact ? 'px-1 py-1' : 'px-1.5 py-1.5'} w-[6.5rem] min-w-[6.5rem] text-mist-light text-xs align-middle whitespace-nowrap`}>{formatDate(entry.date, dateFormat)}</td>}
+                    {showLevel && (
+                      <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} w-[3.25rem] min-w-[3.25rem] text-center align-middle`}>
+                        <span className="text-[10px] text-gold" title={stripBwPercentHint(tier?.name || entry.tierName)}>{shownLevel}</span>
+                      </td>
+                    )}
+                    {showCategory && (
+                      <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} w-[5.25rem] min-w-[5.25rem] text-center align-middle`}>
+                        <span className={`text-[10px] font-semibold ${getExerciseCategoryLabel(ex) === "GYM" ? "text-gold" : "text-jade-light"}`}>
+                          {getExerciseCategoryLabel(ex)}
+                        </span>
+                      </td>
+                    )}
                     <td
-                      className={`${effectiveCompact ? 'px-1 py-1' : 'px-1.5 py-1.5'} align-middle whitespace-nowrap cursor-pointer hover:bg-jade-deep/10 rounded transition-colors ${isEditMode ? 'ring-1 ring-jade-glow/20' : ''}`}
+                      className={`${effectiveCompact ? 'px-1 py-1' : 'px-1.5 py-1.5'} align-middle whitespace-nowrap cursor-pointer hover:bg-jade-deep/10 transition-colors ${isEditMode ? 'ring-1 ring-jade-glow/20' : ''}`}
                       style={{ minWidth: "120px" }}
                       onClick={() => {
                         if (isEditMode) {
                           setLevelPicker({ logId: entry.logId, exerciseId: entry.exerciseId });
                           return;
                         }
-                        onSelectExercise(entry.exerciseId === selectedExerciseId ? null : entry.exerciseId);
+                        const nextFilter: LogTableFilter = {
+                          exerciseId: entry.exerciseId,
+                          levelNameLevel: (
+                            (() => {
+                              const clickedExercise = exerciseLookup.get(entry.exerciseId);
+                              return clickedExercise && isGymCategoryExercise(clickedExercise) ? null : entry.levelNameLevel;
+                            })()
+                          ),
+                        };
+                        const isSameFilter =
+                          selectedLogFilter?.exerciseId === nextFilter.exerciseId &&
+                          selectedLogFilter?.levelNameLevel === nextFilter.levelNameLevel;
+                        onSelectExercise(isSameFilter ? null : nextFilter);
                       }}
                     >
                       {!showIllumination ? (
@@ -1863,7 +1962,7 @@ function HoldTrainingLogTable({
                         </span>
                       ) : (
                         <div
-                          className="px-2 py-1 rounded border inline-flex items-center gap-1.5"
+                          className="px-2 py-1 rounded-md border inline-flex items-center gap-1.5"
                           style={
                             glowIntensity > 0
                               ? ({ ...(displayGlowStyle as React.CSSProperties), ...(softDimStyle || {}) } as React.CSSProperties)
@@ -1889,12 +1988,12 @@ function HoldTrainingLogTable({
                         </div>
                       )}
                     </td>
-                    {holdFields.map((field) => {
+                    {visibleHoldFields.map((field) => {
                       const value = entry[field.key as keyof typeof entry] as number | null;
                       if (isEditMode && editData) {
                         const editVal = editData[field.key as keyof typeof editData];
                         return (
-                          <td key={field.key} className="px-1 py-1.5 text-center align-middle">
+                          <td key={field.key} className="w-[3.25rem] min-w-[3.25rem] px-1 py-1.5 text-center align-middle">
                             <input
                               type="number"
                               min="0"
@@ -1915,20 +2014,20 @@ function HoldTrainingLogTable({
                       }
                       if (field.type === "hold") {
                         return (
-                          <td key={field.key} className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} text-center text-xs font-medium align-middle`} style={{ color: '#5eb8e8', ...getZeroValueStyle(value, 'hold') }}>
+                          <td key={field.key} className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} w-[3.25rem] min-w-[3.25rem] text-center text-xs font-medium align-middle`} style={{ color: '#5eb8e8', ...getZeroValueStyle(value, 'hold') }}>
                             {value != null ? `${value}s` : "—"}
                           </td>
                         );
                       }
                       return (
-                        <td key={field.key} className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} text-center text-cloud-white text-xs align-middle`} style={getZeroValueStyle(value, 'reps')}>
+                        <td key={field.key} className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} w-[3.25rem] min-w-[3.25rem] text-center text-cloud-white text-xs align-middle`} style={getZeroValueStyle(value, 'reps')}>
                           {displayVal(value)}
                         </td>
                       );
                     })}
-                    {anyModifier && (
+                    {anyModifier && showModifier && (
                       isEditMode && editData ? (
-                        <td className="px-1 py-1.5 text-center align-middle">
+                        <td className="w-[4.5rem] min-w-[4.5rem] px-1 py-1.5 text-center align-middle">
                           <input
                             type="text"
                             value={editData.modifier ?? ""}
@@ -1938,14 +2037,14 @@ function HoldTrainingLogTable({
                           />
                         </td>
                       ) : (
-                        <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} text-center text-amber-400 text-xs whitespace-nowrap align-middle`} title={entry.modifier || ""}>
+                        <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} w-[4.5rem] min-w-[4.5rem] text-center text-amber-400 text-xs whitespace-nowrap align-middle`} title={entry.modifier || ""}>
                           {entry.modifier || "—"}
                         </td>
                       )
                     )}
-                    {anyBand && (
+                    {anyBand && showBand && (
                       isEditMode && editData ? (
-                        <td className="px-1 py-1.5 text-center align-middle">
+                        <td className="w-[5rem] min-w-[5rem] px-1 py-1.5 text-center align-middle">
                           <select
                             value={editData.resistanceBandKg != null ? String(editData.resistanceBandKg) : ""}
                             onChange={(e) =>
@@ -1966,14 +2065,14 @@ function HoldTrainingLogTable({
                           </select>
                         </td>
                       ) : (
-                        <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} text-center text-sky-300 text-xs whitespace-nowrap align-middle`}>
+                        <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} w-[5rem] min-w-[5rem] text-center text-sky-300 text-xs whitespace-nowrap align-middle`}>
                           {entry.resistanceBandKg != null ? formatResistanceBandLabel(entry.resistanceBandKg) : "—"}
                         </td>
                       )
                     )}
-                    {anyVariant && (
+                    {anyVariant && showVariant && (
                       isEditMode && editData ? (
-                        <td className="px-1 py-1.5 text-center align-middle">
+                        <td className="w-[6.5rem] min-w-[6.5rem] px-1 py-1.5 text-center align-middle">
                           <select
                             value={editData.variant ?? ""}
                             onChange={(e) => handleEditChange(entry.logId, "variant", e.target.value || null)}
@@ -1988,7 +2087,7 @@ function HoldTrainingLogTable({
                           </select>
                         </td>
                       ) : (
-                        <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} text-center text-purple-400 text-xs whitespace-nowrap align-middle`} title={entry.variant || ""}>
+                        <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} w-[6.5rem] min-w-[6.5rem] text-center text-purple-400 text-xs whitespace-nowrap align-middle`} title={entry.variant || ""}>
                           {entry.variant
                             ? variationDisplay === "full"
                               ? entry.variant
@@ -1997,21 +2096,23 @@ function HoldTrainingLogTable({
                         </td>
                       )
                     )}
-                    {isEditMode && editData ? (
-                      <td className="px-1.5 py-1.5 align-middle">
-                        <input
-                          type="text"
-                          value={editData.notes ?? ""}
-                          onChange={(e) => handleEditChange(entry.logId, "notes", e.target.value || null)}
-                          placeholder="Add notes..."
-                          className="w-full min-w-[100px] bg-ink-deep border border-jade-glow/30 rounded px-2 py-1 text-cloud-white text-xs placeholder:text-mist-dark outline-none transition-all duration-200 focus:border-jade-glow focus:shadow-[0_0_8px_rgba(58,143,143,0.4)]"
-                        />
-                      </td>
-                    ) : (
-                      <td className={`${effectiveCompact ? 'px-1 py-1' : 'px-1.5 py-1.5'} text-mist-light text-xs whitespace-nowrap align-middle`} title={entry.notes || ""}>
-                        {entry.notes || "—"}
-                        {entry.completed && <span className="text-jade-glow ml-1">✦</span>}
-                      </td>
+                    {showNotes && (
+                      isEditMode && editData ? (
+                        <td className="w-[9rem] min-w-[9rem] px-1.5 py-1.5 align-middle">
+                          <input
+                            type="text"
+                            value={editData.notes ?? ""}
+                            onChange={(e) => handleEditChange(entry.logId, "notes", e.target.value || null)}
+                            placeholder="Add notes..."
+                            className="w-full min-w-[100px] bg-ink-deep border border-jade-glow/30 rounded px-2 py-1 text-cloud-white text-xs placeholder:text-mist-dark outline-none transition-all duration-200 focus:border-jade-glow focus:shadow-[0_0_8px_rgba(58,143,143,0.4)]"
+                          />
+                        </td>
+                      ) : (
+                        <td className={`${effectiveCompact ? 'px-1 py-1' : 'px-1.5 py-1.5'} w-[9rem] min-w-[9rem] text-mist-light text-xs whitespace-nowrap align-middle`} title={entry.notes || ""}>
+                          {entry.notes || "—"}
+                          {entry.completed && <span className="text-jade-glow ml-1">✦</span>}
+                        </td>
+                      )
                     )}
                     {isEditMode && (
                       <td className="px-1 py-1.5 text-center align-middle">
@@ -2147,27 +2248,36 @@ function HoldTrainingLogTable({
   );
 }
 
+const MemoTrainingLogTable = memo(TrainingLogTable);
+const MemoHoldTrainingLogTable = memo(HoldTrainingLogTable);
+
 // ── Inline Log Form (appears above table for selected exercises) ──
 
 function InlineLogForm({
+  queueItemId,
   exercise,
   selectedLevel,
   onSubmit,
   onChangeLevel,
   onDismiss,
-  onViewDetail,
+  onViewDetail: _onViewDetail,
+  onExit,
+  draftStorageKey,
 }: {
+  queueItemId: string;
   exercise: ProgressionExercise;
   selectedLevel: number;
-  onSubmit: (exerciseId: string, level: number, data: {
+  onSubmit: (queueItemId: string, exerciseId: string, level: number, data: {
     weight1?: number; reps1?: number;
     weight2?: number; reps2?: number;
     weight3?: number; reps3?: number;
     holdTime?: number; holdTime2?: number; holdTime3?: number; modifier?: string; resistanceBandKg?: number; variant?: string; notes?: string;
   }) => Promise<void>;
   onChangeLevel: (exerciseId: string, level: number) => void;
-  onDismiss: (exerciseId: string) => void;
+  onDismiss: (queueItemId: string) => void;
   onViewDetail: (exerciseId: string) => void;
+  onExit?: () => void;
+  draftStorageKey?: string | null;
 }) {
   const [w1, setW1] = useState("");
   const [r1, setR1] = useState("");
@@ -2194,6 +2304,9 @@ function InlineLogForm({
   const [showTimerModal, setShowTimerModal] = useState(false);
   const [timerTarget, setTimerTarget] = useState<"hold" | "hold2" | "hold3">("hold");
   const [timerReps, setTimerReps] = useState("");
+  const [activeMobileSet, setActiveMobileSet] = useState<1 | 2 | 3>(1);
+  const [draftReady, setDraftReady] = useState(false);
+  const prevDraftKeyRef = useRef<string | null>(null);
   const showHold = inputMode === "hold";
   const { settings } = useDisplaySettings();
   const { isMobile } = useAppContext();
@@ -2222,7 +2335,59 @@ function InlineLogForm({
     : typeKey === "Lower Realms" ? "🔥"
     : typeKey === "Heart Meridian" ? "💚"
     : "⭐";
+  const isGymExercise = isGymCategoryExercise(exercise);
   const showResistanceBand = supportsResistanceBandAssistance(exercise);
+  const handleBackNavigation = useCallback(() => {
+    if (onExit) {
+      onExit();
+      return;
+    }
+    onDismiss(queueItemId);
+  }, [onDismiss, onExit, queueItemId]);
+
+  const resetEntryFields = () => {
+    setW1("");
+    setR1("");
+    setW2("");
+    setR2("");
+    setW3("");
+    setR3("");
+    setHold("");
+    setHold2("");
+    setHold3("");
+    resetTimer();
+    setActiveMobileSet(1);
+  };
+
+  const mobileWeightSets = [
+    { id: 1 as const, title: "Set 1", primaryLabel: `Weight (${weightUnit})`, primaryValue: w1, setPrimary: setW1, secondaryLabel: "Reps", secondaryValue: r1, setSecondary: setR1 },
+    { id: 2 as const, title: "Set 2", primaryLabel: `Weight (${weightUnit})`, primaryValue: w2, setPrimary: setW2, secondaryLabel: "Reps", secondaryValue: r2, setSecondary: setR2 },
+    { id: 3 as const, title: "Set 3", primaryLabel: `Weight (${weightUnit})`, primaryValue: w3, setPrimary: setW3, secondaryLabel: "Reps", secondaryValue: r3, setSecondary: setR3 },
+  ];
+
+  const mobileHoldSets = [
+    { id: 1 as const, title: "Set 1", primaryLabel: "Hold time (sec)", primaryValue: hold, setPrimary: setHold, secondaryLabel: "Work reps", secondaryValue: r1, setSecondary: setR1, timerKey: "hold" as const },
+    { id: 2 as const, title: "Set 2", primaryLabel: "Hold time (sec)", primaryValue: hold2, setPrimary: setHold2, secondaryLabel: "Work reps", secondaryValue: r2, setSecondary: setR2, timerKey: "hold2" as const },
+    { id: 3 as const, title: "Set 3", primaryLabel: "Hold time (sec)", primaryValue: hold3, setPrimary: setHold3, secondaryLabel: "Work reps", secondaryValue: r3, setSecondary: setR3, timerKey: "hold3" as const },
+  ];
+
+  const mobileSetConfigs = showHold ? mobileHoldSets : mobileWeightSets;
+
+  const getMobileSetSummary = (setId: 1 | 2 | 3) => {
+    if (showHold) {
+      const holdValue = setId === 1 ? hold : setId === 2 ? hold2 : hold3;
+      const repsValue = setId === 1 ? r1 : setId === 2 ? r2 : r3;
+      return `${holdValue || "-"}s • ${repsValue || "-"} reps`;
+    }
+
+    const weightValue = setId === 1 ? w1 : setId === 2 ? w2 : w3;
+    const repsValue = setId === 1 ? r1 : setId === 2 ? r2 : r3;
+    return `${weightValue || "-"} ${weightUnit} • ${repsValue || "-"} reps`;
+  };
+
+  const mobilePanelBorder = `${getDifficultyStyle(currentDifficulty).glowColor}30`;
+  const useSetPanelLayout = true;
+  const setInputClass = `w-full border bg-ink-dark text-cloud-white outline-none transition-all duration-200 placeholder:text-mist-dark/35 focus:bg-ink-mid/40 ${isMobile ? "rounded-xl px-3 py-3 text-sm" : "rounded-lg px-2.5 py-2 text-xs"}`;
 
   useEffect(() => {
     setInputMode(getTierInputMode(exercise, selectedLevel));
@@ -2230,13 +2395,122 @@ function InlineLogForm({
     setTimerStartedAt(null);
     setTimerElapsedMs(0);
     setTimerTick(0);
+    setActiveMobileSet(1);
   }, [exercise, exercise.id, selectedLevel]);
+
+  useEffect(() => {
+    const draftKey = draftStorageKey ?? null;
+    if (!draftKey) {
+      setDraftReady(true);
+      prevDraftKeyRef.current = null;
+      return;
+    }
+
+    if (prevDraftKeyRef.current === draftKey && draftReady) return;
+
+    try {
+      const raw = sessionStorage.getItem(draftKey);
+      if (raw) {
+        const draft = JSON.parse(raw) as Record<string, unknown>;
+        setW1(typeof draft.w1 === "string" ? draft.w1 : "");
+        setR1(typeof draft.r1 === "string" ? draft.r1 : "");
+        setW2(typeof draft.w2 === "string" ? draft.w2 : "");
+        setR2(typeof draft.r2 === "string" ? draft.r2 : "");
+        setW3(typeof draft.w3 === "string" ? draft.w3 : "");
+        setR3(typeof draft.r3 === "string" ? draft.r3 : "");
+        setHold(typeof draft.hold === "string" ? draft.hold : "");
+        setHold2(typeof draft.hold2 === "string" ? draft.hold2 : "");
+        setHold3(typeof draft.hold3 === "string" ? draft.hold3 : "");
+        setNotes(typeof draft.notes === "string" ? draft.notes : "");
+        setSelectedModifier(typeof draft.selectedModifier === "string" ? draft.selectedModifier : "");
+        setSelectedResistanceBand(typeof draft.selectedResistanceBand === "string" ? draft.selectedResistanceBand : "");
+        setSelectedVariation(typeof draft.selectedVariation === "string" ? draft.selectedVariation : "");
+        setWeightUnit(draft.weightUnit === "lbs" ? "lbs" : "kg");
+        setInputMode(draft.inputMode === "hold" ? "hold" : "weight");
+        setActiveMobileSet(draft.activeMobileSet === 2 || draft.activeMobileSet === 3 ? draft.activeMobileSet : 1);
+      }
+    } catch {
+      // Ignore draft parse/storage errors.
+    }
+
+    prevDraftKeyRef.current = draftKey;
+    setDraftReady(true);
+  }, [draftStorageKey, draftReady]);
+
+  useEffect(() => {
+    if (!draftStorageKey || !draftReady) return;
+
+    try {
+      sessionStorage.setItem(
+        draftStorageKey,
+        JSON.stringify({
+          w1,
+          r1,
+          w2,
+          r2,
+          w3,
+          r3,
+          hold,
+          hold2,
+          hold3,
+          notes,
+          selectedModifier,
+          selectedResistanceBand,
+          selectedVariation,
+          weightUnit,
+          inputMode,
+          activeMobileSet,
+        })
+      );
+    } catch {
+      // Ignore draft persistence failures.
+    }
+  }, [
+    draftStorageKey,
+    draftReady,
+    w1,
+    r1,
+    w2,
+    r2,
+    w3,
+    r3,
+    hold,
+    hold2,
+    hold3,
+    notes,
+    selectedModifier,
+    selectedResistanceBand,
+    selectedVariation,
+    weightUnit,
+    inputMode,
+    activeMobileSet,
+  ]);
 
   useEffect(() => {
     if (!timerRunning) return;
     const id = window.setInterval(() => setTimerTick(Date.now()), 200);
     return () => window.clearInterval(id);
   }, [timerRunning]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      handleBackNavigation();
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [handleBackNavigation]);
+
+  useEffect(() => {
+    const onPopState = () => {
+      handleBackNavigation();
+    };
+
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [handleBackNavigation]);
 
   const liveTimerMs = timerElapsedMs + (timerRunning && timerStartedAt ? (timerTick - timerStartedAt) : 0);
   const liveTimerSeconds = Math.max(0, Math.round(liveTimerMs / 1000));
@@ -2303,7 +2577,6 @@ function InlineLogForm({
     const primaryMissing = showHold ? (!hold && !r1) : (!w1 && !r1);
     if (primaryMissing) {
       setShakeError(true);
-      setTimeout(() => setShakeError(false), 500);
       return;
     }
     const hasData = w1 || r1 || w2 || r2 || w3 || r3 || hold || hold2 || hold3 || notes || selectedModifier || selectedResistanceBand || selectedVariation;
@@ -2316,7 +2589,7 @@ function InlineLogForm({
         return weightUnit === "lbs" ? Math.round(n * 453.592) / 1000 : n;
       };
       const resistanceBandKg = selectedResistanceBand ? parseFloat(selectedResistanceBand) : undefined;
-      await onSubmit(exercise.id, selectedLevel, {
+      await onSubmit(queueItemId, exercise.id, selectedLevel, {
         weight1: w1 ? toKg(w1) : undefined,
         reps1: r1 ? parseInt(r1) : undefined,
         weight2: w2 ? toKg(w2) : undefined,
@@ -2331,10 +2604,26 @@ function InlineLogForm({
         variant: selectedVariation || undefined,
         notes: notes || undefined,
       });
-      setW1(""); setR1(""); setW2(""); setR2(""); setW3(""); setR3(""); setHold(""); setHold2(""); setHold3(""); setNotes(""); setSelectedModifier(""); setSelectedResistanceBand(""); setSelectedVariation("");
-      resetTimer();
+      resetEntryFields();
+      setNotes("");
+      setSelectedModifier("");
+      setSelectedResistanceBand("");
+      setSelectedVariation("");
+      if (draftStorageKey) {
+        try {
+          sessionStorage.removeItem(draftStorageKey);
+        } catch {
+          // Ignore draft cleanup failures.
+        }
+      }
+
+      if (onExit) {
+        onExit();
+      } else {
+        onDismiss(queueItemId);
+      }
+
       setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
     } catch (err) {
       console.error("Submit error:", err);
     } finally {
@@ -2353,16 +2642,16 @@ function InlineLogForm({
       transition={{ duration: 0.2 }}
     >
       <div
-        className={`relative rounded-xl border-2 overflow-hidden ${isCompact ? 'p-2' : 'p-3'}`}
+        className={`relative overflow-hidden border-2 rounded-2xl rounded-tr-[26px] rounded-bl-[26px] ${isCompact ? 'p-2' : 'p-3'}`}
         style={{
           background: 'var(--ink-deep)',
-          borderColor: `${diffStyle.glowColor}90`,
-          boxShadow: `0 0 28px ${diffStyle.glowColor}70, 0 0 56px ${diffStyle.glowColor}35, inset 0 0 28px ${diffStyle.glowColor}20, inset 0 1px 0 rgba(255,255,255,0.04)`,
+          borderColor: `${diffStyle.glowColor}b8`,
+          boxShadow: `0 0 26px ${diffStyle.glowColor}66, 0 0 52px ${diffStyle.glowColor}30, inset 0 0 18px ${diffStyle.glowColor}1f, inset 0 0 0 1px ${diffStyle.glowColor}2a, inset 0 1px 0 rgba(255,255,255,0.05)`,
         }}
       >
         {/* Difficulty accent stripe */}
         <div
-          className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-xl"
+          className="absolute left-0 top-0 bottom-0 w-[3px]"
           style={{ background: `linear-gradient(to bottom, ${diffStyle.glowColor}, ${diffStyle.glowColor}40)` }}
         />
 
@@ -2397,16 +2686,9 @@ function InlineLogForm({
           </div>
           <div className="flex items-center gap-0.5">
             <button
-              onClick={() => onViewDetail(exercise.id)}
-              className="text-mist-dark/60 hover:text-cloud-white transition-colors text-xs px-1.5 py-0.5 rounded hover:bg-ink-mid/30"
-              title="View full progression details"
-            >
-              ⓘ
-            </button>
-            <button
-              onClick={() => onDismiss(exercise.id)}
+              onClick={handleBackNavigation}
               className="text-mist-dark/60 hover:text-crimson-light transition-colors text-sm px-1.5 py-0.5 rounded hover:bg-crimson-deep/10"
-              title="Dismiss"
+              title="Back"
             >
               ✕
             </button>
@@ -2420,269 +2702,572 @@ function InlineLogForm({
           </p>
         )}
 
-        {/* Controls row: Level + Mode + Modifiers */}
-        <div className="flex items-center gap-2 mb-2.5 pl-2 flex-wrap">
-          {/* Level selector */}
-          <select
-            value={selectedLevel}
-            onChange={(e) => {
-              const nextLevel = Number(e.target.value);
-              setInputMode(getTierInputMode(exercise, nextLevel));
-              onChangeLevel(exercise.id, nextLevel);
-            }}
-            className="bg-ink-dark border rounded px-2 py-1 text-xs outline-none transition-colors cursor-pointer"
-            style={{
-              borderColor: `${diffStyle.glowColor}30`,
-              color: diffStyle.glowColor,
-            }}
-          >
-            {exercise.tiers.map((t) => {
-              const logs = exercise.userProgress[0]?.logs ?? [];
-              const count = logs.filter((l) =>
-                l.level === t.level
-                && (!selectedModifier || l.modifier === selectedModifier)
-                && (!selectedVariation || l.variant === selectedVariation)
-                && (showHold
-                  ? (l.holdTime != null || l.holdTime2 != null || l.holdTime3 != null)
-                  : (l.weight1 != null || l.weight2 != null || l.weight3 != null))
-              ).length;
-              return (
-                <option key={t.level} value={t.level}>
-                  Lv.{t.level} — {t.name} ({count})
-                </option>
-              );
-            })}
-          </select>
+        {useSetPanelLayout ? (
+          <div className={`pl-2 ${isMobile ? "space-y-3" : "space-y-2"}`}>
+            <div className="grid gap-2">
+              <label className="block space-y-1">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-mist-dark">Level</span>
+                <select
+                  value={selectedLevel}
+                  disabled={isGymExercise}
+                  onChange={(e) => {
+                    if (isGymExercise) return;
+                    const nextLevel = Number(e.target.value);
+                    setInputMode(getTierInputMode(exercise, nextLevel));
+                    onChangeLevel(exercise.id, nextLevel);
+                  }}
+                  className={`w-full border bg-ink-dark outline-none transition-colors ${isGymExercise ? "cursor-not-allowed opacity-90" : "cursor-pointer"} ${isMobile ? "rounded-xl px-3 py-3 text-sm" : "rounded-lg px-2.5 py-2 text-xs"}`}
+                  style={{ borderColor: `${diffStyle.glowColor}30`, color: diffStyle.glowColor }}
+                >
+                  {isGymExercise ? (
+                    <option value={selectedLevel}>Auto — Lv.{selectedLevel} ({tierName})</option>
+                  ) : (
+                    exercise.tiers.map((t) => {
+                      const logs = exercise.userProgress[0]?.logs ?? [];
+                      const count = logs.filter((l) =>
+                        l.level === t.level
+                        && (!selectedModifier || l.modifier === selectedModifier)
+                        && (!selectedVariation || l.variant === selectedVariation)
+                        && (showHold
+                          ? (l.holdTime != null || l.holdTime2 != null || l.holdTime3 != null)
+                          : (l.weight1 != null || l.weight2 != null || l.weight3 != null))
+                      ).length;
+                      return (
+                        <option key={t.level} value={t.level}>
+                          Lv.{t.level} — {t.name} ({count})
+                        </option>
+                      );
+                    })
+                  )}
+                </select>
+              </label>
 
-          {/* Tier name */}
-          <span className="text-[10px] text-mist-dark/70 truncate hidden sm:inline">{tierName}</span>
+              <div className={`flex items-center justify-between gap-2 border border-ink-light/20 bg-ink-mid/15 ${isMobile ? "rounded-xl px-3 py-2" : "rounded-lg px-2.5 py-1.5"}`}>
+                <span className="text-[10px] uppercase tracking-[0.14em] text-mist-dark">Tier</span>
+                <span className={`${isMobile ? "text-[11px]" : "text-[10px]"} text-mist-light truncate`}>{tierName}</span>
+              </div>
 
-          {/* Spacer */}
-          <div className="flex-1" />
+              <div className={`grid gap-2 ${showHold ? "grid-cols-1" : "grid-cols-2"}`}>
+                {!showHold && (
+                  <div className={`flex overflow-hidden border border-ink-light/30 ${isMobile ? "rounded-xl" : "rounded-lg"}`}>
+                    <button
+                      onClick={() => setWeightUnit("kg")}
+                      className={`flex-1 font-semibold transition-all duration-200 border-r border-ink-light/30 ${isMobile ? "px-3 py-2.5 text-[11px]" : "px-2.5 py-2 text-[10px]"} ${
+                        weightUnit === "kg"
+                          ? "bg-jade-deep/70 text-cloud-white border-jade-glow/50 shadow-[inset_0_0_0_1px_rgba(58,143,143,0.45),0_0_10px_rgba(58,143,143,0.2)]"
+                          : "bg-ink-mid/55 text-mist-light/85 hover:bg-ink-mid/80 hover:text-cloud-white"
+                      }`}
+                    >
+                      KG
+                    </button>
+                    <button
+                      onClick={() => setWeightUnit("lbs")}
+                      className={`flex-1 font-semibold transition-all duration-200 ${isMobile ? "px-3 py-2.5 text-[11px]" : "px-2.5 py-2 text-[10px]"} ${
+                        weightUnit === "lbs"
+                          ? "bg-jade-deep/70 text-cloud-white border-jade-glow/50 shadow-[inset_0_0_0_1px_rgba(58,143,143,0.45),0_0_10px_rgba(58,143,143,0.2)]"
+                          : "bg-ink-mid/55 text-mist-light/85 hover:bg-ink-mid/80 hover:text-cloud-white"
+                      }`}
+                    >
+                      LBS
+                    </button>
+                  </div>
+                )}
 
-          {/* kg / lbs toggle — weight mode only */}
-          {!showHold && (
-            <div className="flex rounded-md overflow-hidden border border-ink-light/30">
-              <button
-                onClick={() => setWeightUnit("kg")}
-                className={`px-2 py-1 text-[10px] font-semibold transition-all duration-200 border-r border-ink-light/30 ${
-                  weightUnit === "kg"
-                    ? "bg-jade-deep/55 text-cloud-white"
-                    : "bg-ink-mid/60 text-mist-light hover:bg-ink-mid/80 hover:text-cloud-white"
-                }`}
-              >
-                kg
-              </button>
-              <button
-                onClick={() => setWeightUnit("lbs")}
-                className={`px-2 py-1 text-[10px] font-semibold transition-all duration-200 ${
-                  weightUnit === "lbs"
-                    ? "bg-jade-deep/55 text-cloud-white"
-                    : "bg-ink-mid/60 text-mist-light hover:bg-ink-mid/80 hover:text-cloud-white"
-                }`}
-              >
-                lbs
-              </button>
+                <div className={`flex overflow-hidden border border-ink-light/30 ${isMobile ? "rounded-xl" : "rounded-lg"}`}>
+                  <button
+                    onClick={() => { setInputMode("weight"); resetEntryFields(); }}
+                    className={`flex-1 font-semibold transition-all duration-200 border-r ${isMobile ? "px-3 py-2.5 text-[11px]" : "px-2.5 py-2 text-[10px]"} ${
+                      inputMode === "weight"
+                        ? "bg-jade-deep/55 text-cloud-white border-jade/40 shadow-[inset_0_0_0_1px_rgba(58,143,143,0.25)]"
+                        : "bg-ink-mid/60 text-mist-light border-ink-light/30 hover:bg-ink-mid/80 hover:text-cloud-white"
+                    }`}
+                  >
+                    Weight
+                  </button>
+                  <button
+                    onClick={() => { setInputMode("hold"); resetEntryFields(); }}
+                    className={`flex-1 font-semibold transition-all duration-200 ${isMobile ? "px-3 py-2.5 text-[11px]" : "px-2.5 py-2 text-[10px]"} ${
+                      inputMode === "hold"
+                        ? "bg-mountain-blue/30 text-cloud-white shadow-[inset_0_0_0_1px_rgba(94,184,232,0.35)]"
+                        : "bg-ink-mid/60 text-mist-light hover:bg-ink-mid/80 hover:text-cloud-white"
+                    }`}
+                  >
+                    Hold
+                  </button>
+                </div>
+              </div>
             </div>
-          )}
 
-          {/* Mode toggle */}
-          <div className="flex rounded-md overflow-hidden border border-ink-light/30">
-            <button
-              onClick={() => { setInputMode("weight"); setW1(""); setW2(""); setW3(""); setR1(""); setR2(""); setR3(""); setHold(""); setHold2(""); setHold3(""); resetTimer(); }}
-              className={`px-2.5 py-1 text-[10px] font-semibold transition-all duration-200 border-r ${
-                inputMode === "weight"
-                  ? "bg-jade-deep/55 text-cloud-white border-jade/40 shadow-[inset_0_0_0_1px_rgba(58,143,143,0.25)]"
-                  : "bg-ink-mid/60 text-mist-light border-ink-light/30 hover:bg-ink-mid/80 hover:text-cloud-white"
-              }`}
-            >
-              Weight
-            </button>
-            <button
-              onClick={() => { setInputMode("hold"); setW1(""); setW2(""); setW3(""); setR1(""); setR2(""); setR3(""); setHold(""); setHold2(""); setHold3(""); resetTimer(); }}
-              className={`px-2.5 py-1 text-[10px] font-semibold transition-all duration-200 ${
-                inputMode === "hold"
-                  ? "bg-mountain-blue/30 text-cloud-white shadow-[inset_0_0_0_1px_rgba(94,184,232,0.35)]"
-                  : "bg-ink-mid/60 text-mist-light hover:bg-ink-mid/80 hover:text-cloud-white"
-              }`}
-            >
-              Hold
-            </button>
-          </div>
-        </div>
+            {((exercise.modifiers && exercise.modifiers.length > 0) || showResistanceBand || (exercise.variations && exercise.variations.length > 0)) && (
+              <div className="grid gap-2">
+                {exercise.modifiers && exercise.modifiers.length > 0 && (
+                  <label className="block space-y-1">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-mist-dark">Modifier</span>
+                    <select
+                      value={selectedModifier}
+                      onChange={(e) => setSelectedModifier(e.target.value)}
+                      className={`w-full border border-ink-light/20 bg-ink-dark text-gold outline-none focus:border-gold/40 transition-colors cursor-pointer ${isMobile ? "rounded-xl px-3 py-3 text-sm" : "rounded-lg px-2.5 py-2 text-xs"}`}
+                    >
+                      <option value="">No modifier</option>
+                      {exercise.modifiers.filter(m => m.available).map((m) => (
+                        <option key={m.id} value={m.type}>
+                          {m.type}{m.difficultyMod !== 0 ? ` (${m.difficultyMod > 0 ? "+" : ""}${m.difficultyMod})` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                {showResistanceBand && (
+                  <label className="block space-y-1">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-mist-dark">Resistance band</span>
+                    <select
+                      value={selectedResistanceBand}
+                      onChange={(e) => setSelectedResistanceBand(e.target.value)}
+                      className={`w-full border border-ink-light/20 bg-ink-dark text-sky-300 outline-none focus:border-sky-300/40 transition-colors cursor-pointer ${isMobile ? "rounded-xl px-3 py-3 text-sm" : "rounded-lg px-2.5 py-2 text-xs"}`}
+                    >
+                      <option value="">No resistance band</option>
+                      {RESISTANCE_BAND_OPTIONS.map((kg) => (
+                        <option key={kg} value={String(kg)}>
+                          Resistance band {formatResistanceBandLabel(kg)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                {exercise.variations && exercise.variations.length > 0 && (
+                  <label className="block space-y-1">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-mist-dark">Variation</span>
+                    <select
+                      value={selectedVariation}
+                      onChange={(e) => setSelectedVariation(e.target.value)}
+                      className={`w-full border border-ink-light/20 bg-ink-dark text-crimson-light outline-none focus:border-crimson/40 transition-colors cursor-pointer ${isMobile ? "rounded-xl px-3 py-3 text-sm" : "rounded-lg px-2.5 py-2 text-xs"}`}
+                    >
+                      <option value="">No variation</option>
+                      {exercise.variations.map((v) => (
+                        <option key={v.id} value={v.name}>
+                          {v.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+              </div>
+            )}
 
-        {/* Optional modifiers row */}
-        {((exercise.modifiers && exercise.modifiers.length > 0) || showResistanceBand || (exercise.variations && exercise.variations.length > 0)) && (
-          <div className="flex items-center gap-2 mb-2.5 pl-2 flex-wrap">
-            {exercise.modifiers && exercise.modifiers.length > 0 && (
-              <select
-                value={selectedModifier}
-                onChange={(e) => setSelectedModifier(e.target.value)}
-                className="bg-ink-dark border border-ink-light/20 rounded px-2 py-1 text-xs text-gold outline-none
-                           focus:border-gold/40 transition-colors cursor-pointer"
-              >
-                <option value="">No modifier</option>
-                {exercise.modifiers.filter(m => m.available).map((m) => (
-                  <option key={m.id} value={m.type}>
-                    {m.type}{m.difficultyMod !== 0 ? ` (${m.difficultyMod > 0 ? "+" : ""}${m.difficultyMod})` : ""}
-                  </option>
-                ))}
-              </select>
-            )}
-            {showResistanceBand && (
-              <select
-                value={selectedResistanceBand}
-                onChange={(e) => setSelectedResistanceBand(e.target.value)}
-                className="bg-ink-dark border border-ink-light/20 rounded px-2 py-1 text-xs text-sky-300 outline-none
-                           focus:border-sky-300/40 transition-colors cursor-pointer"
-              >
-                <option value="">No resistance band</option>
-                {RESISTANCE_BAND_OPTIONS.map((kg) => (
-                  <option key={kg} value={String(kg)}>
-                    Resistance band {formatResistanceBandLabel(kg)}
-                  </option>
-                ))}
-              </select>
-            )}
-            {exercise.variations && exercise.variations.length > 0 && (
-              <select
-                value={selectedVariation}
-                onChange={(e) => setSelectedVariation(e.target.value)}
-                className="bg-ink-dark border border-ink-light/20 rounded px-2 py-1 text-xs text-crimson-light outline-none
-                           focus:border-crimson/40 transition-colors cursor-pointer"
-              >
-                <option value="">No variation</option>
-                {exercise.variations.map((v) => (
-                  <option key={v.id} value={v.name}>
-                    {v.name}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-        )}
-
-        {/* Input grid */}
-        <div className="pl-2">
-          <div className={isMobile ? "overflow-x-auto pb-1" : undefined}>
             <div
-              className="grid gap-1.5"
-              style={{
-                gridTemplateColumns: "repeat(6, 1fr) 1.5fr",
-                minWidth: isMobile ? "560px" : undefined,
-              }}
+              className={isMobile ? "space-y-2" : "grid gap-2"}
+              style={isMobile ? undefined : { gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}
             >
-            {/* Column headers */}
-            {!showHold ? (
-              <>
-                <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: diffStyle.glowColor, opacity: 0.95 }}>W1</div>
-                <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: 'var(--col-reps)', opacity: 0.95 }}>R1</div>
-                <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: diffStyle.glowColor, opacity: 0.95 }}>W2</div>
-                <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: 'var(--col-reps)', opacity: 0.95 }}>R2</div>
-                <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: diffStyle.glowColor, opacity: 0.95 }}>W3</div>
-                <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: 'var(--col-reps)', opacity: 0.95 }}>R3</div>
-              </>
-            ) : (
-              <>
-                <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: diffStyle.glowColor, opacity: 0.95 }}>T1</div>
-                <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: 'var(--col-reps)', opacity: 0.95 }}>W1</div>
-                <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: diffStyle.glowColor, opacity: 0.95 }}>T2</div>
-                <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: 'var(--col-reps)', opacity: 0.95 }}>W2</div>
-                <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: diffStyle.glowColor, opacity: 0.95 }}>T3</div>
-                <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: 'var(--col-reps)', opacity: 0.95 }}>W3</div>
-              </>
-            )}
-            <div className="text-[9px] text-center uppercase tracking-widest font-semibold text-mist-dark/50 pb-0.5">Notes</div>
+              {mobileSetConfigs.map((setConfig) => {
+                const isOpen = isMobile ? activeMobileSet === setConfig.id : true;
+                return (
+                  <div
+                    key={setConfig.id}
+                    className={`overflow-hidden border bg-ink-dark/55 ${isMobile ? "rounded-2xl" : "rounded-xl"}`}
+                    style={{
+                      borderColor: isOpen ? `${diffStyle.glowColor}55` : mobilePanelBorder,
+                      boxShadow: isOpen ? `0 0 18px ${diffStyle.glowColor}22` : "none",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isMobile) setActiveMobileSet(setConfig.id);
+                      }}
+                      className={`flex w-full items-center justify-between gap-3 text-left ${isMobile ? "px-3 py-3" : "px-2.5 py-2"}`}
+                    >
+                      <div className="min-w-0">
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-mist-dark">{setConfig.title}</div>
+                        <div className={`mt-1 font-medium text-cloud-white ${isMobile ? "text-sm" : "text-xs"}`}>{getMobileSetSummary(setConfig.id)}</div>
+                      </div>
+                      {isMobile && (
+                        <span className="text-lg leading-none" style={{ color: diffStyle.glowColor }}>
+                          {isOpen ? "−" : "+"}
+                        </span>
+                      )}
+                    </button>
 
-            {/* Input fields */}
-            {!showHold ? (
-              <>
-                <input type="number" min="0" step="0.5" value={w1} onChange={(e) => { setW1(e.target.value); if (shakeError) setShakeError(false); }} placeholder="—"
-                  className={`w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-colors duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:bg-ink-mid/40${shakeError ? ' animate-shake' : ''}`}
-                  style={{ borderColor: shakeError ? 'rgba(220,50,50,0.7)' : `${diffStyle.glowColor}40` }} />
-                <input type="number" min="0" max="500" value={r1} onChange={(e) => { setR1(e.target.value); if (shakeError) setShakeError(false); }} placeholder="—"
-                  className={`w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-colors duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:border-gold/50 focus:bg-ink-mid/40${shakeError ? ' animate-shake' : ''}`}
-                  style={{ borderColor: shakeError ? 'rgba(220,50,50,0.7)' : 'rgba(196,168,74,0.15)' }} />
-                <input type="number" min="0" step="0.5" value={w2} onChange={(e) => setW2(e.target.value)} placeholder="—"
-                  className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:bg-ink-mid/40"
-                  style={{ borderColor: `${diffStyle.glowColor}40` }} />
-                <input type="number" min="0" max="500" value={r2} onChange={(e) => setR2(e.target.value)} placeholder="—"
-                  className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:border-gold/50 focus:bg-ink-mid/40"
-                  style={{ borderColor: 'rgba(196,168,74,0.15)' }} />
-                <input type="number" min="0" step="0.5" value={w3} onChange={(e) => setW3(e.target.value)} placeholder="—"
-                  className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:bg-ink-mid/40"
-                  style={{ borderColor: `${diffStyle.glowColor}40` }} />
-                <input type="number" min="0" max="500" value={r3} onChange={(e) => setR3(e.target.value)} placeholder="—"
-                  className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:border-gold/50 focus:bg-ink-mid/40"
-                  style={{ borderColor: 'rgba(196,168,74,0.15)' }} />
-              </>
-            ) : (
-              <>
-                <input type="number" min="0" value={hold} onChange={(e) => { setHold(e.target.value); if (shakeError) setShakeError(false); }} placeholder="s"
-                  className={`w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-colors duration-200 bg-ink-dark border border-mountain-blue/20 text-cloud-white placeholder:text-mist-dark/30 focus:border-mountain-blue-glow/50 focus:bg-ink-mid/40${shakeError ? ' animate-shake' : ''}`}
-                  style={shakeError ? { borderColor: 'rgba(220,50,50,0.7)' } : undefined} />
-                <input type="number" min="0" max="500" value={r1} onChange={(e) => { setR1(e.target.value); if (shakeError) setShakeError(false); }} placeholder="—"
-                  className={`w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-colors duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:border-gold/50 focus:bg-ink-mid/40${shakeError ? ' animate-shake' : ''}`}
-                  style={{ borderColor: shakeError ? 'rgba(220,50,50,0.7)' : 'rgba(196,168,74,0.15)' }} />
-                <input type="number" min="0" value={hold2} onChange={(e) => setHold2(e.target.value)} placeholder="s"
-                  className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-mountain-blue/20 text-cloud-white placeholder:text-mist-dark/30 focus:border-mountain-blue-glow/50 focus:bg-ink-mid/40" />
-                <input type="number" min="0" max="500" value={r2} onChange={(e) => setR2(e.target.value)} placeholder="—"
-                  className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:border-gold/50 focus:bg-ink-mid/40"
-                  style={{ borderColor: 'rgba(196,168,74,0.15)' }} />
-                <input type="number" min="0" value={hold3} onChange={(e) => setHold3(e.target.value)} placeholder="s"
-                  className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-mountain-blue/20 text-cloud-white placeholder:text-mist-dark/30 focus:border-mountain-blue-glow/50 focus:bg-ink-mid/40" />
-                <input type="number" min="0" max="500" value={r3} onChange={(e) => setR3(e.target.value)} placeholder="—"
-                  className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:border-gold/50 focus:bg-ink-mid/40"
-                  style={{ borderColor: 'rgba(196,168,74,0.15)' }} />
-              </>
-            )}
-            <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes..."
-              className="w-full rounded-md px-1.5 py-1.5 text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/20 text-cloud-white placeholder:text-mist-dark/40 focus:border-mist-mid/30 focus:bg-ink-mid/30" />
-          </div>
-          </div>
-        </div>
+                    {isOpen && (
+                      <div className={`border-t ${isMobile ? "space-y-3 px-3 py-3" : "space-y-2 px-2.5 py-2"}`} style={{ borderColor: `${diffStyle.glowColor}22` }}>
+                        {showHold && "timerKey" in setConfig && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowTimerModal(true);
+                              setTimerTarget(setConfig.timerKey as "hold" | "hold2" | "hold3");
+                              setTimerReps("");
+                              resetTimer();
+                            }}
+                            className={`w-full border font-bold text-cloud-white transition-all ${isMobile ? "rounded-xl px-3 py-2.5 text-[11px]" : "rounded-lg px-2.5 py-2 text-[10px]"}`}
+                            style={{
+                              background: "rgba(94,184,232,0.18)",
+                              borderColor: "rgba(94,184,232,0.55)",
+                              boxShadow: `0 0 10px ${diffStyle.glowColor}33`,
+                            }}
+                          >
+                            Use Timer for {setConfig.title.replace("Set", "T")}
+                          </button>
+                        )}
 
-        {/* Footer */}
-        <div className="mt-3 flex items-center justify-end gap-2 pl-2">
-          {saved && (
-            <motion.span
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="text-xs font-medium"
-              style={{ color: diffStyle.glowColor }}
-            >
-              ✦ Saved
-            </motion.span>
-          )}
-          {showHold && (
-            <button
-              type="button"
-              onClick={() => { setShowTimerModal(true); setTimerTarget(getNextTimerTarget()); setTimerReps(""); resetTimer(); }}
-              className="px-3 py-1.5 text-[10px] font-bold rounded-md border text-cloud-white bg-mountain-blue/35 hover:bg-mountain-blue/45 border-mountain-blue-glow/70 shadow-[0_0_10px_rgba(94,184,232,0.45)] hover:shadow-[0_0_16px_rgba(94,184,232,0.6)] transition-all"
-              style={{ boxShadow: `0 0 10px ${diffStyle.glowColor}66, inset 0 0 0 1px ${diffStyle.glowColor}40` }}
-              title="Open compact hold timer"
-            >
-              Start Timer
-            </button>
-          )}
-          <motion.button
-            onClick={handleSubmit}
-            disabled={submitting}
-            animate={saved ? { scale: [1, 1.1, 1] } : { scale: 1 }}
-            whileHover={!submitting ? { scale: 1.06, boxShadow: `0 0 10px ${diffStyle.glowColor}50` } : {}}
-            whileTap={!submitting ? { scale: 0.96 } : {}}
-            transition={{ duration: 0.3 }}
-            className="px-4 py-1.5 rounded-md text-xs font-semibold disabled:opacity-40 cursor-pointer"
-            style={{
-              background: saved ? `${diffStyle.glowColor}30` : `${diffStyle.glowColor}18`,
-              border: `1px solid ${saved ? `${diffStyle.glowColor}60` : `${diffStyle.glowColor}35`}`,
-              color: diffStyle.glowColor,
-              transition: 'background 0.3s, border-color 0.3s',
-            }}
-          >
-            {submitting ? "Saving…" : saved ? "✦ Logged!" : "Log Set"}
-          </motion.button>
-        </div>
+                        <div className={`grid grid-cols-2 ${isMobile ? "gap-2" : "gap-1.5"}`}>
+                          <label className="block space-y-1">
+                            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-mist-dark">{setConfig.primaryLabel}</span>
+                            <input
+                              type="number"
+                              min="0"
+                              step={showHold ? undefined : "0.5"}
+                              max={showHold ? undefined : undefined}
+                              value={setConfig.primaryValue}
+                              onChange={(e) => {
+                                setConfig.setPrimary(e.target.value);
+                                if (shakeError && setConfig.id === 1) setShakeError(false);
+                              }}
+                              placeholder={showHold ? "sec" : "0.0"}
+                              className={`${setInputClass}${shakeError && setConfig.id === 1 ? ' animate-shake' : ''}`}
+                              style={{
+                                borderColor: shakeError && setConfig.id === 1
+                                  ? "rgba(220,50,50,0.7)"
+                                  : showHold
+                                    ? "rgba(94,184,232,0.35)"
+                                    : `${diffStyle.glowColor}40`,
+                              }}
+                            />
+                          </label>
+
+                          <label className="block space-y-1">
+                            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-mist-dark">{setConfig.secondaryLabel}</span>
+                            <input
+                              type="number"
+                              min="0"
+                              max="500"
+                              value={setConfig.secondaryValue}
+                              onChange={(e) => {
+                                setConfig.setSecondary(e.target.value);
+                                if (shakeError && setConfig.id === 1) setShakeError(false);
+                              }}
+                              placeholder="reps"
+                              className={`${setInputClass}${shakeError && setConfig.id === 1 ? ' animate-shake' : ''}`}
+                              style={{ borderColor: shakeError && setConfig.id === 1 ? "rgba(220,50,50,0.7)" : "rgba(196,168,74,0.22)" }}
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <label className="block space-y-1">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-mist-dark">Notes</span>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Session notes, cues, or pain markers..."
+                rows={isMobile ? 3 : 2}
+                className={`w-full border border-ink-light/20 bg-ink-dark text-cloud-white outline-none transition-all duration-200 placeholder:text-mist-dark/40 focus:border-mist-mid/30 focus:bg-ink-mid/30 ${isMobile ? "rounded-xl px-3 py-3 text-sm" : "rounded-lg px-2.5 py-2 text-xs"}`}
+              />
+            </label>
+
+            <div className="flex flex-col gap-2 pt-1">
+              {saved && (
+                <motion.span
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="self-end text-xs font-medium"
+                  style={{ color: diffStyle.glowColor }}
+                >
+                  ✦ Saved
+                </motion.span>
+              )}
+
+              <div className={`grid gap-2 ${showHold ? "grid-cols-2" : "grid-cols-1"}`}>
+                {showHold && (
+                  <button
+                    type="button"
+                    onClick={() => { setShowTimerModal(true); setTimerTarget(getNextTimerTarget()); setTimerReps(""); resetTimer(); }}
+                    className={`border font-bold text-cloud-white transition-all ${isMobile ? "rounded-xl px-3 py-3 text-[11px]" : "rounded-lg px-2.5 py-2 text-[10px]"}`}
+                    style={{
+                      background: "rgba(94,184,232,0.22)",
+                      borderColor: "rgba(94,184,232,0.6)",
+                      boxShadow: `0 0 12px ${diffStyle.glowColor}44`,
+                    }}
+                    title="Open compact hold timer"
+                  >
+                    Start Timer
+                  </button>
+                )}
+
+                <motion.button
+                  onClick={handleSubmit}
+                  disabled={submitting}
+                  animate={saved ? { scale: [1, 1.02, 1] } : { scale: 1 }}
+                  whileTap={!submitting ? { scale: 0.98 } : {}}
+                  transition={{ duration: 0.3 }}
+                  className={`w-full font-semibold disabled:opacity-40 cursor-pointer ${isMobile ? "rounded-xl px-4 py-3 text-sm" : "rounded-lg px-3 py-2 text-xs"}`}
+                  style={{
+                    background: saved ? `${diffStyle.glowColor}30` : `${diffStyle.glowColor}18`,
+                    border: `1px solid ${saved ? `${diffStyle.glowColor}60` : `${diffStyle.glowColor}35`}`,
+                    color: diffStyle.glowColor,
+                    transition: 'background 0.3s, border-color 0.3s',
+                  }}
+                >
+                  {submitting ? "Saving…" : saved ? "✦ Logged!" : "Log Training Data"}
+                </motion.button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Controls row: Level + Mode + Modifiers */}
+            <div className="flex items-center gap-2 mb-2.5 pl-2 flex-wrap">
+              <select
+                value={selectedLevel}
+                disabled={isGymExercise}
+                onChange={(e) => {
+                  if (isGymExercise) return;
+                  const nextLevel = Number(e.target.value);
+                  setInputMode(getTierInputMode(exercise, nextLevel));
+                  onChangeLevel(exercise.id, nextLevel);
+                }}
+                className={`bg-ink-dark border rounded px-2 py-1 text-xs outline-none transition-colors ${isGymExercise ? "cursor-not-allowed opacity-90" : "cursor-pointer"}`}
+                style={{
+                  borderColor: `${diffStyle.glowColor}30`,
+                  color: diffStyle.glowColor,
+                }}
+              >
+                {isGymExercise ? (
+                  <option value={selectedLevel}>Auto — Lv.{selectedLevel} ({tierName})</option>
+                ) : (
+                  exercise.tiers.map((t) => {
+                    const logs = exercise.userProgress[0]?.logs ?? [];
+                    const count = logs.filter((l) =>
+                      l.level === t.level
+                      && (!selectedModifier || l.modifier === selectedModifier)
+                      && (!selectedVariation || l.variant === selectedVariation)
+                      && (showHold
+                        ? (l.holdTime != null || l.holdTime2 != null || l.holdTime3 != null)
+                        : (l.weight1 != null || l.weight2 != null || l.weight3 != null))
+                    ).length;
+                    return (
+                      <option key={t.level} value={t.level}>
+                        Lv.{t.level} — {t.name} ({count})
+                      </option>
+                    );
+                  })
+                )}
+              </select>
+
+              <span className="text-[10px] text-mist-dark/70 truncate hidden sm:inline">{tierName}</span>
+              <div className="flex-1" />
+
+              {!showHold && (
+                <div className="flex rounded-md overflow-hidden border border-ink-light/30">
+                  <button
+                    onClick={() => setWeightUnit("kg")}
+                    className={`px-2 py-1 text-[10px] font-semibold transition-all duration-200 border-r border-ink-light/30 ${
+                      weightUnit === "kg"
+                        ? "bg-jade-deep/70 text-cloud-white border-jade-glow/50 shadow-[inset_0_0_0_1px_rgba(58,143,143,0.45),0_0_10px_rgba(58,143,143,0.2)]"
+                        : "bg-ink-mid/55 text-mist-light/85 hover:bg-ink-mid/80 hover:text-cloud-white"
+                    }`}
+                  >
+                    kg
+                  </button>
+                  <button
+                    onClick={() => setWeightUnit("lbs")}
+                    className={`px-2 py-1 text-[10px] font-semibold transition-all duration-200 ${
+                      weightUnit === "lbs"
+                        ? "bg-jade-deep/70 text-cloud-white border-jade-glow/50 shadow-[inset_0_0_0_1px_rgba(58,143,143,0.45),0_0_10px_rgba(58,143,143,0.2)]"
+                        : "bg-ink-mid/55 text-mist-light/85 hover:bg-ink-mid/80 hover:text-cloud-white"
+                    }`}
+                  >
+                    lbs
+                  </button>
+                </div>
+              )}
+
+              <div className="flex rounded-md overflow-hidden border border-ink-light/30">
+                <button
+                  onClick={() => { setInputMode("weight"); resetEntryFields(); }}
+                  className={`px-2.5 py-1 text-[10px] font-semibold transition-all duration-200 border-r ${
+                    inputMode === "weight"
+                      ? "bg-jade-deep/55 text-cloud-white border-jade/40 shadow-[inset_0_0_0_1px_rgba(58,143,143,0.25)]"
+                      : "bg-ink-mid/60 text-mist-light border-ink-light/30 hover:bg-ink-mid/80 hover:text-cloud-white"
+                  }`}
+                >
+                  Weight
+                </button>
+                <button
+                  onClick={() => { setInputMode("hold"); resetEntryFields(); }}
+                  className={`px-2.5 py-1 text-[10px] font-semibold transition-all duration-200 ${
+                    inputMode === "hold"
+                      ? "bg-mountain-blue/30 text-cloud-white shadow-[inset_0_0_0_1px_rgba(94,184,232,0.35)]"
+                      : "bg-ink-mid/60 text-mist-light hover:bg-ink-mid/80 hover:text-cloud-white"
+                  }`}
+                >
+                  Hold
+                </button>
+              </div>
+            </div>
+
+            {((exercise.modifiers && exercise.modifiers.length > 0) || showResistanceBand || (exercise.variations && exercise.variations.length > 0)) && (
+              <div className="flex items-center gap-2 mb-2.5 pl-2 flex-wrap">
+                {exercise.modifiers && exercise.modifiers.length > 0 && (
+                  <select
+                    value={selectedModifier}
+                    onChange={(e) => setSelectedModifier(e.target.value)}
+                    className="bg-ink-dark border border-ink-light/20 rounded px-2 py-1 text-xs text-gold outline-none focus:border-gold/40 transition-colors cursor-pointer"
+                  >
+                    <option value="">No modifier</option>
+                    {exercise.modifiers.filter(m => m.available).map((m) => (
+                      <option key={m.id} value={m.type}>
+                        {m.type}{m.difficultyMod !== 0 ? ` (${m.difficultyMod > 0 ? "+" : ""}${m.difficultyMod})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {showResistanceBand && (
+                  <select
+                    value={selectedResistanceBand}
+                    onChange={(e) => setSelectedResistanceBand(e.target.value)}
+                    className="bg-ink-dark border border-ink-light/20 rounded px-2 py-1 text-xs text-sky-300 outline-none focus:border-sky-300/40 transition-colors cursor-pointer"
+                  >
+                    <option value="">No resistance band</option>
+                    {RESISTANCE_BAND_OPTIONS.map((kg) => (
+                      <option key={kg} value={String(kg)}>
+                        Resistance band {formatResistanceBandLabel(kg)}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {exercise.variations && exercise.variations.length > 0 && (
+                  <select
+                    value={selectedVariation}
+                    onChange={(e) => setSelectedVariation(e.target.value)}
+                    className="bg-ink-dark border border-ink-light/20 rounded px-2 py-1 text-xs text-crimson-light outline-none focus:border-crimson/40 transition-colors cursor-pointer"
+                  >
+                    <option value="">No variation</option>
+                    {exercise.variations.map((v) => (
+                      <option key={v.id} value={v.name}>
+                        {v.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            )}
+
+            <div className="pl-2">
+              <div className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(6, 1fr) 1.5fr" }}>
+                {!showHold ? (
+                  <>
+                    <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: diffStyle.glowColor, opacity: 0.95 }}>W1</div>
+                    <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: 'var(--col-reps)', opacity: 0.95 }}>R1</div>
+                    <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: diffStyle.glowColor, opacity: 0.95 }}>W2</div>
+                    <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: 'var(--col-reps)', opacity: 0.95 }}>R2</div>
+                    <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: diffStyle.glowColor, opacity: 0.95 }}>W3</div>
+                    <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: 'var(--col-reps)', opacity: 0.95 }}>R3</div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: diffStyle.glowColor, opacity: 0.95 }}>T1</div>
+                    <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: 'var(--col-reps)', opacity: 0.95 }}>W1</div>
+                    <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: diffStyle.glowColor, opacity: 0.95 }}>T2</div>
+                    <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: 'var(--col-reps)', opacity: 0.95 }}>W2</div>
+                    <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: diffStyle.glowColor, opacity: 0.95 }}>T3</div>
+                    <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: 'var(--col-reps)', opacity: 0.95 }}>W3</div>
+                  </>
+                )}
+                <div className="text-[9px] text-center uppercase tracking-widest font-semibold text-mist-dark/50 pb-0.5">Notes</div>
+
+                {!showHold ? (
+                  <>
+                    <input type="number" min="0" step="0.5" value={w1} onChange={(e) => { setW1(e.target.value); if (shakeError) setShakeError(false); }} placeholder="—"
+                      className={`w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-colors duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:bg-ink-mid/40${shakeError ? ' animate-shake' : ''}`}
+                      style={{ borderColor: shakeError ? 'rgba(220,50,50,0.7)' : `${diffStyle.glowColor}40` }} />
+                    <input type="number" min="0" max="500" value={r1} onChange={(e) => { setR1(e.target.value); if (shakeError) setShakeError(false); }} placeholder="—"
+                      className={`w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-colors duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:border-gold/50 focus:bg-ink-mid/40${shakeError ? ' animate-shake' : ''}`}
+                      style={{ borderColor: shakeError ? 'rgba(220,50,50,0.7)' : 'rgba(196,168,74,0.15)' }} />
+                    <input type="number" min="0" step="0.5" value={w2} onChange={(e) => setW2(e.target.value)} placeholder="—"
+                      className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:bg-ink-mid/40"
+                      style={{ borderColor: `${diffStyle.glowColor}40` }} />
+                    <input type="number" min="0" max="500" value={r2} onChange={(e) => setR2(e.target.value)} placeholder="—"
+                      className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:border-gold/50 focus:bg-ink-mid/40"
+                      style={{ borderColor: 'rgba(196,168,74,0.15)' }} />
+                    <input type="number" min="0" step="0.5" value={w3} onChange={(e) => setW3(e.target.value)} placeholder="—"
+                      className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:bg-ink-mid/40"
+                      style={{ borderColor: `${diffStyle.glowColor}40` }} />
+                    <input type="number" min="0" max="500" value={r3} onChange={(e) => setR3(e.target.value)} placeholder="—"
+                      className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:border-gold/50 focus:bg-ink-mid/40"
+                      style={{ borderColor: 'rgba(196,168,74,0.15)' }} />
+                  </>
+                ) : (
+                  <>
+                    <input type="number" min="0" value={hold} onChange={(e) => { setHold(e.target.value); if (shakeError) setShakeError(false); }} placeholder="s"
+                      className={`w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-colors duration-200 bg-ink-dark border border-mountain-blue/20 text-cloud-white placeholder:text-mist-dark/30 focus:border-mountain-blue-glow/50 focus:bg-ink-mid/40${shakeError ? ' animate-shake' : ''}`}
+                      style={shakeError ? { borderColor: 'rgba(220,50,50,0.7)' } : undefined} />
+                    <input type="number" min="0" max="500" value={r1} onChange={(e) => { setR1(e.target.value); if (shakeError) setShakeError(false); }} placeholder="—"
+                      className={`w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-colors duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:border-gold/50 focus:bg-ink-mid/40${shakeError ? ' animate-shake' : ''}`}
+                      style={{ borderColor: shakeError ? 'rgba(220,50,50,0.7)' : 'rgba(196,168,74,0.15)' }} />
+                    <input type="number" min="0" value={hold2} onChange={(e) => setHold2(e.target.value)} placeholder="s"
+                      className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-mountain-blue/20 text-cloud-white placeholder:text-mist-dark/30 focus:border-mountain-blue-glow/50 focus:bg-ink-mid/40" />
+                    <input type="number" min="0" max="500" value={r2} onChange={(e) => setR2(e.target.value)} placeholder="—"
+                      className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:border-gold/50 focus:bg-ink-mid/40"
+                      style={{ borderColor: 'rgba(196,168,74,0.15)' }} />
+                    <input type="number" min="0" value={hold3} onChange={(e) => setHold3(e.target.value)} placeholder="s"
+                      className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-mountain-blue/20 text-cloud-white placeholder:text-mist-dark/30 focus:border-mountain-blue-glow/50 focus:bg-ink-mid/40" />
+                    <input type="number" min="0" max="500" value={r3} onChange={(e) => setR3(e.target.value)} placeholder="—"
+                      className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:border-gold/50 focus:bg-ink-mid/40"
+                      style={{ borderColor: 'rgba(196,168,74,0.15)' }} />
+                  </>
+                )}
+                <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes..."
+                  className="w-full rounded-md px-1.5 py-1.5 text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/20 text-cloud-white placeholder:text-mist-dark/40 focus:border-mist-mid/30 focus:bg-ink-mid/30" />
+              </div>
+            </div>
+
+            <div className="mt-3 flex items-center justify-end gap-2 pl-2">
+              {saved && (
+                <motion.span
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="text-xs font-medium"
+                  style={{ color: diffStyle.glowColor }}
+                >
+                  ✦ Saved
+                </motion.span>
+              )}
+              {showHold && (
+                <button
+                  type="button"
+                  onClick={() => { setShowTimerModal(true); setTimerTarget(getNextTimerTarget()); setTimerReps(""); resetTimer(); }}
+                  className="px-3 py-1.5 text-[10px] font-bold rounded-md border text-cloud-white bg-mountain-blue/35 hover:bg-mountain-blue/45 border-mountain-blue-glow/70 shadow-[0_0_10px_rgba(94,184,232,0.45)] hover:shadow-[0_0_16px_rgba(94,184,232,0.6)] transition-all"
+                  style={{ boxShadow: `0 0 10px ${diffStyle.glowColor}66, inset 0 0 0 1px ${diffStyle.glowColor}40` }}
+                  title="Open compact hold timer"
+                >
+                  Start Timer
+                </button>
+              )}
+              <motion.button
+                onClick={handleSubmit}
+                disabled={submitting}
+                animate={saved ? { scale: [1, 1.1, 1] } : { scale: 1 }}
+                whileHover={!submitting ? { scale: 1.06, boxShadow: `0 0 10px ${diffStyle.glowColor}50` } : {}}
+                whileTap={!submitting ? { scale: 0.96 } : {}}
+                transition={{ duration: 0.3 }}
+                className="px-4 py-1.5 rounded-md text-xs font-semibold disabled:opacity-40 cursor-pointer"
+                style={{
+                  background: saved ? `${diffStyle.glowColor}30` : `${diffStyle.glowColor}18`,
+                  border: `1px solid ${saved ? `${diffStyle.glowColor}60` : `${diffStyle.glowColor}35`}`,
+                  color: diffStyle.glowColor,
+                  transition: 'background 0.3s, border-color 0.3s',
+                }}
+              >
+                {submitting ? "Saving…" : saved ? "✦ Logged!" : "Log Set"}
+              </motion.button>
+            </div>
+          </>
+        )}
 
         {showTimerModal && showHold && (
           <div className="absolute inset-0 z-30 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-[2px] p-2" onClick={closeTimerModal}>
@@ -2788,7 +3373,9 @@ function ProgressionSidebar({
   exercises,
   selectedIds,
   onToggleExercise,
+  onAddExercise,
   onSelectWithLevel,
+  selectedTierIds,
   searchTerm,
   onSearch,
   filterCategory,
@@ -2809,7 +3396,9 @@ function ProgressionSidebar({
   exercises: ProgressionExercise[];
   selectedIds: Set<string>;
   onToggleExercise: (id: string) => void;
-  onSelectWithLevel: (exerciseId: string, level: number) => void;
+  onAddExercise: (id: string) => void;
+  onSelectWithLevel: (exerciseId: string, level: number, tierId?: string) => void;
+  selectedTierIds: Record<string, string>;
   searchTerm: string;
   onSearch: (term: string) => void;
   filterCategory: string;
@@ -2831,7 +3420,12 @@ function ProgressionSidebar({
   const { settings } = useDisplaySettings();
   const [isCompact, setIsCompact] = useState(() => {
     if (typeof window === "undefined") return false;
-    try { return localStorage.getItem("cultivateos-progression-sidebar-compact") === "true"; } catch { return false; }
+    try {
+      const saved = localStorage.getItem("cultivateos-progression-sidebar-compact");
+      return saved === null ? true : saved === "true";
+    } catch {
+      return true;
+    }
   });
 
   // Persist compact state
@@ -2878,11 +3472,17 @@ function ProgressionSidebar({
     return counts;
   }, [exercises]);
 
+  const [disciplineFilter, setDisciplineFilter] = useState<"all" | "gym" | "calisthenics" | "recent">("all");
+
   // Apply filters
   const filtered = exercises.filter((e) => {
     if (hiddenSidebarExerciseNames.has(String(e.name || "").trim().toLowerCase())) {
       return false;
     }
+
+    if (disciplineFilter === "gym" && !isGymCategoryExercise(e)) return false;
+    if (disciplineFilter === "calisthenics" && isGymCategoryExercise(e)) return false;
+    if (disciplineFilter === "recent" && (e.userProgress[0]?.logs?.length ?? 0) === 0) return false;
 
     // Day filter
     if (selectedDayFilter !== null) {
@@ -2956,13 +3556,12 @@ function ProgressionSidebar({
     }
   });
 
-  const [showFilters, setShowFilters] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   const activeFiltersCount = (filterCategory ? 1 : 0) + (filterType ? 1 : 0) + (filterEquipment ? 1 : 0);
   const searchQuery = searchTerm.trim();
   const isSearchActive = searchQuery.length > 0;
-  const canCollapseAll = sorted.some((exercise) => expandedIds.has(exercise.id));
 
   const toggleExpand = useCallback((id: string) => {
     setExpandedIds(prev => {
@@ -2983,7 +3582,6 @@ function ProgressionSidebar({
   ] as const;
 
   const compactEnabled = !isMobile && isCompact;
-  const controlSizeClass = isMobile ? "h-9" : "h-7";
   const chipTextClass = isMobile ? "text-xs" : "text-[10px]";
   const labelTextClass = isMobile ? "text-[10px]" : "text-[9px]";
 
@@ -3085,27 +3683,42 @@ function ProgressionSidebar({
 
         {/* Action bar: icons row */}
         <div className="flex items-center gap-1">
-          <div className="flex-1" />
-
-          {/* Expand / Collapse all */}
-          {expandTiers && !isSearchActive && sorted.length > 0 && (
+          <div className="flex items-center gap-1 min-w-0">
             <button
-              onClick={() => setExpandedIds(new Set())}
-              disabled={!canCollapseAll}
-              className={`group inline-flex items-center gap-1.5 px-2.5 ${controlSizeClass} rounded-md border focus-visible:outline-none focus-visible:ring-2 transition-all duration-200 ${chipTextClass} font-semibold tracking-wide ${
-                canCollapseAll
-                  ? 'border-jade/45 bg-jade-deep/30 text-jade-light hover:bg-jade-deep/45 hover:border-jade/65 hover:text-cloud-white focus-visible:ring-jade-glow/35 shadow-[0_0_10px_rgba(58,143,143,0.18)]'
-                  : 'border-ink-light/35 bg-ink-mid/20 text-mist-dark/70 cursor-not-allowed focus-visible:ring-mist-mid/20 opacity-80'
+              onClick={() => setDisciplineFilter((prev) => (prev === "gym" ? "all" : "gym"))}
+              className={`${isMobile ? "px-2.5 h-9 text-xs" : "px-2 h-7 text-[10px]"} rounded-md flex items-center justify-center border font-semibold transition-all duration-150 ${
+                disciplineFilter === "gym"
+                  ? "bg-jade-deep/30 border-jade-glow/45 text-jade-light shadow-[0_0_8px_rgba(58,143,143,0.16)]"
+                  : "border-ink-light/40 text-mist-dark hover:text-mist-light hover:border-ink-light/60"
               }`}
-              title={canCollapseAll ? "Collapse all tier panels" : "No expanded tier panels"}
-              aria-label="Collapse all tier panels"
+              title="Toggle Gym filter"
             >
-              <svg className={`w-3 h-3 shrink-0 transition-transform duration-200 ${canCollapseAll ? 'group-hover:translate-y-px' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 10l-7 7-7-7" />
-              </svg>
-              Collapse
+              Gym
             </button>
-          )}
+            <button
+              onClick={() => setDisciplineFilter((prev) => (prev === "calisthenics" ? "all" : "calisthenics"))}
+              className={`${isMobile ? "px-2.5 h-9 text-xs" : "px-2 h-7 text-[10px]"} rounded-md flex items-center justify-center border font-semibold transition-all duration-150 ${
+                disciplineFilter === "calisthenics"
+                  ? "bg-jade-deep/30 border-jade-glow/45 text-jade-light shadow-[0_0_8px_rgba(58,143,143,0.16)]"
+                  : "border-ink-light/40 text-mist-dark hover:text-mist-light hover:border-ink-light/60"
+              }`}
+              title="Toggle Calisthenics filter"
+            >
+              Cali
+            </button>
+            <button
+              onClick={() => setDisciplineFilter((prev) => (prev === "recent" ? "all" : "recent"))}
+              className={`${isMobile ? "px-2.5 h-9 text-xs" : "px-2 h-7 text-[10px]"} rounded-md flex items-center justify-center border font-semibold transition-all duration-150 ${
+                disciplineFilter === "recent"
+                  ? "bg-jade-deep/30 border-jade-glow/45 text-jade-light shadow-[0_0_8px_rgba(58,143,143,0.16)]"
+                  : "border-ink-light/40 text-mist-dark hover:text-mist-light hover:border-ink-light/60"
+              }`}
+              title="Show exercises with training logs"
+            >
+              Recent
+            </button>
+          </div>
+          <div className="flex-1" />
 
           <button
             onClick={() => setShowFilters(!showFilters)}
@@ -3285,7 +3898,10 @@ function ProgressionSidebar({
           </div>
           {selectedIds.size > 0 && (
             <button
-              onClick={() => { for (const id of [...selectedIds]) onToggleExercise(id); }}
+              onClick={() => {
+                for (const id of [...selectedIds]) onToggleExercise(id);
+                setExpandedIds(new Set());
+              }}
               className="flex items-center gap-1 px-2 py-0.5 rounded-md border border-crimson/40 bg-crimson-deep/20 text-crimson-light hover:bg-crimson-deep/35 hover:border-crimson/60 transition-all duration-150 text-[10px] font-semibold"
               title="Unselect all"
             >
@@ -3334,22 +3950,24 @@ function ProgressionSidebar({
           )
         ) : (
           <div className={`${compactEnabled ? 'space-y-px' : 'space-y-1.5'}`}>
-            {sorted.map((exercise, idx) => {
+            {sorted.map((exercise) => {
               const isActive = selectedIds.has(exercise.id);
               const currentLevel = exercise.userProgress[0]?.currentLevel ?? 1;
               const effectiveLevel = levelDefaults[exercise.id] || autoLevelByExerciseId[exercise.id] || currentLevel;
               const typeColor = getTypeColor(getTypeColorKey(exercise));
               const displayName = getExerciseDisplayName(exercise, settings.terminologyMode);
-              const typeKey = getTypeColorKey(exercise);
-              const typeEmoji = typeKey === "Upper Heaven" ? "☁️"
-                : typeKey === "Lower Realms" ? "🔥"
-                : typeKey === "Heart Meridian" ? "💚"
-                : "⭐";
               const levelDifficulty = getWeightedDifficulty(exercise, effectiveLevel);
+              const levelDifficultyDisplay = getDifficultyDisplayName(
+                { difficulty: levelDifficulty, wuxiaDifficulty: levelDifficulty },
+                settings.terminologyMode
+              ) || levelDifficulty;
               const levelDiffColor = 'text-jade-glow';
               const glowStyle = {};
               const logCount = exercise.userProgress[0]?.logs?.length ?? 0;
               const isExpanded = expandTiers && expandedIds.has(exercise.id);
+              const isGymExercise = isGymCategoryExercise(exercise);
+              const gymAutoLevel = autoLevelByExerciseId[exercise.id] || effectiveLevel;
+              const selectedTierId = selectedTierIds[exercise.id];
               const isSearchMatch = isSearchActive && matchesLooseSearchInFields(searchQuery, [
                 exercise.name,
                 exercise.wuxiaName,
@@ -3387,36 +4005,51 @@ function ProgressionSidebar({
                   >
                     <div className="pt-1.5 mt-1.5 border-t border-ink-light/20 space-y-0.5">
                       {exercise.tiers.map((tier) => {
-                        const isCurrent = tier.level === effectiveLevel;
+                        const isCurrent = selectedTierId ? tier.id === selectedTierId : tier.level === effectiveLevel;
                         const isActiveTier = isActive && isCurrent;
+                        const isAutoTier = isGymExercise && tier.level === gymAutoLevel;
+                        const canSelectTier = !isGymExercise || isAutoTier;
+                        const tierLogCount = (exercise.userProgress[0]?.logs ?? []).filter((log) => log.level === tier.level).length;
                         return (
                           <div
                             key={tier.id}
-                            onClick={(e) => {
+                            onClick={canSelectTier ? (e) => {
                               e.stopPropagation();
-                              if (isActive && isCurrent) {
-                                // clicking the already-active tier → remove exercise
-                                onToggleExercise(exercise.id);
-                              } else {
-                                // clicking any other tier → add (or switch level)
-                                onSelectWithLevel(exercise.id, tier.level);
-                              }
-                            }}
-                            className={`flex items-center gap-1.5 px-1.5 py-[3px] rounded text-[10px] transition-colors cursor-pointer ${
-                              isActiveTier ? 'bg-jade-deep/25 hover:bg-crimson-deep/20' : isCurrent ? 'bg-jade-deep/15 hover:bg-jade-deep/25' : 'hover:bg-jade-deep/10'
+                              if (isActive && isCurrent) return;
+                              // Click to add/switch tier; for gym this is only the auto tier.
+                              onSelectWithLevel(exercise.id, tier.level, tier.id);
+                            } : undefined}
+                            className={`group/tier flex items-center gap-1.5 px-1.5 py-[3px] rounded text-[10px] ${
+                              isGymExercise
+                                ? (isAutoTier ? 'bg-ink-mid/35 cursor-pointer transition-colors duration-150 hover:bg-jade-deep/22 hover:shadow-[inset_0_0_0_1px_rgba(58,143,143,0.3)]' : 'cursor-default pointer-events-none opacity-70')
+                                : 'cursor-pointer'
+                            } ${
+                              isGymExercise
+                                ? ''
+                                : (isActiveTier
+                                  ? 'transition-colors duration-150 bg-jade-deep/25'
+                                  : isCurrent
+                                    ? 'transition-colors duration-150 bg-jade-deep/15 hover:bg-jade-deep/22'
+                                    : 'transition-colors duration-150 hover:bg-jade-deep/14')
                             }`}
                           >
-                            <span className={`font-mono w-4 text-center shrink-0 ${isCurrent ? 'text-gold font-bold' : 'text-mist-dark/60'}`}>
+                            <span className={`font-mono shrink-0 text-center ${
+                              isGymExercise
+                                ? (isAutoTier ? 'min-w-[1.5rem] px-1 py-0.5 rounded border border-mist-light/35 bg-ink-dark/55 text-mist-light font-semibold' : 'w-4 text-mist-dark/70')
+                                : (isActiveTier ? 'min-w-[1.5rem] px-1 py-0.5 rounded border border-gold/40 bg-gold/10 text-gold font-bold shadow-[0_0_6px_rgba(196,168,74,0.2)]' : isCurrent ? 'w-4 text-gold font-bold' : 'w-4 text-mist-dark/60')
+                            }`}>
                               {tier.level}
                             </span>
-                            <span className={`truncate flex-1 ${isActiveTier ? 'text-jade-light font-semibold' : 'text-jade-glow'} ${isCurrent ? 'font-medium' : 'opacity-70'}`} title={tier.wuxiaName || tier.name}>
-                              {settings.terminologyMode === "fantasy" && tier.wuxiaName ? tier.wuxiaName : tier.name}
+                            <span className={`truncate flex-1 transition-[text-shadow,color] duration-150 ${
+                              isGymExercise
+                                ? (isAutoTier ? 'text-mist-light font-semibold' : 'text-mist-dark')
+                                : (isCurrent ? 'text-jade-light font-semibold' : 'text-mist-light/85')
+                            } ${isCurrent ? 'font-medium' : 'opacity-90'} ${!isGymExercise ? 'group-hover/tier:text-jade-light group-hover/tier:[text-shadow:0_0_8px_rgba(58,143,143,0.4)]' : ''}`} title={tier.wuxiaName || tier.name}>
+                              {getExerciseDisplayName(tier, settings.terminologyMode)}
                             </span>
-                            {isActiveTier ? (
-                              <span className="shrink-0 text-[8px] text-crimson-light/70" title="Click to remove">✕</span>
-                            ) : isCurrent ? (
-                              <span className="shrink-0 text-[8px] text-gold/80">◆</span>
-                            ) : null}
+                            <span className={`shrink-0 min-w-[1.3rem] text-right text-[9px] font-semibold ${isCurrent ? 'text-jade-light' : 'text-mist-mid/85'}`}>
+                              {tierLogCount}
+                            </span>
                           </div>
                         );
                       })}
@@ -3443,10 +4076,30 @@ function ProgressionSidebar({
                 </button>
               ) : null;
 
-              // Row click handler: expand/collapse tiers when expandTiers is on, otherwise toggle selection
-              const handleRowClick = expandTiers
-                ? () => toggleExpand(exercise.id)
-                : () => onToggleExercise(exercise.id);
+              // Row click handler: expand/collapse tiers when available, otherwise toggle selection
+              const handleRowClick = () => {
+                // If expandTiers mode and exercise has tiers, toggle expansion
+                if (expandTiers && exercise.tiers.length > 0) {
+                  setExpandedIds((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(exercise.id)) {
+                      next.delete(exercise.id);
+                    } else {
+                      next.add(exercise.id);
+                    }
+                    return next;
+                  });
+                  return;
+                }
+
+                // Otherwise, toggle selection (add to queue or remove)
+                if (isActive) {
+                  onToggleExercise(exercise.id);
+                  return;
+                }
+
+                onAddExercise(exercise.id);
+              };
 
               /* ═══ Compact mode ═══ */
               if (compactEnabled) {
@@ -3457,7 +4110,7 @@ function ProgressionSidebar({
                         relative flex items-center gap-1.5 px-2.5 py-[5px] rounded-md cursor-pointer transition-all duration-150
                         group border
                         ${isActive
-                          ? 'bg-jade-deep/20 border-jade/30'
+                          ? 'bg-jade-deep/28 border-jade-glow/55 shadow-[0_0_10px_rgba(58,143,143,0.2)]'
                           : isSearchMatch
                             ? 'bg-jade-deep/10 border-jade-glow/45 shadow-[0_0_10px_rgba(58,143,143,0.16)] hover:bg-jade-deep/15'
                             : 'bg-ink-dark/40 border-ink-light/50 hover:bg-ink-mid/20 hover:border-ink-light/70'
@@ -3466,9 +4119,9 @@ function ProgressionSidebar({
                       style={showIllumination && isActive ? glowStyle as React.CSSProperties : undefined}
                       onClick={handleRowClick}
                     >
-                      {chevron}
                       {/* Selection indicator */}
                       <div className={`w-1 h-4 rounded-full shrink-0 transition-all duration-200 ${isActive ? 'bg-jade-glow' : 'bg-transparent group-hover:bg-ink-light/40'}`} />
+                      {chevron}
                       <span className={`text-[11px] truncate flex-1 ${showIllumination ? levelDiffColor : isActive ? 'text-cloud-white' : 'text-mist-light'}`} title={displayName}>
                         {displayName}
                       </span>
@@ -3477,7 +4130,7 @@ function ProgressionSidebar({
                       )}
                       <span className="text-[9px] text-gold/80 shrink-0 font-mono">Lv.{effectiveLevel}</span>
                       <span className={`shrink-0 text-[8px] font-medium px-1 py-0 rounded ${!expandTiers ? levelDiffColor : levelDiffColor + ' opacity-70'}`}>
-                        {!expandTiers ? levelDifficulty : levelDifficulty.split(" ").map(w => w[0]).join("")}
+                        {!expandTiers ? levelDifficultyDisplay : levelDifficultyDisplay.split(" ").map(w => w[0]).join("")}
                       </span>
                     </div>
                     {expandTiers && tierPanel}
@@ -3492,58 +4145,56 @@ function ProgressionSidebar({
                     key={exercise.id}
                     initial={{ opacity: 0, y: 4 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.015, duration: 0.2 }}
+                    transition={{ duration: 0.2 }}
                   >
                     <div
                       className={`
                         relative p-2.5 rounded-lg border cursor-pointer transition-all duration-200 group
                         ${isActive
-                          ? 'bg-jade-deep/15 border-jade/30 shadow-[0_0_10px_rgba(58,143,143,0.1)]'
+                          ? 'bg-jade-deep/24 border-jade-glow/55 shadow-[0_0_14px_rgba(58,143,143,0.2)]'
                           : isSearchMatch
-                            ? 'bg-jade-deep/10 border-jade-glow/45 shadow-[0_0_12px_rgba(58,143,143,0.14)] hover:bg-jade-deep/15'
-                            : 'bg-ink-dark/40 border-ink-light/50 hover:border-ink-light/70 hover:bg-ink-mid/15'
+                            ? 'bg-jade-deep/10 border-jade-glow/45 shadow-[0_0_10px_rgba(58,143,143,0.16)] hover:bg-jade-deep/14'
+                            : 'bg-ink-dark/45 border-ink-light/50 hover:border-ink-light/70 hover:bg-ink-mid/15'
                         }
                       `}
                       style={showIllumination && glowIntensity > 0 ? glowStyle as React.CSSProperties : undefined}
                       onClick={handleRowClick}
                     >
-                      {/* Active indicator bar */}
-                      {isActive && (
-                        <div className="absolute left-0 top-2 bottom-2 w-[2px] rounded-full bg-jade-glow" />
-                      )}
-
                       <div className="flex items-start gap-2">
-                        <span className="text-base pt-0.5 opacity-70 shrink-0">{typeEmoji}</span>
-                        <div className="flex flex-col min-w-0 flex-1">
+                        <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5 min-w-0">
+                            <div className={`w-1 h-4 rounded-full shrink-0 transition-all duration-200 ${isActive ? 'bg-jade-glow' : 'bg-transparent group-hover:bg-ink-light/40'}`} />
                             {chevron}
-                            <h3 className={`text-[11px] font-medium ${showIllumination ? levelDiffColor : 'text-cloud-white'} truncate flex-1 leading-snug`} title={displayName}>
+                            <h3 className={`text-[11px] font-semibold ${showIllumination ? levelDiffColor : 'text-cloud-white'} truncate flex-1`} title={displayName}>
                               {displayName}
                             </h3>
+                            {logCount > 0 && (
+                              <span className="text-[8px] text-mist-dark/70 font-mono shrink-0">{logCount}</span>
+                            )}
                             <span className="text-[9px] text-gold/70 shrink-0 font-mono">Lv.{effectiveLevel}</span>
                           </div>
-                          <div className="mt-1 flex items-center gap-1 flex-wrap">
-                            <span className={`text-[8px] font-medium px-1.5 py-0 rounded ${levelDiffColor} bg-ink-dark/50 border border-current/20`}>
-                              {levelDifficulty}
+
+                          <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                            <span className={`text-[8px] font-semibold px-1.5 py-0.5 rounded ${levelDiffColor} bg-ink-dark/55 border border-current/20`}>
+                              {levelDifficultyDisplay}
                             </span>
                             {showPath && (
-                              <span className={`text-[8px] px-1.5 py-0 rounded ${typeColor} bg-ink-dark/30 border border-current/15 opacity-70`}>
+                              <span className={`text-[8px] px-1.5 py-0.5 rounded ${typeColor} bg-ink-dark/40 border border-current/15 opacity-75`}>
                                 {getTypeDisplayName(exercise, settings.terminologyMode)}
                               </span>
                             )}
                             <EquipmentBadges exercise={exercise} />
-                            {logCount > 0 && (
-                              <span className="text-[8px] text-mist-dark/60 font-mono">{logCount} log{logCount !== 1 ? "s" : ""}</span>
+                            {showRealm && exercise.category && (
+                              <span className="text-[8px] text-mist-dark/70">{exercise.category}</span>
                             )}
                           </div>
-                          {showRealm && exercise.category && (
-                            <span className="text-[9px] text-mist-dark/60 mt-0.5">{exercise.category}</span>
-                          )}
+
                           {loreVisible && showPath && exercise.story && (
-                            <p className="mt-1 text-[9px] text-mist-mid/70 leading-relaxed line-clamp-2">
+                            <p className="mt-1.5 pt-1 border-t border-ink-light/20 text-[9px] text-mist-mid/70 leading-relaxed line-clamp-1">
                               {exercise.story}
                             </p>
                           )}
+
                           {expandTiers && tierPanel}
                         </div>
                       </div>
@@ -3558,54 +4209,50 @@ function ProgressionSidebar({
                   key={exercise.id}
                   initial={{ opacity: 0, y: 4 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.015, duration: 0.2 }}
+                  transition={{ duration: 0.2 }}
                 >
                   <div
                     className={`
-                      relative p-2 rounded-lg border cursor-pointer transition-all duration-200 group
+                      relative p-2.5 rounded-lg border cursor-pointer transition-all duration-200 group
                       ${isActive
-                        ? 'bg-jade-deep/15 border-jade/30'
+                        ? 'bg-jade-deep/24 border-jade-glow/55 shadow-[0_0_12px_rgba(58,143,143,0.2)]'
                         : isSearchMatch
-                          ? 'bg-jade-deep/10 border-jade-glow/45 shadow-[0_0_12px_rgba(58,143,143,0.14)] hover:bg-jade-deep/15'
-                          : 'bg-ink-dark/40 border-ink-light/50 hover:border-ink-light/70 hover:bg-ink-mid/15'
+                          ? 'bg-jade-deep/10 border-jade-glow/45 shadow-[0_0_10px_rgba(58,143,143,0.16)] hover:bg-jade-deep/14'
+                          : 'bg-ink-dark/45 border-ink-light/50 hover:border-ink-light/70 hover:bg-ink-mid/15'
                       }
                     `}
                     style={showIllumination ? glowStyle as React.CSSProperties : undefined}
                     onClick={handleRowClick}
                   >
-                    {/* Active indicator bar */}
-                    {isActive && (
-                      <div className="absolute left-0 top-1.5 bottom-1.5 w-[2px] rounded-full bg-jade-glow" />
-                    )}
-
-                    <div className="flex items-center gap-1.5 pl-1">
+                    <div className="flex items-center gap-1.5">
+                      <div className={`w-1 h-4 rounded-full shrink-0 transition-all duration-200 ${isActive ? 'bg-jade-glow' : 'bg-transparent group-hover:bg-ink-light/40'}`} />
                       {chevron}
-                      <div className={`text-[11px] font-medium ${showIllumination ? levelDiffColor : isActive ? 'text-cloud-white' : 'text-mist-light'} transition-colors duration-150 truncate flex-1`} title={displayName}>
+                      <div className={`text-[11px] font-semibold ${showIllumination ? levelDiffColor : isActive ? 'text-cloud-white' : 'text-mist-light'} transition-colors duration-150 truncate flex-1`} title={displayName}>
                         {displayName}
                       </div>
                       {logCount > 0 && (
-                        <span className="text-[8px] text-mist-dark/60 font-mono shrink-0">{logCount}</span>
+                        <span className="text-[8px] text-mist-dark/70 font-mono shrink-0">{logCount}</span>
                       )}
                       <span className="text-[9px] text-gold/70 shrink-0 font-mono">Lv.{effectiveLevel}</span>
                       <span className={`shrink-0 text-[8px] font-medium px-1.5 py-0 rounded ${levelDiffColor} bg-ink-dark/30 border border-current/15`}>
-                        {levelDifficulty}
+                        {levelDifficultyDisplay}
                       </span>
                     </div>
                     {(showRealm || showPath) && (
-                      <div className="flex items-center gap-1 mt-0.5 pl-1 flex-wrap">
+                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                         {showPath && (
-                          <span className={`inline-flex items-center px-1.5 py-0 rounded text-[8px] ${typeColor} opacity-60`}>
+                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[8px] ${typeColor} opacity-75 bg-ink-dark/35 border border-current/15`}>
                             {getTypeDisplayName(exercise, settings.terminologyMode)}
                           </span>
                         )}
                         <EquipmentBadges exercise={exercise} />
                         {showRealm && exercise.category && (
-                          <span className="text-[8px] text-mist-dark/50">{exercise.category}</span>
+                          <span className="text-[8px] text-mist-dark/70">{exercise.category}</span>
                         )}
                       </div>
                     )}
                     {loreVisible && showPath && exercise.story && (
-                      <p className="text-[9px] text-mist-mid/60 leading-relaxed line-clamp-2 mt-0.5 pl-1">
+                      <p className="text-[9px] text-mist-mid/70 leading-relaxed line-clamp-1 mt-1.5 pt-1 border-t border-ink-light/20">
                         {exercise.story}
                       </p>
                     )}
@@ -3789,6 +4436,7 @@ function EmptyState() {
 // ── Main Page ──
 
 export default function ProgressionPage() {
+  const { settings } = useDisplaySettings();
   const { user } = useAuth();
   const [exercises, setExercises] = useState<ProgressionExercise[]>([]);
   const [loading, setLoading] = useState(true);
@@ -3798,15 +4446,36 @@ export default function ProgressionPage() {
   const [filterEquipment, setFilterEquipment] = useState("");
   const [detailExercise, setDetailExercise] = useState<ProgressionExercise | null>(null);
   const [levelDefaults, setLevelDefaults] = useState<Record<string, number>>({});
-  const [selectedExerciseIds, setSelectedExerciseIds] = useState<Set<string>>(new Set());
-  const [selectedLogExerciseId, setSelectedLogExerciseId] = useState<string | null>(null);
+  const [selectedTierIds, setSelectedTierIds] = useState<Record<string, string>>({});
+  const [readyToLogQueueItems, setReadyToLogQueueItems] = useState<ReadyToLogQueueItem[]>([]);
+  const [readyToLogQueueHydrated, setReadyToLogQueueHydrated] = useState(false);
+  const [activeQueueItemId, setActiveQueueItemId] = useState<string | null>(null);
+  const [selectedLogFilter, setSelectedLogFilter] = useState<LogTableFilter | null>(null);
   const [showColorGuide, setShowColorGuide] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedDayFilter, setSelectedDayFilter] = useState<number | null>(null);
   const [_exerciseOrder, setExerciseOrder] = useState<string[]>([]);
   const [physique, setPhysique] = useState<UserPhysiqueSettings>(DEFAULT_USER_PHYSIQUE);
+  const filterHistoryArmedRef = useRef(false);
+  const loggerHistoryArmedRef = useRef(false);
 
   const userId = user?.id;
+  const readyToLogQueueStorageKey = userId ? `training-ready-queue:${userId}` : null;
+  const getDraftStorageKey = useCallback((exerciseId: string) => {
+    if (!userId) return null;
+    return `training-log-draft:${userId}:${exerciseId}`;
+  }, [userId]);
+
+  const clearExerciseDraft = useCallback((exerciseId: string) => {
+    const draftKey = getDraftStorageKey(exerciseId);
+    if (!draftKey) return;
+
+    try {
+      sessionStorage.removeItem(draftKey);
+    } catch {
+      // Ignore draft cleanup failures.
+    }
+  }, [getDraftStorageKey]);
 
   // ── User physique settings (used for gym auto-tiering) ──
   useEffect(() => {
@@ -3836,6 +4505,59 @@ export default function ProgressionPage() {
       try { setLevelDefaults(JSON.parse(stored)); } catch { /* ignore */ }
     }
   }, [userId]);
+
+  // ── Persist ready-to-log queue items so logger/back navigation does not drop them ──
+  useEffect(() => {
+    if (!readyToLogQueueStorageKey) {
+      setReadyToLogQueueItems([]);
+      setReadyToLogQueueHydrated(false);
+      return;
+    }
+
+    try {
+      const raw = localStorage.getItem(readyToLogQueueStorageKey);
+      if (!raw) {
+        setReadyToLogQueueItems([]);
+      } else {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.every((item) => typeof item === "string")) {
+          // Backward compatibility: migrate old exercise-id array storage.
+          setReadyToLogQueueItems(
+            parsed
+              .filter((exerciseId): exerciseId is string => typeof exerciseId === "string")
+              .map((exerciseId) => ({ id: createReadyToLogQueueItemId(), exerciseId }))
+          );
+        } else if (
+          Array.isArray(parsed) &&
+          parsed.every(
+            (item) =>
+              item &&
+              typeof item === "object" &&
+              typeof (item as ReadyToLogQueueItem).id === "string" &&
+              typeof (item as ReadyToLogQueueItem).exerciseId === "string"
+          )
+        ) {
+          setReadyToLogQueueItems(parsed as ReadyToLogQueueItem[]);
+        } else {
+          setReadyToLogQueueItems([]);
+        }
+      }
+    } catch {
+      setReadyToLogQueueItems([]);
+    } finally {
+      setReadyToLogQueueHydrated(true);
+    }
+  }, [readyToLogQueueStorageKey]);
+
+  useEffect(() => {
+    if (!readyToLogQueueStorageKey || !readyToLogQueueHydrated) return;
+
+    try {
+      localStorage.setItem(readyToLogQueueStorageKey, JSON.stringify(readyToLogQueueItems));
+    } catch {
+      // Ignore localStorage write failures.
+    }
+  }, [readyToLogQueueStorageKey, readyToLogQueueHydrated, readyToLogQueueItems]);
 
   const updateLevelDefault = useCallback((exerciseId: string, level: number) => {
     setLevelDefaults((prev) => {
@@ -3870,25 +4592,40 @@ export default function ProgressionPage() {
   }, [fetchExercises]);
 
   // ── Toggle exercise selection ──
-  const toggleExercise = useCallback((id: string) => {
-    setSelectedExerciseIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
+  const addExercise = useCallback((exerciseId: string) => {
+    const queueItemId = createReadyToLogQueueItemId();
+    setReadyToLogQueueItems((prev) => [...prev, { id: queueItemId, exerciseId }]);
+    return queueItemId;
   }, []);
 
-  const dismissExercise = useCallback((id: string) => {
-    setSelectedExerciseIds((prev) => {
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
-    });
-  }, []);
+  const selectedExerciseIds = useMemo(
+    () => new Set(readyToLogQueueItems.map((item) => item.exerciseId)),
+    [readyToLogQueueItems]
+  );
+
+  const toggleExercise = useCallback((exerciseId: string) => {
+    const itemsToRemove = readyToLogQueueItems.filter((item) => item.exerciseId === exerciseId);
+    if (itemsToRemove.length === 0) {
+      addExercise(exerciseId);
+      return;
+    }
+
+    const removedIds = new Set(itemsToRemove.map((item) => item.id));
+    setReadyToLogQueueItems((prev) => prev.filter((item) => !removedIds.has(item.id)));
+    for (const item of itemsToRemove) {
+      clearExerciseDraft(item.exerciseId);
+    }
+    setActiveQueueItemId((prev) => (prev && removedIds.has(prev) ? null : prev));
+  }, [addExercise, clearExerciseDraft, readyToLogQueueItems]);
+
+  const dismissQueueItem = useCallback((queueItemId: string) => {
+    const target = readyToLogQueueItems.find((item) => item.id === queueItemId);
+    if (!target) return;
+
+    setReadyToLogQueueItems((prev) => prev.filter((item) => item.id !== queueItemId));
+    clearExerciseDraft(target.exerciseId);
+    setActiveQueueItemId((prev) => (prev === queueItemId ? null : prev));
+  }, [clearExerciseDraft, readyToLogQueueItems]);
 
   // ── Day assignment management (for TechniqueManagementDrawer) ──
   const handleUpdateDayAssignments = useCallback(async (exerciseId: string, assignedDays: string) => {
@@ -3929,7 +4666,7 @@ export default function ProgressionPage() {
   const handleDrawerClose = useCallback(() => setIsDrawerOpen(false), []);
 
   // ── Log training data ──
-  const handleLog = async (exerciseId: string, level: number, data: {
+  const handleLog = async (queueItemId: string, exerciseId: string, level: number, data: {
     weight1?: number; reps1?: number;
     weight2?: number; reps2?: number;
     weight3?: number; reps3?: number;
@@ -3968,7 +4705,9 @@ export default function ProgressionPage() {
       }
       throw new Error(errMsg);
     }
+
     await fetchExercises();
+    dismissQueueItem(queueItemId);
   };
 
   // ── View detail ──
@@ -3993,8 +4732,99 @@ export default function ProgressionPage() {
   const types = [...new Set(exercises.map((e) => e.type).filter((t): t is string => !!t && t.trim().length > 0))].sort();
   const equipmentTypes = [...new Set(exercises.flatMap(getEquipmentTags))].sort();
 
-  // Selected exercises in order they were added
-  const selectedExercises = exercises.filter((e) => selectedExerciseIds.has(e.id));
+  // Selected exercises in insertion order from the queue set.
+  const selectedExercises = useMemo(
+    () =>
+      readyToLogQueueItems
+        .map((item) => {
+          const exercise = exercises.find((candidate) => candidate.id === item.exerciseId);
+          if (!exercise) return null;
+          return { queueItemId: item.id, exercise };
+        })
+        .filter((item): item is { queueItemId: string; exercise: ProgressionExercise } => Boolean(item)),
+    [exercises, readyToLogQueueItems]
+  );
+  const loggerTargetQueueItemId = activeQueueItemId;
+  const activeLoggerQueueItem = loggerTargetQueueItemId
+    ? readyToLogQueueItems.find((item) => item.id === loggerTargetQueueItemId) ?? null
+    : null;
+  const activeLoggerExercise = activeLoggerQueueItem
+    ? exercises.find((exercise) => exercise.id === activeLoggerQueueItem.exerciseId) ?? null
+    : null;
+
+  useEffect(() => {
+    if (activeQueueItemId && !readyToLogQueueItems.some((item) => item.id === activeQueueItemId)) {
+      setActiveQueueItemId(null);
+    }
+  }, [activeQueueItemId, readyToLogQueueItems]);
+
+  // Escape should close logger first, then clear active table filter.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (activeQueueItemId) {
+        event.preventDefault();
+        setActiveQueueItemId(null);
+        loggerHistoryArmedRef.current = false;
+        return;
+      }
+      if (!selectedLogFilter) return;
+      event.preventDefault();
+      setSelectedLogFilter(null);
+      filterHistoryArmedRef.current = false;
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [activeQueueItemId, selectedLogFilter]);
+
+  // When logger is open, add a same-page history entry so mobile back closes the popup first.
+  useEffect(() => {
+    if (!activeQueueItemId) {
+      loggerHistoryArmedRef.current = false;
+      return;
+    }
+    if (loggerHistoryArmedRef.current) return;
+
+    try {
+      window.history.pushState({ workoutLogger: true, at: Date.now() }, "", window.location.href);
+      loggerHistoryArmedRef.current = true;
+    } catch {
+      // Ignore history failures.
+    }
+  }, [activeQueueItemId]);
+
+  // When filtered, add a same-page history entry so mobile back clears filter first.
+  useEffect(() => {
+    if (!selectedLogFilter) {
+      filterHistoryArmedRef.current = false;
+      return;
+    }
+    if (filterHistoryArmedRef.current) return;
+
+    try {
+      window.history.pushState({ workoutTableFilter: true, at: Date.now() }, "", window.location.href);
+      filterHistoryArmedRef.current = true;
+    } catch {
+      // Ignore history failures.
+    }
+  }, [selectedLogFilter]);
+
+  useEffect(() => {
+    const onPopState = () => {
+      if (activeQueueItemId) {
+        setActiveQueueItemId(null);
+        loggerHistoryArmedRef.current = false;
+        return;
+      }
+      if (!selectedLogFilter) return;
+      setSelectedLogFilter(null);
+      filterHistoryArmedRef.current = false;
+    };
+
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [activeQueueItemId, selectedLogFilter]);
 
   // ── Render ──
 
@@ -4003,10 +4833,15 @@ export default function ProgressionPage() {
       exercises={exercises}
       selectedIds={selectedExerciseIds}
       onToggleExercise={toggleExercise}
-      onSelectWithLevel={(exerciseId, level) => {
-        if (!selectedExerciseIds.has(exerciseId)) toggleExercise(exerciseId);
+      onAddExercise={addExercise}
+      onSelectWithLevel={(exerciseId, level, tierId) => {
+        if (!selectedExerciseIds.has(exerciseId)) addExercise(exerciseId);
+        if (tierId) {
+          setSelectedTierIds((prev) => ({ ...prev, [exerciseId]: tierId }));
+        }
         updateLevelDefault(exerciseId, level);
       }}
+      selectedTierIds={selectedTierIds}
       searchTerm={searchTerm}
       onSearch={setSearchTerm}
       filterCategory={filterCategory}
@@ -4041,67 +4876,160 @@ export default function ProgressionPage() {
       {exercises.length === 0 ? (
         <EmptyState />
       ) : (
-        <div className="px-0 py-3 sm:p-4 space-y-4">
-          {/* Color guide */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowColorGuide(true)}
-              className="ml-auto px-2.5 py-1 rounded-md text-[10px] font-semibold border border-ink-light/60 text-mist-dark hover:text-cloud-white hover:border-mist-dark transition-all duration-200 flex items-center gap-1"
-              title="Cultivation Color System"
-            >
-              <span className="text-sm">🌈</span> Colors
-            </button>
-          </div>
-
-          {/* Selected exercise log forms (above table) */}
+        <div className="px-0 py-2 sm:py-3 space-y-3 sm:space-y-4">
+          {/* Selected exercises queue */}
           {selectedExercises.length > 0 && (
-            <section>
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-xs text-mist-light uppercase tracking-wider">Log Training Data</h3>
+            <section className="space-y-2">
+              <div className="flex items-center justify-between gap-2 px-1 sm:px-0">
+                <div className="min-w-0">
+                  <h3 className="text-xs text-mist-light uppercase tracking-wider">Ready To Log</h3>
+                  <p className="mt-0.5 text-[10px] text-mist-dark">Tap a banner to open the logger popup.</p>
+                </div>
                 <button
-                  onClick={() => setSelectedExerciseIds(new Set())}
-                  className="text-[10px] text-mist-dark hover:text-crimson-light transition-colors"
+                  onClick={() => {
+                    for (const queuedItem of readyToLogQueueItems) {
+                      clearExerciseDraft(queuedItem.exerciseId);
+                    }
+                    setReadyToLogQueueItems([]);
+                    setActiveQueueItemId(null);
+                  }}
+                  className="whitespace-nowrap rounded-md border border-crimson/45 bg-crimson-deep/30 px-3 py-1.5 text-[11px] font-semibold text-crimson-light transition-all duration-150 hover:bg-crimson-deep/45 hover:border-crimson/70 hover:text-cloud-white active:scale-[0.98]"
                 >
                   Clear all
                 </button>
               </div>
-              <div className="space-y-2">
-                <AnimatePresence>
-                  {selectedExercises.map((exercise) => (
-                    <InlineLogForm
-                      key={exercise.id}
-                      exercise={exercise}
-                      selectedLevel={getSelectedLevel(exercise, levelDefaults, autoLevelByExerciseId)}
-                      onSubmit={handleLog}
-                      onChangeLevel={updateLevelDefault}
-                      onDismiss={dismissExercise}
-                      onViewDetail={handleViewExercise}
-                    />
-                  ))}
-                </AnimatePresence>
+              <div className="space-y-0">
+                {selectedExercises.map(({ queueItemId, exercise }) => {
+                  const isActiveLogger = loggerTargetQueueItemId === queueItemId;
+                  const level = getSelectedLevel(exercise, levelDefaults, autoLevelByExerciseId);
+                  const queueFilterLevel = isGymCategoryExercise(exercise) ? null : level;
+                  const isFilterActiveForRow =
+                    selectedLogFilter?.exerciseId === exercise.id &&
+                    selectedLogFilter?.levelNameLevel === queueFilterLevel;
+                  const selectedTier = exercise.tiers.find((tier) => tier.level === level);
+                  const rowDifficulty = getWeightedDifficulty(exercise, level) || exercise.difficulty;
+                  const difficultyStyle = getDifficultyStyle(rowDifficulty);
+                  const conventionalDifficulty = getDifficultyDisplayName(
+                    { difficulty: rowDifficulty, wuxiaDifficulty: rowDifficulty },
+                    "normal"
+                  ) || rowDifficulty;
+                  const displayName = stripBwPercentHint(getExerciseDisplayName(selectedTier || exercise, settings.terminologyMode));
+                  const altName = settings.terminologyMode === "fantasy"
+                    ? stripBwPercentHint(selectedTier?.name || exercise.name || "")
+                    : stripBwPercentHint(selectedTier?.wuxiaName || exercise.wuxiaName || "");
+                  const showAltName = !!altName && altName !== displayName;
+                  const openLogger = () => {
+                    setActiveQueueItemId(queueItemId);
+                  };
+                  return (
+                    <div
+                      key={queueItemId}
+                      className={`relative mb-1 flex items-center gap-2 rounded-md border px-2.5 py-2 cursor-pointer transform-gpu transition-[transform,background-color] duration-75 ease-out hover:-translate-y-0.5 ${
+                        isActiveLogger
+                          ? "bg-ink-mid/45"
+                          : "bg-ink-dark/45 hover:bg-ink-mid/35"
+                      }`}
+                      onClick={openLogger}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          openLogger();
+                        }
+                      }}
+                      style={{
+                        borderColor: difficultyStyle.glowColor,
+                        boxShadow: isActiveLogger
+                          ? `${difficultyStyle.glowShadow}, 0 0 14px ${difficultyStyle.glowColor}, inset 0 0 0 1px ${difficultyStyle.glowColor}`
+                          : `${difficultyStyle.glowShadow}, inset 0 0 0 1px ${difficultyStyle.glowColor}`,
+                        backgroundImage: "linear-gradient(104deg, rgba(8,16,24,0.96) 0%, rgba(14,24,36,0.94) 100%)",
+                      }}
+                    >
+                      <span
+                        className="absolute left-0 top-0 h-full w-1 rounded-l-md"
+                        style={{ backgroundColor: difficultyStyle.glowColor, boxShadow: `0 0 10px ${difficultyStyle.glowColor}` }}
+                      />
+                      <div className="min-w-0 flex-1 pl-1 text-left">
+                        <div className={`truncate text-[11px] font-semibold ${difficultyStyle.textColor}`}>
+                          {displayName}
+                        </div>
+                        {showAltName && (
+                          <div className="truncate text-[10px] text-mist-light/80">
+                            {settings.terminologyMode === "fantasy" ? "Conventional" : "Cultivation"}: {altName}
+                          </div>
+                        )}
+                        <div className="mt-0.5 flex items-center gap-2 text-[10px]">
+                          <span className="text-mist-dark">Lv.{level}</span>
+                          <span className="font-semibold" style={{ color: difficultyStyle.glowColor }}>{conventionalDifficulty}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            const nextFilter: LogTableFilter = {
+                              exerciseId: exercise.id,
+                              levelNameLevel: queueFilterLevel,
+                            };
+                            const isSameFilter =
+                              selectedLogFilter?.exerciseId === nextFilter.exerciseId &&
+                              selectedLogFilter?.levelNameLevel === nextFilter.levelNameLevel;
+                            setSelectedLogFilter(isSameFilter ? null : nextFilter);
+                          }}
+                          className={`inline-flex h-6 items-center justify-center rounded-md border px-2 text-[10px] font-semibold leading-none transition-all duration-150 ${
+                            isFilterActiveForRow
+                              ? "border-jade-glow/70 bg-jade-deep/35 text-jade-glow"
+                              : "border-jade/40 bg-jade-deep/10 text-jade-light hover:bg-jade-deep/25 hover:border-jade-glow/60"
+                          }`}
+                          aria-label={`${isFilterActiveForRow ? "Clear" : "Apply"} log filter for ${stripBwPercentHint(exercise.wuxiaName || exercise.name)}`}
+                          title={isFilterActiveForRow ? "Clear log filter" : "Filter logs to this exercise/tier"}
+                        >
+                          Filter
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            dismissQueueItem(queueItemId);
+                          }}
+                          className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-crimson/45 bg-crimson/10 text-[12px] font-bold leading-none text-crimson-light transition-all duration-150 hover:bg-crimson/20 hover:border-crimson/70"
+                          aria-label={`Remove ${stripBwPercentHint(exercise.wuxiaName || exercise.name)}`}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </section>
           )}
 
           {/* Training Log Table */}
-          <section className="space-y-3">
+          <section className={`space-y-3 rounded-lg border p-2 transition-colors ${selectedLogFilter ? "border-jade-glow/25 bg-ink-mid/20" : "border-transparent bg-transparent"}`}>
             <div className="flex items-center justify-between gap-2 px-1 sm:px-0">
               <h3 className="text-xs text-mist-light uppercase tracking-wider">Training Log</h3>
-              {selectedLogExerciseId && (
-                <button
-                  onClick={() => setSelectedLogExerciseId(null)}
-                  className="text-[10px] px-2 py-1 rounded border border-jade/40 text-jade-light hover:bg-jade-deep/20"
-                >
-                  Clear Exercise Filter
-                </button>
-              )}
+              <button
+                onClick={() => setSelectedLogFilter(null)}
+                disabled={!selectedLogFilter}
+                className={`text-[10px] px-2 py-1 rounded border transition-colors ${
+                  selectedLogFilter
+                    ? "border-jade/40 text-jade-light hover:bg-jade-deep/20"
+                    : "border-jade/20 text-jade-light/0 pointer-events-none"
+                }`}
+                aria-hidden={!selectedLogFilter}
+              >
+                Clear Exercise Filter
+              </button>
             </div>
-            <div className="-mx-4 sm:mx-0">
-              <TrainingLogTable
+            <div className="-mx-4 sm:-mx-6">
+              <MemoTrainingLogTable
                 exercises={exercises}
                 physique={physique}
-                selectedExerciseId={selectedLogExerciseId}
-                onSelectExercise={setSelectedLogExerciseId}
+                selectedLogFilter={selectedLogFilter}
+                onSelectExercise={setSelectedLogFilter}
                 onRefresh={fetchExercises}
                 userId={userId || ''}
               />
@@ -4110,13 +5038,13 @@ export default function ProgressionPage() {
 
           {/* Timed Hold Log Table */}
           {exercises.some(hasHoldBasedTiers) && (
-            <section className="space-y-3">
+            <section className={`space-y-3 rounded-lg border p-2 transition-colors ${selectedLogFilter ? "border-mountain-blue-glow/20 bg-ink-mid/20" : "border-transparent bg-transparent"}`}>
               <h3 className="text-xs text-mountain-blue-glow uppercase tracking-wider px-1 sm:px-0">Timed Hold Log</h3>
-              <div className="-mx-4 sm:mx-0">
-                <HoldTrainingLogTable
+              <div className="-mx-4 sm:-mx-6">
+                <MemoHoldTrainingLogTable
                   exercises={exercises}
-                  selectedExerciseId={selectedLogExerciseId}
-                  onSelectExercise={setSelectedLogExerciseId}
+                  selectedLogFilter={selectedLogFilter}
+                  onSelectExercise={setSelectedLogFilter}
                   onRefresh={fetchExercises}
                   userId={userId || ''}
                 />
@@ -4155,6 +5083,46 @@ export default function ProgressionPage() {
         onReorderExercises={handleReorderExercises}
         selectedDayFilter={selectedDayFilter}
       />
+
+      {/* Ready-to-log popup logger */}
+      <AnimatePresence>
+        {activeLoggerExercise && activeLoggerQueueItem && (
+          <>
+            <motion.button
+              type="button"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setActiveQueueItemId(null)}
+              className="fixed inset-0 z-40 bg-black/55 backdrop-blur-[1px]"
+              aria-label="Close logger"
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 18, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.98 }}
+              transition={{ duration: 0.16 }}
+              className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-3 sm:p-6"
+              onClick={() => setActiveQueueItemId(null)}
+            >
+              <div className="w-full max-w-4xl" onClick={(event) => event.stopPropagation()}>
+                <InlineLogForm
+                  key={activeLoggerQueueItem.id}
+                  queueItemId={activeLoggerQueueItem.id}
+                  exercise={activeLoggerExercise}
+                  selectedLevel={getSelectedLevel(activeLoggerExercise, levelDefaults, autoLevelByExerciseId)}
+                  onSubmit={handleLog}
+                  onChangeLevel={updateLevelDefault}
+                  onDismiss={dismissQueueItem}
+                  onViewDetail={handleViewExercise}
+                  onExit={() => setActiveQueueItemId(null)}
+                  draftStorageKey={getDraftStorageKey(activeLoggerExercise.id)}
+                />
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </PageLayout>
   );
 }
