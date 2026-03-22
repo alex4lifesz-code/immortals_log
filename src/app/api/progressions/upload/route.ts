@@ -49,7 +49,8 @@ interface ExerciseInput {
   wuxiaType?: string;
   story?: string;
   tips?: string[];
-  category: string | string[];
+  category?: string | string[];
+  targetGroup?: string | string[];
   equipment?: {
     type?: string;
     bodyweight?: boolean;
@@ -80,12 +81,13 @@ function validateExercise(ex: unknown, index: number): { valid: boolean; error?:
   if (!e.name || typeof e.name !== "string") {
     return { valid: false, error: `Entry ${index}: missing or invalid "name"` };
   }
-  const category = e.category;
+  const category = e.category ?? e.targetGroup;
   const hasValidCategory =
     (typeof category === "string" && category.trim().length > 0) ||
     (Array.isArray(category) && category.some((c) => typeof c === "string" && c.trim().length > 0));
+  // Keep uploads permissive: category can be inferred/fallback to Uncategorized.
   if (!hasValidCategory) {
-    return { valid: false, error: `Entry ${index}: missing or invalid "category" (string or string[] expected)` };
+    (e as Record<string, unknown>).category = "Uncategorized";
   }
 
   const tiers = (e.progressions || e.tiers) as TierInput[] | undefined;
@@ -114,6 +116,10 @@ function toCommaSeparated(val: string[] | string | undefined): string {
 function normalizeCategory(val: string[] | string | undefined): string {
   const category = toCommaSeparated(val);
   return category || "Uncategorized";
+}
+
+function resolveExerciseCategory(ex: ExerciseInput): string {
+  return normalizeCategory(ex.category ?? ex.targetGroup);
 }
 
 function stripUnsupportedWuxiaFields<T>(data: T): T {
@@ -250,7 +256,7 @@ export async function POST(req: NextRequest) {
               wuxiaType: wuxiaType,
               story: ex.story ? String(ex.story).trim().slice(0, 5000) : "",
               tips: Array.isArray(ex.tips) ? JSON.stringify(ex.tips.map(t => String(t).trim()).filter(Boolean)) : "",
-              category: normalizeCategory(ex.category).slice(0, 100),
+              category: resolveExerciseCategory(ex).slice(0, 100),
               equipmentType: String(equipment.type || "bodyweight").trim().slice(0, 100),
               bodyweight: equipment.bodyweight !== false,
               weighted: equipment.weighted === true,
@@ -386,7 +392,7 @@ export async function POST(req: NextRequest) {
             wuxiaType: wuxiaType,
             story: ex.story ? String(ex.story).trim().slice(0, 5000) : "",
             tips: Array.isArray(ex.tips) ? JSON.stringify(ex.tips.map(t => String(t).trim()).filter(Boolean)) : "",
-            category: normalizeCategory(ex.category).slice(0, 100),
+            category: resolveExerciseCategory(ex).slice(0, 100),
             equipmentType: String(equipment.type || "bodyweight").trim().slice(0, 100),
             bodyweight: equipment.bodyweight !== false,
             weighted: equipment.weighted === true,
