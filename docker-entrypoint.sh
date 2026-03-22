@@ -7,9 +7,9 @@ echo "DATABASE_URL: ${DATABASE_URL}"
 # Extract file path from DATABASE_URL (e.g. "file:/app/data/cultivation.db" -> "/app/data/cultivation.db")
 DB_PATH=$(echo "$DATABASE_URL" | sed 's|^file:||')
 
-# ── Full database reset (set RESET_DB=true in environment to trigger) ──
+# â”€â”€ Full database reset (set RESET_DB=true in environment to trigger) â”€â”€
 if [ "${RESET_DB:-false}" = "true" ]; then
-  echo "!!! RESET_DB=true — Deleting database for clean rebuild !!!"
+  echo "!!! RESET_DB=true â€” Deleting database for clean rebuild !!!"
   rm -f "$DB_PATH" "${DB_PATH}-journal" "${DB_PATH}-wal" "${DB_PATH}-shm"
   echo "Database files removed. Migrations will recreate from scratch."
 fi
@@ -31,7 +31,7 @@ check();
 if [ -n "$FAILED" ]; then
   echo "$FAILED" | while IFS= read -r mig; do
     [ -z "$mig" ] && continue
-    echo "Found failed migration: $mig — marking as rolled back..."
+    echo "Found failed migration: $mig â€” marking as rolled back..."
     npx prisma migrate resolve --rolled-back "$mig" --schema=./prisma/schema.prisma 2>&1
     echo "Resolved: $mig"
   done

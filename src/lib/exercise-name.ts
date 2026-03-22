@@ -117,3 +117,35 @@ export function matchesLooseSearch(haystack: string, query: string): boolean {
 export function matchesLooseSearchInFields(query: string, fields: Array<string | null | undefined>): boolean {
   return fields.some((field) => matchesLooseSearch(field || "", query));
 }
+
+export function getExerciseNameTooltip(
+  exercise: ExerciseNameLike,
+  terminologyMode: TerminologyMode,
+  story?: string | null
+): string {
+  const normalName = exercise.name?.trim() || "";
+  const fantasyName = exercise.wuxiaName?.trim() || "";
+  const conventionalName = normalName || fantasyName;
+  const cultivationName = fantasyName || normalName;
+
+  const lines: string[] = [];
+
+  if (terminologyMode === "normal") {
+    if (conventionalName) lines.push(`Conventional: ${conventionalName}`);
+    if (cultivationName) lines.push(`Cultivation: ${cultivationName}`);
+  } else {
+    if (cultivationName) lines.push(`Cultivation: ${cultivationName}`);
+    if (conventionalName) lines.push(`Conventional: ${conventionalName}`);
+  }
+
+  if (lines.length === 0) {
+    return terminologyMode === "normal" ? "Unknown Exercise" : "Unknown Technique";
+  }
+
+  if (story?.trim()) {
+    lines.push("");
+    lines.push(story.trim().slice(0, 180));
+  }
+
+  return lines.join("\n");
+}
