@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- API 29+ specific attributes -->
+    <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <!-- Prevent Android night-mode colour overlay on WebView -->
+        <item name="android:forceDarkAllowed">false</item>
+        <!-- Prevent system enforcing contrast requirements that may affect system bar colors -->
+        <item name="android:enforceNavigationBarContrast">false</item>
+        <item name="android:enforceStatusBarContrast">false</item>
+    </style>
+
+    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <!-- Prevent Android night-mode colour overlay on WebView -->
+        <item name="android:forceDarkAllowed">false</item>
+        <!-- Prevent system enforcing contrast requirements that may affect system bar colors -->
+        <item name="android:enforceNavigationBarContrast">false</item>
+        <item name="android:enforceStatusBarContrast">false</item>
+    </style>
+</resources>
