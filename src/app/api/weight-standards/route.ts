@@ -1,10 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withAuth } from "@/lib/auth/middleware";
 
-/** GET /api/weight-standards — Fetch weight standards for exercises (public, for tier calculation) */
-export async function GET(req: NextRequest) {
+/** GET /api/weight-standards — Fetch weight standards for exercises (authenticated users, for tier calculation) */
+export const GET = withAuth(async (request) => {
   try {
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = new URL(request.url);
     const exerciseId = searchParams.get("exerciseId");
 
     if (exerciseId) {
@@ -45,4 +46,4 @@ export async function GET(req: NextRequest) {
     console.error("Weight standards fetch error:", error);
     return NextResponse.json({ error: "Failed to fetch weight standards" }, { status: 500 });
   }
-}
+});

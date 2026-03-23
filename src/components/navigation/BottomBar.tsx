@@ -100,6 +100,7 @@ function BottomBar() {
                 <span className="text-[10px] uppercase tracking-[0.15em] text-mist-dark font-semibold">Navigation</span>
                 <button
                   onClick={() => setMenuOpen(false)}
+                  aria-label="Close navigation menu"
                   className="p-1.5 rounded-lg text-mist-dark active:text-cloud-white active:bg-white/10 transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -107,7 +108,7 @@ function BottomBar() {
                   </svg>
                 </button>
               </div>
-              <div className="grid grid-cols-2 gap-1.5 px-1">
+              <div className="grid grid-cols-2 gap-1.5 px-1" role="menu" aria-label="Navigation menu">
                 {user && (
                   <div className="col-span-2 rounded-xl border border-jade-glow/20 bg-ink-mid/40 px-3 py-2">
                     <p className="text-[10px] uppercase tracking-[0.12em] text-mist-dark mb-0.5">Body Profile</p>
@@ -125,6 +126,7 @@ function BottomBar() {
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: index * 0.04 }}
                     whileTap={{ scale: 0.97 }}
+                    role="menuitem"
                     className={`flex items-center gap-2.5 px-3 py-3 rounded-xl transition-colors min-h-[48px] ${
                       pathname === item.path
                         ? "text-jade-light bg-jade-deep/30 border border-jade/20"
@@ -141,6 +143,7 @@ function BottomBar() {
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: moreItems.length * 0.04 }}
                   whileTap={{ scale: 0.97 }}
+                  role="menuitem"
                   className="flex items-center gap-2.5 px-3 py-3 rounded-xl transition-colors min-h-[48px] text-crimson-light/70 active:text-crimson-light active:bg-crimson-deep/20 border border-transparent col-span-2"
                   onClick={() => { setMenuOpen(false); logout(); }}
                 >
@@ -170,6 +173,7 @@ function BottomBar() {
               <motion.button
                 key={item.id}
                 whileTap={{ scale: 0.9 }}
+                aria-current={isActive ? "page" : undefined}
                 onClick={() => { router.push(item.path); setMobileSidebarOpen(false); setMenuOpen(false); }}
                 className={`relative flex flex-col items-center justify-center gap-0.5 min-w-[64px] min-h-[56px] pt-2 pb-1 rounded-2xl transition-colors ${
                   isActive ? "text-[var(--accent)]" : "text-mist-mid active:text-mist-light"
@@ -199,6 +203,8 @@ function BottomBar() {
             <motion.button
               whileTap={{ scale: 0.88 }}
               onClick={handleFABPress}
+              aria-label={activeDrawerClose ? "Close drawer" : mobileSidebarOpen ? "Close menu" : "Open menu"}
+              aria-expanded={mobileSidebarOpen || undefined}
               className={`w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-colors ${
                 activeDrawerClose
                   ? "bg-crimson-glow/90"
@@ -244,6 +250,7 @@ function BottomBar() {
               <motion.button
                 key={item.id}
                 whileTap={{ scale: 0.9 }}
+                aria-current={isActive ? "page" : undefined}
                 onClick={() => { router.push(item.path); setMobileSidebarOpen(false); setMenuOpen(false); }}
                 className={`relative flex flex-col items-center justify-center gap-0.5 min-w-[64px] min-h-[56px] pt-2 pb-1 rounded-2xl transition-colors ${
                   isActive ? "text-[var(--accent)]" : "text-mist-mid active:text-mist-light"
@@ -272,6 +279,8 @@ function BottomBar() {
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={handleMenuToggle}
+            aria-label={menuOpen ? "Close more menu" : "Open more menu"}
+            aria-expanded={menuOpen || undefined}
             className={`relative flex flex-col items-center justify-center gap-0.5 min-w-[64px] min-h-[56px] pt-2 pb-1 rounded-2xl transition-colors ${
               menuOpen ? "text-[var(--accent)]" : "text-mist-mid active:text-mist-light"
             }`}

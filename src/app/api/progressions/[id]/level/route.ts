@@ -1,20 +1,14 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withAuth } from "@/lib/auth/middleware";
 
 // PUT /api/progressions/[id]/level — update user's current level for an exercise
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export const PUT = withAuth(async (request, { auth, params }) => {
   try {
-    const { id } = await params;
-    const body = await req.json();
-    const userId = body.userId;
+    const id = params.id as string;
+    const body = await request.json();
     const currentLevel = body.currentLevel;
 
-    if (!userId || typeof userId !== "string") {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
-    }
     if (typeof currentLevel !== "number" || currentLevel < 1) {
       return NextResponse.json({ error: "currentLevel must be a positive number" }, { status: 400 });
     }
@@ -27,6 +21,7 @@ export async function PUT(
       return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
     }
 
+    const userId = auth.userId;
     const progress = await prisma.userProgressionLevel.upsert({
       where: { userId_exerciseId: { userId, exerciseId: id } },
       update: { currentLevel },
@@ -38,4 +33,4 @@ export async function PUT(
     console.error("Level update error:", error);
     return NextResponse.json({ error: "Failed to update level" }, { status: 500 });
   }
-}
+});

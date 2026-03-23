@@ -1,13 +1,15 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withAuth } from "@/lib/auth/middleware";
 
-// GET /api/progressions/logs/export?userId=X
-export async function GET(req: NextRequest) {
+// GET /api/progressions/logs/export?targetUserId=<id>  (admin only)
+// GET /api/progressions/logs/export                     (own data)
+export const GET = withAuth(async (request, { auth }) => {
   try {
-    const userId = req.nextUrl.searchParams.get("userId");
-    if (!userId) {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
-    }
+    const { searchParams } = new URL(request.url);
+    const targetUserId = searchParams.get("targetUserId");
+    // Admins can export another user's data
+    const userId = targetUserId && auth.role === "admin" ? targetUserId : auth.userId;
 
     const logs = await prisma.progressionLog.findMany({
       where: {
@@ -58,4 +60,4 @@ export async function GET(req: NextRequest) {
     console.error("Progression log export error:", error);
     return NextResponse.json({ error: "Failed to export progression logs" }, { status: 500 });
   }
-}
+});

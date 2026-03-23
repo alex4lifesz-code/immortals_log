@@ -7,6 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import { t } from "@/lib/terminology";
 import PresetSlots from "@/components/ui/PresetSlots";
 import { memo, useState, useEffect, useCallback, useRef } from "react";
+import { api } from "@/lib/api-client";
 
 interface QuickStats {
   todaySessions: number;
@@ -30,9 +31,8 @@ function RightPanel() {
     const controller = new AbortController();
     abortRef.current = controller;
     try {
-      const res = await fetch(`/api/progressions/logs/export?userId=${encodeURIComponent(user.id)}`, { signal: controller.signal });
-      const data = await res.json();
-      const logs: { exerciseName: string; createdAt: string }[] = data.logs || [];
+      const data = await api.get<{ logs: { exerciseName: string; createdAt: string }[] }>("/api/progressions/logs/export", { signal: controller.signal });
+      const logs = data.logs || [];
       const todayStr = new Date().toISOString().split("T")[0];
       const todayLogs = logs.filter(l => l.createdAt && l.createdAt.split("T")[0] === todayStr);
       const uniqueTodayExercises = new Set(todayLogs.map(l => l.exerciseName)).size;
@@ -71,6 +71,9 @@ function RightPanel() {
       {/* Collapse / Expand toggle tab */}
       <button
         onClick={() => updateSettings({ rightPanelVisible: !visible })}
+        aria-label={visible ? "Hide Quick View panel" : "Show Quick View panel"}
+        aria-expanded={visible}
+        aria-controls="right-panel"
         className="absolute -left-4 top-1/2 -translate-y-1/2 z-30 w-4 h-10 bg-ink-dark border border-ink-light rounded-l flex items-center justify-center hover:bg-ink-mid transition-colors group"
         title={visible ? "Hide Quick View" : "Show Quick View"}
       >
@@ -88,6 +91,7 @@ function RightPanel() {
       <AnimatePresence mode="wait">
         {visible && (
           <motion.aside
+            id="right-panel"
             initial={{ width: 0, opacity: 0 }}
             animate={{ width: 256, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
@@ -119,9 +123,12 @@ function RightPanel() {
                 <div className="ink-border rounded-lg p-3 bg-ink-dark">
                   <h3 className="text-xs text-mountain-blue-glow mb-2">{t("Recent Activity", terminologyMode)}</h3>
                   {stats.recentLogs.length === 0 ? (
-                    <p className="text-xs text-mist-dark italic">
-                      No recent cultivation records
-                    </p>
+                    <div className="flex flex-col items-center py-3 text-center">
+                      <div className="text-xl opacity-30 mb-1">📜</div>
+                      <p className="text-[10px] text-mist-dark">
+                        No recent cultivation records
+                      </p>
+                    </div>
                   ) : (
                     <div className="space-y-1.5">
                       {stats.recentLogs.map((l, i) => (

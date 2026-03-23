@@ -31,8 +31,8 @@ export default function MobileDashboardPage() {
       setLoading(true);
       try {
         const [checkinsRes, progressionsRes] = await Promise.all([
-          fetch("/api/checkins", { cache: "no-store" }),
-          fetch(`/api/progressions?userId=${encodeURIComponent(user.id)}`, { cache: "no-store" }),
+          fetch("/api/checkins", { cache: "no-store", credentials: "include" }),
+          fetch("/api/progressions", { cache: "no-store", credentials: "include" }),
         ]);
 
         const checkinsPayload = await checkinsRes.json().catch(() => ({}));

@@ -6,9 +6,8 @@ import { useRouter } from "next/navigation";
 import GlowButton from "@/components/ui/GlowButton";
 import GlowInput from "@/components/ui/GlowInput";
 import { useAuth } from "@/context/AuthContext";
+import { CONFIG } from "@/lib/config";
 import ConnectivityBanner from "@/components/system/ConnectivityBanner";
-
-const REMEMBERED_CREDENTIALS_KEY = "cultivation-remembered-credentials";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -17,31 +16,17 @@ export default function LoginPage() {
   const [isRegister, setIsRegister] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [stayLoggedIn, setStayLoggedIn] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const { login } = useAuth();
-
-  // Load remembered credentials on mount
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(REMEMBERED_CREDENTIALS_KEY);
-      if (saved) {
-        const { username: savedUser, password: savedPass } = JSON.parse(saved);
-        if (savedUser) setUsername(savedUser);
-        if (savedPass) setPassword(savedPass);
-        setRememberMe(true);
-      }
-    } catch {}
-  }, []);
 
   // Apply saved theme on mount so login screen matches user's chosen theme
   useEffect(() => {
     try {
       const savedTheme = localStorage.getItem("cultivation-theme-style");
       if (savedTheme) {
-        const themes = ["midnight-ink", "mountain-mist", "calligraphy", "sakura", "sakura-dark"];
+        const themes: readonly string[] = CONFIG.themes;
         document.documentElement.classList.remove(...themes);
         if (themes.includes(savedTheme)) {
           document.documentElement.classList.add(savedTheme);
@@ -59,11 +44,12 @@ export default function LoginPage() {
       const endpoint = isRegister ? "/api/auth/register" : "/api/auth/login";
       const body = isRegister
         ? { username, password, name }
-        : { username, password };
+        : { username, password, rememberMe };
 
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(body),
       });
 
@@ -74,16 +60,9 @@ export default function LoginPage() {
         return;
       }
 
-      // Save/clear remembered credentials
-      if (rememberMe && !isRegister) {
-        localStorage.setItem(REMEMBERED_CREDENTIALS_KEY, JSON.stringify({ username, password }));
-      } else {
-        localStorage.removeItem(REMEMBERED_CREDENTIALS_KEY);
-      }
-
-      // Save user session (stayLoggedIn = persist across restarts)
+      // Set user in auth context (cookie is set by server)
       if (data.user) {
-        login(data.user, stayLoggedIn);
+        login(data.user);
       }
 
       router.push("/dashboard");
@@ -262,25 +241,13 @@ export default function LoginPage() {
                 <div className="flex items-center gap-2">
                   <input
                     type="checkbox"
-                    id="stayLoggedIn"
-                    checked={stayLoggedIn}
-                    onChange={(e) => setStayLoggedIn(e.target.checked)}
-                    className="w-3.5 h-3.5 rounded border-ink-light bg-ink-dark accent-jade-glow cursor-pointer"
-                  />
-                  <label htmlFor="stayLoggedIn" className="text-xs text-mist-mid cursor-pointer select-none">
-                    长驻 · Stay Logged In
-                  </label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
                     id="rememberMe"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
                     className="w-3.5 h-3.5 rounded border-ink-light bg-ink-dark accent-jade-glow cursor-pointer"
                   />
                   <label htmlFor="rememberMe" className="text-xs text-mist-mid cursor-pointer select-none">
-                    记住我 · Remember Credentials
+                    记住我 · Remember Me
                   </label>
                 </div>
               </motion.div>

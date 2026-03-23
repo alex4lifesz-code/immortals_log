@@ -38,7 +38,7 @@ export default function ExerciseHistoryModal({ exerciseId, exerciseName, isOpen,
     let cancelled = false;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- loading state before async fetch
     setLoading(true);
-    fetch(`/api/exercises/history?exerciseId=${encodeURIComponent(exerciseId)}&userId=${encodeURIComponent(user.id)}`)
+    fetch(`/api/exercises/history?exerciseId=${encodeURIComponent(exerciseId)}`, { credentials: "include" })
       .then(res => res.ok ? res.json() : Promise.reject())
       .then(data => { if (!cancelled) setHistoryData(data.history || []); })
       .catch(() => { if (!cancelled) setHistoryData([]); })

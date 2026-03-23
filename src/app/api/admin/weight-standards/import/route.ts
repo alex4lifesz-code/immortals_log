@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { TIER_NAMES, TIER_COLORS } from "@/lib/weight-standards";
+import { withAdmin } from "@/lib/auth/middleware";
 
 interface ImportTier {
   tier: number;
@@ -18,19 +19,11 @@ interface ImportExerciseStandard {
 }
 
 /** POST /api/admin/weight-standards/import — Bulk import weight standards from JSON */
-export async function POST(req: NextRequest) {
+export const POST = withAdmin(async (request, { auth }) => {
   try {
-    const body = await req.json();
-    const { userId, exercises: importData } = body;
-
-    if (!userId || typeof userId !== "string") {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
-    }
-
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user || user.role !== "admin") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
+    const body = await request.json();
+    const { exercises: importData } = body;
+    const userId = auth.userId;
 
     if (!Array.isArray(importData) || importData.length === 0) {
       return NextResponse.json({ error: "No exercises to import" }, { status: 400 });
@@ -152,10 +145,10 @@ export async function POST(req: NextRequest) {
     console.error("Weight standards import error:", error);
     return NextResponse.json({ error: "Failed to import weight standards" }, { status: 500 });
   }
-}
+});
 
 /** GET /api/admin/weight-standards/import — Returns expected format documentation */
-export async function GET() {
+export const GET = withAdmin(async () => {
   return NextResponse.json({
     description: "Expected JSON import format",
     example: {
@@ -182,4 +175,4 @@ export async function GET() {
       ],
     },
   });
-}
+});

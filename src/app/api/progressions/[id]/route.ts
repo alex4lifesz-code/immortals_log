@@ -1,18 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { serializeDayAssignments } from "@/lib/constants";
+import { withAuth } from "@/lib/auth/middleware";
 
-// GET /api/progressions/[id]?userId=X — get a shared progression exercise with requesting user's progress
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+// GET /api/progressions/[id] — get a shared progression exercise with requesting user's progress
+export const GET = withAuth(async (_request, { auth, params }) => {
   try {
-    const { id } = await params;
-    const userId = req.nextUrl.searchParams.get("userId");
-    if (!userId) {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
-    }
+    const id = params.id as string;
 
     const exercise = await prisma.progressionExercise.findFirst({
       where: { id },
@@ -21,7 +15,7 @@ export async function GET(
         variations: true,
         modifiers: true,
         userProgress: {
-          where: { userId },
+          where: { userId: auth.userId },
           include: {
             logs: { orderBy: { createdAt: "desc" } },
           },
@@ -38,19 +32,13 @@ export async function GET(
     console.error("Progression fetch error:", error);
     return NextResponse.json({ error: "Failed to fetch progression" }, { status: 500 });
   }
-}
+});
 
-// DELETE /api/progressions/[id]?userId=X — delete a single progression exercise
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+// DELETE /api/progressions/[id] — delete a single progression exercise
+export const DELETE = withAuth(async (_request, { auth, params }) => {
   try {
-    const { id } = await params;
-    const userId = req.nextUrl.searchParams.get("userId");
-    if (!userId) {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
-    }
+    const id = params.id as string;
+    const userId = auth.userId;
 
     const exercise = await prisma.progressionExercise.findFirst({
       where: { id, userId },
@@ -68,21 +56,14 @@ export async function DELETE(
     console.error("Progression delete error:", error);
     return NextResponse.json({ error: "Failed to delete progression" }, { status: 500 });
   }
-}
+});
 
 // PATCH /api/progressions/[id] — update fields on a progression exercise
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export const PATCH = withAuth(async (request, { auth, params }) => {
   try {
-    const { id } = await params;
-    const body = await req.json();
-    const userId = body.userId;
-
-    if (!userId) {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
-    }
+    const id = params.id as string;
+    const body = await request.json();
+    const userId = auth.userId;
 
     // Verify ownership
     const existing = await prisma.progressionExercise.findFirst({
@@ -135,7 +116,7 @@ export async function PATCH(
     // Duplicate name check
     if (data.name) {
       const allProgs = await prisma.progressionExercise.findMany({
-        where: { userId },
+        where: { userId: auth.userId },
         select: { id: true, name: true },
       });
       const duplicate = allProgs.find(p => p.id !== id && p.name.toLowerCase() === String(data.name).toLowerCase());
@@ -221,7 +202,7 @@ export async function PATCH(
         variations: true,
         modifiers: true,
         userProgress: {
-          where: { userId },
+          where: { userId: auth.userId },
           include: { logs: { orderBy: { createdAt: "desc" } } },
         },
       },
@@ -235,4 +216,4 @@ export async function PATCH(
       { status: 500 }
     );
   }
-}
+});

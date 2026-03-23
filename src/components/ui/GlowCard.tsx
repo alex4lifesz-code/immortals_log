@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { ReactNode, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 interface GlowCardProps {
   children: ReactNode;
@@ -66,6 +67,7 @@ export function GlowModal({
   contentClassName = "",
   glowColor
 }: GlowModalProps) {
+  const trapRef = useFocusTrap(isOpen);
   useEffect(() => {
     if (!isOpen) return;
     
@@ -100,6 +102,10 @@ export function GlowModal({
             className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
           >
             <div
+              ref={trapRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label={title}
               onClick={(e) => e.stopPropagation()}
               className={`bg-ink-deep w-full max-w-lg max-h-[80vh] overflow-y-auto pointer-events-auto glow-modal-container ${panelClassName}`}
               style={{
@@ -118,6 +124,7 @@ export function GlowModal({
                     whileHover={{ scale: 1.1, rotate: 90 }}
                     whileTap={{ scale: 0.9 }}
                     onClick={onClose}
+                    aria-label="Close dialog"
                     className="text-mist-dark hover:text-crimson-light transition-colors text-lg"
                   >
                     ✕

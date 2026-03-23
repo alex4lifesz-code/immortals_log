@@ -1,25 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { TierStandard, tiersToRecord } from "@/lib/weight-standards";
+import { withAdmin } from "@/lib/auth/middleware";
 
 /** GET /api/admin/weight-standards/[exerciseId] — Fetch weight standards for a specific exercise */
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ exerciseId: string }> }
-) {
+export const GET = withAdmin(async (_request, { params }) => {
   try {
-    const { exerciseId } = await params;
-    const { searchParams } = new URL(req.url);
-    const userId = searchParams.get("userId");
-
-    if (!userId) {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
-    }
-
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user || user.role !== "admin") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
+    const exerciseId = params.exerciseId as string;
 
     const standards = await prisma.weightStandard.findMany({
       where: { exerciseId },
@@ -33,26 +20,14 @@ export async function GET(
     console.error("Weight standard fetch error:", error);
     return NextResponse.json({ error: "Failed to fetch weight standard" }, { status: 500 });
   }
-}
+});
 
 /** PUT /api/admin/weight-standards/[exerciseId] — Create or update weight standards */
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: Promise<{ exerciseId: string }> }
-) {
+export const PUT = withAdmin(async (request, { auth, params }) => {
   try {
-    const { exerciseId } = await params;
-    const body = await req.json();
-    const { userId, gender, tiers } = body;
-
-    if (!userId || typeof userId !== "string") {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
-    }
-
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user || user.role !== "admin") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
+    const exerciseId = params.exerciseId as string;
+    const body = await request.json();
+    const { gender, tiers } = body;
 
     // Validate gender
     const genderUpper = String(gender).toUpperCase();
@@ -105,13 +80,13 @@ export async function PUT(
       },
       update: {
         ...tierData,
-        updatedBy: userId,
+        updatedBy: auth.userId,
       },
       create: {
         exerciseId,
         gender: genderUpper,
         ...tierData,
-        updatedBy: userId,
+        updatedBy: auth.userId,
       },
     });
 
@@ -120,27 +95,14 @@ export async function PUT(
     console.error("Weight standard update error:", error);
     return NextResponse.json({ error: "Failed to update weight standard" }, { status: 500 });
   }
-}
+});
 
 /** DELETE /api/admin/weight-standards/[exerciseId] — Delete weight standards */
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: Promise<{ exerciseId: string }> }
-) {
+export const DELETE = withAdmin(async (request, { params }) => {
   try {
-    const { exerciseId } = await params;
-    const { searchParams } = new URL(req.url);
-    const userId = searchParams.get("userId");
+    const exerciseId = params.exerciseId as string;
+    const { searchParams } = new URL(request.url);
     const gender = searchParams.get("gender")?.toUpperCase();
-
-    if (!userId) {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
-    }
-
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user || user.role !== "admin") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
 
     if (gender && (gender === "MALE" || gender === "FEMALE")) {
       await prisma.weightStandard.deleteMany({
@@ -157,4 +119,4 @@ export async function DELETE(
     console.error("Weight standard delete error:", error);
     return NextResponse.json({ error: "Failed to delete weight standard" }, { status: 500 });
   }
-}
+});

@@ -1,22 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withAdmin } from "@/lib/auth/middleware";
 
 /** GET /api/admin/weight-standards — Fetch all exercises with their weight standards */
-export async function GET(req: NextRequest) {
+export const GET = withAdmin(async () => {
   try {
-    const { searchParams } = new URL(req.url);
-    const userId = searchParams.get("userId");
-
-    if (!userId) {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
-    }
-
-    // Verify admin role
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user || user.role !== "admin") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
-
     // Get all exercises with their weight standards
     const exercises = await prisma.progressionExercise.findMany({
       include: {
@@ -46,4 +34,4 @@ export async function GET(req: NextRequest) {
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json({ error: "Failed to fetch weight standards", detail: message }, { status: 500 });
   }
-}
+});

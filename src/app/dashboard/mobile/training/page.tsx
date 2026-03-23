@@ -21,7 +21,7 @@ export default function MobileTrainingPage() {
   useEffect(() => {
     const run = async () => {
       if (!user?.id) return;
-      const res = await fetch(`/api/progressions?userId=${encodeURIComponent(user.id)}`, { cache: "no-store" });
+      const res = await fetch("/api/progressions", { cache: "no-store", credentials: "include" });
       const payload = await res.json().catch(() => ({}));
       setItems(Array.isArray(payload?.exercises) ? payload.exercises : []);
     };

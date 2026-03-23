@@ -4,12 +4,14 @@ import { motion } from "framer-motion";
 import { useState, useEffect, useCallback } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import GlowButton from "@/components/ui/GlowButton";
+import PageSkeleton from "@/components/ui/PageSkeleton";
 import GlowInput from "@/components/ui/GlowInput";
 import GlowCard from "@/components/ui/GlowCard";
 import { GlowModal } from "@/components/ui/GlowCard";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import DataManagement from "@/components/admin/DataManagement";
+import { api } from "@/lib/api-client";
 
 interface AdminUser {
   id: string;
@@ -66,15 +68,11 @@ export default function AdminPanelPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [usersRes, exercisesRes, checkinsRes] = await Promise.all([
-        fetch("/api/users"),
-        fetch("/api/exercises"),
-        fetch("/api/checkins"),
+      const [usersData, exercisesData, checkinsData] = await Promise.all([
+        api.get<{ users: AdminUser[] }>("/api/users"),
+        api.get<{ exercises: unknown[] }>("/api/exercises"),
+        api.get<{ checkins: unknown[] }>("/api/checkins"),
       ]);
-
-      const usersData = await usersRes.json();
-      const exercisesData = await exercisesRes.json();
-      const checkinsData = await checkinsRes.json();
 
       const usersList = usersData.users || [];
       setUsers(usersList);
@@ -100,23 +98,16 @@ export default function AdminPanelPage() {
     if (!newUsername.trim() || !newPassword.trim() || !newName.trim()) return;
 
     try {
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: newUsername,
-          password: newPassword,
-          name: newName,
-        }),
+      await api.post("/api/auth/register", {
+        username: newUsername,
+        password: newPassword,
+        name: newName,
       });
-
-      if (res.ok) {
-        setShowNewUserModal(false);
-        setNewUsername("");
-        setNewPassword("");
-        setNewName("");
-        fetchData();
-      }
+      setShowNewUserModal(false);
+      setNewUsername("");
+      setNewPassword("");
+      setNewName("");
+      fetchData();
     } catch (err) {
       console.error("Failed to create user:", err);
     }
@@ -126,14 +117,9 @@ export default function AdminPanelPage() {
     if (!confirm("Are you sure you want to delete this user?")) return;
 
     try {
-      const res = await fetch(`/api/users/${userId}`, {
-        method: "DELETE",
-      });
-
-      if (res.ok) {
-        setShowUserDetailModal(false);
-        fetchData();
-      }
+      await api.delete(`/api/users/${userId}`);
+      setShowUserDetailModal(false);
+      fetchData();
     } catch (err) {
       console.error("Failed to delete user:", err);
     }
@@ -143,22 +129,14 @@ export default function AdminPanelPage() {
     if (!newDisplayName.trim()) return;
     setIsSavingName(true);
     try {
-      const res = await fetch(`/api/users/${userId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newDisplayName.trim() }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        // If updating own name, refresh auth state
-        if (user && userId === user.id) {
-          login({ ...user, name: data.user.name });
-        }
-        fetchData();
-        if (selectedUser && selectedUser.id === userId) {
-          setSelectedUser({ ...selectedUser, name: data.user.name });
-        }
+      const data = await api.patch<{ user: { name: string } }>(`/api/users/${userId}`, { name: newDisplayName.trim() });
+      // If updating own name, refresh auth state
+      if (user && userId === user.id) {
+        login({ ...user, name: data.user.name });
+      }
+      fetchData();
+      if (selectedUser && selectedUser.id === userId) {
+        setSelectedUser({ ...selectedUser, name: data.user.name });
       }
     } catch (err) {
       console.error("Failed to update display name:", err);
@@ -198,15 +176,7 @@ export default function AdminPanelPage() {
       sidebarLabel="Admin Panel"
     >
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-            className="text-3xl"
-          >
-            ☯
-          </motion.div>
-        </div>
+        <PageSkeleton statCards={4} wideBlock={false} rows={4} />
       ) : (
         <div className="space-y-6">
           {/* System Statistics */}

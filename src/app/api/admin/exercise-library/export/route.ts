@@ -1,27 +1,18 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withAdmin } from "@/lib/auth/middleware";
 
 /**
- * GET /api/admin/exercise-library/export?userId=<adminId>&targetUserId=<userId>
+ * GET /api/admin/exercise-library/export?targetUserId=<userId>
  *
  * Exports all ProgressionExercises (including tiers, variations, modifiers)
  * belonging to targetUserId as a JSON file download.
- * Requires the requesting user (userId) to have the admin role.
+ * Requires admin role (enforced by withAdmin).
  */
-export async function GET(req: NextRequest) {
+export const GET = withAdmin(async (request, { auth }) => {
   try {
-    const { searchParams } = new URL(req.url);
-    const userId = searchParams.get("userId");
-    const targetUserId = searchParams.get("targetUserId") || userId;
-
-    if (!userId) {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
-    }
-
-    const requestingUser = await prisma.user.findUnique({ where: { id: userId } });
-    if (!requestingUser || requestingUser.role !== "admin") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
+    const { searchParams } = new URL(request.url);
+    const targetUserId = searchParams.get("targetUserId") || auth.userId;
 
     const exercises = await prisma.progressionExercise.findMany({
       where: { userId: targetUserId! },
@@ -102,4 +93,4 @@ export async function GET(req: NextRequest) {
     console.error("Exercise library export error:", error);
     return NextResponse.json({ error: "Failed to export exercise library" }, { status: 500 });
   }
-}
+});

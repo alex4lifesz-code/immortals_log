@@ -23,11 +23,13 @@ const cinzel = Cinzel({
   variable: "--font-cinzel",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
+  preload: false,
 });
 
 const notoSerif = Noto_Serif({
   variable: "--font-noto-serif",
   subsets: ["latin"],
+  preload: false,
   weight: ["300", "400", "500", "700"],
 });
 
@@ -35,12 +37,14 @@ const crimsonText = Crimson_Text({
   variable: "--font-crimson-text",
   subsets: ["latin"],
   weight: ["400", "600", "700"],
+  preload: false,
 });
 
 const maShanZheng = Ma_Shan_Zheng({
   variable: "--font-ma-shan-zheng",
   subsets: ["latin"],
   weight: "400",
+  preload: false,
 });
 
 export const metadata: Metadata = {
@@ -63,6 +67,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
       <head>
+        {/* Theme hydration script — theme list must stay in sync with CONFIG.themes in src/lib/config.ts */}
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var t=localStorage.getItem('cultivation-theme');if(t==='light'){document.documentElement.classList.remove('dark');document.documentElement.classList.add('light')}var s=localStorage.getItem('cultivation-theme-style');if(s&&['midnight-ink','mountain-mist','calligraphy','sakura','sakura-dark'].indexOf(s)!==-1){document.documentElement.classList.add(s)}}catch(e){}})()`

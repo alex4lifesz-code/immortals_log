@@ -5,7 +5,11 @@ import GlowButton from "@/components/ui/GlowButton";
 import GlowCard from "@/components/ui/GlowCard";
 import { GlowModal } from "@/components/ui/GlowCard";
 import { useAuth } from "@/context/AuthContext";
-import * as XLSX from "xlsx";
+import type * as XLSXTypes from "xlsx";
+
+async function loadXLSX(): Promise<typeof XLSXTypes> {
+  return import("xlsx");
+}
 
 interface UserOption {
   id: string;
@@ -29,7 +33,7 @@ export default function DataManagement() {
   useEffect(() => {
     async function fetchUsers() {
       try {
-        const res = await fetch("/api/users");
+        const res = await fetch("/api/users", { credentials: "include" });
         const data = await res.json();
         if (data.users) {
           setAllUsers(data.users);
@@ -73,6 +77,7 @@ export default function DataManagement() {
     setImportStatus({ type: "loading", message: "Parsing spreadsheet..." });
 
     try {
+      const XLSX = await loadXLSX();
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data, { type: "array" });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -172,7 +177,8 @@ export default function DataManagement() {
       const res = await fetch("/api/progressions/logs/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: targetUserId, logs, replaceExisting: false }),
+        credentials: "include",
+        body: JSON.stringify({ targetUserId, logs, replaceExisting: false }),
       });
 
       const result = await res.json();
@@ -212,7 +218,8 @@ export default function DataManagement() {
       const res = await fetch("/api/progressions/logs/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: targetUserId, logs: [], replaceExisting: true }),
+        credentials: "include",
+        body: JSON.stringify({ targetUserId, logs: [], replaceExisting: true }),
       });
 
       const result = await res.json();
@@ -232,7 +239,7 @@ export default function DataManagement() {
     if (!targetUserId) return;
     setSessionExportStatus({ type: "loading", message: "Fetching training log entries..." });
     try {
-      const res = await fetch(`/api/progressions/logs/export?userId=${targetUserId}`);
+      const res = await fetch(`/api/progressions/logs/export?targetUserId=${encodeURIComponent(targetUserId)}`, { credentials: "include" });
       const data = await res.json();
       const logs = data.logs || [];
 
@@ -262,6 +269,7 @@ export default function DataManagement() {
         Notes: log.notes || "",
       }));
 
+      const XLSX = await loadXLSX();
       const ws = XLSX.utils.json_to_sheet(rows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Training Log");
@@ -280,6 +288,7 @@ export default function DataManagement() {
     setCheckinImportStatus({ type: "loading", message: "Parsing spreadsheet..." });
 
     try {
+      const XLSX = await loadXLSX();
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data, { type: "array" });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -291,7 +300,7 @@ export default function DataManagement() {
       }
 
       // Fetch all users to map names to IDs
-      const usersRes = await fetch("/api/users");
+      const usersRes = await fetch("/api/users", { credentials: "include" });
       const usersData = await usersRes.json();
       const allUsers: { id: string; name: string; username: string }[] = usersData.users || [];
 
@@ -415,6 +424,7 @@ export default function DataManagement() {
           await fetch("/api/checkins", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
+            credentials: "include",
             body: JSON.stringify({ date: parsedDate, entries }),
           });
           imported++;
@@ -437,8 +447,8 @@ export default function DataManagement() {
     setCheckinExportStatus({ type: "loading", message: "Fetching check-in data..." });
     try {
       const [checkinsRes, usersRes] = await Promise.all([
-        fetch("/api/checkins"),
-        fetch("/api/users"),
+        fetch("/api/checkins", { credentials: "include" }),
+        fetch("/api/users", { credentials: "include" }),
       ]);
       const checkinsData = await checkinsRes.json();
       const usersData = await usersRes.json();
@@ -485,6 +495,7 @@ export default function DataManagement() {
         return row;
       });
 
+      const XLSX = await loadXLSX();
       const ws = XLSX.utils.json_to_sheet(exportRows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Check-In Records");
@@ -500,7 +511,7 @@ export default function DataManagement() {
     setShowRemoveCheckinConfirm(false);
     setRemoveCheckinStatus({ type: "loading", message: "Removing all check-in records..." });
     try {
-      const res = await fetch("/api/checkins", { method: "DELETE" });
+      const res = await fetch("/api/checkins", { method: "DELETE", credentials: "include" });
       const result = await res.json();
       if (res.ok) {
         setRemoveCheckinStatus({ type: "success", message: result.message || "All check-in records removed" });
@@ -516,8 +527,8 @@ export default function DataManagement() {
   const handleExerciseLibraryExport = async () => {
     setExerciseExportStatus({ type: "loading", message: "Exporting exercise library..." });
     try {
-      const url = `/api/admin/exercise-library/export?userId=${encodeURIComponent(user?.id || "")}&targetUserId=${encodeURIComponent(targetUserId)}`;
-      const res = await fetch(url);
+      const url = `/api/admin/exercise-library/export?targetUserId=${encodeURIComponent(targetUserId)}`;
+      const res = await fetch(url, { credentials: "include" });
       if (!res.ok) {
         const data = await res.json();
         setExerciseExportStatus({ type: "error", message: data.error || "Export failed" });
@@ -563,8 +574,8 @@ export default function DataManagement() {
       const res = await fetch("/api/admin/exercise-library/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
-          userId: user?.id,
           targetUserId,
           exercises,
           skipDuplicates: true,

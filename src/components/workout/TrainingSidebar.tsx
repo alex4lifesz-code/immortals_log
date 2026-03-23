@@ -119,7 +119,10 @@ function TechniqueCard({ exercise, isSelected, onSelect, delay, displayMode, com
             }
           `}
           style={showIllumination ? glowStyle as React.CSSProperties : undefined}
+          role="button"
+          tabIndex={0}
           onClick={() => onSelect(exercise.id)}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(exercise.id); } }}
           title={exerciseTooltip}
         >
           {/* Selected check */}
@@ -190,7 +193,10 @@ function TechniqueCard({ exercise, isSelected, onSelect, delay, displayMode, com
             }
           `}
           style={!isSelected && showIllumination && glowIntensity > 0 && glowIntensity < 100 ? { boxShadow: `0 0 12px rgba(58,143,143,0.2), ${glowStyle.boxShadow || ''}` } : undefined}
+          role="button"
+          tabIndex={0}
           onClick={() => onSelect(exercise.id)}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(exercise.id); } }}
           title={exerciseTooltip}
         >
           <div className="flex items-start gap-2.5">
@@ -410,7 +416,7 @@ export default function TrainingSidebar({
       }
 
       try {
-        const response = await fetch(`/api/workouts?userId=${user.id}&showAll=true`);
+        const response = await fetch("/api/workouts?showAll=true", { credentials: "include" });
         if (!response.ok) return;
         const data = await response.json();
         setWorkoutHistory(data.workouts || []);

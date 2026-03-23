@@ -4,9 +4,11 @@ import React, { createContext, useContext, useState, useCallback, useEffect, use
 import { NavItem, defaultNavItems } from "@/lib/constants";
 import { isNativePlatform } from "@/lib/platform";
 import { useAuth } from "@/context/AuthContext";
+import { CONFIG, type Theme } from "@/lib/config";
+import { api } from "@/lib/api-client";
 
 type ThemeMode = "dark" | "light";
-type ThemeStyle = "midnight-ink" | "mountain-mist" | "calligraphy" | "sakura" | "sakura-dark";
+type ThemeStyle = Theme;
 type NavigationMode = "top" | "side";
 type ViewportMode = "auto" | "mobile" | "desktop";
 type TrainingMode = "simplified" | "detailed";
@@ -150,7 +152,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setThemeStyle = useCallback((style: ThemeStyle) => {
     setThemeStyleState(style);
     if (typeof window !== "undefined") {
-      document.documentElement.classList.remove("midnight-ink", "mountain-mist", "calligraphy", "sakura", "sakura-dark");
+      document.documentElement.classList.remove(...CONFIG.themes);
       document.documentElement.classList.add(style);
       localStorage.setItem("cultivation-theme-style", style);
     }
@@ -164,7 +166,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setTheme(saved);
     }
     const savedStyle = localStorage.getItem("cultivation-theme-style") as ThemeStyle | null;
-    if (savedStyle && ["midnight-ink", "mountain-mist", "calligraphy", "sakura", "sakura-dark"].includes(savedStyle)) {
+    if (savedStyle && (CONFIG.themes as readonly string[]).includes(savedStyle)) {
       setThemeStyle(savedStyle);
     }
   }, [setTheme, setThemeStyle]);
@@ -183,10 +185,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       setRemotePrefsReady(false);
       try {
-        const res = await fetch(`/api/users/preferences?userId=${encodeURIComponent(user.id)}`, { cache: "no-store" });
-        if (!res.ok) return;
-
-        const payload = await res.json();
+        const payload = await api.get<{ appPrefs?: Record<string, unknown> }>("/api/users/preferences", { cache: "no-store" });
         const appPrefs = payload?.appPrefs && typeof payload.appPrefs === "object" ? payload.appPrefs : null;
         if (!appPrefs || cancelled) return;
 
@@ -200,9 +199,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           localStorage.setItem("cultivation-theme", remoteTheme);
         }
 
-        if (typeof remoteThemeStyle === "string" && ["midnight-ink", "mountain-mist", "calligraphy", "sakura", "sakura-dark"].includes(remoteThemeStyle)) {
+        if (typeof remoteThemeStyle === "string" && (CONFIG.themes as readonly string[]).includes(remoteThemeStyle)) {
           setThemeStyleState(remoteThemeStyle as ThemeStyle);
-          document.documentElement.classList.remove("midnight-ink", "mountain-mist", "calligraphy", "sakura", "sakura-dark");
+          document.documentElement.classList.remove(...CONFIG.themes);
           document.documentElement.classList.add(remoteThemeStyle);
           localStorage.setItem("cultivation-theme-style", remoteThemeStyle);
         }
@@ -228,16 +227,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!remotePrefsReady || !user?.id || syncedUserIdRef.current !== user.id) return;
 
     const timer = window.setTimeout(() => {
-      fetch("/api/users/preferences", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: user.id,
-          appPrefs: {
-            theme,
-            themeStyle,
-          },
-        }),
+      api.put("/api/users/preferences", {
+        appPrefs: {
+          theme,
+          themeStyle,
+        },
       }).catch(() => {
         // Ignore sync failures; local settings are still saved.
       });

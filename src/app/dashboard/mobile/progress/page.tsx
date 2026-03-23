@@ -18,7 +18,7 @@ export default function MobileProgressPage() {
   useEffect(() => {
     const run = async () => {
       if (!user?.id) return;
-      const res = await fetch(`/api/progressions/logs/export?userId=${encodeURIComponent(user.id)}`, { cache: "no-store" });
+      const res = await fetch("/api/progressions/logs/export", { cache: "no-store", credentials: "include" });
       const payload = await res.json().catch(() => []);
       setLogs(Array.isArray(payload) ? payload : []);
     };

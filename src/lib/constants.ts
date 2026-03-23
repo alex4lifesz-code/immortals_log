@@ -17,22 +17,6 @@ export const defaultNavItems: NavItem[] = [
   { id: "admin", label: "Administrative Palace", icon: "👑", path: "/dashboard/admin", pinned: false, visible: true },
 ];
 
-// TODO: These will be populated dynamically from the new exercise database system
-export const DIFFICULTY_LEVELS = [] as const;
-
-// TODO: These will be populated dynamically from the new exercise database system
-export const EXERCISE_TYPES = [] as const;
-
-// TODO: These will be populated dynamically from the new exercise database system
-export const TARGET_GROUPS = [] as const;
-
-// TODO: These will be populated dynamically from the new exercise database system
-export const TARGET_GROUP_CATEGORIES: { label: string; groups: string[] }[] = [];
-
-export type DifficultyLevel = (typeof DIFFICULTY_LEVELS)[number];
-export type ExerciseType = (typeof EXERCISE_TYPES)[number];
-export type TargetGroup = (typeof TARGET_GROUPS)[number];
-
 function normalizeDifficultyKey(difficulty: string): string {
   const raw = (difficulty || "").trim();
   const lower = raw.toLowerCase();

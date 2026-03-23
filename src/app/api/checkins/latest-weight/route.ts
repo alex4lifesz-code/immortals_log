@@ -1,17 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withAuth } from "@/lib/auth/middleware";
 
-export async function GET(req: NextRequest) {
-  const userId = req.nextUrl.searchParams.get("userId");
-
-  if (!userId || typeof userId !== "string" || userId.length > 200) {
-    return NextResponse.json({ error: "Missing or invalid userId" }, { status: 400 });
-  }
-
+export const GET = withAuth(async (_request, { auth }) => {
   try {
     const latest = await prisma.checkIn.findFirst({
       where: {
-        userId,
+        userId: auth.userId,
         weight: { not: null },
       },
       orderBy: { date: "desc" },
@@ -27,4 +22,4 @@ export async function GET(req: NextRequest) {
     console.error("Latest weight fetch error:", error);
     return NextResponse.json({ error: "Failed to fetch latest weight" }, { status: 500 });
   }
-}
+});

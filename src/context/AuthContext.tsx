@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { getPersistedUser, persistUser, clearPersistedUser } from "@/lib/storage";
 
 type User = {
   id: string;
@@ -15,7 +14,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (user: User, rememberMe?: boolean) => void;
+  login: (user: User) => void;
   logout: () => Promise<void>;
 }
 
@@ -26,20 +25,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
-  // Hydrate auth state from persistent storage on mount
+  // Hydrate auth state from cookie-based session on mount
   useEffect(() => {
     let cancelled = false;
 
     async function hydrate() {
       try {
-        const saved = await getPersistedUser();
-        if (saved && !cancelled) {
-          const parsedUser = JSON.parse(saved);
-          setUser(parsedUser);
+        const res = await fetch("/api/auth/me", {
+          credentials: "include",
+        });
+        if (!res.ok) {
+          if (!cancelled) setUser(null);
+          return;
+        }
+        const data = await res.json();
+        if (data.user && !cancelled) {
+          setUser(data.user);
         }
       } catch {
-        // Corrupted data — clear without blocking the finally block
-        clearPersistedUser().catch(() => {});
+        // Network error — leave user as null
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -49,7 +53,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const timeout = setTimeout(() => {
       if (!cancelled) {
         cancelled = true;
-        clearPersistedUser().catch(() => {});
         setIsLoading(false);
       }
     }, 5000);
@@ -62,14 +65,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const login = useCallback((userData: User, rememberMe = false) => {
+  const login = useCallback((userData: User) => {
     setUser(userData);
-    persistUser(JSON.stringify(userData), rememberMe);
   }, []);
 
   const logout = useCallback(async () => {
     setUser(null);
-    await clearPersistedUser();
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch {
+      // Best-effort — cookie will expire anyway
+    }
     localStorage.removeItem("cultivation-nav-state");
     router.push("/");
   }, [router]);

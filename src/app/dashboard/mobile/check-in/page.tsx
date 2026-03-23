@@ -33,6 +33,7 @@ export default function MobileCheckinPage() {
     await fetch("/api/checkins", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({
         date: todayISO(),
         entries: {
@@ -42,7 +43,6 @@ export default function MobileCheckinPage() {
             comment,
           },
         },
-        requestingUserId: user.id,
       }),
     });
 

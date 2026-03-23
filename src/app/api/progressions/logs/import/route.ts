@@ -1,5 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withAuth } from "@/lib/auth/middleware";
+import { importLimiter } from "@/lib/auth/rate-limiters";
+import { getClientIdentifier } from "@/lib/rate-limit";
 
 type ImportedLog = {
   exerciseId?: string;
@@ -147,19 +150,27 @@ function addExerciseToMaps(
 }
 
 // POST /api/progressions/logs/import
-// Body: { userId: string, logs: ImportedLog[], replaceExisting?: boolean }
-export async function POST(req: NextRequest) {
+// Body: { logs: ImportedLog[], replaceExisting?: boolean }
+export const POST = withAuth(async (request, { auth }) => {
   try {
-    const body = await req.json() as {
-      userId?: string;
+    // Rate limit imports
+    const clientId = getClientIdentifier(request);
+    const rateLimitResult = importLimiter.check(clientId);
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        { error: "Too many import requests. Please try again later." },
+        { status: 429 }
+      );
+    }
+
+    const body = await request.json() as {
       logs?: ImportedLog[];
       replaceExisting?: boolean;
+      targetUserId?: string;
     };
 
-    const userId = body.userId;
-    if (!userId || typeof userId !== "string") {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
-    }
+    // Admins can import into another user's data
+    const userId = body.targetUserId && auth.role === "admin" ? body.targetUserId : auth.userId;
 
     const logs = body.logs;
     if (!Array.isArray(logs)) {
@@ -457,6 +468,25 @@ export async function POST(req: NextRequest) {
       createdVariations++;
     };
 
+    const logCreateBatch: {
+      userProgressionId: string;
+      level: number;
+      weight1: number | null;
+      reps1: number | null;
+      weight2: number | null;
+      reps2: number | null;
+      weight3: number | null;
+      reps3: number | null;
+      holdTime: number | null;
+      holdTime2: number | null;
+      holdTime3: number | null;
+      modifier: string | null;
+      variant: string | null;
+      notes: string | null;
+      completed: boolean;
+      createdAt: Date;
+    }[] = [];
+
     for (const rawLog of logs) {
       let exercise = null as TargetExercise | null;
 
@@ -522,28 +552,34 @@ export async function POST(req: NextRequest) {
         levelByExerciseId.set(exercise.id, userProgression);
       }
 
-      await prisma.progressionLog.create({
-        data: {
-          userProgressionId: userProgression.id,
-          level,
-          weight1: normalizeNullableNumber(rawLog.weight1, 0, 10000),
-          reps1: normalizeNullableInt(rawLog.reps1, 0, 500),
-          weight2: normalizeNullableNumber(rawLog.weight2, 0, 10000),
-          reps2: normalizeNullableInt(rawLog.reps2, 0, 500),
-          weight3: normalizeNullableNumber(rawLog.weight3, 0, 10000),
-          reps3: normalizeNullableInt(rawLog.reps3, 0, 500),
-          holdTime: normalizeNullableInt(rawLog.holdTime, 0, 9999),
-          holdTime2: normalizeNullableInt(rawLog.holdTime2, 0, 9999),
-          holdTime3: normalizeNullableInt(rawLog.holdTime3, 0, 9999),
-          modifier: rawLog.modifier ? String(rawLog.modifier).trim().slice(0, 100) : null,
-          variant: rawLog.variant ? String(rawLog.variant).trim().slice(0, 200) : null,
-          notes: rawLog.notes ? String(rawLog.notes).trim().slice(0, 1000) : null,
-          completed: Boolean(rawLog.completed),
-          createdAt: parseCreatedAt(rawLog.createdAt),
-        },
+      logCreateBatch.push({
+        userProgressionId: userProgression.id,
+        level,
+        weight1: normalizeNullableNumber(rawLog.weight1, 0, 10000),
+        reps1: normalizeNullableInt(rawLog.reps1, 0, 500),
+        weight2: normalizeNullableNumber(rawLog.weight2, 0, 10000),
+        reps2: normalizeNullableInt(rawLog.reps2, 0, 500),
+        weight3: normalizeNullableNumber(rawLog.weight3, 0, 10000),
+        reps3: normalizeNullableInt(rawLog.reps3, 0, 500),
+        holdTime: normalizeNullableInt(rawLog.holdTime, 0, 9999),
+        holdTime2: normalizeNullableInt(rawLog.holdTime2, 0, 9999),
+        holdTime3: normalizeNullableInt(rawLog.holdTime3, 0, 9999),
+        modifier: rawLog.modifier ? String(rawLog.modifier).trim().slice(0, 100) : null,
+        variant: rawLog.variant ? String(rawLog.variant).trim().slice(0, 200) : null,
+        notes: rawLog.notes ? String(rawLog.notes).trim().slice(0, 1000) : null,
+        completed: Boolean(rawLog.completed),
+        createdAt: parseCreatedAt(rawLog.createdAt),
       });
 
       imported++;
+    }
+
+    // Batch-insert all logs in chunks of 500 to avoid SQLite parameter limits
+    const BATCH_SIZE = 500;
+    for (let i = 0; i < logCreateBatch.length; i += BATCH_SIZE) {
+      await prisma.progressionLog.createMany({
+        data: logCreateBatch.slice(i, i + BATCH_SIZE),
+      });
     }
 
     return NextResponse.json({
@@ -560,4 +596,4 @@ export async function POST(req: NextRequest) {
     console.error("Progression log import error:", error);
     return NextResponse.json({ error: "Failed to import progression logs" }, { status: 500 });
   }
-}
+});

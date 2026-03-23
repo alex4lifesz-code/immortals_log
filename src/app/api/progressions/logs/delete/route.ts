@@ -1,16 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withAuth } from "@/lib/auth/middleware";
 
-export async function POST(req: NextRequest) {
+export const POST = withAuth(async (request, { auth }) => {
   try {
-    const { logId, userId } = await req.json();
+    const { logId } = await request.json();
 
     if (!logId || typeof logId !== "string") {
       return NextResponse.json({ error: "logId is required" }, { status: 400 });
-    }
-
-    if (!userId || typeof userId !== "string") {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
     }
 
     // Find the log and verify ownership
@@ -23,7 +20,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Log record not found" }, { status: 404 });
     }
 
-    if (log.userProgression.userId !== userId) {
+    if (log.userProgression.userId !== auth.userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
@@ -34,4 +31,4 @@ export async function POST(req: NextRequest) {
     console.error("Progression log delete error:", error);
     return NextResponse.json({ error: "Failed to delete log record" }, { status: 500 });
   }
-}
+});

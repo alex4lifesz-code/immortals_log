@@ -51,6 +51,8 @@ function TopBar() {
         >
           <motion.button
             onClick={() => setTopPanelExpanded(true)}
+            aria-label="Expand navigation bar"
+            aria-expanded={false}
             whileHover={{ y: 2 }}
             whileTap={{ y: 1 }}
             className="w-16 h-2 bg-gradient-to-r from-jade-glow/60 to-jade-light/60 rounded-b-full border-b border-jade-glow/40 shadow-lg shadow-jade-glow/20 hover:shadow-jade-glow/40 transition-shadow"
@@ -73,7 +75,10 @@ function TopBar() {
         <div className="flex items-center pr-2 border-r border-ink-light">
           <motion.span 
             className="text-jade-glow text-xs font-bold whitespace-nowrap tracking-wider cursor-pointer"
+            role="link"
+            tabIndex={0}
             onClick={() => router.push("/dashboard")}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); router.push("/dashboard"); } }}
             whileHover={{ scale: 1.05 }}
           >
             ⚔️ Immortals Log
@@ -82,13 +87,14 @@ function TopBar() {
 
         {/* Navigation Items — desktop only */}
         {!isMobile && (
-          <div className="flex items-center gap-1">
+          <nav className="flex items-center gap-1" aria-label="Main navigation">
             {visibleDesktopItems.map((item) => (
               <motion.button
                 key={item.id}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => router.push(item.path)}
+                aria-current={pathname === item.path ? "page" : undefined}
                 className={`px-3 py-1 text-xs rounded-md transition-all duration-200 whitespace-nowrap ${
                   pathname === item.path
                     ? "bg-jade-deep text-jade-light glow-subtle"
@@ -98,7 +104,7 @@ function TopBar() {
                 {item.icon} {t(item.label, settings.terminologyMode ?? "fantasy")}
               </motion.button>
             ))}
-          </div>
+          </nav>
         )}
 
         {/* Right section */}

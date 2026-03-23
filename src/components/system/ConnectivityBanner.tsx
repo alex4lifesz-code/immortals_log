@@ -16,10 +16,11 @@ export default function ConnectivityBanner() {
       const timeout = window.setTimeout(() => controller.abort(), CHECK_TIMEOUT_MS);
 
       try {
-        const res = await fetch("/api/checkins", {
+        const res = await fetch("/api/health", {
           method: "GET",
           cache: "no-store",
           signal: controller.signal,
+          credentials: "include",
         });
 
         if (!mounted) return;

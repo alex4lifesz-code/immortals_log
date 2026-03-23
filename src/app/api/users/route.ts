@@ -1,8 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withAuth } from "@/lib/auth/middleware";
 
-export async function GET() {
+export const GET = withAuth(async (_request, { auth }) => {
   try {
+    // Only admins can list all users
+    if (auth.role !== "admin") {
+      return NextResponse.json(
+        { error: "Admin access required", code: "FORBIDDEN" },
+        { status: 403 }
+      );
+    }
+
     const [users, progressionLevels] = await Promise.all([
       prisma.user.findMany({
         select: {
@@ -34,7 +43,7 @@ export async function GET() {
     for (const level of progressionLevels) {
       progressionLogCounts.set(
         level.userId,
-        (progressionLogCounts.get(level.userId) ?? 0) + level._count.logs,
+        (progressionLogCounts.get(level.userId) ?? 0) + level._count.logs
       );
     }
 
@@ -51,6 +60,9 @@ export async function GET() {
     return NextResponse.json({ users: enrichedUsers });
   } catch (error) {
     console.error("Users fetch error:", error);
-    return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch users" },
+      { status: 500 }
+    );
   }
-}
+});

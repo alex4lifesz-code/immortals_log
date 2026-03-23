@@ -1,11 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withAuth } from "@/lib/auth/middleware";
 
 // GET /api/checkins/notes?date=YYYY-MM-DD  — fetch all community notes for a date (or all if no date)
 // GET /api/checkins/notes?future=true — fetch notes for dates beyond today
-export async function GET(req: NextRequest) {
+export const GET = withAuth(async (request) => {
   try {
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = new URL(request.url);
     const date = searchParams.get("date");
     const future = searchParams.get("future");
     const clientToday = searchParams.get("today");
@@ -36,16 +37,17 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // POST /api/checkins/notes — create a new note
-export async function POST(req: NextRequest) {
+export const POST = withAuth(async (request, { auth }) => {
   try {
-    const { date, userId, content } = await req.json();
+    const { date, content } = await request.json();
+    const userId = auth.userId;
 
-    if (!date || !userId || !content?.trim()) {
+    if (!date || !content?.trim()) {
       return NextResponse.json(
-        { error: "Date, userId, and content are required" },
+        { error: "Date and content are required" },
         { status: 400 }
       );
     }
@@ -54,14 +56,6 @@ export async function POST(req: NextRequest) {
     if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       return NextResponse.json(
         { error: "Invalid date format (expected YYYY-MM-DD)" },
-        { status: 400 }
-      );
-    }
-
-    // Validate userId type
-    if (typeof userId !== "string") {
-      return NextResponse.json(
-        { error: "Invalid userId" },
         { status: 400 }
       );
     }
@@ -99,16 +93,16 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // PATCH /api/checkins/notes — toggle pin on a note
-export async function PATCH(req: NextRequest) {
+export const PATCH = withAuth(async (request, { auth }) => {
   try {
-    const { noteId, userId, pinned } = await req.json();
+    const { noteId, pinned } = await request.json();
 
-    if (!noteId || !userId) {
+    if (!noteId) {
       return NextResponse.json(
-        { error: "noteId and userId are required" },
+        { error: "noteId is required" },
         { status: 400 }
       );
     }
@@ -118,7 +112,7 @@ export async function PATCH(req: NextRequest) {
       where: { id: noteId },
     });
 
-    if (!existing || existing.userId !== userId) {
+    if (!existing || existing.userId !== auth.userId) {
       return NextResponse.json(
         { error: "Note not found or not owned by user" },
         { status: 403 }
@@ -141,16 +135,16 @@ export async function PATCH(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // DELETE /api/checkins/notes — delete a note (owner only)
-export async function DELETE(req: NextRequest) {
+export const DELETE = withAuth(async (request, { auth }) => {
   try {
-    const { noteId, userId } = await req.json();
+    const { noteId } = await request.json();
 
-    if (!noteId || !userId) {
+    if (!noteId) {
       return NextResponse.json(
-        { error: "noteId and userId are required" },
+        { error: "noteId is required" },
         { status: 400 }
       );
     }
@@ -160,7 +154,7 @@ export async function DELETE(req: NextRequest) {
       where: { id: noteId },
     });
 
-    if (!existing || existing.userId !== userId) {
+    if (!existing || existing.userId !== auth.userId) {
       return NextResponse.json(
         { error: "Note not found or not owned by user" },
         { status: 403 }
@@ -177,4 +171,4 @@ export async function DELETE(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

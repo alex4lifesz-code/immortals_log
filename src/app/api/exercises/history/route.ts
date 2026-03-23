@@ -1,24 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withAuth } from "@/lib/auth/middleware";
 
-export async function GET(req: NextRequest) {
+export const GET = withAuth(async (req, { auth }) => {
   try {
     const { searchParams } = new URL(req.url);
     const exerciseId = searchParams.get("exerciseId");
-    const userId = searchParams.get("userId");
 
     if (!exerciseId) {
-      return NextResponse.json({ error: "Exercise ID is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Exercise ID is required" },
+        { status: 400 }
+      );
     }
 
-    // Query progression logs for this exercise via UserProgressionLevel
-    const whereClause: { exerciseId: string; userId?: string } = { exerciseId };
-    if (userId) {
-      whereClause.userId = userId;
-    }
-
+    // Only return the authenticated user's history
     const levels = await prisma.userProgressionLevel.findMany({
-      where: whereClause,
+      where: { exerciseId, userId: auth.userId },
       include: {
         logs: {
           orderBy: { createdAt: "desc" },
@@ -43,11 +41,16 @@ export async function GET(req: NextRequest) {
     );
 
     // Sort by date descending and limit to 50
-    history.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    history.sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
 
     return NextResponse.json({ history: history.slice(0, 50) });
   } catch (error) {
     console.error("Exercise history fetch error:", error);
-    return NextResponse.json({ error: "Failed to fetch exercise history" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch exercise history" },
+      { status: 500 }
+    );
   }
-}
+});

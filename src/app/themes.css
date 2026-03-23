@@ -1,0 +1,769 @@
+/* ===== Theme: Mountain Mist — Rice paper & ink wash ===== */
+.mountain-mist {
+  --void-black: #e8e0d8;
+  --ink-deep: #f5f0eb;
+  --ink-dark: #ede6de;
+  --ink-mid: #ddd5cb;
+  --ink-light: #c8bfb5;
+  --mist-dark: #8a7f72;
+  --mist-mid: #6b5f52;
+  --mist-light: #5a4e42;
+  --mist-pale: #4a3f35;
+  --cloud-white: #2a2420;
+  --pure-white: #1a1510;
+
+  --jade-deep: #b8e0dc;
+  --jade: #2d7a7a;
+  --jade-glow: #1a6060;
+  --jade-light: #145050;
+  --crimson-deep: #f0c8c8;
+  --crimson: #a04040;
+  --crimson-glow: #8a2e2e;
+  --crimson-light: #701e1e;
+  --mountain-blue: #3a6888;
+  --mountain-blue-glow: #2a5070;
+  --forest-deep: #c8dcc8;
+  --forest: #3a6048;
+  --gold-dim: #a08840;
+  --gold: #8a7030;
+  --gold-glow: #705a20;
+
+  /* Difficulty colors — deeper tones for light backgrounds */
+  --difficulty-green: #15803d;
+  --difficulty-green-glow: #166534;
+  --difficulty-amber: #b45309;
+  --difficulty-amber-glow: #92400e;
+  --difficulty-red: #dc2626;
+  --difficulty-red-glow: #b91c1c;
+  --difficulty-violet: #6d28d9;
+  --difficulty-violet-glow: #5b21b6;
+  --difficulty-pink: #be185d;
+  --difficulty-pink-glow: #9d174d;
+  --difficulty-light-pink: #c026d3;
+  --difficulty-light-pink-glow: #a21caf;
+  --difficulty-cyan: #0891b2;
+  --difficulty-cyan-glow: #0e7490;
+
+  /* Difficulty glows — darker shadows for light backgrounds */
+  --glow-difficulty-green: 0 0 12px rgba(21, 128, 61, 0.35), 0 0 24px rgba(21, 128, 61, 0.15);
+  --glow-difficulty-amber: 0 0 12px rgba(180, 83, 9, 0.35), 0 0 24px rgba(180, 83, 9, 0.15);
+  --glow-difficulty-red: 0 0 12px rgba(220, 38, 38, 0.35), 0 0 24px rgba(220, 38, 38, 0.15);
+  --glow-difficulty-violet: 0 0 12px rgba(109, 40, 217, 0.35), 0 0 24px rgba(109, 40, 217, 0.15);
+  --glow-difficulty-pink: 0 0 12px rgba(190, 24, 93, 0.35), 0 0 24px rgba(190, 24, 93, 0.15);
+  --glow-difficulty-light-pink: 0 0 12px rgba(192, 38, 211, 0.35), 0 0 24px rgba(192, 38, 211, 0.15);
+  --glow-difficulty-cyan: 0 0 12px rgba(8, 145, 178, 0.35), 0 0 24px rgba(8, 145, 178, 0.15);
+
+  --background: var(--void-black);
+  --foreground: var(--cloud-white);
+  --surface: var(--ink-deep);
+  --surface-hover: var(--ink-mid);
+  --border: var(--ink-light);
+  --border-glow: var(--jade);
+  --text-primary: var(--cloud-white);
+  --text-secondary: var(--mist-light);
+  --text-muted: var(--mist-dark);
+  --accent: var(--jade-glow);
+  --accent-hover: var(--jade-light);
+  --danger: var(--crimson);
+  --danger-hover: var(--crimson-glow);
+
+  --glow-jade: 0 0 15px rgba(26, 96, 96, 0.25), 0 0 30px rgba(26, 96, 96, 0.1);
+  --glow-crimson: 0 0 15px rgba(138, 46, 46, 0.25), 0 0 30px rgba(138, 46, 46, 0.1);
+  --glow-gold: 0 0 15px rgba(112, 90, 32, 0.25), 0 0 30px rgba(112, 90, 32, 0.1);
+  --glow-blue: 0 0 15px rgba(42, 80, 112, 0.25), 0 0 30px rgba(42, 80, 112, 0.1);
+  --glow-subtle: 0 0 8px rgba(26, 96, 96, 0.1);
+  --glow-modal: 0 0 40px rgba(26, 96, 96, 0.35), 0 0 80px rgba(26, 96, 96, 0.15), inset 0 0 30px rgba(26, 96, 96, 0.08);
+
+  --col-weight: #1a6060;
+  --col-weight-bg: rgba(26, 96, 96, 0.1);
+  --col-reps: #8a7030;
+  --col-reps-bg: rgba(138, 112, 48, 0.1);
+}
+
+.mountain-mist * {
+  scrollbar-color: var(--ink-light) var(--void-black);
+}
+
+/* ===== Theme: Calligraphy — Monochrome ink & brush ===== */
+.calligraphy {
+  --void-black: #0a0a0a;
+  --ink-deep: #141414;
+  --ink-dark: #1c1c1c;
+  --ink-mid: #282828;
+  --ink-light: #383838;
+  --mist-dark: #585858;
+  --mist-mid: #787878;
+  --mist-light: #a0a0a0;
+  --mist-pale: #c0c0c0;
+  --cloud-white: #d8d8d8;
+  --pure-white: #ebebeb;
+
+  --jade-deep: #303030;
+  --jade: #606060;
+  --jade-glow: #909090;
+  --jade-light: #b0b0b0;
+  --crimson-deep: #3a2020;
+  --crimson: #6a3030;
+  --crimson-glow: #904040;
+  --crimson-light: #b05050;
+  --mountain-blue: #506070;
+  --mountain-blue-glow: #708090;
+  --forest-deep: #203020;
+  --forest: #405040;
+  --gold-dim: #6a6040;
+  --gold: #908060;
+  --gold-glow: #b0a070;
+
+  /* Difficulty colors — muted, desaturated tones for monochrome harmony */
+  --difficulty-green: #6aaa6a;
+  --difficulty-green-glow: #508050;
+  --difficulty-amber: #c8a848;
+  --difficulty-amber-glow: #a08838;
+  --difficulty-red: #c86060;
+  --difficulty-red-glow: #a04848;
+  --difficulty-violet: #9080b0;
+  --difficulty-violet-glow: #706090;
+  --difficulty-pink: #b07090;
+  --difficulty-pink-glow: #905878;
+  --difficulty-light-pink: #c090a0;
+  --difficulty-light-pink-glow: #a07888;
+
+  /* Difficulty glows — softer for calligraphy theme */
+  --glow-difficulty-green: 0 0 12px rgba(106, 170, 106, 0.25), 0 0 24px rgba(106, 170, 106, 0.08);
+  --glow-difficulty-amber: 0 0 12px rgba(200, 168, 72, 0.25), 0 0 24px rgba(200, 168, 72, 0.08);
+  --glow-difficulty-red: 0 0 12px rgba(200, 96, 96, 0.25), 0 0 24px rgba(200, 96, 96, 0.08);
+  --glow-difficulty-violet: 0 0 12px rgba(144, 128, 176, 0.25), 0 0 24px rgba(144, 128, 176, 0.08);
+  --glow-difficulty-pink: 0 0 12px rgba(176, 112, 144, 0.25), 0 0 24px rgba(176, 112, 144, 0.08);
+  --glow-difficulty-light-pink: 0 0 12px rgba(192, 144, 160, 0.25), 0 0 24px rgba(192, 144, 160, 0.08);
+
+  --background: var(--void-black);
+  --foreground: var(--cloud-white);
+  --surface: var(--ink-deep);
+  --surface-hover: var(--ink-mid);
+  --border: var(--ink-light);
+  --border-glow: var(--jade);
+  --text-primary: var(--cloud-white);
+  --text-secondary: var(--mist-light);
+  --text-muted: var(--mist-dark);
+  --accent: var(--jade-glow);
+  --accent-hover: var(--jade-light);
+  --danger: var(--crimson);
+  --danger-hover: var(--crimson-glow);
+
+  --glow-jade: 0 0 20px rgba(144, 144, 144, 0.2), 0 0 40px rgba(144, 144, 144, 0.08);
+  --glow-crimson: 0 0 20px rgba(144, 64, 64, 0.2), 0 0 40px rgba(144, 64, 64, 0.08);
+  --glow-gold: 0 0 20px rgba(176, 160, 112, 0.2), 0 0 40px rgba(176, 160, 112, 0.08);
+  --glow-blue: 0 0 20px rgba(112, 128, 144, 0.2), 0 0 40px rgba(112, 128, 144, 0.08);
+  --glow-subtle: 0 0 10px rgba(144, 144, 144, 0.08);
+  --glow-modal: 0 0 40px rgba(144, 144, 144, 0.3), 0 0 80px rgba(144, 144, 144, 0.15), inset 0 0 30px rgba(144, 144, 144, 0.08);
+
+  --col-weight: #909090;
+  --col-weight-bg: rgba(144, 144, 144, 0.06);
+  --col-reps: #b0a070;
+  --col-reps-bg: rgba(176, 160, 112, 0.06);
+}
+
+/* ===== Theme: Sakura — Cherry blossom & spring dawn ===== */
+.sakura {
+  --void-black: #1a1018;
+  --ink-deep: #201820;
+  --ink-dark: #2a2028;
+  --ink-mid: #382e38;
+  --ink-light: #4a3e4a;
+  --mist-dark: #6a5a68;
+  --mist-mid: #8a7888;
+  --mist-light: #b0a0ae;
+  --mist-pale: #d0c4ce;
+  --cloud-white: #f0e8ee;
+  --pure-white: #faf5f8;
+
+  --jade-deep: #3a2040;
+  --jade: #c06888;
+  --jade-glow: #e07898;
+  --jade-light: #f090a8;
+  --crimson-deep: #4a1828;
+  --crimson: #a03050;
+  --crimson-glow: #d04068;
+  --crimson-light: #f05878;
+  --mountain-blue: #6878a0;
+  --mountain-blue-glow: #8090c0;
+  --forest-deep: #2a3028;
+  --forest: #487050;
+  --gold-dim: #c0a060;
+  --gold: #d8b870;
+  --gold-glow: #f0d080;
+
+  /* Difficulty colors — warm-tinted to harmonise with sakura palette */
+  --difficulty-green: #34d399;
+  --difficulty-green-glow: #10b981;
+  --difficulty-amber: #fbbf24;
+  --difficulty-amber-glow: #f59e0b;
+  --difficulty-red: #f87171;
+  --difficulty-red-glow: #ef4444;
+  --difficulty-violet: #c4b5fd;
+  --difficulty-violet-glow: #a78bfa;
+  --difficulty-pink: #f9a8d4;
+  --difficulty-pink-glow: #f472b6;
+  --difficulty-light-pink: #fda4af;
+  --difficulty-light-pink-glow: #fb7185;
+
+  /* Difficulty glows — warm sakura-tinted glows */
+  --glow-difficulty-green: 0 0 15px rgba(52, 211, 153, 0.35), 0 0 30px rgba(52, 211, 153, 0.12);
+  --glow-difficulty-amber: 0 0 15px rgba(251, 191, 36, 0.35), 0 0 30px rgba(251, 191, 36, 0.12);
+  --glow-difficulty-red: 0 0 15px rgba(248, 113, 113, 0.35), 0 0 30px rgba(248, 113, 113, 0.12);
+  --glow-difficulty-violet: 0 0 15px rgba(196, 181, 253, 0.35), 0 0 30px rgba(196, 181, 253, 0.12);
+  --glow-difficulty-pink: 0 0 15px rgba(249, 168, 212, 0.35), 0 0 30px rgba(249, 168, 212, 0.12);
+  --glow-difficulty-light-pink: 0 0 15px rgba(253, 164, 175, 0.35), 0 0 30px rgba(253, 164, 175, 0.12);
+
+  --background: var(--void-black);
+  --foreground: var(--cloud-white);
+  --surface: var(--ink-deep);
+  --surface-hover: var(--ink-mid);
+  --border: var(--ink-light);
+  --border-glow: var(--jade);
+  --text-primary: var(--cloud-white);
+  --text-secondary: var(--mist-light);
+  --text-muted: var(--mist-dark);
+  --accent: var(--jade-glow);
+  --accent-hover: var(--jade-light);
+  --danger: var(--crimson);
+  --danger-hover: var(--crimson-glow);
+
+  --glow-jade: 0 0 20px rgba(224, 120, 152, 0.35), 0 0 40px rgba(224, 120, 152, 0.15);
+  --glow-crimson: 0 0 20px rgba(208, 64, 104, 0.35), 0 0 40px rgba(208, 64, 104, 0.15);
+  --glow-gold: 0 0 20px rgba(240, 208, 128, 0.35), 0 0 40px rgba(240, 208, 128, 0.15);
+  --glow-blue: 0 0 20px rgba(128, 144, 192, 0.35), 0 0 40px rgba(128, 144, 192, 0.15);
+  --glow-subtle: 0 0 10px rgba(224, 120, 152, 0.12);
+  --glow-modal: 0 0 40px rgba(224, 120, 152, 0.35), 0 0 80px rgba(224, 120, 152, 0.18), inset 0 0 30px rgba(224, 120, 152, 0.1);
+
+  --col-weight: #e07898;
+  --col-weight-bg: rgba(224, 120, 152, 0.08);
+  --col-reps: #d8b870;
+  --col-reps-bg: rgba(216, 184, 112, 0.08);
+}
+
+/* Sakura Dark — non-prefixed class for inner component scoping */
+.sakura-dark {
+  --void-black: #0c080e;
+  --ink-deep: #130e16;
+  --ink-dark: #1a1420;
+  --ink-mid: #241c2a;
+  --ink-light: #332838;
+  --mist-dark: #5a4860;
+  --mist-mid: #7a6880;
+  --mist-light: #9a88a0;
+  --mist-pale: #b8a8be;
+  --cloud-white: #e0d4e4;
+  --pure-white: #f0e8f2;
+
+  --jade-deep: #2a1020;
+  --jade: #8a3060;
+  --jade-glow: #d4508a;
+  --jade-light: #e8689e;
+  --crimson-deep: #2a0a18;
+  --crimson: #a02858;
+  --crimson-glow: #d03870;
+  --crimson-light: #e85088;
+  --mountain-blue: #6a5888;
+  --mountain-blue-glow: #8870a8;
+  --forest-deep: #101810;
+  --forest: #284028;
+  --gold-dim: #b07888;
+  --gold: #d0889a;
+  --gold-glow: #e898aa;
+
+  --background: var(--void-black);
+  --foreground: var(--cloud-white);
+  --surface: var(--ink-deep);
+  --surface-hover: var(--ink-mid);
+  --border: var(--ink-light);
+  --border-glow: var(--jade);
+  --text-primary: var(--cloud-white);
+  --text-secondary: var(--mist-light);
+  --text-muted: var(--mist-dark);
+  --accent: var(--jade-glow);
+  --accent-hover: var(--jade-light);
+  --danger: var(--crimson);
+  --danger-hover: var(--crimson-glow);
+
+  --glow-jade: 0 0 20px rgba(212, 80, 138, 0.3), 0 0 40px rgba(212, 80, 138, 0.12);
+  --glow-crimson: 0 0 20px rgba(208, 56, 112, 0.25), 0 0 40px rgba(208, 56, 112, 0.1);
+  --glow-gold: 0 0 20px rgba(232, 152, 170, 0.3), 0 0 40px rgba(232, 152, 170, 0.12);
+  --glow-blue: 0 0 20px rgba(136, 112, 168, 0.2), 0 0 40px rgba(136, 112, 168, 0.08);
+  --glow-subtle: 0 0 10px rgba(212, 80, 138, 0.15);
+  --glow-modal: 0 0 40px rgba(212, 80, 138, 0.4), 0 0 80px rgba(212, 80, 138, 0.2), inset 0 0 30px rgba(212, 80, 138, 0.1);
+
+  --col-weight: #9a88a0;
+  --col-weight-bg: rgba(154, 136, 160, 0.06);
+  --col-reps: #d4508a;
+  --col-reps-bg: rgba(212, 80, 138, 0.08);
+
+  /* Difficulty colors — deep magenta-tinted to complement sakura-dark palette */
+  --difficulty-green: #2dd4a0;
+  --difficulty-green-glow: #0fa87e;
+  --difficulty-amber: #f5b020;
+  --difficulty-amber-glow: #d99a10;
+  --difficulty-red: #f06060;
+  --difficulty-red-glow: #d94040;
+  --difficulty-violet: #b8a0e8;
+  --difficulty-violet-glow: #9878d0;
+  --difficulty-pink: #e890c0;
+  --difficulty-pink-glow: #d470a8;
+  --difficulty-light-pink: #f0a0b0;
+  --difficulty-light-pink-glow: #e07898;
+
+  /* Difficulty glows — deep magenta-tinted */
+  --glow-difficulty-green: 0 0 15px rgba(45, 212, 160, 0.3), 0 0 30px rgba(45, 212, 160, 0.1);
+  --glow-difficulty-amber: 0 0 15px rgba(245, 176, 32, 0.3), 0 0 30px rgba(245, 176, 32, 0.1);
+  --glow-difficulty-red: 0 0 15px rgba(240, 96, 96, 0.3), 0 0 30px rgba(240, 96, 96, 0.1);
+  --glow-difficulty-violet: 0 0 15px rgba(184, 160, 232, 0.3), 0 0 30px rgba(184, 160, 232, 0.1);
+  --glow-difficulty-pink: 0 0 15px rgba(232, 144, 192, 0.3), 0 0 30px rgba(232, 144, 192, 0.1);
+  --glow-difficulty-light-pink: 0 0 15px rgba(240, 160, 176, 0.3), 0 0 30px rgba(240, 160, 176, 0.1);
+}
+
+/* ===== Custom Scrollbar — Sidebar & General ===== */
+.sidebar-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: var(--ink-light);
+  border-radius: 4px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--jade-deep);
+}
+
+.sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ink-light) transparent;
+}
+
+/* ===== Hidden Scrollbar — Scroll without visible scrollbar ===== */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;             /* Chrome, Safari, Opera */
+}
+
+/* ===== LIGHT THEME — Ink Wash Mountain Mist ===== */
+/* Inspired by the wuxia mountain painting: soft blue-greys,
+   gentle lavenders, mist whites, rice-paper backgrounds,
+   teal-green foliage accents and muted terracotta reds. */
+
+html.mountain-mist {
+  /* Core palette — rice paper, mist, and mountain stone */
+  --void-black: #f5f0eb;
+  --ink-deep: #ede7e1;
+  --ink-dark: #e8e2dc;
+  --ink-mid: #ddd6cf;
+  --ink-light: #c8c0b8;
+  --mist-dark: #8a9aaa;
+  --mist-mid: #7088a0;
+  --mist-light: #5a7590;
+  --mist-pale: #4a6578;
+  --cloud-white: #2c3440;
+  --pure-white: #1a2030;
+
+  /* Accent colours — teal foliage & terracotta robes */
+  --jade-deep: #b8dede;
+  --jade: #4a9e9e;
+  --jade-glow: #2d7a7a;
+  --jade-light: #1f5c5c;
+  --crimson-deep: #f0d0d0;
+  --crimson: #a04040;
+  --crimson-glow: #883030;
+  --crimson-light: #702828;
+  --mountain-blue: #5a8aaa;
+  --mountain-blue-glow: #3a6a8a;
+  --forest-deep: #c8e0d0;
+  --forest: #4a8a60;
+  --gold-dim: #a09050;
+  --gold: #887840;
+  --gold-glow: #706030;
+
+  /* Semantic tokens */
+  --background: #f5f0eb;
+  --foreground: #2c3440;
+  --surface: #ede7e1;
+  --surface-hover: #d8d2cc;
+  --border: #c8c0b8;
+  --border-glow: #4a9e9e;
+  --text-primary: #2c3440;
+  --text-secondary: #5a7590;
+  --text-muted: #8a9aaa;
+  --accent: #2d7a7a;
+  --accent-hover: #1f5c5c;
+  --danger: #a04040;
+  --danger-hover: #883030;
+
+  /* Glow effects — softer, more diffused like morning mist */
+  --glow-jade: 0 0 16px rgba(45, 122, 122, 0.2), 0 0 32px rgba(45, 122, 122, 0.1);
+  --glow-crimson: 0 0 16px rgba(160, 64, 64, 0.2), 0 0 32px rgba(160, 64, 64, 0.1);
+  --glow-gold: 0 0 16px rgba(136, 120, 64, 0.2), 0 0 32px rgba(136, 120, 64, 0.1);
+  --glow-blue: 0 0 16px rgba(58, 106, 138, 0.2), 0 0 32px rgba(58, 106, 138, 0.1);
+  --glow-subtle: 0 0 8px rgba(45, 122, 122, 0.1);
+  --glow-modal: 0 0 40px rgba(45, 122, 122, 0.3), 0 0 80px rgba(45, 122, 122, 0.15), inset 0 0 30px rgba(45, 122, 122, 0.08);
+
+  /* Column colours for W/R differentiation */
+  --col-weight: #2d7a7a;
+  --col-weight-bg: rgba(45, 122, 122, 0.08);
+  --col-reps: #887840;
+  --col-reps-bg: rgba(136, 120, 64, 0.08);
+
+  /* Difficulty colors — deeper tones for light-background contrast */
+  --difficulty-green: #15803d;
+  --difficulty-green-glow: #166534;
+  --difficulty-amber: #b45309;
+  --difficulty-amber-glow: #92400e;
+  --difficulty-red: #dc2626;
+  --difficulty-red-glow: #b91c1c;
+  --difficulty-violet: #6d28d9;
+  --difficulty-violet-glow: #5b21b6;
+  --difficulty-pink: #be185d;
+  --difficulty-pink-glow: #9d174d;
+  --difficulty-light-pink: #c026d3;
+  --difficulty-light-pink-glow: #a21caf;
+
+  /* Difficulty glows — darker shadow values for light backgrounds */
+  --glow-difficulty-green: 0 0 12px rgba(21, 128, 61, 0.25), 0 0 24px rgba(21, 128, 61, 0.1);
+  --glow-difficulty-amber: 0 0 12px rgba(180, 83, 9, 0.25), 0 0 24px rgba(180, 83, 9, 0.1);
+  --glow-difficulty-red: 0 0 12px rgba(220, 38, 38, 0.25), 0 0 24px rgba(220, 38, 38, 0.1);
+  --glow-difficulty-violet: 0 0 12px rgba(109, 40, 217, 0.25), 0 0 24px rgba(109, 40, 217, 0.1);
+  --glow-difficulty-pink: 0 0 12px rgba(190, 24, 93, 0.25), 0 0 24px rgba(190, 24, 93, 0.1);
+  --glow-difficulty-light-pink: 0 0 12px rgba(192, 38, 211, 0.25), 0 0 24px rgba(192, 38, 211, 0.1);
+}
+
+html.mountain-mist .cultivation-gradient {
+  background: linear-gradient(135deg, #ede7e1, #e0dbd5, #b8dede);
+}
+
+html.mountain-mist .mist-overlay {
+  background: linear-gradient(180deg, transparent, rgba(245, 240, 235, 0.8));
+}
+
+html.mountain-mist ::selection {
+  background: #b8dede;
+  color: #2c3440;
+}
+
+html.mountain-mist * {
+  scrollbar-color: #c8c0b8 #f5f0eb;
+}
+
+/* ===== CALLIGRAPHY THEME — Black & Gold Brush Strokes ===== */
+/* Inspired by classical Chinese calligraphy art: pure black ink,
+   burnished gold accents, true grayscale, and minimalist elegance. */
+
+html.calligraphy {
+  /* Core palette — pure grayscale from black to white */
+  --void-black: #050505;
+  --ink-deep: #0f0f0f;
+  --ink-dark: #1a1a1a;
+  --ink-mid: #252525;
+  --ink-light: #333333;
+  --mist-dark: #4a4a4a;
+  --mist-mid: #666666;
+  --mist-light: #888888;
+  --mist-pale: #aaaaaa;
+  --cloud-white: #d0d0d0;
+  --pure-white: #e8e8e8;
+
+  /* Accent colours — burnished gold only, everything else grayscale */
+  --jade-deep: #1a1a1a;
+  --jade: #333333;
+  --jade-glow: #d4a860;
+  --jade-light: #f0b870;
+  --crimson-deep: #2a1a10;
+  --crimson: #7a5030;
+  --crimson-glow: #b87a50;
+  --crimson-light: #d89060;
+  --mountain-blue: #2a2a2a;
+  --mountain-blue-glow: #3a3a3a;
+  --forest-deep: #0a0a0a;
+  --forest: #151515;
+  --gold-dim: #a89060;
+  --gold: #d4a860;
+  --gold-glow: #f0b870;
+
+  /* Semantic tokens */
+  --background: #050505;
+  --foreground: #d0d0d0;
+  --surface: #0f0f0f;
+  --surface-hover: #1a1a1a;
+  --border: #333333;
+  --border-glow: #d4a860;
+  --text-primary: #d0d0d0;
+  --text-secondary: #888888;
+  --text-muted: #666666;
+  --accent: #d4a860;
+  --accent-hover: #f0b870;
+  --danger: #b87a50;
+  --danger-hover: #d89060;
+
+  /* Glow effects — warm burnished gold only */
+  --glow-jade: 0 0 20px rgba(212, 168, 96, 0.3), 0 0 40px rgba(212, 168, 96, 0.12);
+  --glow-crimson: 0 0 20px rgba(184, 122, 80, 0.25), 0 0 40px rgba(184, 122, 80, 0.1);
+  --glow-gold: 0 0 20px rgba(240, 184, 112, 0.3), 0 0 40px rgba(240, 184, 112, 0.12);
+  --glow-blue: 0 0 20px rgba(170, 170, 170, 0.2), 0 0 40px rgba(170, 170, 170, 0.08);
+  --glow-subtle: 0 0 10px rgba(212, 168, 96, 0.15);
+  --glow-modal: 0 0 40px rgba(212, 168, 96, 0.35), 0 0 80px rgba(212, 168, 96, 0.15), inset 0 0 30px rgba(212, 168, 96, 0.1);
+
+  /* Column colours for W/R differentiation */
+  --col-weight: #888888;
+  --col-weight-bg: rgba(136, 136, 136, 0.06);
+  --col-reps: #d4a860;
+  --col-reps-bg: rgba(212, 168, 96, 0.08);
+
+  /* Difficulty colors — muted, desaturated for monochrome theme */
+  --difficulty-green: #6aaa6a;
+  --difficulty-green-glow: #508850;
+  --difficulty-amber: #c8a848;
+  --difficulty-amber-glow: #a88830;
+  --difficulty-red: #c86060;
+  --difficulty-red-glow: #a84848;
+  --difficulty-violet: #9080b0;
+  --difficulty-violet-glow: #706898;
+  --difficulty-pink: #b07090;
+  --difficulty-pink-glow: #905878;
+  --difficulty-light-pink: #c090a0;
+  --difficulty-light-pink-glow: #a07888;
+
+  /* Difficulty glows — softer for calligraphy theme */
+  --glow-difficulty-green: 0 0 12px rgba(106, 170, 106, 0.2), 0 0 24px rgba(106, 170, 106, 0.08);
+  --glow-difficulty-amber: 0 0 12px rgba(200, 168, 72, 0.2), 0 0 24px rgba(200, 168, 72, 0.08);
+  --glow-difficulty-red: 0 0 12px rgba(200, 96, 96, 0.2), 0 0 24px rgba(200, 96, 96, 0.08);
+  --glow-difficulty-violet: 0 0 12px rgba(144, 128, 176, 0.2), 0 0 24px rgba(144, 128, 176, 0.08);
+  --glow-difficulty-pink: 0 0 12px rgba(176, 112, 144, 0.2), 0 0 24px rgba(176, 112, 144, 0.08);
+  --glow-difficulty-light-pink: 0 0 12px rgba(192, 144, 160, 0.2), 0 0 24px rgba(192, 144, 160, 0.08);
+}
+
+html.calligraphy .cultivation-gradient {
+  background: linear-gradient(135deg, #0f0f0f, #1a1a1a, #252525);
+}
+
+html.calligraphy .mist-overlay {
+  background: linear-gradient(180deg, transparent, rgba(5, 5, 5, 0.95));
+}
+
+html.calligraphy ::selection {
+  background: #333333;
+  color: #f0b870;
+}
+
+html.calligraphy * {
+  scrollbar-color: #333333 #050505;
+}
+
+/* ===== Sakura Cherry Blossom Theme ===== */
+html.sakura {
+  /* Core palette — soft pinks and whites with improved contrast */
+  --void-black: #faf7f6;
+  --ink-deep: #f5f1f0;
+  --ink-dark: #ede8e6;
+  --ink-mid: #e0d9d7;
+  --ink-light: #d0c5c1;
+  --mist-dark: #9d8a87;
+  --mist-mid: #8a7472;
+  --mist-light: #6b5a56;
+  --mist-pale: #5a4945;
+  --cloud-white: #3a2a28;
+  --pure-white: #1a0a08;
+
+  /* Accent colours — cherry blossom pinks with higher saturation */
+  --jade-deep: #d4889c;
+  --jade: #e8507a;
+  --jade-glow: #f5386b;
+  --jade-light: #ff1a5e;
+  --crimson-deep: #b87a6f;
+  --crimson: #d85a4a;
+  --crimson-glow: #ff3a2a;
+  --crimson-light: #ff5a3a;
+  --mountain-blue: #8aa8c8;
+  --mountain-blue-glow: #6e90b0;
+  --forest-deep: #c8d5c8;
+  --forest: #8aad8a;
+  --gold-dim: #c8a890;
+  --gold: #d8a878;
+  --gold-glow: #e8b888;
+
+  /* Semantic tokens */
+  --background: #faf7f6;
+  --foreground: #1a0a08;
+  --surface: #f5f1f0;
+  --surface-hover: #e8e0de;
+  --border: #d0c5c1;
+  --border-glow: #e8507a;
+  --text-primary: #3a2a28;
+  --text-secondary: #5a4945;
+  --text-muted: #8a7472;
+  --accent: #e8507a;
+  --accent-hover: #f5386b;
+  --danger: #c85a50;
+  --danger-hover: #ff3a2a;
+
+  /* Glow effects — vibrant pink shimmer */
+  --glow-jade: 0 0 20px rgba(232, 80, 122, 0.4), 0 0 40px rgba(232, 80, 122, 0.2);
+  --glow-crimson: 0 0 20px rgba(220, 90, 74, 0.4), 0 0 40px rgba(220, 90, 74, 0.2);
+  --glow-gold: 0 0 20px rgba(232, 184, 144, 0.4), 0 0 40px rgba(232, 184, 144, 0.2);
+  --glow-blue: 0 0 20px rgba(154, 175, 204, 0.4), 0 0 40px rgba(154, 175, 204, 0.2);
+  --glow-subtle: 0 0 10px rgba(232, 80, 122, 0.25);
+  --glow-modal: 0 0 40px rgba(232, 80, 122, 0.4), 0 0 80px rgba(232, 80, 122, 0.2), inset 0 0 30px rgba(232, 80, 122, 0.1);
+
+  /* Column colours for W/R differentiation */
+  --col-weight: #7a96b3;
+  --col-weight-bg: rgba(122, 150, 179, 0.08);
+  --col-reps: #e8507a;
+  --col-reps-bg: rgba(232, 80, 122, 0.08);
+
+  /* Difficulty colors — warm pink-tinted for sakura light theme */
+  --difficulty-green: #15803d;
+  --difficulty-green-glow: #166534;
+  --difficulty-amber: #b45309;
+  --difficulty-amber-glow: #92400e;
+  --difficulty-red: #dc2626;
+  --difficulty-red-glow: #b91c1c;
+  --difficulty-violet: #7c3aed;
+  --difficulty-violet-glow: #6d28d9;
+  --difficulty-pink: #db2777;
+  --difficulty-pink-glow: #be185d;
+  --difficulty-light-pink: #c026d3;
+  --difficulty-light-pink-glow: #a21caf;
+
+  /* Difficulty glows — warm for sakura light */
+  --glow-difficulty-green: 0 0 12px rgba(21, 128, 61, 0.25), 0 0 24px rgba(21, 128, 61, 0.1);
+  --glow-difficulty-amber: 0 0 12px rgba(180, 83, 9, 0.25), 0 0 24px rgba(180, 83, 9, 0.1);
+  --glow-difficulty-red: 0 0 12px rgba(220, 38, 38, 0.25), 0 0 24px rgba(220, 38, 38, 0.1);
+  --glow-difficulty-violet: 0 0 12px rgba(124, 58, 237, 0.25), 0 0 24px rgba(124, 58, 237, 0.1);
+  --glow-difficulty-pink: 0 0 12px rgba(219, 39, 119, 0.25), 0 0 24px rgba(219, 39, 119, 0.1);
+  --glow-difficulty-light-pink: 0 0 12px rgba(192, 38, 211, 0.25), 0 0 24px rgba(192, 38, 211, 0.1);
+}
+
+html.sakura .cultivation-gradient {
+  background: linear-gradient(135deg, #f5f1f0, #e8e0de, #d8c8c0);
+}
+
+html.sakura .mist-overlay {
+  background: linear-gradient(180deg, transparent, rgba(250, 247, 246, 0.95));
+}
+
+html.sakura ::selection {
+  background: #e8507a;
+  color: #faf7f6;
+}
+
+html.sakura * {
+  scrollbar-color: #d4888c #faf7f6;
+}
+
+/* ===== SAKURA DARK THEME — Deep Sakura & Rose Night ===== */
+/* Inspired by cherry blossoms under moonlight: deep night backgrounds,
+   sakura pink accents, rose highlights, and refined dark elegance. */
+
+html.sakura-dark {
+  /* Core palette — deep night with plum undertones */
+  --void-black: #0c080e;
+  --ink-deep: #130e16;
+  --ink-dark: #1a1420;
+  --ink-mid: #241c2a;
+  --ink-light: #332838;
+  --mist-dark: #5a4860;
+  --mist-mid: #7a6880;
+  --mist-light: #9a88a0;
+  --mist-pale: #b8a8be;
+  --cloud-white: #e0d4e4;
+  --pure-white: #f0e8f2;
+
+  /* Accent colours — sakura pink, rose, and deep cherry */
+  --jade-deep: #2a1020;
+  --jade: #8a3060;
+  --jade-glow: #d4508a;
+  --jade-light: #e8689e;
+  --crimson-deep: #2a0a18;
+  --crimson: #a02858;
+  --crimson-glow: #d03870;
+  --crimson-light: #e85088;
+  --mountain-blue: #6a5888;
+  --mountain-blue-glow: #8870a8;
+  --forest-deep: #101810;
+  --forest: #284028;
+  --gold-dim: #b07888;
+  --gold: #d0889a;
+  --gold-glow: #e898aa;
+
+  /* Semantic tokens */
+  --background: #0c080e;
+  --foreground: #e0d4e4;
+  --surface: #130e16;
+  --surface-hover: #1a1420;
+  --border: #332838;
+  --border-glow: #d4508a;
+  --text-primary: #e0d4e4;
+  --text-secondary: #9a88a0;
+  --text-muted: #5a4860;
+  --accent: #d4508a;
+  --accent-hover: #e8689e;
+  --danger: #d03870;
+  --danger-hover: #e85088;
+
+  /* Glow effects — soft sakura pink radiance */
+  --glow-jade: 0 0 20px rgba(212, 80, 138, 0.3), 0 0 40px rgba(212, 80, 138, 0.12);
+  --glow-crimson: 0 0 20px rgba(208, 56, 112, 0.25), 0 0 40px rgba(208, 56, 112, 0.1);
+  --glow-gold: 0 0 20px rgba(232, 152, 170, 0.3), 0 0 40px rgba(232, 152, 170, 0.12);
+  --glow-blue: 0 0 20px rgba(136, 112, 168, 0.2), 0 0 40px rgba(136, 112, 168, 0.08);
+  --glow-subtle: 0 0 10px rgba(212, 80, 138, 0.15);
+  --glow-modal: 0 0 40px rgba(212, 80, 138, 0.4), 0 0 80px rgba(212, 80, 138, 0.2), inset 0 0 30px rgba(212, 80, 138, 0.1);
+
+  /* Column colours for W/R differentiation */
+  --col-weight: #9a88a0;
+  --col-weight-bg: rgba(154, 136, 160, 0.06);
+  --col-reps: #d4508a;
+  --col-reps-bg: rgba(212, 80, 138, 0.08);
+
+  /* Difficulty colors — magenta-tinted for sakura-dark theme */
+  --difficulty-green: #2dd4a0;
+  --difficulty-green-glow: #0fa87e;
+  --difficulty-amber: #f5b020;
+  --difficulty-amber-glow: #d99a10;
+  --difficulty-red: #f06060;
+  --difficulty-red-glow: #d94040;
+  --difficulty-violet: #b8a0e8;
+  --difficulty-violet-glow: #9878d0;
+  --difficulty-pink: #e890c0;
+  --difficulty-pink-glow: #d470a8;
+  --difficulty-light-pink: #f0a0b0;
+  --difficulty-light-pink-glow: #e07898;
+
+  /* Difficulty glows — deep magenta-tinted */
+  --glow-difficulty-green: 0 0 15px rgba(45, 212, 160, 0.3), 0 0 30px rgba(45, 212, 160, 0.1);
+  --glow-difficulty-amber: 0 0 15px rgba(245, 176, 32, 0.3), 0 0 30px rgba(245, 176, 32, 0.1);
+  --glow-difficulty-red: 0 0 15px rgba(240, 96, 96, 0.3), 0 0 30px rgba(240, 96, 96, 0.1);
+  --glow-difficulty-violet: 0 0 15px rgba(184, 160, 232, 0.3), 0 0 30px rgba(184, 160, 232, 0.1);
+  --glow-difficulty-pink: 0 0 15px rgba(232, 144, 192, 0.3), 0 0 30px rgba(232, 144, 192, 0.1);
+  --glow-difficulty-light-pink: 0 0 15px rgba(240, 160, 176, 0.3), 0 0 30px rgba(240, 160, 176, 0.1);
+}
+
+html.sakura-dark .cultivation-gradient {
+  background: linear-gradient(135deg, #130e16, #1a1420, #241c2a);
+}
+
+html.sakura-dark .mist-overlay {
+  background: linear-gradient(180deg, transparent, rgba(12, 8, 14, 0.95));
+}
+
+html.sakura-dark ::selection {
+  background: #332838;
+  color: #e8689e;
+}
+
+html.sakura-dark * {
+  scrollbar-color: #332838 #0c080e;
+}

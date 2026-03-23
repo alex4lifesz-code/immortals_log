@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { SimpleExercise, TrainingCategory, SimpleExerciseType, MuscleGroup, Difficulty } from "@/lib/exercise-types";
 import { ALL_TRAINING_CATEGORIES, ALL_EXERCISE_TYPES, ALL_MUSCLE_GROUPS, ALL_DIFFICULTIES } from "@/lib/exercise-types";
+import { withAuth } from "@/lib/auth/middleware";
 
 function mapDbToSimpleExercise(pe: {
   id: string;
@@ -86,15 +87,8 @@ function inferDifficulty(diff?: string): Difficulty | undefined {
 }
 
 /** GET /api/exercise-library — Fetch shared exercise library */
-export async function GET(req: NextRequest) {
+export const GET = withAuth(async () => {
   try {
-    const { searchParams } = new URL(req.url);
-    const userId = searchParams.get("userId");
-
-    if (!userId) {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
-    }
-
     const dbExercises = await prisma.progressionExercise.findMany({
       orderBy: { name: "asc" },
     });
@@ -104,19 +98,19 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ exercises });
   } catch (error) {
     console.error("Exercise library fetch error:", error);
-    return NextResponse.json({ error: "Failed to fetch exercises" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch exercises" },
+      { status: 500 }
+    );
   }
-}
+});
 
 /** POST /api/exercise-library — Create a new exercise */
-export async function POST(req: NextRequest) {
+export const POST = withAuth(async (req, { auth }) => {
   try {
     const body = await req.json();
-    const { userId, name, category, exerciseType, muscleGroups, equipment, difficulty, description, instructions } = body;
-
-    if (!userId || typeof userId !== 'string') {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
-    }
+    const userId = auth.userId;
+    const { name, category, exerciseType, muscleGroups, equipment, difficulty, description, instructions } = body;
 
     const trimmedName = String(name || "").trim().slice(0, 200);
     if (!trimmedName || trimmedName.length < 2) {
@@ -210,6 +204,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ exercise }, { status: 201 });
   } catch (error) {
     console.error("Exercise create error:", error);
-    return NextResponse.json({ error: "Failed to create exercise" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to create exercise" },
+      { status: 500 }
+    );
   }
-}
+});

@@ -4,11 +4,13 @@ import { motion } from "framer-motion";
 import { useState, useEffect, useCallback, useRef } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import GlowButton from "@/components/ui/GlowButton";
+import PageSkeleton from "@/components/ui/PageSkeleton";
 import { GlowModal } from "@/components/ui/GlowCard";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { formatDateWithPreference } from "@/lib/constants";
 import { syncWeightFromLatestCheckin } from "@/lib/user-physique";
+import { api } from "@/lib/api-client";
 
 interface User {
   id: string;
@@ -167,8 +169,7 @@ export default function CheckInPage() {
 
   const fetchCommunityNotes = useCallback(async () => {
     try {
-      const res = await fetch("/api/checkins/notes");
-      const data = await res.json();
+      const data = await api.get<{ notes: CommunityNote[] }>("/api/checkins/notes");
       setCommunityNotes(data.notes || []);
     } catch (err) {
       console.error("Failed to fetch community notes:", err);
@@ -178,15 +179,9 @@ export default function CheckInPage() {
   const handleDeleteCommunityNote = useCallback(async (noteId: string) => {
     if (!user) return;
     try {
-      const res = await fetch("/api/checkins/notes", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ noteId, userId: user.id }),
-      });
-      if (res.ok) {
-        setCommunityNotes(prev => prev.filter(n => n.id !== noteId));
-        broadcastNotesUpdated();
-      }
+      await api.delete("/api/checkins/notes", { noteId });
+      setCommunityNotes(prev => prev.filter(n => n.id !== noteId));
+      broadcastNotesUpdated();
     } catch (err) {
       console.error("Failed to delete community note:", err);
     }
@@ -194,16 +189,10 @@ export default function CheckInPage() {
 
   const handleDeleteRow = useCallback(async (date: string) => {
     try {
-      const res = await fetch("/api/checkins", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date }),
-      });
-      if (res.ok) {
-        setRows(prev => prev.filter(r => r.date !== date));
-        setDeletingRowDate(null);
-        broadcastNotesUpdated();
-      }
+      await api.delete("/api/checkins", { date });
+      setRows(prev => prev.filter(r => r.date !== date));
+      setDeletingRowDate(null);
+      broadcastNotesUpdated();
     } catch (err) {
       console.error("Failed to delete row:", err);
     }
@@ -212,21 +201,15 @@ export default function CheckInPage() {
   const handleTogglePinNote = useCallback(async (noteId: string, pinned: boolean) => {
     if (!user) return;
     try {
-      const res = await fetch("/api/checkins/notes", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ noteId, userId: user.id, pinned }),
-      });
-      if (res.ok) {
-        setCommunityNotes(prev =>
-          prev.map(n => n.id === noteId ? { ...n, pinned } : n)
-            .sort((a, b) => {
-              if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-              return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-            })
-        );
-        broadcastNotesUpdated();
-      }
+      await api.patch("/api/checkins/notes", { noteId, pinned });
+      setCommunityNotes(prev =>
+        prev.map(n => n.id === noteId ? { ...n, pinned } : n)
+          .sort((a, b) => {
+            if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          })
+      );
+      broadcastNotesUpdated();
     } catch (err) {
       console.error("Failed to toggle pin:", err);
     }
@@ -234,12 +217,10 @@ export default function CheckInPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [usersRes, checkinsRes] = await Promise.all([
-        fetch("/api/users"),
-        fetch("/api/checkins"),
+      const [usersData, checkinsData] = await Promise.all([
+        api.get<{ users: User[] }>("/api/users"),
+        api.get<{ checkins: Array<{ date: string; userId: string; present: boolean; weight?: number; comment?: string }> }>("/api/checkins"),
       ]);
-      const usersData = await usersRes.json();
-      const checkinsData = await checkinsRes.json();
       setUsers(usersData.users || []);
 
       // Group check-ins by date
@@ -319,11 +300,7 @@ export default function CheckInPage() {
     const entry = todayRow?.entries[user.id] || { present: false, weight: "", comment: "" };
     const updatedEntry = { ...entry, weight: weightPromptValue };
     try {
-      await fetch("/api/checkins", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date: today, entries: { [user.id]: updatedEntry }, requestingUserId: user.id }),
-      });
+      await api.post("/api/checkins", { date: today, entries: { [user.id]: updatedEntry } });
       // Auto-sync weight if sync toggle is enabled
       syncWeightFromLatestCheckin(user.id);
     } catch (err) {
@@ -443,11 +420,7 @@ export default function CheckInPage() {
         },
       };
       
-      await fetch("/api/checkins", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date, entries, requestingUserId: user.id }),
-      });
+      await api.post("/api/checkins", { date, entries });
 
       // Award XP only when checking in (not when unchecking)
       if (present && userId === user.id) {
@@ -492,11 +465,7 @@ export default function CheckInPage() {
               for (const u of users) {
                 entries[u.id] = row.entries[u.id] || { present: false, weight: "", comment: "" };
               }
-              await fetch("/api/checkins", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ date: row.date, entries }),
-              });
+              await api.post("/api/checkins", { date: row.date, entries });
             }
           }
         } catch (err) {
@@ -532,15 +501,7 @@ export default function CheckInPage() {
       sidebarLabel="Check-In"
     >
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-            className="text-3xl"
-          >
-            ☯
-          </motion.div>
-        </div>
+        <PageSkeleton statCards={2} wideBlock rows={5} />
       ) : (
         <>
           {/* Cultivation Journal — personal day notes */}
@@ -729,8 +690,14 @@ export default function CheckInPage() {
 
                 {/* Rows */}
                 {sortedRows.length === 0 ? (
-                  <div className="py-10 text-center text-mist-dark italic text-xs">
-                    No records yet. Check-in records will be created automatically.
+                  <div className="flex flex-col items-center py-10 text-center">
+                    <div className="text-2xl opacity-30 mb-2">📋</div>
+                    <p className="text-xs text-mist-dark">
+                      No records yet
+                    </p>
+                    <p className="text-[10px] text-mist-dark/60 mt-1">
+                      Check-in records will be created automatically
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-0">

@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withAdmin } from "@/lib/auth/middleware";
 
 interface TierImport {
   level: number;
@@ -63,27 +64,18 @@ interface ExerciseImport {
 /**
  * POST /api/admin/exercise-library/import
  *
- * Body (JSON): { userId: string, targetUserId: string, exercises: ExerciseImport[], skipDuplicates?: boolean }
+ * Body (JSON): { targetUserId: string, exercises: ExerciseImport[], skipDuplicates?: boolean }
  *
  * Imports exercises into the exercise library for targetUserId.
- * Requires userId to have admin role.
+ * Requires admin role (enforced by withAdmin).
  * skipDuplicates (default true): silently skip exercises whose name already exists for targetUserId.
  */
-export async function POST(req: NextRequest) {
+export const POST = withAdmin(async (request, { auth }) => {
   try {
-    const body = await req.json();
-    const { userId, targetUserId, exercises, skipDuplicates = true } = body;
+    const body = await request.json();
+    const { targetUserId, exercises, skipDuplicates = true } = body;
 
-    // Validate admin
-    if (!userId || typeof userId !== "string") {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
-    }
-    const requestingUser = await prisma.user.findUnique({ where: { id: userId } });
-    if (!requestingUser || requestingUser.role !== "admin") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
-
-    const destUserId: string = targetUserId && typeof targetUserId === "string" ? targetUserId : userId;
+    const destUserId: string = targetUserId && typeof targetUserId === "string" ? targetUserId : auth.userId;
 
     // Validate target user exists
     const destUser = await prisma.user.findUnique({ where: { id: destUserId } });
@@ -239,4 +231,4 @@ export async function POST(req: NextRequest) {
     console.error("Exercise library import error:", error);
     return NextResponse.json({ error: "Failed to import exercise library" }, { status: 500 });
   }
-}
+});

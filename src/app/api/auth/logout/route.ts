@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
+import { clearAuthCookie } from "@/lib/auth";
 
 export async function POST() {
-  // Logout is handled on client-side by clearing localStorage
-  // This endpoint can be used for server-side cleanup if needed in the future
-  return NextResponse.json({ success: true });
+  const response = NextResponse.json({ success: true });
+  clearAuthCookie(response);
+  return response;
 }

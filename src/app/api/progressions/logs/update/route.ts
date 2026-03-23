@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withAuth } from "@/lib/auth/middleware";
 
 interface LogUpdate {
   id: string;
@@ -18,13 +19,10 @@ interface LogUpdate {
   notes: string | null;
 }
 
-export async function POST(req: NextRequest) {
+export const POST = withAuth(async (request, { auth }) => {
   try {
-    const { updates, userId } = await req.json() as { updates: LogUpdate[]; userId: string };
-
-    if (!userId || typeof userId !== "string") {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
-    }
+    const { updates } = await request.json() as { updates: LogUpdate[] };
+    const userId = auth.userId;
 
     if (!updates || !Array.isArray(updates) || updates.length === 0) {
       return NextResponse.json(
@@ -115,4 +113,4 @@ export async function POST(req: NextRequest) {
     console.error("Progression log update error:", error);
     return NextResponse.json({ error: "Failed to update progression logs" }, { status: 500 });
   }
-}
+});

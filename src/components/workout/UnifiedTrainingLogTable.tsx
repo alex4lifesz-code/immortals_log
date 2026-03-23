@@ -8,6 +8,7 @@ import GlowCard from "@/components/ui/GlowCard";
 import { useDisplaySettings, DEFAULT_UNIFIED_VISIBLE_COLUMNS } from "@/context/DisplaySettingsContext";
 import { useAppContext } from "@/context/AppContext";
 import { getTypeColor, formatDateWithPreference } from "@/lib/constants";
+import { api, ApiRequestError } from "@/lib/api-client";
 import { getDifficultyColorClass, getDifficultyGlowStyleScaled } from "@/lib/difficulty-styles";
 import { getExerciseDisplayName, getTypeDisplayName, getDifficultyDisplayName, getTypeColorKey } from "@/lib/exercise-name";
 import { inferExerciseType, formatSetValue, formatSetReps, getColumnHeaders, kgToLbs, type ExerciseType } from "@/lib/unit-conversion";
@@ -15,110 +16,33 @@ import { UserPhysiqueSettings } from "@/lib/user-physique";
 import type { WeightStandardRecord } from "@/lib/weight-standards";
 import { TIER_NAMES, TIER_COLORS } from "@/lib/weight-standards";
 
-export type WeightStandardsMap = Record<string, { male: WeightStandardRecord | null; female: WeightStandardRecord | null }>;
+// Types — single source of truth
+import type {
+  WeightStandardsMap,
+  ProgressionExercise,
+  ProgressionLog,
+  LogTableFilter,
+} from "@/app/dashboard/workout/types";
+export type { WeightStandardsMap, ProgressionExercise, ProgressionLog, LogTableFilter };
 
-// Re-export needed types to keep the component self-contained
-export interface ProgressionTier {
-  id: string;
-  level: number;
-  name: string;
-  wuxiaName: string;
-  difficulty: string;
-  wuxiaDifficulty: string;
-  wuxiaType: string;
-  description: string;
-  targetHold: number | null;
-  targetReps: number | null;
-  targetRepsText?: string | null;
-}
+// Utilities — imported from shared workout utils
+import {
+  formatResistanceBandLabel,
+  formatModifierWeightLabel,
+  parseModifierWithBand,
+  buildModifierWithBand,
+  stripBwPercentHint,
+  isGymCategoryExercise,
+  getExerciseCategoryLabel,
+  getBandSoftDimOpacity,
+  getBandAdjustedGlowStyle,
+  getEffectiveWeight,
+  getTierName,
+  RESISTANCE_BAND_OPTIONS,
+  MODIFIER_WEIGHT_OPTIONS,
+} from "@/app/dashboard/workout/utils";
 
-export interface ProgressionVariation {
-  id: string;
-  name: string;
-  wuxiaName: string;
-  difficulty: string;
-  description: string;
-  wuxiaDifficulty: string;
-  wuxiaType: string;
-}
-
-export interface ProgressionModifier {
-  id: string;
-  type: string;
-  available: boolean;
-  difficultyMod: number;
-  notes: string;
-}
-
-export interface ProgressionLog {
-  id: string;
-  level: number;
-  weight1: number | null;
-  reps1: number | null;
-  weight2: number | null;
-  reps2: number | null;
-  weight3: number | null;
-  reps3: number | null;
-  holdTime: number | null;
-  holdTime2: number | null;
-  holdTime3: number | null;
-  reps: number | null;
-  modifier: string | null;
-  variant: string | null;
-  notes: string | null;
-  completed: boolean;
-  createdAt: string;
-}
-
-export interface UserProgress {
-  id: string;
-  currentLevel: number;
-  logs: ProgressionLog[];
-}
-
-export interface ProgressionExercise {
-  id: string;
-  name: string;
-  wuxiaName: string;
-  difficulty: string;
-  wuxiaDifficulty: string;
-  type: string;
-  wuxiaType: string;
-  story: string;
-  tips: string;
-  category: string;
-  equipmentType: string;
-  bodyweight: boolean;
-  weighted: boolean;
-  rings: boolean;
-  primaryMuscles: string;
-  secondaryMuscles: string;
-  assignedDays: string;
-  tiers: ProgressionTier[];
-  variations: ProgressionVariation[];
-  modifiers: ProgressionModifier[];
-  userProgress: UserProgress[];
-}
-
-export interface LogTableFilter {
-  exerciseId: string;
-  levelNameLevel: number | null;
-}
-
-// ── Shared helpers (imported from workout page) ──
-// These functions are passed in or re-implemented to avoid circular deps
-
-const RESISTANCE_BAND_OPTIONS = [2, 5, 7, 10, 12, 15, 18, 20, 25, 30, 35, 40, 45, 50, 55, 60];
-const MODIFIER_WEIGHT_OPTIONS = [2.5, 5, 7.5, 10, 12.5, 15, 20, 25, 30, 35, 40, 45, 50] as const;
-
-function formatResistanceBandLabel(kg: number): string {
-  return `-${kg}kg`;
-}
-
-function formatModifierWeightLabel(kg: number): string {
-  const normalized = Number.isInteger(kg) ? String(kg) : kg.toFixed(1).replace(/\.0$/, "");
-  return `+${normalized}kg`;
-}
+// ── UTLT-specific helpers ──
 
 function parseModifierDisplayToKg(modifier: string | null | undefined): number | null {
   if (!modifier) return null;
@@ -128,117 +52,11 @@ function parseModifierDisplayToKg(modifier: string | null | undefined): number |
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
-function getEffectiveWeight(avg: number, bandKg?: number | null, modifierWeightKg?: number | null): number {
-  const bandOffset = typeof bandKg === "number" && Number.isFinite(bandKg) && bandKg > 0 ? bandKg : 0;
-  const modifierOffset =
-    typeof modifierWeightKg === "number" && Number.isFinite(modifierWeightKg) && modifierWeightKg > 0
-      ? modifierWeightKg
-      : 0;
-  return Math.max(0, avg - bandOffset + modifierOffset);
-}
-
-function parseModifierWithBand(modifier: string | null | undefined): {
-  baseModifier: string | null;
-  resistanceBandKg: number | null;
-  modifierWeightKg: number | null;
-  displayLevelOverride: number | null;
-} {
-  if (!modifier) return { baseModifier: null, resistanceBandKg: null, modifierWeightKg: null, displayLevelOverride: null };
-  let base = modifier;
-  let bandKg: number | null = null;
-  let levelOverride: number | null = null;
-  let modifierWeightKg: number | null = null;
-  const bandMatch = modifier.match(/RB:\s*([\d.]+)\s*kg/i);
-  if (bandMatch) {
-    bandKg = parseFloat(bandMatch[1]);
-    base = base.replace(/RB:\s*[\d.]+\s*kg/i, "").trim();
-  }
-  const levelMatch = modifier.match(/RBL:\s*(\d+)/i);
-  if (levelMatch) {
-    levelOverride = parseInt(levelMatch[1]);
-    base = base.replace(/RBL:\s*\d+/i, "").trim();
-  }
-  const mwMatch = modifier.match(/MW:\s*([\d.]+)\s*kg/i);
-  if (mwMatch) {
-    modifierWeightKg = parseFloat(mwMatch[1]);
-    base = base.replace(/MW:\s*[\d.]+\s*kg/i, "").trim();
-  }
-  const trimmed = base.replace(/\s*[|;,]\s*$/g, "").trim();
-  base = trimmed.length > 0 ? trimmed : "";
-  return { baseModifier: base || null, resistanceBandKg: bandKg, modifierWeightKg, displayLevelOverride: levelOverride };
-}
-
-function buildModifierWithBand(
-  baseModifier: string | null | undefined,
-  bandKg: number | null | undefined,
-  level: number | undefined,
-  modifierWeightKg?: number | null,
-): string | null {
-  const parts: string[] = [];
-  if (baseModifier) parts.push(baseModifier);
-  if (bandKg != null && bandKg > 0) parts.push(`RB: ${bandKg}kg`);
-  if (bandKg != null && bandKg > 0 && level != null) parts.push(`RBL: ${level}`);
-  if (modifierWeightKg != null && modifierWeightKg > 0) parts.push(`MW: ${modifierWeightKg}kg`);
-  return parts.length > 0 ? parts.join(" | ") : null;
-}
-
-function stripBwPercentHint(label: string): string {
-  return label.replace(/\s*\([\d.]+%\s*BW\)/i, "");
-}
-
-function isGymCategoryExercise(exercise: ProgressionExercise): boolean {
-  const tags = (exercise.category || "").split(",").map((t) => t.trim().toLowerCase());
-  return tags.includes("gym") || tags.includes("weight training") || tags.includes("machines");
-}
-
-function getExerciseCategoryLabel(exercise: ProgressionExercise | undefined): string {
-  if (!exercise) return "—";
-  const tags = (exercise.category || "").split(",").map((t) => t.trim().toLowerCase());
-  if (tags.includes("gym") || tags.includes("weight training") || tags.includes("machines")) return "GYM";
-  if (tags.includes("yoga") || tags.includes("stretching")) return "Yoga";
-  if (tags.includes("cardio")) return "Cardio";
-  return "Cali";
-}
-
-function getBandSoftDimOpacity(kg: number | null | undefined): number {
-  if (!kg || kg <= 0) return 1;
-  return Math.max(0.4, 1 - kg * 0.01);
-}
-
-function getBandAdjustedGlowStyle(
-  glowStyle: React.CSSProperties,
-  bandKg: number | null | undefined,
-): React.CSSProperties {
-  if (!bandKg || bandKg <= 0) return glowStyle;
-  const dimFactor = Math.max(0.25, 1 - bandKg * 0.015);
-  const result: Record<string, string> = {};
-  for (const [key, val] of Object.entries(glowStyle)) {
-    if (typeof val === "string" && val.includes("rgba")) {
-      result[key] = val.replace(/rgba\(([^)]+)\)/g, (_m, inside) => {
-        const parts = inside.split(",");
-        if (parts.length === 4) {
-          const alpha = parseFloat(parts[3]) * dimFactor;
-          return `rgba(${parts[0]},${parts[1]},${parts[2]},${alpha.toFixed(3)})`;
-        }
-        return _m;
-      });
-    } else {
-      result[key] = val;
-    }
-  }
-  return result as React.CSSProperties;
-}
-
 function abbreviateVariantText(text: string): string {
   const words = text.trim().split(/[^A-Za-z0-9]+/).filter(Boolean);
   if (words.length >= 2) return words.slice(0, 4).map((w) => w[0].toUpperCase()).join("");
   const compact = words[0] ?? text.trim();
   return compact.slice(0, 6).toUpperCase();
-}
-
-function getTierName(exercise: ProgressionExercise, level: number): string {
-  const tier = exercise.tiers.find((t) => t.level === level);
-  return tier ? tier.name : `Level ${level}`;
 }
 
 // ── Tier standards (bodyweight-percentage based) ──
@@ -291,7 +109,6 @@ function getTierFromWeights(
   return { glowColor: currentTier.color, tierName: currentTier.name };
 }
 
-/** Build tier array from a DB WeightStandardRecord, falling back to hardcoded TIER_STANDARDS. */
 function buildTierArray(record: WeightStandardRecord | null | undefined) {
   if (!record) return TIER_STANDARDS;
   return [
@@ -304,7 +121,6 @@ function buildTierArray(record: WeightStandardRecord | null | undefined) {
   ];
 }
 
-/** Compute tier from a single log entry's weights (per-row). */
 function getTierFromEntryWeights(
   weights: (number | null)[],
   userBodyweightKg: number | null,
@@ -324,28 +140,6 @@ function getTierFromEntryWeights(
   return { glowColor: tier.color, tierName: tier.name };
 }
 
-function getWeightedDifficulty(
-  exercise: ProgressionExercise,
-  level: number,
-  variant?: string | null,
-  modifier?: string | null,
-): string {
-  const tier = exercise.tiers.find((t) => t.level === level);
-  const baseDiff = tier?.difficulty || exercise.difficulty;
-  return baseDiff;
-}
-
-function getAutoGymLevelFromSet(
-  _exercise: ProgressionExercise,
-  _physique: UserPhysiqueSettings,
-  _weights: { weight1: number | null; weight2: number | null; weight3: number | null },
-  _bandKg: number | null,
-): number | null {
-  // Simplified — real implementation in workout page
-  return null;
-}
-
-/** Get the standard weight (kg) for the NEXT tier of an exercise (the target to reach). */
 function getNextTierStandardWeightKg(
   exercise: ProgressionExercise | undefined,
   currentWeights: (number | null)[],
@@ -354,8 +148,6 @@ function getNextTierStandardWeightKg(
   modifierWeightKg?: number | null,
 ): number | null {
   if (!exercise || !userBodyweightKg || userBodyweightKg <= 0) return null;
-
-  // Calculate current tier from the entry's weights
   const valid = currentWeights.filter((w): w is number => w != null && w > 0);
   if (valid.length === 0) return null;
   const avg = valid.reduce((s, w) => s + w, 0) / valid.length;
@@ -363,13 +155,10 @@ function getNextTierStandardWeightKg(
   const pct = (effectiveWeight / userBodyweightKg) * 100;
   const currentTier = TIER_STANDARDS.find((t) => pct >= t.minPercentage && pct < t.maxPercentage) || TIER_STANDARDS[TIER_STANDARDS.length - 1];
   const nextTier = TIER_STANDARDS.find((t) => t.tier === currentTier.tier + 1);
-  if (!nextTier) return null; // Already at Elite
-
-  // Next tier's minimum percentage * bodyweight = target weight
+  if (!nextTier) return null;
   return (nextTier.minPercentage / 100) * userBodyweightKg;
 }
 
-/** Compute average effective weight from a log entry (band assistance + added modifier weight). */
 function getEntryAvgWeight(entry: UnifiedFlatLogEntry): number | null {
   if (entry.exerciseType === "timed") return null;
   const weights = [entry.origWeight1, entry.origWeight2, entry.origWeight3].filter(
@@ -390,7 +179,6 @@ interface UnifiedFlatLogEntry {
   level: number;
   levelNameLevel: number;
   tierName: string;
-  // Unified value columns: weight OR holdTime depending on exercise type
   val1: number | null;
   val2: number | null;
   val3: number | null;
@@ -404,7 +192,6 @@ interface UnifiedFlatLogEntry {
   notes: string | null;
   completed: boolean;
   exerciseType: ExerciseType;
-  // Keep originals for edit mode save
   origWeight1: number | null;
   origWeight2: number | null;
   origWeight3: number | null;
@@ -424,7 +211,6 @@ function flattenLogsUnified(exercises: ProgressionExercise[]): UnifiedFlatLogEnt
       const exType = inferExerciseType(ex, hasHold);
       const parsed = parseModifierWithBand(log.modifier);
 
-      // Unified values: use holdTime for timed, weight for weighted/bodyweight
       const val1 = hasHold ? log.holdTime : log.weight1;
       const val2 = hasHold ? log.holdTime2 : log.weight2;
       const val3 = hasHold ? log.holdTime3 : log.weight3;
@@ -639,22 +425,17 @@ function UnifiedTrainingLogTable({
           notes: data.notes,
         };
       });
-      const res = await fetch("/api/progressions/logs/update", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ updates, userId }),
-      });
-      if (res.ok) {
-        setSaveMessage({ type: "success", text: "Training logs updated successfully!" });
-        setIsEditMode(false);
-        setEditingData({});
-        onRefresh();
+      const res = await api.post<{ error?: string }>("/api/progressions/logs/update", { updates });
+      setSaveMessage({ type: "success", text: "Training logs updated successfully!" });
+      setIsEditMode(false);
+      setEditingData({});
+      onRefresh();
+    } catch (err) {
+      if (err instanceof ApiRequestError) {
+        setSaveMessage({ type: "error", text: err.message || "Failed to save changes" });
       } else {
-        const data = await res.json();
-        setSaveMessage({ type: "error", text: data.error || "Failed to save changes" });
+        setSaveMessage({ type: "error", text: "Network error — unable to save changes" });
       }
-    } catch {
-      setSaveMessage({ type: "error", text: "Network error — unable to save changes" });
     } finally {
       setIsEditMode(false);
       setIsSaving(false);
@@ -669,21 +450,16 @@ function UnifiedTrainingLogTable({
   const handleDeleteLog = async (logId: string) => {
     setIsDeleting(true);
     try {
-      const res = await fetch("/api/progressions/logs/delete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ logId, userId }),
-      });
-      if (res.ok) {
-        setSaveMessage({ type: "success", text: "Log record deleted successfully" });
-        setDeleteConfirm(null);
-        onRefresh();
+      await api.post("/api/progressions/logs/delete", { logId });
+      setSaveMessage({ type: "success", text: "Log record deleted successfully" });
+      setDeleteConfirm(null);
+      onRefresh();
+    } catch (err) {
+      if (err instanceof ApiRequestError) {
+        setSaveMessage({ type: "error", text: err.message || "Failed to delete record" });
       } else {
-        const data = await res.json();
-        setSaveMessage({ type: "error", text: data.error || "Failed to delete record" });
+        setSaveMessage({ type: "error", text: "Network error — unable to delete record" });
       }
-    } catch {
-      setSaveMessage({ type: "error", text: "Network error — unable to delete record" });
     } finally {
       setIsDeleting(false);
     }

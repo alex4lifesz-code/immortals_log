@@ -415,7 +415,7 @@ export function DisplaySettingsProvider({ children }: { children: ReactNode }) {
 
       setRemotePrefsReady(false);
       try {
-        const res = await fetch(`/api/users/preferences?userId=${encodeURIComponent(user.id)}`, { cache: "no-store" });
+        const res = await fetch("/api/users/preferences", { cache: "no-store", credentials: "include" });
         if (!res.ok) return;
 
         const payload = await res.json();
@@ -448,8 +448,8 @@ export function DisplaySettingsProvider({ children }: { children: ReactNode }) {
       fetch("/api/users/preferences", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
-          userId: user.id,
           displaySettings: settings,
         }),
       }).catch(() => {

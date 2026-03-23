@@ -26,6 +26,7 @@ export default function MobileBottomNav() {
               <Link
                 href={tab.href}
                 onClick={() => haptics.light()}
+                aria-current={active ? "page" : undefined}
                 className={`flex min-h-12 flex-col items-center justify-center rounded-xl border px-1 py-1 text-[11px] ${
                   active
                     ? "border-jade-glow bg-jade-deep/30 text-jade-light"

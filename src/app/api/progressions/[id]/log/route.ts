@@ -1,19 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withAuth } from "@/lib/auth/middleware";
 
 // POST /api/progressions/[id]/log — log training data for a progression level
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export const POST = withAuth(async (request, { auth, params }) => {
   try {
-    const { id } = await params;
-    const body = await req.json();
-    const userId = body.userId;
-
-    if (!userId || typeof userId !== "string") {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
-    }
+    const id = params.id as string;
+    const body = await request.json();
+    const userId = auth.userId;
 
     const level = Number(body.level);
     if (!level || level < 1) {
@@ -73,4 +67,4 @@ export async function POST(
     console.error("Progression log error:", message, error);
     return NextResponse.json({ error: message || "Failed to log progression" }, { status: 500 });
   }
-}
+});

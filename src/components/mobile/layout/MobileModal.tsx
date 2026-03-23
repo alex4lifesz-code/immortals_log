@@ -2,14 +2,18 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import type { ReactNode } from "react";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 interface MobileModalProps {
   open: boolean;
   onClose: () => void;
   children: ReactNode;
+  ariaLabel?: string;
 }
 
-export default function MobileModal({ open, onClose, children }: MobileModalProps) {
+export default function MobileModal({ open, onClose, children, ariaLabel }: MobileModalProps) {
+  const trapRef = useFocusTrap(open);
+
   return (
     <AnimatePresence>
       {open && (
@@ -24,6 +28,10 @@ export default function MobileModal({ open, onClose, children }: MobileModalProp
             onClick={onClose}
           />
           <motion.section
+            ref={trapRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={ariaLabel}
             initial={{ y: 30, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 24, opacity: 0 }}

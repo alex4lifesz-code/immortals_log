@@ -4,8 +4,9 @@ import { useAppContext } from "@/context/AppContext";
 import { useHapticFeedback } from "@/hooks/useHapticFeedback";
 import { applyNavigationBarFromCssVar } from "@/utils/navigationBarColor";
 import MobileThemePreview from "@/components/mobile/theme/MobileThemePreview";
+import type { Theme } from "@/lib/config";
 
-type ThemeStyle = "midnight-ink" | "mountain-mist" | "calligraphy" | "sakura" | "sakura-dark";
+type ThemeStyle = Theme;
 
 const themePreviews: { id: ThemeStyle; title: string; colors: string[]; favorite?: boolean }[] = [
   { id: "midnight-ink", title: "Midnight Ink", colors: ["#0d0f14", "#151823", "#2d6b6b", "#c4a84a"] },

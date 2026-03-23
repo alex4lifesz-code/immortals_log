@@ -1,12 +1,19 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withAuth } from "@/lib/auth/middleware";
 
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export const PATCH = withAuth(async (req, { auth, params }) => {
   try {
-    const { id } = await params;
+    const id = params.id as string;
+
+    // Users can only update their own profile, unless admin
+    if (auth.userId !== id && auth.role !== "admin") {
+      return NextResponse.json(
+        { error: "You can only update your own profile" },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json();
     const { name } = body;
 
@@ -33,25 +40,31 @@ export async function PATCH(
       { status: 500 }
     );
   }
-}
+});
 
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export const DELETE = withAuth(async (_req, { auth, params }) => {
   try {
-    const { id } = await params;
+    const id = params.id as string;
 
-    // Prevent deleting the admin user
+    // Only admin can delete users
+    if (auth.role !== "admin") {
+      return NextResponse.json(
+        { error: "Admin access required" },
+        { status: 403 }
+      );
+    }
+
+    // Admin cannot delete themselves
+    if (auth.userId === id) {
+      return NextResponse.json(
+        { error: "Cannot delete your own account" },
+        { status: 403 }
+      );
+    }
+
     const targetUser = await prisma.user.findUnique({ where: { id } });
     if (!targetUser) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-    if (targetUser.username === "admin") {
-      return NextResponse.json(
-        { error: "Cannot delete the admin user" },
-        { status: 403 }
-      );
     }
 
     await prisma.user.delete({ where: { id } });
@@ -64,4 +77,4 @@ export async function DELETE(
       { status: 500 }
     );
   }
-}
+});

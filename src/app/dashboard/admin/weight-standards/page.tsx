@@ -85,7 +85,8 @@ function WeightStandardsEditorModal({ isOpen, onClose, exercise, userId, onSaved
       const maleRes = await fetch(`/api/admin/weight-standards/${exercise.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, gender: "MALE", tiers: maleTiers }),
+        credentials: "include",
+        body: JSON.stringify({ gender: "MALE", tiers: maleTiers }),
       });
       if (!maleRes.ok) {
         const err = await maleRes.json();
@@ -96,7 +97,8 @@ function WeightStandardsEditorModal({ isOpen, onClose, exercise, userId, onSaved
       const femaleRes = await fetch(`/api/admin/weight-standards/${exercise.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, gender: "FEMALE", tiers: femaleTiers }),
+        credentials: "include",
+        body: JSON.stringify({ gender: "FEMALE", tiers: femaleTiers }),
       });
       if (!femaleRes.ok) {
         const err = await femaleRes.json();
@@ -447,7 +449,7 @@ export default function WeightStandardsPage() {
   const fetchData = useCallback(async () => {
     if (!user?.id) return;
     try {
-      const res = await fetch(`/api/admin/weight-standards?userId=${encodeURIComponent(user.id)}`);
+      const res = await fetch("/api/admin/weight-standards", { credentials: "include" });
       if (res.status === 403) {
         router.push("/dashboard");
         return;
@@ -501,8 +503,9 @@ export default function WeightStandardsPage() {
     if (!user?.id) return;
     if (!confirm("Remove all weight standards for this exercise? It will revert to defaults.")) return;
     try {
-      await fetch(`/api/admin/weight-standards/${exerciseId}?userId=${encodeURIComponent(user.id)}`, {
+      await fetch(`/api/admin/weight-standards/${exerciseId}`, {
         method: "DELETE",
+        credentials: "include",
       });
       fetchData();
     } catch (err) {
@@ -531,7 +534,8 @@ export default function WeightStandardsPage() {
       const res = await fetch("/api/admin/weight-standards/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id, exercises: data.exercises }),
+        credentials: "include",
+        body: JSON.stringify({ exercises: data.exercises }),
       });
 
       const result = await res.json();

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { GlowModal } from "@/components/ui/GlowCard";
+import GlowButton from "@/components/ui/GlowButton";
 import { DEFAULT_USER_PHYSIQUE, loadUserPhysique, saveUserPhysique, syncWeightFromLatestCheckin, UserGender } from "@/lib/user-physique";
 
 interface UserPhysiqueButtonProps {
@@ -38,7 +39,7 @@ export default function UserPhysiqueButton({ userId, userName, className }: User
     setCheckinWeightLoading(true);
     setOpen(true);
 
-    fetch(`/api/checkins/latest-weight?userId=${encodeURIComponent(userId)}`)
+    fetch("/api/checkins/latest-weight", { credentials: "include" })
       .then((res) => res.json())
       .then((data) => {
         if (data.weight != null) {
@@ -201,23 +202,27 @@ export default function UserPhysiqueButton({ userId, userName, className }: User
           </div>
 
           <div className="flex gap-2">
-            <button
+            <GlowButton
+              variant="ghost"
+              size="sm"
+              className="flex-1"
               onClick={() => {
                 setGender(DEFAULT_USER_PHYSIQUE.gender);
                 setBodyWeightKg("");
                 setSyncEnabled(false);
               }}
-              className="flex-1 px-3 py-2 rounded-lg text-xs border border-ink-light text-mist-light hover:bg-ink-mid/30 transition-colors"
             >
               Clear
-            </button>
-            <button
+            </GlowButton>
+            <GlowButton
+              variant="jade"
+              size="sm"
+              className="flex-1"
               onClick={handleSave}
               disabled={!canSave}
-              className="flex-1 px-3 py-2 rounded-lg text-xs border border-jade/50 bg-jade-deep/30 text-jade-light hover:bg-jade-deep/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Save
-            </button>
+            </GlowButton>
           </div>
         </div>
       </GlowModal>

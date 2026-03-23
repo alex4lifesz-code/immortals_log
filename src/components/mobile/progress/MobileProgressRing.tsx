@@ -13,7 +13,14 @@ export default function MobileProgressRing({ progress, label, valueText }: Mobil
   const dashOffset = circumference - (normalized / 100) * circumference;
 
   return (
-    <div className="relative inline-flex items-center justify-center">
+    <div
+      className="relative inline-flex items-center justify-center"
+      role="progressbar"
+      aria-valuenow={normalized}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-label={label || "Progress"}
+    >
       <svg viewBox="0 0 120 120" className="h-28 w-28 -rotate-90">
         <circle cx="60" cy="60" r={radius} className="fill-none stroke-ink-mid" strokeWidth="10" />
         <circle

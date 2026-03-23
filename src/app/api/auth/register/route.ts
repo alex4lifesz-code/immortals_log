@@ -1,9 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { createToken, setAuthCookie } from "@/lib/auth";
+import { registerLimiter } from "@/lib/auth/rate-limiters";
+import { getClientIdentifier } from "@/lib/rate-limit";
+import { validatePassword, validateUsername } from "@/lib/validation";
+import { CONFIG } from "@/lib/config";
 
 export async function POST(req: NextRequest) {
   try {
+    // Rate limiting
+    const clientId = getClientIdentifier(req);
+    const rateCheck = registerLimiter.check(clientId);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: "Too many registration attempts. Please try again later.",
+          code: "RATE_LIMITED",
+          retryAfter: rateCheck.resetAt.toISOString(),
+        },
+        { status: 429 }
+      );
+    }
+
     const { username, password, name } = await req.json();
 
     if (!username || !password || !name) {
@@ -14,7 +33,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate types
-    if (typeof username !== "string" || typeof password !== "string" || typeof name !== "string") {
+    if (
+      typeof username !== "string" ||
+      typeof password !== "string" ||
+      typeof name !== "string"
+    ) {
       return NextResponse.json(
         { error: "Invalid field types" },
         { status: 400 }
@@ -24,18 +47,20 @@ export async function POST(req: NextRequest) {
     const trimmedUsername = username.trim();
     const trimmedName = name.trim().slice(0, 100);
 
-    // Validate username: 2-30 chars, alphanumeric + underscores/hyphens
-    if (trimmedUsername.length < 2 || trimmedUsername.length > 30 || !/^[a-zA-Z0-9_-]+$/.test(trimmedUsername)) {
+    // Validate username
+    const usernameValidation = validateUsername(trimmedUsername);
+    if (!usernameValidation.valid) {
       return NextResponse.json(
-        { error: "Dao name must be 2-30 characters (letters, numbers, underscores, hyphens)" },
+        { error: usernameValidation.errors.join(". ") },
         { status: 400 }
       );
     }
 
-    // Validate password minimum length
-    if (password.length < 4 || password.length > 100) {
+    // Validate password with complexity requirements
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
       return NextResponse.json(
-        { error: "Secret art must be between 4 and 100 characters" },
+        { error: passwordValidation.errors.join(". ") },
         { status: 400 }
       );
     }
@@ -48,7 +73,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const existing = await prisma.user.findUnique({ where: { username: trimmedUsername } });
+    const existing = await prisma.user.findUnique({
+      where: { username: trimmedUsername },
+    });
     if (existing) {
       return NextResponse.json(
         { error: "Dao name already taken" },
@@ -56,19 +83,42 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(
+      password,
+      CONFIG.auth.bcryptRounds
+    );
 
     // Check if this is the first user — assign admin role
     const userCount = await prisma.user.count();
     const role = userCount === 0 ? "admin" : "user";
 
     const user = await prisma.user.create({
-      data: { username: trimmedUsername, password: hashedPassword, name: trimmedName, role },
+      data: {
+        username: trimmedUsername,
+        password: hashedPassword,
+        name: trimmedName,
+        role,
+      },
     });
 
-    return NextResponse.json({
-      user: { id: user.id, username: user.username, name: user.name, role: user.role },
+    // Auto-login after registration: generate JWT and set cookie
+    const token = await createToken(
+      { id: user.id, username: user.username, name: user.name, role: user.role },
+      false
+    );
+
+    const response = NextResponse.json({
+      user: {
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        role: user.role,
+      },
     });
+
+    setAuthCookie(response, token, false);
+
+    return response;
   } catch (error) {
     console.error("Register error:", error);
     return NextResponse.json(
