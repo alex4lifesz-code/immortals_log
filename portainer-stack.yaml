@@ -10,6 +10,7 @@
 # Required environment variables (set in Portainer):
 #   APP_PORT       — Host port for the application (default: 3000)
 #   APP_VERSION    — Image tag / version label (default: latest)
+#   JWT_SECRET     — Secret key for JWT token signing (generate: openssl rand -base64 32)
 #
 # Optional environment variables:
 #   RESET_DB       — Set to "true" to wipe and rebuild the database from scratch
@@ -27,6 +28,7 @@ services:
     environment:
       - NODE_ENV=production
       - DATABASE_URL=file:/app/data/cultivation.db
+      - JWT_SECRET=${JWT_SECRET}
       - NEXT_TELEMETRY_DISABLED=1
       - RESET_DB=${RESET_DB:-false}
     volumes:

@@ -13,6 +13,7 @@ services:
     environment:
       - NODE_ENV=production
       - DATABASE_URL=file:/app/data/cultivation.db
+      - JWT_SECRET=${JWT_SECRET}
       - NEXT_TELEMETRY_DISABLED=1
     volumes:
       - wuxia_data:/app/data
