@@ -1,11 +1,11 @@
 "use client";
 
-import { motion } from "framer-motion";
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { motion, type HTMLMotionProps } from "framer-motion";
+import type { ReactNode } from "react";
 
 type MobileButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 
-interface MobileButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface MobileButtonProps extends HTMLMotionProps<"button"> {
   children: ReactNode;
   variant?: MobileButtonVariant;
 }

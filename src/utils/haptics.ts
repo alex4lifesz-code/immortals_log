@@ -21,14 +21,14 @@ export async function triggerHaptic(level: HapticLevel) {
   const mod = await getHaptics();
   if (!mod) return;
 
-  const styleMap: Record<HapticLevel, "LIGHT" | "MEDIUM" | "HEAVY"> = {
-    light: "LIGHT",
-    medium: "MEDIUM",
-    heavy: "HEAVY",
-  };
+  const styleMap = {
+    light: mod.ImpactStyle.Light,
+    medium: mod.ImpactStyle.Medium,
+    heavy: mod.ImpactStyle.Heavy,
+  } as const;
 
   try {
-    await mod.Haptics.impact({ style: mod.ImpactStyle[styleMap[level]] });
+    await mod.Haptics.impact({ style: styleMap[level] });
   } catch {
     // Best-effort only; do not block UX.
   }

@@ -24,9 +24,6 @@ const config: CapacitorConfig = {
     appendUserAgent: " CapacitorNative/3.0",
   },
   plugins: {
-    App: {
-      launchUrl: "",
-    },
     SplashScreen: {
       launchAutoHide: true,
       launchShowDuration: 1500,
