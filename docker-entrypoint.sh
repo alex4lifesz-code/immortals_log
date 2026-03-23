@@ -88,6 +88,33 @@ const bcrypt = require("bcryptjs");
 
 async function seed() {
   const client = createClient({ url: process.env.DATABASE_URL });
+  const resetAdminPassword = process.env.RESET_ADMIN_PASSWORD === "true";
+
+  if (resetAdminPassword) {
+    console.log("RESET_ADMIN_PASSWORD=true. Resetting admin credentials...");
+    const now = new Date().toISOString();
+    const hash = await bcrypt.hash("admin", 10);
+    const existingAdmin = await client.execute({
+      sql: "SELECT id FROM User WHERE username = ? LIMIT 1",
+      args: ["admin"],
+    });
+
+    if (existingAdmin.rows.length > 0) {
+      await client.execute({
+        sql: "UPDATE User SET password = ?, role = ?, updatedAt = ? WHERE username = ?",
+        args: [hash, "admin", now, "admin"],
+      });
+      console.log("Admin password reset complete (admin/admin).");
+    } else {
+      const id = "admin_" + Date.now().toString(36);
+      await client.execute({
+        sql: "INSERT INTO User (id, username, password, name, role, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        args: [id, "admin", hash, "Administrator", "admin", now, now]
+      });
+      console.log("Admin user created with credentials (admin/admin).");
+    }
+  }
+
   const result = await client.execute("SELECT COUNT(*) as cnt FROM User");
   const count = result.rows[0].cnt;
   if (count === 0) {
