@@ -54,6 +54,23 @@ function formatDateDisplay(dateStr: string): string {
   return `${dayNames[date.getDay()]}, ${monthNames[date.getMonth()]} ${date.getDate()}`;
 }
 
+function getCompactUserLabel(name: string): string {
+  const trimmed = name.trim();
+  if (!trimmed) return "?";
+
+  const words = trimmed.split(/\s+/).filter(Boolean);
+  if (words.length === 1) {
+    return words[0].slice(0, 3);
+  }
+
+  const initials = words
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase() || "")
+    .join("");
+
+  return initials || trimmed.slice(0, 3).toUpperCase();
+}
+
 function CheckInSidebar({
   onAddToday,
   onAddCustom,
@@ -695,7 +712,14 @@ export default function CheckInPage() {
                 >
                   <div className="px-1">Date</div>
                   {users.map((u) => (
-                    <div key={`h-c-${u.id}`} className="text-center px-0.5">{u.name}</div>
+                    <div
+                      key={`h-c-${u.id}`}
+                      className="text-center px-0.5 truncate"
+                      title={u.name}
+                      aria-label={u.name}
+                    >
+                      {getCompactUserLabel(u.name)}
+                    </div>
                   ))}
                   {users.map((u) => (
                     <div key={`h-w-${u.id}`} className="text-center px-0.5">{u.name.charAt(0)}.Wt</div>

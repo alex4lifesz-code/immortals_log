@@ -25,6 +25,9 @@ type TargetExercise = {
   id: string;
   name: string;
   wuxiaName: string;
+  difficulty: string;
+  wuxiaDifficulty: string;
+  wuxiaType: string;
 };
 
 type SourceProgressionExercise = {
@@ -81,6 +84,54 @@ function normalizeText(v: unknown): string {
     .trim();
 }
 
+function inferImportedExerciseShape(log: ImportedLog) {
+  const hasWeightedData = [log.weight1, log.weight2, log.weight3].some((value) => {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) && numeric > 0;
+  });
+  const hasHoldData = [log.holdTime, log.holdTime2, log.holdTime3].some((value) => {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) && numeric > 0;
+  });
+
+  if (hasWeightedData) {
+    return {
+      category: "Imported, GYM",
+      equipmentType: "machine, barbell, dumbbell",
+      bodyweight: false,
+      weighted: true,
+      rings: false,
+      difficulty: "",
+      wuxiaDifficulty: "",
+      wuxiaType: "",
+    };
+  }
+
+  if (hasHoldData) {
+    return {
+      category: "Imported, Yoga",
+      equipmentType: "bodyweight",
+      bodyweight: true,
+      weighted: false,
+      rings: false,
+      difficulty: "",
+      wuxiaDifficulty: "",
+      wuxiaType: "",
+    };
+  }
+
+  return {
+    category: "Imported, Calisthenics",
+    equipmentType: "bodyweight",
+    bodyweight: true,
+    weighted: false,
+    rings: false,
+    difficulty: "",
+    wuxiaDifficulty: "",
+    wuxiaType: "",
+  };
+}
+
 function addExerciseToMaps(
   exercise: TargetExercise,
   byId: Map<string, TargetExercise>,
@@ -135,14 +186,42 @@ export async function POST(req: NextRequest) {
 
     const exercises = await prisma.progressionExercise.findMany({
       where: { userId },
-      select: { id: true, name: true, wuxiaName: true },
+      select: {
+        id: true,
+        name: true,
+        wuxiaName: true,
+        difficulty: true,
+        wuxiaDifficulty: true,
+        wuxiaType: true,
+        tiers: { select: { level: true } },
+        variations: { select: { name: true, wuxiaName: true } },
+      },
     });
 
     const exerciseById = new Map<string, TargetExercise>();
     const exerciseByName = new Map<string, TargetExercise>();
+    const tierLevelsByExerciseId = new Map<string, Set<number>>();
+    const variationKeysByExerciseId = new Map<string, Set<string>>();
     for (const ex of exercises) {
+      tierLevelsByExerciseId.set(ex.id, new Set(ex.tiers.map((tier) => tier.level)));
+      variationKeysByExerciseId.set(
+        ex.id,
+        new Set(
+          ex.variations
+            .flatMap((variation) => [variation.name, variation.wuxiaName])
+            .map(normalizeText)
+            .filter(Boolean)
+        )
+      );
       addExerciseToMaps(
-        { id: ex.id, name: ex.name, wuxiaName: ex.wuxiaName || "" },
+        {
+          id: ex.id,
+          name: ex.name,
+          wuxiaName: ex.wuxiaName || "",
+          difficulty: ex.difficulty || "",
+          wuxiaDifficulty: ex.wuxiaDifficulty || "",
+          wuxiaType: ex.wuxiaType || "",
+        },
         exerciseById,
         exerciseByName
       );
@@ -199,9 +278,9 @@ export async function POST(req: NextRequest) {
 
     const existingLevels = await prisma.userProgressionLevel.findMany({
       where: { userId },
-      select: { id: true, exerciseId: true },
+      select: { id: true, exerciseId: true, currentLevel: true },
     });
-    const levelByExerciseId = new Map(existingLevels.map((l) => [l.exerciseId, l.id]));
+    const levelByExerciseId = new Map(existingLevels.map((l) => [l.exerciseId, { id: l.id, currentLevel: l.currentLevel }]));
 
     if (replaceExisting) {
       await prisma.progressionLog.deleteMany({
@@ -211,6 +290,9 @@ export async function POST(req: NextRequest) {
 
     let imported = 0;
     let skipped = 0;
+    let createdExercises = 0;
+    let createdVariations = 0;
+    let createdTiers = 0;
     const skippedDetails: string[] = [];
 
     const createTargetExerciseFromLibrary = async (lib: LibraryExercise): Promise<TargetExercise> => {
@@ -232,10 +314,20 @@ export async function POST(req: NextRequest) {
           primaryMuscles: "",
           secondaryMuscles: "",
         },
-        select: { id: true, name: true, wuxiaName: true },
+        select: { id: true, name: true, wuxiaName: true, difficulty: true, wuxiaDifficulty: true, wuxiaType: true },
       });
-      const target = { id: created.id, name: created.name, wuxiaName: created.wuxiaName || "" };
+      const target = {
+        id: created.id,
+        name: created.name,
+        wuxiaName: created.wuxiaName || "",
+        difficulty: created.difficulty || "",
+        wuxiaDifficulty: created.wuxiaDifficulty || created.difficulty || "",
+        wuxiaType: created.wuxiaType || "",
+      };
       addExerciseToMaps(target, exerciseById, exerciseByName);
+      tierLevelsByExerciseId.set(target.id, new Set<number>());
+      variationKeysByExerciseId.set(target.id, new Set<string>());
+      createdExercises++;
       return target;
     };
 
@@ -258,11 +350,111 @@ export async function POST(req: NextRequest) {
           primaryMuscles: src.primaryMuscles || "",
           secondaryMuscles: src.secondaryMuscles || "",
         },
-        select: { id: true, name: true, wuxiaName: true },
+        select: { id: true, name: true, wuxiaName: true, difficulty: true, wuxiaDifficulty: true, wuxiaType: true },
       });
-      const target = { id: created.id, name: created.name, wuxiaName: created.wuxiaName || "" };
+      const target = {
+        id: created.id,
+        name: created.name,
+        wuxiaName: created.wuxiaName || "",
+        difficulty: created.difficulty || "",
+        wuxiaDifficulty: created.wuxiaDifficulty || created.difficulty || "",
+        wuxiaType: created.wuxiaType || "",
+      };
       addExerciseToMaps(target, exerciseById, exerciseByName);
+      tierLevelsByExerciseId.set(target.id, new Set<number>());
+      variationKeysByExerciseId.set(target.id, new Set<string>());
+      createdExercises++;
       return target;
+    };
+
+    const createTargetExerciseFromImport = async (rawLog: ImportedLog): Promise<TargetExercise | null> => {
+      const trimmedName = String(rawLog.exerciseName || "").trim();
+      if (!trimmedName) return null;
+
+      const inferred = inferImportedExerciseShape(rawLog);
+      const created = await prisma.progressionExercise.create({
+        data: {
+          userId,
+          name: trimmedName.slice(0, 200),
+          wuxiaName: trimmedName.slice(0, 200),
+          difficulty: inferred.difficulty,
+          wuxiaDifficulty: inferred.wuxiaDifficulty,
+          type: inferred.category.includes("GYM") ? "Heaven and Earth United" : "",
+          wuxiaType: inferred.wuxiaType,
+          story: "Imported from training log",
+          category: inferred.category,
+          equipmentType: inferred.equipmentType,
+          bodyweight: inferred.bodyweight,
+          weighted: inferred.weighted,
+          rings: inferred.rings,
+          primaryMuscles: "",
+          secondaryMuscles: "",
+        },
+        select: { id: true, name: true, wuxiaName: true, difficulty: true, wuxiaDifficulty: true, wuxiaType: true },
+      });
+
+      const target = {
+        id: created.id,
+        name: created.name,
+        wuxiaName: created.wuxiaName || "",
+        difficulty: created.difficulty || "",
+        wuxiaDifficulty: created.wuxiaDifficulty || created.difficulty || "",
+        wuxiaType: created.wuxiaType || "",
+      };
+      addExerciseToMaps(target, exerciseById, exerciseByName);
+      tierLevelsByExerciseId.set(target.id, new Set<number>());
+      variationKeysByExerciseId.set(target.id, new Set<string>());
+      createdExercises++;
+      return target;
+    };
+
+    const ensureTierExists = async (exercise: TargetExercise, level: number) => {
+      const normalizedLevel = Math.max(1, Math.floor(level || 1));
+      const existingLevelsForExercise = tierLevelsByExerciseId.get(exercise.id) ?? new Set<number>();
+      if (existingLevelsForExercise.has(normalizedLevel)) return;
+
+      await prisma.progressionTier.create({
+        data: {
+          exerciseId: exercise.id,
+          level: normalizedLevel,
+          name: normalizedLevel === 1 ? exercise.name : `${exercise.name} Level ${normalizedLevel}`,
+          wuxiaName: normalizedLevel === 1 ? (exercise.wuxiaName || exercise.name) : `${exercise.wuxiaName || exercise.name} Level ${normalizedLevel}`,
+          difficulty: exercise.difficulty || "",
+          wuxiaDifficulty: exercise.wuxiaDifficulty || exercise.difficulty || "",
+          wuxiaType: exercise.wuxiaType || "",
+        },
+      });
+
+      existingLevelsForExercise.add(normalizedLevel);
+      tierLevelsByExerciseId.set(exercise.id, existingLevelsForExercise);
+      createdTiers++;
+    };
+
+    const ensureVariationExists = async (exercise: TargetExercise, variantName: string | null | undefined) => {
+      const trimmedVariant = String(variantName || "").trim();
+      if (!trimmedVariant) return;
+
+      const normalizedVariant = normalizeText(trimmedVariant);
+      if (!normalizedVariant) return;
+
+      const existingVariationKeys = variationKeysByExerciseId.get(exercise.id) ?? new Set<string>();
+      if (existingVariationKeys.has(normalizedVariant)) return;
+
+      await prisma.progressionVariation.create({
+        data: {
+          exerciseId: exercise.id,
+          name: trimmedVariant.slice(0, 200),
+          wuxiaName: trimmedVariant.slice(0, 200),
+          difficulty: exercise.difficulty || "",
+          wuxiaDifficulty: exercise.wuxiaDifficulty || exercise.difficulty || "",
+          wuxiaType: exercise.wuxiaType || "",
+          description: "Imported from training log",
+        },
+      });
+
+      existingVariationKeys.add(normalizedVariant);
+      variationKeysByExerciseId.set(exercise.id, existingVariationKeys);
+      createdVariations++;
     };
 
     for (const rawLog of logs) {
@@ -291,6 +483,10 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      if (!exercise && rawLog.exerciseName) {
+        exercise = await createTargetExerciseFromImport(rawLog);
+      }
+
       if (!exercise) {
         skipped++;
         if (skippedDetails.length < 50) {
@@ -299,25 +495,36 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
-      let userProgressionId = levelByExerciseId.get(exercise.id);
-      if (!userProgressionId) {
+      const level = Math.max(1, Math.floor(Number(rawLog.level) || 1));
+      await ensureTierExists(exercise, level);
+      await ensureVariationExists(exercise, rawLog.variant);
+
+      let userProgression = levelByExerciseId.get(exercise.id);
+      if (!userProgression) {
         const createdLevel = await prisma.userProgressionLevel.create({
           data: {
             userId,
             exerciseId: exercise.id,
-            currentLevel: Math.max(1, Math.floor(Number(rawLog.level) || 1)),
+            currentLevel: level,
           },
-          select: { id: true },
+          select: { id: true, currentLevel: true },
         });
-        userProgressionId = createdLevel.id;
-        levelByExerciseId.set(exercise.id, createdLevel.id);
+        userProgression = createdLevel;
+        levelByExerciseId.set(exercise.id, createdLevel);
       }
 
-      const level = Math.max(1, Math.floor(Number(rawLog.level) || 1));
+      if (userProgression.currentLevel < level) {
+        await prisma.userProgressionLevel.update({
+          where: { id: userProgression.id },
+          data: { currentLevel: level },
+        });
+        userProgression = { ...userProgression, currentLevel: level };
+        levelByExerciseId.set(exercise.id, userProgression);
+      }
 
       await prisma.progressionLog.create({
         data: {
-          userProgressionId,
+          userProgressionId: userProgression.id,
           level,
           weight1: normalizeNullableNumber(rawLog.weight1, 0, 10000),
           reps1: normalizeNullableInt(rawLog.reps1, 0, 500),
@@ -343,6 +550,9 @@ export async function POST(req: NextRequest) {
       success: true,
       imported,
       skipped,
+      createdExercises,
+      createdVariations,
+      createdTiers,
       skippedDetails: skippedDetails.length > 0 ? skippedDetails : undefined,
       replaced: replaceExisting,
     });

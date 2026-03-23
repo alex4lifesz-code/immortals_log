@@ -20,11 +20,6 @@ const NAV_ICON_MAP: Record<string, ReactNode> = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
     </svg>
   ),
-  "/dashboard/exercises": (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-    </svg>
-  ),
 };
 
 function BottomBar() {
@@ -43,7 +38,7 @@ function BottomBar() {
   const primaryItems = useMemo(() => [
     items.find(i => i.path === "/dashboard"),
     items.find(i => i.path === "/dashboard/workout"),
-    items.find(i => i.path === "/dashboard/exercises"),
+    items.find(i => i.path === "/dashboard/checkin"),
   ].filter(Boolean) as typeof items, [items]);
 
   const moreItems = useMemo(

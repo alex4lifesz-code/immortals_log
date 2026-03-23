@@ -14,10 +14,10 @@ import {
   DateFormatOption,
   ActiveCardStyle,
   VariationDisplayMode,
-  ProgressionVisibleColumnKey,
-  ProgressionHoldVisibleColumnKey,
-  DEFAULT_PROGRESSION_VISIBLE_COLUMNS,
-  DEFAULT_PROGRESSION_HOLD_VISIBLE_COLUMNS,
+  UnifiedVisibleColumnKey,
+  DEFAULT_UNIFIED_VISIBLE_COLUMNS,
+  PopupLoggerStyle,
+  WeightUnitPref,
 } from "@/context/DisplaySettingsContext";
 import PresetSlots from "@/components/ui/PresetSlots";
 import SetupWizard from "@/components/ui/SetupWizard";
@@ -40,13 +40,18 @@ function SettingRow({
   );
 }
 
-const PROGRESSION_LOG_COLUMN_OPTIONS: Array<{ key: ProgressionVisibleColumnKey; label: string }> = [
+function getColumnOptionLabelClass(label: string) {
+  return /^(W|R|T|S)\d$/.test(label)
+    ? "inline-flex min-w-[2.25rem] justify-center font-semibold tabular-nums tracking-[0.08em]"
+    : "inline-flex min-w-0";
+}
+
+const UNIFIED_COLUMN_OPTIONS: Array<{ key: UnifiedVisibleColumnKey; label: string }> = [
   { key: "date", label: "Date" },
-  { key: "level", label: "Level" },
   { key: "category", label: "Category" },
-  { key: "weight1", label: "W1" },
-  { key: "weight2", label: "W2" },
-  { key: "weight3", label: "W3" },
+  { key: "val1", label: "S1" },
+  { key: "val2", label: "S2" },
+  { key: "val3", label: "S3" },
   { key: "reps1", label: "R1" },
   { key: "reps2", label: "R2" },
   { key: "reps3", label: "R3" },
@@ -54,29 +59,9 @@ const PROGRESSION_LOG_COLUMN_OPTIONS: Array<{ key: ProgressionVisibleColumnKey; 
   { key: "band", label: "Band" },
   { key: "variant", label: "Variant" },
   { key: "notes", label: "Notes" },
+  { key: "standardWeight", label: "Std Wt" },
+  { key: "avgWeight", label: "Avg Wt" },
 ];
-
-const PROGRESSION_HOLD_COLUMN_OPTIONS: Array<{ key: ProgressionHoldVisibleColumnKey; label: string }> = [
-  { key: "date", label: "Date" },
-  { key: "level", label: "Level" },
-  { key: "category", label: "Category" },
-  { key: "holdTime", label: "T1" },
-  { key: "holdTime2", label: "T2" },
-  { key: "holdTime3", label: "T3" },
-  { key: "reps1", label: "W1" },
-  { key: "reps2", label: "W2" },
-  { key: "reps3", label: "W3" },
-  { key: "modifier", label: "Modifier" },
-  { key: "band", label: "Band" },
-  { key: "variant", label: "Variant" },
-  { key: "notes", label: "Notes" },
-];
-
-function getColumnOptionLabelClass(label: string) {
-  return /^(W|R|T)\d$/.test(label)
-    ? "inline-flex min-w-[2.25rem] justify-center font-semibold tabular-nums tracking-[0.08em]"
-    : "inline-flex min-w-0";
-}
 
 function SettingsSidebar({ onLogout }: { onLogout: () => void }) {
   const { themeStyle, viewportMode } = useAppContext();
@@ -155,6 +140,8 @@ function SettingsSidebar({ onLogout }: { onLogout: () => void }) {
           <SettingRow label="Card Glow" value={`${settings.glowIntensityProgressionCards ?? 100}%`} color={(settings.glowIntensityProgressionCards ?? 100) > 0 ? "text-gold" : "text-mist-dark"} />
           <SettingRow label="Log Glow" value={`${settings.glowIntensityProgressionLog ?? 100}%`} color={(settings.glowIntensityProgressionLog ?? 100) > 0 ? "text-gold" : "text-mist-dark"} />
           <SettingRow label="Click Mode" value={(settings.progressionSidebarExpandTiers ?? true) ? "Expanded" : "Basic"} color="text-gold" />
+          <SettingRow label="Weight Unit" value={(settings.defaultWeightUnit ?? "kg").toUpperCase()} color="text-gold" />
+          <SettingRow label="Logger Style" value={(settings.popupLoggerStyle ?? "classic").charAt(0).toUpperCase() + (settings.popupLoggerStyle ?? "classic").slice(1)} color="text-gold" />
         </div>
       </div>
 
@@ -196,21 +183,12 @@ export default function SettingsPage() {
   } = useAppContext();
   const { settings, updateSettings, resetSettings } = useDisplaySettings();
   const [showWizard, setShowWizard] = useState(false);
-  const visibleProgressionColumns = settings.progressionVisibleColumns ?? DEFAULT_PROGRESSION_VISIBLE_COLUMNS;
-  const visibleHoldColumns = settings.progressionHoldVisibleColumns ?? DEFAULT_PROGRESSION_HOLD_VISIBLE_COLUMNS;
-
-  const toggleProgressionColumn = (key: ProgressionVisibleColumnKey) => {
-    const next = visibleProgressionColumns.includes(key)
-      ? visibleProgressionColumns.filter((column) => column !== key)
-      : [...visibleProgressionColumns, key];
-    updateSettings({ progressionVisibleColumns: next });
-  };
-
-  const toggleHoldColumn = (key: ProgressionHoldVisibleColumnKey) => {
-    const next = visibleHoldColumns.includes(key)
-      ? visibleHoldColumns.filter((column) => column !== key)
-      : [...visibleHoldColumns, key];
-    updateSettings({ progressionHoldVisibleColumns: next });
+  const visibleUnifiedColumns = settings.unifiedVisibleColumns ?? DEFAULT_UNIFIED_VISIBLE_COLUMNS;
+  const toggleUnifiedColumn = (key: UnifiedVisibleColumnKey) => {
+    const next = visibleUnifiedColumns.includes(key)
+      ? visibleUnifiedColumns.filter((c) => c !== key)
+      : [...visibleUnifiedColumns, key];
+    updateSettings({ unifiedVisibleColumns: next });
   };
 
   return (
@@ -735,6 +713,27 @@ export default function SettingsPage() {
                   </div>
                   <input type="range" min="0" max="100" step="5" value={settings.glowIntensityProgressionSidebar ?? 100} onChange={(e) => updateSettings({ glowIntensityProgressionSidebar: parseInt(e.target.value) })} className="w-full h-1 bg-ink-light rounded-full appearance-none cursor-pointer accent-gold" />
                 </div>
+                <div className="flex items-center justify-between gap-3 py-1.5">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[11px] text-mist-light shrink-0">Colour mode</span>
+                    <span className="text-[9px] text-mist-dark">{(settings.progressionSidebarUseThemeColor ?? false) ? "Use theme colour for all exercises" : "Colour based on weight tier"}</span>
+                  </div>
+                  <div className="flex rounded-md border border-ink-light overflow-hidden shrink-0">
+                    {([{ value: false, label: "Tier" }, { value: true, label: "Theme" }] as const).map((opt) => (
+                      <button
+                        key={String(opt.value)}
+                        onClick={() => updateSettings({ progressionSidebarUseThemeColor: opt.value })}
+                        className={`px-2.5 py-1 text-[10px] font-medium transition-all ${
+                          (settings.progressionSidebarUseThemeColor ?? false) === opt.value
+                            ? "bg-gold-dim/20 text-gold border-gold/30"
+                            : "text-mist-dark hover:text-mist-light hover:bg-ink-mid/20"
+                        } ${opt.value ? "border-l border-ink-light" : ""}`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -879,16 +878,16 @@ export default function SettingsPage() {
                 </div>
                 <div className="py-1.5">
                   <div className="min-w-0 mb-2">
-                    <span className="text-[11px] text-mist-light block">Visible columns</span>
-                    <span className="text-[9px] text-mist-dark block mt-0.5">Exercise always stays visible in both logs</span>
+                    <span className="text-[11px] text-mist-light block">Visible columns (unified)</span>
+                    <span className="text-[9px] text-mist-dark block mt-0.5">Exercise always stays visible. S = Set value (weight/time)</span>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                    {PROGRESSION_LOG_COLUMN_OPTIONS.map((option) => (
+                    {UNIFIED_COLUMN_OPTIONS.map((option) => (
                       <label key={option.key} className="flex items-center gap-2 rounded-md border border-ink-light/70 px-2 py-1.5 text-[10px] text-mist-light hover:border-gold/30 hover:bg-ink-mid/15 cursor-pointer">
                         <input
                           type="checkbox"
-                          checked={visibleProgressionColumns.includes(option.key)}
-                          onChange={() => toggleProgressionColumn(option.key)}
+                          checked={visibleUnifiedColumns.includes(option.key)}
+                          onChange={() => toggleUnifiedColumn(option.key)}
                           className="h-3.5 w-3.5 rounded border-ink-light bg-ink-dark text-gold focus:ring-gold/40"
                         />
                         <span className={getColumnOptionLabelClass(option.label)}>{option.label}</span>
@@ -896,22 +895,47 @@ export default function SettingsPage() {
                     ))}
                   </div>
                 </div>
-                <div className="py-1.5">
-                  <div className="min-w-0 mb-2">
-                    <span className="text-[11px] text-mist-light block">Timed hold columns</span>
-                    <span className="text-[9px] text-mist-dark block mt-0.5">Control the secondary hold log separately</span>
+                <div className="flex items-center justify-between gap-3 py-1.5">
+                  <div className="min-w-0">
+                    <span className="text-[11px] text-mist-light shrink-0 block">Default weight unit</span>
+                    <span className="text-[9px] text-mist-dark block mt-0.5">Used for display in the unified training log</span>
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                    {PROGRESSION_HOLD_COLUMN_OPTIONS.map((option) => (
-                      <label key={option.key} className="flex items-center gap-2 rounded-md border border-ink-light/70 px-2 py-1.5 text-[10px] text-mist-light hover:border-gold/30 hover:bg-ink-mid/15 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={visibleHoldColumns.includes(option.key)}
-                          onChange={() => toggleHoldColumn(option.key)}
-                          className="h-3.5 w-3.5 rounded border-ink-light bg-ink-dark text-gold focus:ring-gold/40"
-                        />
-                        <span className={getColumnOptionLabelClass(option.label)}>{option.label}</span>
-                      </label>
+                  <div className="flex rounded-md border border-ink-light overflow-hidden">
+                    {(["kg", "lbs"] as const).map((u, idx) => (
+                      <button
+                        key={u}
+                        onClick={() => updateSettings({ defaultWeightUnit: u as WeightUnitPref })}
+                        className={`px-3 py-1 text-[10px] font-medium transition-all ${
+                          (settings.defaultWeightUnit ?? "kg") === u
+                            ? "bg-gold-dim/20 text-gold border-gold/30"
+                            : "text-mist-dark hover:text-mist-light hover:bg-ink-mid/20"
+                        } ${idx > 0 ? "border-l border-ink-light" : ""}`}
+                      >
+                        {u.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-3 py-1.5">
+                  <div className="min-w-0">
+                    <span className="text-[11px] text-mist-light shrink-0 block">Popup logger style</span>
+                    <span className="text-[9px] text-mist-dark block mt-0.5">
+                      {(settings.popupLoggerStyle ?? "classic") === "classic" ? "Full set panels with timer integration" : (settings.popupLoggerStyle ?? "classic") === "minimal" ? "Vertical stacked rows — quick entry" : "Compact inline grid — max density"}
+                    </span>
+                  </div>
+                  <div className="flex rounded-md border border-ink-light overflow-hidden">
+                    {(["classic", "minimal", "compact"] as const).map((s, idx) => (
+                      <button
+                        key={s}
+                        onClick={() => updateSettings({ popupLoggerStyle: s as PopupLoggerStyle })}
+                        className={`px-2.5 py-1 text-[10px] font-medium transition-all capitalize ${
+                          (settings.popupLoggerStyle ?? "classic") === s
+                            ? "bg-gold-dim/20 text-gold border-gold/30"
+                            : "text-mist-dark hover:text-mist-light hover:bg-ink-mid/20"
+                        } ${idx > 0 ? "border-l border-ink-light" : ""}`}
+                      >
+                        {s}
+                      </button>
                     ))}
                   </div>
                 </div>

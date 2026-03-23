@@ -22,6 +22,42 @@ export type TerminologyMode = "fantasy" | "normal";
 
 export type VariationDisplayMode = "abbreviation" | "full";
 
+export type PopupLoggerStyle = "classic" | "minimal" | "compact";
+
+export type WeightUnitPref = "kg" | "lbs";
+
+// Unified column keys for the merged training log table
+export type UnifiedVisibleColumnKey =
+  | "date"
+  | "category"
+  | "val1"
+  | "val2"
+  | "val3"
+  | "reps1"
+  | "reps2"
+  | "reps3"
+  | "modifier"
+  | "band"
+  | "variant"
+  | "notes"
+  | "standardWeight"
+  | "avgWeight";
+
+export const DEFAULT_UNIFIED_VISIBLE_COLUMNS: UnifiedVisibleColumnKey[] = [
+  "date",
+  "category",
+  "val1",
+  "val2",
+  "val3",
+  "reps1",
+  "reps2",
+  "reps3",
+  "modifier",
+  "band",
+  "variant",
+  "notes",
+];
+
 export type ProgressionVisibleColumnKey =
   | "date"
   | "level"
@@ -174,6 +210,12 @@ export interface DisplaySettings {
   progressionHoldVisibleColumns: ProgressionHoldVisibleColumnKey[];
   // Progression log variation display mode
   progressionVariationDisplay: VariationDisplayMode;
+  // Unified training log visible columns
+  unifiedVisibleColumns: UnifiedVisibleColumnKey[];
+  // Default weight unit preference
+  defaultWeightUnit: WeightUnitPref;
+  // Popup logger style variant
+  popupLoggerStyle: PopupLoggerStyle;
 }
 
 const DEFAULT_SETTINGS: DisplaySettings = {
@@ -222,6 +264,9 @@ const DEFAULT_SETTINGS: DisplaySettings = {
   progressionVisibleColumns: DEFAULT_PROGRESSION_VISIBLE_COLUMNS,
   progressionHoldVisibleColumns: DEFAULT_PROGRESSION_HOLD_VISIBLE_COLUMNS,
   progressionVariationDisplay: "abbreviation",
+  unifiedVisibleColumns: DEFAULT_UNIFIED_VISIBLE_COLUMNS,
+  defaultWeightUnit: "kg",
+  popupLoggerStyle: "classic",
 };
 
 const STORAGE_KEY = "cultivateos-display-settings";

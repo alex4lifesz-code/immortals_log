@@ -53,22 +53,17 @@ export default function DataManagement() {
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [sessionExportStatus, setSessionExportStatus] = useState<{ type: "idle" | "loading" | "success" | "error"; message: string }>({ type: "idle", message: "" });
 
-  // Technique data management state
-  const techniqueFileInputRef = useRef<HTMLInputElement>(null);
-  const [showTechniqueImportModal, setShowTechniqueImportModal] = useState(false);
-  const [techniqueImportText, setTechniqueImportText] = useState("");
-  const [techniqueImportError, setTechniqueImportError] = useState("");
-  const [techniqueImportStatus, setTechniqueImportStatus] = useState<{ type: "idle" | "loading" | "success" | "error"; message: string }>({ type: "idle", message: "" });
-  const [techniqueExportStatus, setTechniqueExportStatus] = useState<{ type: "idle" | "loading" | "success" | "error"; message: string }>({ type: "idle", message: "" });
-  const [removeTechniqueStatus, setRemoveTechniqueStatus] = useState<{ type: "idle" | "loading" | "success" | "error"; message: string }>({ type: "idle", message: "" });
-  const [showRemoveTechniqueConfirm, setShowRemoveTechniqueConfirm] = useState(false);
-
   // Check-in data management state
   const checkinXlsxInputRef = useRef<HTMLInputElement>(null);
   const [checkinImportStatus, setCheckinImportStatus] = useState<{ type: "idle" | "loading" | "success" | "error"; message: string }>({ type: "idle", message: "" });
   const [checkinExportStatus, setCheckinExportStatus] = useState<{ type: "idle" | "loading" | "success" | "error"; message: string }>({ type: "idle", message: "" });
   const [removeCheckinStatus, setRemoveCheckinStatus] = useState<{ type: "idle" | "loading" | "success" | "error"; message: string }>({ type: "idle", message: "" });
   const [showRemoveCheckinConfirm, setShowRemoveCheckinConfirm] = useState(false);
+
+  // Exercise library import/export state
+  const exerciseJsonInputRef = useRef<HTMLInputElement>(null);
+  const [exerciseImportStatus, setExerciseImportStatus] = useState<{ type: "idle" | "loading" | "success" | "error"; message: string }>({ type: "idle", message: "" });
+  const [exerciseExportStatus, setExerciseExportStatus] = useState<{ type: "idle" | "loading" | "success" | "error"; message: string }>({ type: "idle", message: "" });
 
   // ── Training Log Import ──
   const handleXlsxImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -184,8 +179,17 @@ export default function DataManagement() {
 
       if (res.ok) {
         let msg = `Imported ${result.imported} training log entr${result.imported === 1 ? "y" : "ies"}${result.skipped ? `, ${result.skipped} skipped` : ""}`;
-        if (result.errors && result.errors.length > 0) {
-          msg += `\n${result.errors.join("\n")}`;
+        if (result.createdExercises) {
+          msg += `\nCreated ${result.createdExercises} exercise${result.createdExercises === 1 ? "" : "s"}`;
+        }
+        if (result.createdVariations) {
+          msg += `\nCreated ${result.createdVariations} variation${result.createdVariations === 1 ? "" : "s"}`;
+        }
+        if (result.createdTiers) {
+          msg += `\nCreated ${result.createdTiers} tier${result.createdTiers === 1 ? "" : "s"}`;
+        }
+        if (result.skippedDetails && result.skippedDetails.length > 0) {
+          msg += `\n${result.skippedDetails.join("\n")}`;
         }
         setImportStatus({ type: result.skipped && !result.imported ? "error" : "success", message: msg });
       } else {
@@ -268,175 +272,6 @@ export default function DataManagement() {
     }
   };
 
-  // ── Technique Import ──
-  const handleTechniqueImport = async () => {
-    if (!targetUserId) {
-      setTechniqueImportError("Please select a target user before importing techniques.");
-      setTechniqueImportStatus({ type: "error", message: "Target user is required" });
-      return;
-    }
-
-    setTechniqueImportError("");
-    setTechniqueImportStatus({ type: "loading", message: "Importing..." });
-    try {
-      const data = JSON.parse(techniqueImportText);
-      const exercises = Array.isArray(data)
-        ? data
-        : (data && Array.isArray(data.exercises) ? data.exercises : [data]);
-
-      if (!Array.isArray(exercises) || exercises.length === 0) {
-        setTechniqueImportError("Invalid format: expected an array of techniques.");
-        setTechniqueImportStatus({ type: "error", message: "Invalid format" });
-        return;
-      }
-
-      // Import into exercise library so techniques are visible in Technique Scroll.
-      const libraryPayload = exercises.map((ex: Record<string, unknown>) => {
-        const category = Array.isArray(ex.category)
-          ? ex.category.map((v) => String(v).trim()).filter(Boolean).join(", ")
-          : String(ex.category || ex.targetGroup || "").trim();
-        const tiers = (ex.progressions || ex.tiers) as { difficulty?: string; wuxiaDifficulty?: string }[] | undefined;
-        const lastTier = tiers?.length ? tiers[tiers.length - 1] : undefined;
-        const maxDifficulty =
-          lastTier?.wuxiaDifficulty ||
-          lastTier?.difficulty ||
-          (ex.wuxiaDifficulty as string) ||
-          (ex.difficulty as string) ||
-          "Mortal";
-
-        return {
-          name: ex.name,
-          wuxiaName: ex.wuxiaName || "",
-          difficulty: maxDifficulty,
-          type: (ex.wuxiaType as string) || (ex.type as string) || "Unified Realm",
-          story: ex.story || "",
-          targetGroup: category,
-        };
-      });
-
-      const libRes = await fetch("/api/exercises/import", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-user-role": user?.role || "",
-        },
-        body: JSON.stringify({ exercises: libraryPayload }),
-      });
-
-      const libResult = await libRes.json();
-      if (!libRes.ok) {
-        setTechniqueImportError(libResult.error || "Library import failed");
-        setTechniqueImportStatus({ type: "error", message: libResult.error || "Library import failed" });
-        return;
-      }
-
-      const res = await fetch("/api/progressions/upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: targetUserId, exercises }),
-      });
-
-      if (res.ok) {
-        const result = await res.json();
-        const imported = libResult.imported ?? 0;
-        const skipped = (libResult.skipped ?? 0) + (result.skipped ?? 0);
-        let msg = `Imported ${imported} technique(s)`;
-        if (skipped > 0) msg += ` (${skipped > imported ? Math.ceil(skipped / 2) : skipped} duplicate(s) skipped)`;
-        if (result.errors?.length) msg += `, ${result.errors.length} warning(s)`;
-        setTechniqueImportStatus({ type: "success", message: msg });
-        if (typeof window !== "undefined") {
-          window.dispatchEvent(new Event("exercises-library-updated"));
-          window.dispatchEvent(new Event("progression-exercises-updated"));
-          localStorage.setItem("exercises-library-updated-at", String(Date.now()));
-        }
-        setShowTechniqueImportModal(false);
-        setTechniqueImportText("");
-      } else {
-        const err = await res.json();
-        const details = Array.isArray(err.details) && err.details.length > 0
-          ? `\n${err.details.join("\n")}`
-          : "";
-        const msg = `${err.error || "Progression import failed (library import succeeded)"}${details}`;
-        setTechniqueImportError(msg);
-        setTechniqueImportStatus({ type: "error", message: msg });
-      }
-    } catch {
-      setTechniqueImportError("Invalid JSON format. Please check your scroll.");
-      setTechniqueImportStatus({ type: "error", message: "Invalid JSON format" });
-    }
-  };
-
-  const handleTechniqueFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setTechniqueImportText(ev.target?.result as string);
-    };
-    reader.readAsText(file);
-    if (techniqueFileInputRef.current) techniqueFileInputRef.current.value = "";
-  };
-
-  // ── Technique Export ──
-  const handleTechniqueExport = async () => {
-    setTechniqueExportStatus({ type: "loading", message: "Fetching techniques..." });
-    try {
-      const res = await fetch("/api/exercises");
-      const data = await res.json();
-      const exercises = data.exercises || [];
-
-      if (exercises.length === 0) {
-        setTechniqueExportStatus({ type: "error", message: "No techniques to export" });
-        return;
-      }
-
-      const exportData = exercises.map((ex: { name: string; wuxiaName?: string | null; difficulty: string; type: string; story?: string | null; targetGroup?: string | null }) => ({
-        name: ex.name,
-        ...(ex.wuxiaName ? { wuxiaName: ex.wuxiaName } : {}),
-        difficulty: ex.difficulty,
-        type: ex.type,
-        ...(ex.story ? { story: ex.story } : {}),
-        ...(ex.targetGroup ? { targetGroup: ex.targetGroup } : {}),
-      }));
-
-      const jsonString = JSON.stringify(exportData, null, 2);
-      const blob = new Blob([jsonString], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `techniques-library-${new Date().toISOString().split("T")[0]}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      setTechniqueExportStatus({ type: "success", message: `Exported ${exercises.length} technique(s)` });
-    } catch (err: unknown) {
-      setTechniqueExportStatus({ type: "error", message: err instanceof Error ? err.message : "Export failed" });
-    }
-  };
-
-  // ── Remove All Techniques ──
-  const handleRemoveAllTechniques = async () => {
-    setShowRemoveTechniqueConfirm(false);
-    setRemoveTechniqueStatus({ type: "loading", message: "Removing all techniques..." });
-    try {
-      const res = await fetch("/api/exercises", {
-        method: "DELETE",
-        headers: {
-          "x-user-role": user?.role || "",
-        },
-      });
-      const result = await res.json();
-      if (res.ok) {
-        setRemoveTechniqueStatus({ type: "success", message: result.message || "All techniques removed" });
-      } else {
-        setRemoveTechniqueStatus({ type: "error", message: result.error || "Failed to remove techniques" });
-      }
-    } catch (err: unknown) {
-      setRemoveTechniqueStatus({ type: "error", message: err instanceof Error ? err.message : "An error occurred" });
-    }
-  };
-
   // ── Check-In XLSX Import ──
   const handleCheckinXlsxImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -473,8 +308,8 @@ export default function DataManagement() {
       const headers = Object.keys(rows[0]);
       // Known non-user headers (case-insensitive)
       const reservedHeaders = new Set(["date", "day", "comments", "comment"]);
-      // Weight column pattern: "X.Weight" or "X.Wt" or specific like "A.Weight"
-      const weightColRegex = /^(.+?)\.\s*w(?:eight|t)$/i;
+      // Weight column pattern: "X.Weight", "X.Wt", and optional unit suffixes like "X.Weight (kg)".
+      const weightColRegex = /^(.+?)\.\s*w(?:eight|t)\s*(?:\([^)]*\))?$/i;
 
       // Identify user columns (checkbox columns) and weight columns
       const userColumns: { header: string; userId: string }[] = [];
@@ -677,6 +512,167 @@ export default function DataManagement() {
     }
   };
 
+  // ── Exercise Library Export ──
+  const handleExerciseLibraryExport = async () => {
+    setExerciseExportStatus({ type: "loading", message: "Exporting exercise library..." });
+    try {
+      const url = `/api/admin/exercise-library/export?userId=${encodeURIComponent(user?.id || "")}&targetUserId=${encodeURIComponent(targetUserId)}`;
+      const res = await fetch(url);
+      if (!res.ok) {
+        const data = await res.json();
+        setExerciseExportStatus({ type: "error", message: data.error || "Export failed" });
+        return;
+      }
+      const blob = await res.blob();
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `exercise-library-export-${new Date().toISOString().slice(0, 10)}.json`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+      setExerciseExportStatus({ type: "success", message: "Exercise library exported successfully" });
+    } catch (err: unknown) {
+      setExerciseExportStatus({ type: "error", message: err instanceof Error ? err.message : "Export failed" });
+    }
+  };
+
+  // ── Exercise Library Import ──
+  const handleExerciseLibraryImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+
+    setExerciseImportStatus({ type: "loading", message: "Reading JSON file..." });
+    try {
+      const text = await file.text();
+      let parsed: { version?: number; exercises?: unknown[] };
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        setExerciseImportStatus({ type: "error", message: "Invalid JSON file. Please upload a valid exercise library export." });
+        return;
+      }
+
+      const exercises = Array.isArray(parsed?.exercises) ? parsed.exercises : (Array.isArray(parsed) ? parsed : null);
+      if (!exercises || exercises.length === 0) {
+        setExerciseImportStatus({ type: "error", message: "No exercises found in the file. Expected { exercises: [...] } format." });
+        return;
+      }
+
+      setExerciseImportStatus({ type: "loading", message: `Importing ${exercises.length} exercise(s)...` });
+
+      const res = await fetch("/api/admin/exercise-library/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user?.id,
+          targetUserId,
+          exercises,
+          skipDuplicates: true,
+        }),
+      });
+
+      const result = await res.json();
+      if (res.ok) {
+        const detail = result.errors?.length > 0 ? `\n⚠ ${result.errors.slice(0, 3).join("\n")}` : "";
+        setExerciseImportStatus({ type: "success", message: result.message + detail });
+      } else {
+        setExerciseImportStatus({ type: "error", message: result.error || "Import failed" });
+      }
+    } catch (err: unknown) {
+      setExerciseImportStatus({ type: "error", message: err instanceof Error ? err.message : "An error occurred" });
+    }
+  };
+
+  // ── Download JSON Template ──
+  const handleDownloadTemplate = () => {
+    const template = {
+      version: 1,
+      exercises: [
+        {
+          name: "Bench Press",
+          wuxiaName: "Iron Chest Seal",
+          difficulty: "Beginner",
+          wuxiaDifficulty: "Mortal",
+          type: "GYM",
+          wuxiaType: "Body Tempering",
+          story: "A foundational chest pressing movement performed on a flat bench. Develops raw pushing power and sets the foundation for upper-body cultivation.",
+          category: "GYM",
+          equipmentType: "Barbell, Bench, Squat Rack",
+          bodyweight: false,
+          weighted: true,
+          rings: false,
+          primaryMuscles: "Chest, Triceps",
+          secondaryMuscles: "Shoulders",
+          tips: JSON.stringify(["Keep your feet flat on the floor", "Retract and depress your scapulae", "Lower the bar to mid-chest with control"]),
+          prerequisites: JSON.stringify([]),
+          cues: JSON.stringify(["Drive your feet into the floor", "Squeeze the bar apart", "Push the ceiling away"]),
+          commonMistakes: JSON.stringify([
+            { mistake: "Bouncing the bar off the chest", correction: "Lower under control and pause briefly at the bottom" },
+            { mistake: "Flaring elbows excessively", correction: "Keep elbows at ~45° from your torso" }
+          ]),
+          breathing: "Inhale on the way down, exhale forcefully as you press up.",
+          safetyConsiderations: JSON.stringify(["Always use a spotter or safety bars", "Warm up with lighter weight before working sets"]),
+          competitionStandards: JSON.stringify({}),
+          assignedDays: "",
+          tiers: [
+            {
+              level: 1,
+              name: "Foundation Press",
+              wuxiaName: "Mortal Imprint",
+              difficulty: "Beginner",
+              description: "Press the bar for 3 sets of 8–12 reps with controlled form.",
+              targetReps: 10,
+              targetRepsText: "8-12",
+              targetHold: null
+            },
+            {
+              level: 2,
+              name: "Intermediate Press",
+              wuxiaName: "Iron Body Seal",
+              difficulty: "Intermediate",
+              description: "Press the bar for 5 sets of 5 reps at heavier load.",
+              targetReps: 5,
+              targetRepsText: "5",
+              targetHold: null
+            }
+          ],
+          variations: [
+            {
+              name: "Incline Bench Press",
+              wuxiaName: "Ascending Heaven Fist",
+              difficulty: "Intermediate",
+              description: "Performed on a 30–45° incline to emphasise the upper chest."
+            },
+            {
+              name: "Close-Grip Bench Press",
+              wuxiaName: "Narrow Mountain Palm",
+              difficulty: "Intermediate",
+              description: "Hands shoulder-width apart to shift emphasis to the triceps."
+            }
+          ],
+          modifiers: [
+            {
+              type: "weighted",
+              available: true,
+              difficultyMod: 0.5,
+              notes: "Increase load by 2.5–5 kg per progression",
+              method: "Barbell loading",
+              difficultyIncrease: "+1 tier per 10% bodyweight added"
+            }
+          ]
+        }
+      ]
+    };
+
+    const json = JSON.stringify(template, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "exercise-library-template.json";
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
+
   return (
     <>
       <GlowCard glow="crimson" hoverable={false}>
@@ -786,6 +782,79 @@ export default function DataManagement() {
           </div>
         </div>
 
+        {/* ── Exercise Library Import / Export Section ── */}
+        <div className="mt-6 pt-4 border-t border-ink-light/50">
+          <p className="text-xs text-mist-light font-medium mb-2">
+            Exercise Library {targetUserId !== user?.id && <span className="text-gold">— {targetUserName}</span>}
+          </p>
+          <p className="text-xs text-mist-dark mb-3">
+            Import or export the Exercise Library as a JSON file. Exporting downloads all exercises (with tiers, variations, and modifiers) for the selected cultivator.
+            Importing adds exercises from a JSON file — duplicate names are skipped automatically. Download the template below to see the expected format with a Bench Press example.
+          </p>
+          <div className="space-y-3">
+            {/* Template Download */}
+            <div className="flex items-center gap-3">
+              <GlowButton
+                variant="ghost"
+                size="sm"
+                onClick={handleDownloadTemplate}
+              >
+                📄 Download JSON Template
+              </GlowButton>
+              <p className="text-[10px] text-mist-dark">Includes a Bench Press example to guide the format</p>
+            </div>
+
+            {/* Import JSON */}
+            <div className="flex items-center gap-3">
+              <GlowButton
+                variant="gold"
+                size="sm"
+                onClick={() => exerciseJsonInputRef.current?.click()}
+                disabled={exerciseImportStatus.type === "loading"}
+              >
+                {exerciseImportStatus.type === "loading" ? "Importing..." : "📥 Import Exercise Library JSON"}
+              </GlowButton>
+              <input
+                ref={exerciseJsonInputRef}
+                type="file"
+                accept=".json,application/json"
+                onChange={handleExerciseLibraryImport}
+                className="hidden"
+              />
+              {exerciseImportStatus.type !== "idle" && (
+                <p className={`text-xs whitespace-pre-line ${
+                  exerciseImportStatus.type === "success" ? "text-jade-glow" :
+                  exerciseImportStatus.type === "error" ? "text-crimson-light" :
+                  "text-mist-light"
+                }`}>
+                  {exerciseImportStatus.message}
+                </p>
+              )}
+            </div>
+
+            {/* Export JSON */}
+            <div className="flex items-center gap-3">
+              <GlowButton
+                variant="ghost"
+                size="sm"
+                onClick={handleExerciseLibraryExport}
+                disabled={exerciseExportStatus.type === "loading"}
+              >
+                {exerciseExportStatus.type === "loading" ? "Exporting..." : "📤 Export Exercise Library JSON"}
+              </GlowButton>
+              {exerciseExportStatus.type !== "idle" && (
+                <p className={`text-xs ${
+                  exerciseExportStatus.type === "success" ? "text-jade-glow" :
+                  exerciseExportStatus.type === "error" ? "text-crimson-light" :
+                  "text-mist-light"
+                }`}>
+                  {exerciseExportStatus.message}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* ── Sect Register (Check-In Records) Section ── */}
         <div className="mt-6 pt-4 border-t border-ink-light/50">
           <p className="text-xs text-mist-light font-medium mb-2">Sect Register (Check-In Records)</p>
@@ -867,77 +936,6 @@ export default function DataManagement() {
           </div>
         </div>
 
-        {/* ── Technique Scroll Section ── */}
-        <div className="mt-6 pt-4 border-t border-ink-light/50">
-          <p className="text-xs text-mist-light font-medium mb-2">Technique Scroll</p>
-          <p className="text-xs text-mist-dark mb-3">
-            Import techniques from a JSON file, export your technique library, or purge all techniques.
-          </p>
-          <div className="space-y-3">
-            {/* Import Techniques */}
-            <div className="flex items-center gap-3">
-              <GlowButton
-                variant="gold"
-                size="sm"
-                onClick={() => setShowTechniqueImportModal(true)}
-                disabled={techniqueImportStatus.type === "loading"}
-              >
-                {techniqueImportStatus.type === "loading" ? "Importing..." : "📥 Import Techniques"}
-              </GlowButton>
-              {techniqueImportStatus.type !== "idle" && (
-                <p className={`text-xs ${
-                  techniqueImportStatus.type === "success" ? "text-jade-glow" :
-                  techniqueImportStatus.type === "error" ? "text-crimson-light" :
-                  "text-mist-light"
-                }`}>
-                  {techniqueImportStatus.message}
-                </p>
-              )}
-            </div>
-
-            {/* Export Techniques */}
-            <div className="flex items-center gap-3">
-              <GlowButton
-                variant="ghost"
-                size="sm"
-                onClick={handleTechniqueExport}
-                disabled={techniqueExportStatus.type === "loading"}
-              >
-                {techniqueExportStatus.type === "loading" ? "Exporting..." : "📤 Export Techniques"}
-              </GlowButton>
-              {techniqueExportStatus.type !== "idle" && (
-                <p className={`text-xs ${
-                  techniqueExportStatus.type === "success" ? "text-jade-glow" :
-                  techniqueExportStatus.type === "error" ? "text-crimson-light" :
-                  "text-mist-light"
-                }`}>
-                  {techniqueExportStatus.message}
-                </p>
-              )}
-            </div>
-
-            {/* Remove All Techniques */}
-            <div className="flex items-center gap-3 pt-2 border-t border-ink-light/30">
-              <GlowButton
-                variant="crimson"
-                size="sm"
-                onClick={() => setShowRemoveTechniqueConfirm(true)}
-                disabled={removeTechniqueStatus.type === "loading"}
-              >
-                {removeTechniqueStatus.type === "loading" ? "Removing..." : "🗑 Remove All Techniques"}
-              </GlowButton>
-              {removeTechniqueStatus.type !== "idle" && (
-                <p className={`text-xs ${
-                  removeTechniqueStatus.type === "success" ? "text-jade-glow" :
-                  removeTechniqueStatus.type === "error" ? "text-crimson-light" :
-                  "text-mist-light"
-                }`}>
-                  {removeTechniqueStatus.message}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
       </GlowCard>
 
       {/* Remove All Training Logs Confirmation Modal */}
@@ -1000,123 +998,6 @@ export default function DataManagement() {
         </div>
       </GlowModal>
 
-      {/* Import Technique Scroll Modal */}
-      <GlowModal
-        isOpen={showTechniqueImportModal}
-        onClose={() => {
-          setShowTechniqueImportModal(false);
-          setTechniqueImportError("");
-        }}
-        title="Import Technique Scroll"
-      >
-        <div className="space-y-3">
-          <p className="text-xs text-mist-mid">
-            Upload a JSON file or paste JSON data. Expected format:
-          </p>
-          <pre className="text-[10px] text-mist-dark bg-ink-dark p-3 rounded-lg overflow-x-auto">
-            {`[{
-  "name": "Conventional Name",
-  "wuxiaName": "Wuxia Technique Name",
-  "difficulty": "Core Formation",
-  "type": "Upper Heaven",
-  "category": "Push",
-  "story": "Optional description...",
-  "primaryMuscles": ["Chest", "Triceps"],
-  "secondaryMuscles": ["Shoulders"],
-  "tips": ["Tip 1", "Tip 2"],
-  "equipment": {
-    "type": "bodyweight",
-    "bodyweight": true
-  },
-  "tiers": [{
-    "level": 1,
-    "name": "Tier Name",
-    "wuxiaName": "Wuxia Tier Name",
-    "difficulty": "Mortal",
-    "description": "Tier description",
-    "targetReps": 10,
-    "targetHold": 30
-  }],
-  "variations": [{
-    "name": "Variation Name",
-    "description": "Description"
-  }],
-  "modifiers": [{
-    "type": "Ring",
-    "available": true,
-    "notes": "Extra difficulty"
-  }]
-}]`}
-          </pre>
-          <p className="text-[10px] text-mist-dark">
-            <span className="text-mist-light">Required:</span> name, category.{" "}
-            <span className="text-mist-light">Optional:</span> wuxiaName, difficulty, type, story, primaryMuscles, secondaryMuscles, tips, equipment, tiers, variations, modifiers.
-          </p>
-
-          <div className="flex gap-2">
-            <GlowButton
-              variant="ghost"
-              size="sm"
-              onClick={() => techniqueFileInputRef.current?.click()}
-            >
-              📁 Choose File
-            </GlowButton>
-            <input
-              ref={techniqueFileInputRef}
-              type="file"
-              accept=".json"
-              onChange={handleTechniqueFileUpload}
-              className="hidden"
-            />
-          </div>
-
-          <textarea
-            placeholder="Paste JSON here..."
-            value={techniqueImportText}
-            onChange={(e) => setTechniqueImportText(e.target.value)}
-            rows={8}
-            className="w-full bg-ink-dark border border-ink-light rounded-lg px-3 py-2 text-xs text-cloud-white font-mono placeholder:text-mist-dark outline-none transition-all duration-300 resize-none focus:border-gold focus:shadow-[0_0_12px_rgba(232,200,74,0.3)]"
-          />
-
-          {techniqueImportError && (
-            <p className="text-xs text-crimson-light">{techniqueImportError}</p>
-          )}
-
-          <GlowButton variant="gold" glow className="w-full" onClick={handleTechniqueImport}>
-            📥 Import Scroll
-          </GlowButton>
-        </div>
-      </GlowModal>
-
-      {/* Remove All Techniques Confirmation Modal */}
-      <GlowModal
-        isOpen={showRemoveTechniqueConfirm}
-        onClose={() => setShowRemoveTechniqueConfirm(false)}
-        title="Confirm Technique Purge"
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-mist-light">
-            This will purge <span className="text-crimson-light font-semibold">all</span> visible techniques from the Technique Scroll library. This action cannot be undone.
-          </p>
-          <div className="flex gap-3">
-            <GlowButton
-              variant="crimson"
-              glow
-              className="flex-1"
-              onClick={handleRemoveAllTechniques}
-            >
-              Confirm Remove All
-            </GlowButton>
-            <GlowButton
-              variant="ghost"
-              className="flex-1"
-              onClick={() => setShowRemoveTechniqueConfirm(false)}
-            >
-              Cancel
-            </GlowButton>
-          </div>
-        </div>
-      </GlowModal>
     </>
   );
 }

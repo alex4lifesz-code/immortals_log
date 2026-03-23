@@ -45,7 +45,7 @@ function formatDateLocal(date: Date): string {
 const quickActions = [
   { label: "Start Training", icon: "⚔️", path: "/dashboard/workout", glow: "jade" as const },
   { label: "Check In", icon: "📋", path: "/dashboard/checkin", glow: "blue" as const },
-  { label: "Browse Techniques", icon: "📜", path: "/dashboard/exercises", glow: "gold" as const },
+  { label: "Settings", icon: "⚙️", path: "/dashboard/settings", glow: "gold" as const },
 ];
 
 const DEFAULT_CULTIVATOR_COLORS = [

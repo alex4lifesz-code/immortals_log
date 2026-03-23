@@ -1,0 +1,15 @@
+.mobile-shell {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 74px);
+}
+
+.mobile-shell * {
+  touch-action: manipulation;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-shell * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

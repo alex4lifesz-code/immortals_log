@@ -1,21 +1,26 @@
-"use client";
+﻿"use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect, useCallback, useMemo, useRef, memo, startTransition } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, startTransition } from "react";
 import { createPortal } from "react-dom";
 import PageLayout from "@/components/layout/PageLayout";
 import GlowButton from "@/components/ui/GlowButton";
 import GlowCard from "@/components/ui/GlowCard";
 import { GlowModal } from "@/components/ui/GlowCard";
 import { useAuth } from "@/context/AuthContext";
-import { useDisplaySettings, DEFAULT_PROGRESSION_VISIBLE_COLUMNS, DEFAULT_PROGRESSION_HOLD_VISIBLE_COLUMNS } from "@/context/DisplaySettingsContext";
+import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { getDifficultyColor, getTypeColor, DAY_ABBREVIATIONS, parseDayAssignments } from "@/lib/constants";
-import { formatDateWithPreference } from "@/lib/constants";
+
 import { getDifficultyColorClass, getDifficultyGlowStyleScaled, getDifficultyStyle } from "@/lib/difficulty-styles";
 import { getExerciseDisplayName, matchesLooseSearchInFields, getTypeDisplayName, getDifficultyDisplayName, getDifficultyColorKey, getTypeColorKey } from "@/lib/exercise-name";
 import { useAppContext } from "@/context/AppContext";
 import TechniqueManagementDrawer from "@/components/workout/TechniqueManagementDrawer";
+import { MemoUnifiedTrainingLogTable } from "@/components/workout/UnifiedTrainingLogTable";
 import { DEFAULT_USER_PHYSIQUE, loadUserPhysique, UserPhysiqueSettings } from "@/lib/user-physique";
+import type { WeightStandardRecord } from "@/lib/weight-standards";
+import { recordToTiers } from "@/lib/weight-standards";
+
+type WeightStandardsMap = Record<string, { male: WeightStandardRecord | null; female: WeightStandardRecord | null }>;
 
 // ── Types ──
 
@@ -154,6 +159,14 @@ function formatResistanceBandLabel(kg: number): string {
   return `-${normalized}kg`;
 }
 
+const MODIFIER_WEIGHT_TOKEN = /^MW:\s*(\d+(?:\.\d+)?)\s*kg$/i;
+const MODIFIER_WEIGHT_OPTIONS = [2.5, 5, 7.5, 10, 12.5, 15, 20, 25, 30, 35, 40, 45, 50] as const;
+
+function formatModifierWeightLabel(kg: number): string {
+  const normalized = Number.isInteger(kg) ? String(kg) : kg.toFixed(1).replace(/\.0$/, "");
+  return `+${normalized}kg`;
+}
+
 function getBandDimOpacity(kg: number | null | undefined): number {
   if (typeof kg !== "number" || !Number.isFinite(kg) || kg <= 0) return 1;
   const normalized = Math.max(0, Math.min(1, kg / MAX_RESISTANCE_BAND_KG));
@@ -187,9 +200,10 @@ function getBandAdjustedGlowStyle(glowStyle: React.CSSProperties, kg: number | n
 function parseModifierWithBand(modifier: string | null | undefined): {
   baseModifier: string | null;
   resistanceBandKg: number | null;
+  modifierWeightKg: number | null;
   displayLevelOverride: number | null;
 } {
-  if (!modifier) return { baseModifier: null, resistanceBandKg: null, displayLevelOverride: null };
+  if (!modifier) return { baseModifier: null, resistanceBandKg: null, modifierWeightKg: null, displayLevelOverride: null };
 
   const parts = modifier
     .split("|")
@@ -197,6 +211,7 @@ function parseModifierWithBand(modifier: string | null | undefined): {
     .filter(Boolean);
 
   let resistanceBandKg: number | null = null;
+  let modifierWeightKg: number | null = null;
   let displayLevelOverride: number | null = null;
   const baseParts: string[] = [];
 
@@ -213,12 +228,19 @@ function parseModifierWithBand(modifier: string | null | undefined): {
       if (Number.isFinite(lvl) && lvl > 0) displayLevelOverride = Math.floor(lvl);
       continue;
     }
+    const mwMatch = part.match(MODIFIER_WEIGHT_TOKEN);
+    if (mwMatch) {
+      const val = Number(mwMatch[1]);
+      if (Number.isFinite(val) && val > 0) modifierWeightKg = val;
+      continue;
+    }
     baseParts.push(part);
   }
 
   return {
     baseModifier: baseParts.length > 0 ? baseParts.join(" | ") : null,
     resistanceBandKg,
+    modifierWeightKg,
     displayLevelOverride,
   };
 }
@@ -227,6 +249,7 @@ function buildModifierWithBand(
   baseModifier: string | null | undefined,
   resistanceBandKg: number | null | undefined,
   displayLevelOverride?: number | null,
+  modifierWeightKg?: number | null,
 ): string | null {
   const parts: string[] = [];
   const base = baseModifier?.trim();
@@ -236,6 +259,9 @@ function buildModifierWithBand(
     if (typeof displayLevelOverride === "number" && Number.isFinite(displayLevelOverride) && displayLevelOverride > 0) {
       parts.push(`RBL:${Math.floor(displayLevelOverride)}`);
     }
+  }
+  if (typeof modifierWeightKg === "number" && Number.isFinite(modifierWeightKg) && modifierWeightKg > 0) {
+    parts.push(`MW:${modifierWeightKg}kg`);
   }
   return parts.length > 0 ? parts.join(" | ") : null;
 }
@@ -257,6 +283,15 @@ function averageWeightsFromLog(log: ProgressionLog): number | null {
   const vals = [log.weight1, log.weight2, log.weight3].filter((v): v is number => typeof v === "number" && Number.isFinite(v) && v > 0);
   if (vals.length === 0) return null;
   return vals.reduce((sum, v) => sum + v, 0) / vals.length;
+}
+
+function getEffectiveWeight(avg: number, bandKg?: number | null, modifierWeightKg?: number | null): number {
+  const bandOffset = typeof bandKg === "number" && Number.isFinite(bandKg) && bandKg > 0 ? bandKg : 0;
+  const modifierOffset =
+    typeof modifierWeightKg === "number" && Number.isFinite(modifierWeightKg) && modifierWeightKg > 0
+      ? modifierWeightKg
+      : 0;
+  return Math.max(0, avg - bandOffset + modifierOffset);
 }
 
 function scaleTargets(seed: number[], count: number): number[] {
@@ -282,7 +317,6 @@ function getGymTierTargets(gender: UserPhysiqueSettings["gender"], tierCount: nu
   const seeds: Record<UserPhysiqueSettings["gender"], number[]> = {
     male: [20, 35, 50, 65, 80, 95, 110, 125, 140, 160],
     female: [15, 25, 35, 45, 55, 65, 75, 85, 95, 110],
-    other: [18, 30, 42, 54, 66, 78, 90, 102, 114, 126],
   };
 
   return scaleTargets(seeds[gender], tierCount);
@@ -302,7 +336,36 @@ function isGymWeightTrackedExercise(exercise: ProgressionExercise): boolean {
   return explicitlyWeighted || looksGymByEquipment || hasExternalWeightHistory;
 }
 
+function isLikelyCalisthenicsExercise(exercise: ProgressionExercise): boolean {
+  const name = (exercise.name || "").toLowerCase().replace(/[-_]+/g, " ");
+  const equipment = (exercise.equipmentType || "").toLowerCase();
+  const tags = parseCategoryTags(exercise.category).map((tag) => tag.toLowerCase().replace(/[-_]+/g, " "));
+
+  const calisthenicsNameHints = [
+    "pull up",
+    "chin up",
+    "dip",
+    "push up",
+    "muscle up",
+    "front lever",
+    "back lever",
+    "planche",
+    "handstand",
+    "l sit",
+    "dragon flag",
+    "human flag",
+  ];
+  const calisthenicsEquipmentHints = ["rings", "pull", "dip", "floor", "parallette", "bodyweight"];
+
+  if (exercise.bodyweight || exercise.rings) return true;
+  if (tags.some((tag) => tag.includes("calisthenics") || tag.includes("bodyweight"))) return true;
+  if (calisthenicsNameHints.some((hint) => name.includes(hint))) return true;
+  if (calisthenicsEquipmentHints.some((hint) => equipment.includes(hint))) return true;
+  return false;
+}
+
 function isGymCategoryExercise(exercise: ProgressionExercise): boolean {
+  if (isLikelyCalisthenicsExercise(exercise)) return false;
   const tags = parseCategoryTags(exercise.category).map((tag) => tag.toLowerCase().trim());
   return tags.some((tag) => /\bgym\b/i.test(tag.replace(/[_-]+/g, " ")));
 }
@@ -364,44 +427,64 @@ function getGymTierStandardKg(tier: ProgressionTier, bodyWeightKg: number): numb
 }
 
 function supportsResistanceBandAssistance(exercise: ProgressionExercise): boolean {
+  if (isLikelyCalisthenicsExercise(exercise)) return true;
+
   const name = (exercise.name || "").toLowerCase();
   const equipment = (exercise.equipmentType || "").toLowerCase();
-  const category = (exercise.category || "").toLowerCase();
-
-  const calisthenicsNameHints = [
-    "pull up",
-    "chin up",
-    "dip",
-    "push up",
-    "muscle up",
-    "front lever",
-    "back lever",
-    "planche",
-    "handstand",
-    "l-sit",
-    "dragon flag",
-    "human flag",
-  ];
-  const calisthenicsEquipmentHints = ["bar", "pull", "dip", "floor", "rings", "body", "parallette"];
   const gymHints = ["dumbbell", "barbell", "machine", "cable", "plate", "smith"];
 
-  const looksCalisthenics =
-    exercise.bodyweight ||
-    exercise.rings ||
-    calisthenicsNameHints.some((hint) => name.includes(hint)) ||
-    calisthenicsEquipmentHints.some((hint) => equipment.includes(hint)) ||
-    category.includes("calisthenics");
-
-  if (looksCalisthenics) return true;
-
   return !gymHints.some((hint) => equipment.includes(hint) || name.includes(hint));
+}
+
+function supportsBodyweightQuickFill(exercise: ProgressionExercise): boolean {
+  return isLikelyCalisthenicsExercise(exercise);
+}
+
+function getDefaultVariationOptions(exercise: ProgressionExercise): string[] {
+  const text = `${exercise.name || ""} ${exercise.equipmentType || ""} ${exercise.category || ""}`.toLowerCase();
+  const pullingHints = ["pull", "chin", "row", "pulldown", "lever", "curl", "deadlift", "muscle up"];
+  const pressingHints = ["push", "press", "bench", "dip", "planche", "handstand"];
+  const ringHints = ["ring", "rings"];
+  const lowerBodyHints = ["squat", "lunge", "leg", "calf", "hinge"];
+
+  const hasHint = (hints: string[]) => hints.some((hint) => text.includes(hint));
+  const options = new Set<string>();
+  const isLowerBody = hasHint(lowerBodyHints);
+
+  if (isLowerBody) {
+    options.add("Standard (shoulder-width stance)");
+    options.add("Narrow stance");
+    options.add("Wide stance");
+    options.add("Negative reps (slow eccentric)");
+    return Array.from(options);
+  }
+
+  options.add("Standard (shoulder-width grip)");
+  options.add("Close grip (narrow hand spacing)");
+  options.add("Wide grip (wide hand spacing)");
+
+  if (hasHint(pullingHints)) {
+    options.add("Supinated (underhand) grip");
+  } else if (hasHint(pressingHints)) {
+    options.add("Neutral grip");
+  }
+
+  if (hasHint(ringHints)) {
+    options.add("False grip");
+  }
+
+  options.add("Negative reps (slow eccentric)");
+
+  const compact = Array.from(options).slice(0, 6);
+  return compact.length > 0 ? compact : ["Standard (shoulder-width grip)"];
 }
 
 
 function getAutoGymLevelFromAverage(
   exercise: ProgressionExercise,
   physique: UserPhysiqueSettings,
-  avgWeight: number | null
+  avgWeight: number | null,
+  weightStandards?: WeightStandardsMap
 ): number | null {
   if (!isGymCategoryExercise(exercise)) return null;
   if (!isGymWeightTrackedExercise(exercise)) return null;
@@ -410,8 +493,26 @@ function getAutoGymLevelFromAverage(
   if (!avgWeight || avgWeight <= 0) return null;
 
   const sortedTiers = [...exercise.tiers].sort((a, b) => a.level - b.level);
-  const explicitStandards = sortedTiers.map((tier) => getGymTierStandardKg(tier, physique.bodyWeightKg as number));
 
+  // Priority 1: Database-configured weight standards (admin-set BW% thresholds per exercise+gender)
+  const dbStandards = weightStandards?.[exercise.id];
+  if (dbStandards) {
+    const genderKey = physique.gender === "female" ? "female" : "male";
+    const record = genderKey === "female" ? dbStandards.female : dbStandards.male;
+    if (record) {
+      const tiers = recordToTiers(record);
+      const bwPercent = (avgWeight / physique.bodyWeightKg) * 100;
+      // Map DB tiers (up to 6) onto exercise tiers by index
+      let picked = sortedTiers[0].level;
+      for (let i = 0; i < sortedTiers.length && i < tiers.length; i++) {
+        if (bwPercent >= tiers[i].minPercentage) picked = sortedTiers[i].level;
+      }
+      return picked;
+    }
+  }
+
+  // Priority 2: Explicit standards parsed from tier text (e.g. "50% BW", "60kg")
+  const explicitStandards = sortedTiers.map((tier) => getGymTierStandardKg(tier, physique.bodyWeightKg as number));
   const hasExplicitStandards = explicitStandards.some((v) => v != null);
 
   if (hasExplicitStandards) {
@@ -424,6 +525,7 @@ function getAutoGymLevelFromAverage(
     return picked;
   }
 
+  // Priority 3: Fallback hardcoded BW% seeds per gender
   const bwPercent = (avgWeight / physique.bodyWeightKg) * 100;
   const targets = getGymTierTargets(physique.gender, sortedTiers.length);
 
@@ -442,14 +544,15 @@ function getAutoGymLevelFromSet(
     weight2?: number | null;
     weight3?: number | null;
   },
-  bandKg?: number | null
+  modifier?: string | null,
+  weightStandards?: WeightStandardsMap
 ): number | null {
-  const bandOffset = (typeof bandKg === "number" && bandKg > 0) ? bandKg : 0;
+  const { resistanceBandKg, modifierWeightKg } = parseModifierWithBand(modifier);
   const vals = [setData.weight1, setData.weight2, setData.weight3]
     .filter((v): v is number => typeof v === "number" && Number.isFinite(v) && v > 0)
-    .map((v) => Math.max(0, v - bandOffset));
+    .map((v) => getEffectiveWeight(v, resistanceBandKg, modifierWeightKg));
   const avg = vals.length > 0 ? vals.reduce((sum, v) => sum + v, 0) / vals.length : null;
-  return getAutoGymLevelFromAverage(exercise, physique, avg);
+  return getAutoGymLevelFromAverage(exercise, physique, avg, weightStandards);
 }
 
 function recentAverageWeightBandAdjusted(logs: ProgressionLog[], limit = 3): number | null {
@@ -460,19 +563,18 @@ function recentAverageWeightBandAdjusted(logs: ProgressionLog[], limit = 3): num
     .map((log) => {
       const avg = averageWeightsFromLog(log);
       if (avg == null) return null;
-      const { resistanceBandKg } = parseModifierWithBand(log.modifier);
-      const offset = (typeof resistanceBandKg === "number" && resistanceBandKg > 0) ? resistanceBandKg : 0;
-      return Math.max(0, avg - offset);
+      const { resistanceBandKg, modifierWeightKg } = parseModifierWithBand(log.modifier);
+      return getEffectiveWeight(avg, resistanceBandKg, modifierWeightKg);
     })
     .filter((v): v is number => v != null);
   if (vals.length === 0) return null;
   return vals.reduce((sum, v) => sum + v, 0) / vals.length;
 }
 
-function getAutoGymLevel(exercise: ProgressionExercise, physique: UserPhysiqueSettings): number | null {
+function getAutoGymLevel(exercise: ProgressionExercise, physique: UserPhysiqueSettings, weightStandards?: WeightStandardsMap): number | null {
   const logs = exercise.userProgress[0]?.logs ?? [];
   const avgWeight = recentAverageWeightBandAdjusted(logs, 3);
-  return getAutoGymLevelFromAverage(exercise, physique, avgWeight);
+  return getAutoGymLevelFromAverage(exercise, physique, avgWeight, weightStandards);
 }
 
 function getTierName(exercise: ProgressionExercise, level: number): string {
@@ -732,7 +834,7 @@ function ExerciseDetailModal({
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="text-[10px] text-mist-dark font-mono">Lv.{tier.level}</span>
                         <span className={`text-xs font-medium ${isCompleted ? "text-jade-light" : isCurrent ? "text-gold" : "text-cloud-white"}`}>
-                          {getExerciseDisplayName(tier, settings.terminologyMode)}
+                          {getExerciseDisplayName(exercise, settings.terminologyMode)}
                         </span>
                         {(tier.difficulty || tier.wuxiaDifficulty) && (
                           <span className={`text-[9px] px-1.5 py-0 rounded-full ${getDifficultyColor(getDifficultyColorKey(tier))} bg-ink-dark/40 border border-current/15`}>
@@ -823,1454 +925,202 @@ function ExerciseDetailModal({
   );
 }
 
-// ── Training Log Table ──
+// ── Tier Progress Bar (bodyweight-percentage based) ──
 
-interface FlatLogEntry {
-  logId: string;
-  date: string;
-  exerciseName: string;
-  exerciseId: string;
-  level: number;
-  levelNameLevel: number;
-  tierName: string;
-  weight1: number | null;
-  reps1: number | null;
-  weight2: number | null;
-  reps2: number | null;
-  weight3: number | null;
-  reps3: number | null;
-  holdTime: number | null;
-  holdTime2: number | null;
-  holdTime3: number | null;
-  modifier: string | null;
-  resistanceBandKg: number | null;
-  variant: string | null;
-  notes: string | null;
-  completed: boolean;
-  hasHold: boolean;
+interface TierInfo {
+  tier: number;
+  name: string;
+  minPercentage: number;
+  maxPercentage: number;
+  color: string;
 }
 
-function flattenLogs(exercises: ProgressionExercise[]): FlatLogEntry[] {
-  const entries: FlatLogEntry[] = [];
+const TIER_STANDARDS: TierInfo[] = [
+  { tier: 1, name: "Untrained", minPercentage: 0, maxPercentage: 50, color: "#4ade80" },
+  { tier: 2, name: "Beginner", minPercentage: 50, maxPercentage: 75, color: "#fbbf24" },
+  { tier: 3, name: "Novice", minPercentage: 75, maxPercentage: 100, color: "#f87171" },
+  { tier: 4, name: "Intermediate", minPercentage: 100, maxPercentage: 125, color: "#a78bfa" },
+  { tier: 5, name: "Advanced", minPercentage: 125, maxPercentage: 150, color: "#f472b6" },
+  { tier: 6, name: "Elite", minPercentage: 150, maxPercentage: Infinity, color: "#67e8f9" },
+];
 
-  for (const ex of exercises) {
-    const progress = ex.userProgress[0];
-    if (!progress) continue;
-    for (const log of progress.logs) {
-      const logHasHold = log.holdTime != null || log.holdTime2 != null || log.holdTime3 != null;
-      const parsed = parseModifierWithBand(log.modifier);
-      entries.push({
-        logId: log.id,
-        date: log.createdAt,
-        exerciseName: ex.name,
-        exerciseId: ex.id,
-        level: log.level,
-        levelNameLevel: parsed.displayLevelOverride ?? log.level,
-        tierName: stripBwPercentHint(getTierName(ex, parsed.displayLevelOverride ?? log.level)),
-        weight1: log.weight1,
-        reps1: log.reps1,
-        weight2: log.weight2,
-        reps2: log.reps2,
-        weight3: log.weight3,
-        reps3: log.reps3,
-        holdTime: log.holdTime,
-        holdTime2: log.holdTime2,
-        holdTime3: log.holdTime3,
-        modifier: parsed.baseModifier,
-        resistanceBandKg: parsed.resistanceBandKg,
-        variant: log.variant,
-        notes: log.notes,
-        completed: log.completed,
-        hasHold: logHasHold,
-      });
-    }
-  }
-  entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  return entries;
+function calculateTier(avgWeight: number, userBodyweight: number) {
+  const percentage = (avgWeight / userBodyweight) * 100;
+  const currentTier = TIER_STANDARDS.find(
+    (t) => percentage >= t.minPercentage && percentage < t.maxPercentage
+  ) || TIER_STANDARDS[TIER_STANDARDS.length - 1];
+  const nextTier = TIER_STANDARDS.find((t) => t.tier === currentTier.tier + 1);
+  const nextTierWeight = nextTier ? (nextTier.minPercentage / 100) * userBodyweight : null;
+  const tierRange = currentTier.maxPercentage - currentTier.minPercentage;
+  const progressInTier = tierRange === Infinity ? 100 : ((percentage - currentTier.minPercentage) / tierRange) * 100;
+  return { currentTier, percentage, nextTierWeight, progressInTier };
 }
 
-function formatDate(dateString: string, dateFormat: "dd-mm-yyyy" | "dd-mmm-yyyy" | "dd-mm-yy" | "dd-mmm-yy"): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return formatDateWithPreference(date, dateFormat);
-}
-
-function displayVal(v: number | null): string {
-  return v != null ? String(v) : "—";
-}
-
-function abbreviateVariantText(text: string): string {
-  const words = text
-    .trim()
-    .split(/[^A-Za-z0-9]+/)
-    .filter(Boolean);
-
-  if (words.length >= 2) {
-    return words.slice(0, 4).map((w) => w[0].toUpperCase()).join("");
+/** Compute the tier glow color from an exercise's logged weights and user bodyweight. */
+function getTierGlowFromLogs(
+  exercise: ProgressionExercise,
+  userBodyweightKg: number | null,
+): { glowColor: string; tierName: string } {
+  const DEFAULT_COLOR = TIER_STANDARDS[0].color; // Untrained grey
+  if (!userBodyweightKg || userBodyweightKg <= 0) {
+    return { glowColor: DEFAULT_COLOR, tierName: TIER_STANDARDS[0].name };
   }
 
-  const compact = words[0] ?? text.trim();
-  return compact.slice(0, 6).toUpperCase();
-}
+  const logs = exercise.userProgress?.[0]?.logs ?? [];
+  if (logs.length === 0) {
+    return { glowColor: DEFAULT_COLOR, tierName: TIER_STANDARDS[0].name };
+  }
 
-function TrainingLogTable({
-  exercises,
-  physique,
-  selectedLogFilter,
-  onSelectExercise,
-  onRefresh,
-  userId,
-}: {
-  exercises: ProgressionExercise[];
-  physique: UserPhysiqueSettings;
-  selectedLogFilter: LogTableFilter | null;
-  onSelectExercise: (filter: LogTableFilter | null) => void;
-  onRefresh: () => void;
-  userId: string;
-}) {
-  const allEntries = useMemo(() => flattenLogs(exercises), [exercises]);
-  const tableEntries = useMemo(() => allEntries.filter((entry) => !entry.hasHold), [allEntries]);
-  const exerciseLookup = useMemo(() => new Map(exercises.map((exercise) => [exercise.id, exercise])), [exercises]);
-
-  const isSelectedGymExercise = selectedLogFilter
-    ? (() => {
-        const selectedExercise = exerciseLookup.get(selectedLogFilter.exerciseId);
-        return selectedExercise ? isGymCategoryExercise(selectedExercise) : false;
-      })()
-    : false;
-
-  // Show only selected progression tier when a filter is active.
-  const entries = allEntries.filter(
-    (entry) =>
-      !entry.hasHold &&
-      (!selectedLogFilter ||
-        (entry.exerciseId === selectedLogFilter.exerciseId &&
-          (isSelectedGymExercise || entry.levelNameLevel === selectedLogFilter.levelNameLevel)))
+  // Sort descending by date
+  const sorted = [...logs].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
-  const { settings } = useDisplaySettings();
+
+  // Group by session date, take last 3 sessions
+  const sessionDates = new Set<string>();
+  const sessionLogs: typeof sorted = [];
+  for (const log of sorted) {
+    const dateKey = new Date(log.createdAt).toDateString();
+    if (sessionDates.size < 3 || sessionDates.has(dateKey)) {
+      sessionDates.add(dateKey);
+      sessionLogs.push(log);
+    }
+    if (sessionDates.size >= 3 && !sessionDates.has(dateKey)) break;
+  }
+
+  const allWeights: number[] = [];
+  for (const log of sessionLogs) {
+    const { resistanceBandKg: bandKg, modifierWeightKg } = parseModifierWithBand(log.modifier);
+    if (log.weight1 && log.weight1 > 0) allWeights.push(getEffectiveWeight(log.weight1, bandKg, modifierWeightKg));
+    if (log.weight2 && log.weight2 > 0) allWeights.push(getEffectiveWeight(log.weight2, bandKg, modifierWeightKg));
+    if (log.weight3 && log.weight3 > 0) allWeights.push(getEffectiveWeight(log.weight3, bandKg, modifierWeightKg));
+  }
+
+  if (allWeights.length === 0) {
+    return { glowColor: DEFAULT_COLOR, tierName: TIER_STANDARDS[0].name };
+  }
+
+  const avgWeight = allWeights.reduce((s, w) => s + w, 0) / allWeights.length;
+  const { currentTier } = calculateTier(avgWeight, userBodyweightKg);
+  return { glowColor: currentTier.color, tierName: currentTier.name };
+}
+
+function TierProgressBar({
+  exercise,
+  userBodyweightKg,
+}: {
+  exercise: ProgressionExercise;
+  userBodyweightKg: number | null;
+}) {
   const { isMobile } = useAppContext();
 
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [editingData, setEditingData] = useState<Record<string, {
-    weight1: number | null; reps1: number | null;
-    weight2: number | null; reps2: number | null;
-    weight3: number | null; reps3: number | null;
-    level: number;
-    modifier: string | null; resistanceBandKg: number | null; variant: string | null; notes: string | null;
-  }>>({});
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<{ logId: string; exerciseName: string } | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [levelPicker, setLevelPicker] = useState<{ logId: string; exerciseId: string } | null>(null);
+  // Only show for weighted exercises (not timed / pure bodyweight without weight)
+  const isWeightedExercise = exercise.weighted || false;
+  const isBodyweightExercise = exercise.bodyweight || false;
+  if (!isWeightedExercise && !isBodyweightExercise) return null;
 
-  const logMode = settings.progressionLogMode ?? "name-illumination-realm";
-  const compactSetting = settings.progressionLogCompact ?? "compact";
-  const glowIntensity = settings.glowIntensityProgressionLog ?? 100;
-  const columnColors = settings.progressionColumnColorsEnabled ?? true;
-  const columnGrouped = settings.progressionColumnOrderGrouped ?? true;
-  const variationDisplay = settings.progressionVariationDisplay ?? "abbreviation";
-  const dateFormat = settings.dateFormat || "dd-mmm-yyyy";
-  const visibleColumnKeys = settings.progressionVisibleColumns ?? DEFAULT_PROGRESSION_VISIBLE_COLUMNS;
-  const visibleColumnSet = useMemo(() => new Set(visibleColumnKeys), [visibleColumnKeys]);
-  const showDate = visibleColumnSet.has("date");
-  const showLevel = visibleColumnSet.has("level");
-  const showCategory = visibleColumnSet.has("category");
-  const showModifier = visibleColumnSet.has("modifier");
-  const showBand = visibleColumnSet.has("band");
-  const showVariant = visibleColumnSet.has("variant");
-  const showNotes = visibleColumnSet.has("notes");
-
-  const effectiveCompact = compactSetting === "compact" || (compactSetting === "auto" && isMobile);
-
-  const showIllumination = logMode !== "name-only";
-  const showRealm = logMode === "name-illumination-realm" || logMode === "name-illumination-realm-path";
-  const showPath = logMode === "name-illumination-realm-path";
-
-  // Build exercise lookup for display
-
-  const anyModifier = tableEntries.some((entry) => entry.modifier);
-  const anyBand = true;
-  const anyVariant = isEditMode || tableEntries.some((entry) => entry.variant);
-
-  const getZeroValueStyle = (value: number | null, colType: string): React.CSSProperties | undefined => {
-    if (value === 0) return { backgroundColor: 'var(--ink-mid)', color: 'var(--mist-dark)' };
-    if (columnColors && colType === 'weight') return { backgroundColor: 'var(--col-weight-bg)' };
-    if (columnColors && colType === 'reps') return { backgroundColor: 'var(--col-reps-bg)' };
-    return undefined;
-  };
-
-  const handleEditModeToggle = () => {
-    if (!isEditMode) {
-      // Toggle immediately for instant visual feedback
-      setIsEditMode(true);
-      // Defer heavy data preparation to keep the UI responsive
-      startTransition(() => {
-        const newData: typeof editingData = {};
-        entries.forEach(entry => {
-          const ex = exerciseLookup.get(entry.exerciseId);
-          const autoFromSet = ex
-            ? getAutoGymLevelFromSet(ex, physique, {
-                weight1: entry.weight1,
-                weight2: entry.weight2,
-                weight3: entry.weight3,
-              }, entry.resistanceBandKg)
-            : null;
-          const effectiveLevel =
-            ex && isGymCategoryExercise(ex)
-              ? (autoFromSet ?? entry.level)
-              : entry.level;
-          newData[entry.logId] = {
-            weight1: entry.weight1, reps1: entry.reps1,
-            weight2: entry.weight2, reps2: entry.reps2,
-            weight3: entry.weight3, reps3: entry.reps3,
-            level: effectiveLevel,
-            modifier: entry.modifier, resistanceBandKg: entry.resistanceBandKg, variant: entry.variant, notes: entry.notes,
-          };
-        });
-        setEditingData(newData);
-      });
-    } else {
-      setIsEditMode(false);
-    }
-  };
-
-  const handleEditChange = (logId: string, field: string, value: string | number | null) => {
-    setEditingData(prev => ({ ...prev, [logId]: { ...prev[logId], [field]: value } }));
-  };
-
-  const handleSaveChanges = async () => {
-    setIsSaving(true);
-    try {
-      const updates = Object.entries(editingData).map(([id, data]) => ({
-        id,
-        level: data.level,
-        weight1: data.weight1,
-        reps1: data.reps1,
-        weight2: data.weight2,
-        reps2: data.reps2,
-        weight3: data.weight3,
-        reps3: data.reps3,
-        modifier: buildModifierWithBand(data.modifier, data.resistanceBandKg, data.level),
-        variant: data.variant,
-        notes: data.notes,
-      }));
-      const res = await fetch("/api/progressions/logs/update", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ updates, userId }),
-      });
-      if (res.ok) {
-        setSaveMessage({ type: "success", text: "Training logs updated successfully!" });
-        setIsEditMode(false);
-        setEditingData({});
-        onRefresh();
-      } else {
-        const data = await res.json();
-        setSaveMessage({ type: "error", text: data.error || "Failed to save changes" });
-      }
-    } catch {
-      setSaveMessage({ type: "error", text: "Network error — unable to save changes" });
-    } finally {
-      setIsEditMode(false);
-      setIsSaving(false);
-    }
-  };
-
-  const handleCancel = () => {
-    setIsEditMode(false);
-    setEditingData({});
-  };
-
-  const handleDeleteLog = async (logId: string) => {
-    setIsDeleting(true);
-    try {
-      const res = await fetch("/api/progressions/logs/delete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ logId, userId }),
-      });
-      if (res.ok) {
-        setSaveMessage({ type: "success", text: "Log record deleted successfully" });
-        setDeleteConfirm(null);
-        onRefresh();
-      } else {
-        const data = await res.json();
-        setSaveMessage({ type: "error", text: data.error || "Failed to delete record" });
-      }
-    } catch {
-      setSaveMessage({ type: "error", text: "Network error — unable to delete record" });
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  // Column order
-  const dataColumns = columnGrouped
-    ? ["weight1", "weight2", "weight3", "reps1", "reps2", "reps3"] as const
-    : ["weight1", "reps1", "weight2", "reps2", "weight3", "reps3"] as const;
-
-  const dataColumnLabels = columnGrouped
-    ? ["W1", "W2", "W3", "R1", "R2", "R3"]
-    : ["W1", "R1", "W2", "R2", "W3", "R3"];
-
-  const dataColumnTypes = columnGrouped
-    ? ["weight", "weight", "weight", "reps", "reps", "reps"]
-    : ["weight", "reps", "weight", "reps", "weight", "reps"];
-
-  const visibleDataColumns = dataColumns.filter((col) => visibleColumnSet.has(col));
-  const visibleDataColumnLabels = dataColumnLabels.filter((_label, idx) => visibleColumnSet.has(dataColumns[idx]));
-  const visibleDataColumnTypes = dataColumnTypes.filter((_type, idx) => visibleColumnSet.has(dataColumns[idx]));
-  const emptyRowColSpan =
-    (showDate ? 1 : 0) +
-    (showLevel ? 1 : 0) +
-    (showCategory ? 1 : 0) +
-    1 +
-    visibleDataColumns.length +
-    (anyModifier && showModifier ? 1 : 0) +
-    (anyBand && showBand ? 1 : 0) +
-    (anyVariant && showVariant ? 1 : 0) +
-    (showNotes ? 1 : 0) +
-    (isEditMode ? 1 : 0);
-
-  const fieldMeta: Record<string, { type: "weight" | "reps"; min: string; max?: string; step?: string }> = {
-    weight1: { type: "weight", min: "0", step: "0.5" },
-    weight2: { type: "weight", min: "0", step: "0.5" },
-    weight3: { type: "weight", min: "0", step: "0.5" },
-    reps1: { type: "reps", min: "0", max: "500" },
-    reps2: { type: "reps", min: "0", max: "500" },
-    reps3: { type: "reps", min: "0", max: "500" },
-  };
-
-  return (
-    <>
-    <GlowCard className={isMobile ? "w-full !p-0 border-x-0 rounded-none" : "w-full !p-0"} glow="jade" hoverable={false}>
-      {/* Edit header bar */}
-      {entries.length > 0 && (
-        <div className="flex items-center justify-between px-3 py-2 border-b border-jade-glow/20">
-          <div className="flex items-center gap-2">
-            {saveMessage && (
-              <motion.span
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className={`text-[11px] ${saveMessage.type === "success" ? "text-jade-light" : "text-crimson-light"}`}
-              >
-                {saveMessage.text}
-              </motion.span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {isEditMode ? (
-              <>
-                <GlowButton variant="jade" size="sm" onClick={handleSaveChanges} disabled={isSaving}>
-                  {isSaving ? "Saving..." : "✓ Save"}
-                </GlowButton>
-                <GlowButton variant="ghost" size="sm" onClick={handleCancel} disabled={isSaving}>
-                  ✕ Cancel
-                </GlowButton>
-              </>
-            ) : (
-              <button
-                onClick={handleEditModeToggle}
-                className="text-xs px-3 py-1 rounded border border-jade-glow/40 text-jade-light hover:bg-jade-deep/10 hover:scale-105 active:scale-95 transition-all duration-100"
-              >
-                ✎ Edit
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      <div className="overflow-x-auto -mx-4 px-4" style={{ WebkitOverflowScrolling: "touch" }}>
-        <table className={`text-xs border-collapse w-full`} style={{ whiteSpace: "nowrap", minWidth: effectiveCompact ? "400px" : (isEditMode ? "720px" : "650px") }}>
-          <thead>
-            <tr className="border-b border-jade-glow/30 text-mist-dark">
-              {showDate && <th className={`${effectiveCompact ? 'py-1 px-1' : 'py-2 px-1.5'} w-[6.5rem] min-w-[6.5rem] text-left font-semibold uppercase tracking-wider text-[11px]`}>Date</th>}
-              {showLevel && <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} w-[3.25rem] min-w-[3.25rem] text-center font-semibold uppercase tracking-wider text-[11px]`}>Lvl</th>}
-              {showCategory && <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} w-[5.25rem] min-w-[5.25rem] text-center font-semibold uppercase tracking-wider text-[11px]`}>Category</th>}
-              <th className={`${effectiveCompact ? 'py-1 px-1' : 'py-2 px-1.5'} text-left font-semibold uppercase tracking-wider text-[11px]`}>Exercise</th>
-              {visibleDataColumnLabels.map((label, idx) => (
-                <th
-                  key={label + idx}
-                  className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} w-[3.25rem] min-w-[3.25rem] text-center font-semibold tabular-nums uppercase tracking-wider text-[11px]`}
-                  style={columnColors ? { color: visibleDataColumnTypes[idx] === "weight" ? "var(--col-weight)" : "var(--col-reps)" } : undefined}
-                >
-                  {label}
-                </th>
-              ))}
-              {anyModifier && showModifier && (
-                <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} w-[4.5rem] min-w-[4.5rem] text-center font-semibold uppercase tracking-wider text-[11px] text-amber-400`}>Mod</th>
-              )}
-              {anyBand && showBand && (
-                <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} w-[5rem] min-w-[5rem] text-center font-semibold uppercase tracking-wider text-[11px] text-sky-300`}>Band</th>
-              )}
-              {anyVariant && showVariant && (
-                <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} w-[6.5rem] min-w-[6.5rem] text-center font-semibold uppercase tracking-wider text-[11px] text-purple-400`}>Variant</th>
-              )}
-              {showNotes && <th className={`${effectiveCompact ? 'py-1 px-1' : 'py-2 px-1.5'} w-[9rem] min-w-[9rem] text-left font-semibold uppercase tracking-wider text-[11px]`}>Notes</th>}
-              {isEditMode && <th className="px-1 py-2 text-center font-semibold text-mist-glow text-[11px] align-middle">⋮</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {entries.length === 0 ? (
-              <tr>
-                <td colSpan={emptyRowColSpan} className="py-6 text-center text-mist-mid text-sm">
-                  No training data logged yet. Select an exercise from the sidebar to log your first set.
-                </td>
-              </tr>
-            ) : (
-              <AnimatePresence initial={false}>
-                {entries.map((entry) => {
-                  const ex = exerciseLookup.get(entry.exerciseId);
-                  const editData = editingData[entry.logId];
-                  const autoFromSet = ex
-                    ? getAutoGymLevelFromSet(ex, physique, {
-                        weight1: entry.weight1,
-                        weight2: entry.weight2,
-                        weight3: entry.weight3,
-                      }, entry.resistanceBandKg)
-                    : null;
-                  const effectiveLevel =
-                    ex && isGymCategoryExercise(ex)
-                      ? (autoFromSet ?? entry.level)
-                      : entry.level;
-                  const previewLevel = isEditMode && editData ? editData.level : effectiveLevel;
-                  const activeModifier = isEditMode && editData ? editData.modifier : entry.modifier;
-                  const activeVariant = isEditMode && editData ? editData.variant : entry.variant;
-                  const tier = ex?.tiers.find(t => t.level === previewLevel);
-                  const displayTier = ex?.tiers.find(t => t.level === entry.levelNameLevel);
-                  const tierDifficulty = ex ? getWeightedDifficulty(ex, previewLevel, activeVariant, activeModifier) : '';
-                  const tierDifficultyDisplay = getDifficultyDisplayName(
-                    { difficulty: tierDifficulty, wuxiaDifficulty: tierDifficulty },
-                    settings.terminologyMode
-                  ) || tierDifficulty;
-                  const diffColorClass = tierDifficulty ? getDifficultyColorClass(tierDifficulty) : '';
-                  const exerciseGlow = tierDifficulty ? getDifficultyGlowStyleScaled(tierDifficulty, glowIntensity) : {};
-                  const activeBand = isEditMode && editData ? editData.resistanceBandKg : entry.resistanceBandKg;
-                  const isBandAssistedCali = getExerciseCategoryLabel(ex) === "Cali" && typeof activeBand === "number" && activeBand > 0;
-                  const displayGlowStyle = isBandAssistedCali
-                    ? getBandAdjustedGlowStyle(exerciseGlow as React.CSSProperties, activeBand)
-                    : exerciseGlow;
-                  const softDimStyle = isBandAssistedCali
-                    ? ({ opacity: getBandSoftDimOpacity(activeBand) } as React.CSSProperties)
-                    : undefined;
-                  const entryDisplayName = isEditMode && ex
-                    ? stripBwPercentHint(getExerciseDisplayName(tier || ex, settings.terminologyMode))
-                    : displayTier
-                    ? stripBwPercentHint(getExerciseDisplayName(displayTier, settings.terminologyMode))
-                    : ex ? stripBwPercentHint(getExerciseDisplayName(ex, settings.terminologyMode)) : stripBwPercentHint(entry.exerciseName);
-                  const shownLevel = previewLevel;
-                  const exerciseVariantOptions = (ex?.variations ?? []).map((v) => v.name).filter(Boolean);
-                  const selectedVariantValue = editData?.variant ?? "";
-                  const variantSelectOptions =
-                    selectedVariantValue && !exerciseVariantOptions.includes(selectedVariantValue)
-                      ? [...exerciseVariantOptions, selectedVariantValue]
-                      : exerciseVariantOptions;
-
-                  return (
-                    <motion.tr
-                      key={entry.logId}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.12, ease: "easeOut" }}
-                      className={`border-b transition-all duration-100 ${
-                        isEditMode
-                          ? "border-jade-glow/15 bg-jade-deep/5 hover:bg-jade-deep/10"
-                          : "border-ink-light/50 hover:bg-ink-mid/10"
-                      }`}
-                    >
-                      {showDate && <td className={`${effectiveCompact ? 'px-1 py-1' : 'px-1.5 py-1.5'} w-[6.5rem] min-w-[6.5rem] text-mist-light text-xs align-middle whitespace-nowrap`}>{formatDate(entry.date, dateFormat)}</td>}
-                      {showLevel && (
-                        <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} w-[3.25rem] min-w-[3.25rem] text-center align-middle`}>
-                          <span className="text-[10px] text-gold" title={stripBwPercentHint(tier?.name || entry.tierName)}>{shownLevel}</span>
-                        </td>
-                      )}
-                      {showCategory && (
-                        <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} w-[5.25rem] min-w-[5.25rem] text-center align-middle`}>
-                          <span className={`text-[10px] font-semibold ${getExerciseCategoryLabel(ex) === "GYM" ? "text-gold" : "text-jade-light"}`}>
-                            {getExerciseCategoryLabel(ex)}
-                          </span>
-                        </td>
-                      )}
-                      <td
-                        className={`${effectiveCompact ? 'px-1 py-1' : 'px-1.5 py-1.5'} align-middle whitespace-nowrap cursor-pointer hover:bg-jade-deep/10 transition-colors ${isEditMode ? 'ring-1 ring-jade-glow/20' : ''}`}
-                        style={{ minWidth: "120px" }}
-                        onClick={() => {
-                          if (isEditMode) {
-                            setLevelPicker({ logId: entry.logId, exerciseId: entry.exerciseId });
-                            return;
-                          }
-                          const nextFilter: LogTableFilter = {
-                            exerciseId: entry.exerciseId,
-                            levelNameLevel: (
-                              (() => {
-                                const clickedExercise = exerciseLookup.get(entry.exerciseId);
-                                return clickedExercise && isGymCategoryExercise(clickedExercise) ? null : entry.levelNameLevel;
-                              })()
-                            ),
-                          };
-                          const isSameFilter =
-                            selectedLogFilter?.exerciseId === nextFilter.exerciseId &&
-                            selectedLogFilter?.levelNameLevel === nextFilter.levelNameLevel;
-                          onSelectExercise(isSameFilter ? null : nextFilter);
-                        }}
-                      >
-                        {!showIllumination ? (
-                          <span className="text-xs text-cloud-white" style={softDimStyle} title={entryDisplayName}>
-                            {entryDisplayName}
-                          </span>
-                        ) : (
-                          <div
-                            className="px-2 py-1 rounded-md border inline-flex items-center gap-1.5"
-                            style={
-                              glowIntensity > 0
-                                ? ({ ...(displayGlowStyle as React.CSSProperties), ...(softDimStyle || {}) } as React.CSSProperties)
-                                : softDimStyle
-                            }
-                            title={entryDisplayName}
-                          >
-                            <span className={`text-xs font-normal ${diffColorClass}`}>
-                              {entryDisplayName}
-                            </span>
-                            {showRealm && ex && (
-                              <>
-                                <span className={`inline-flex items-center px-1 py-0 rounded text-[9px] font-medium ${diffColorClass} border border-current/20 opacity-80`}>
-                                  {tierDifficultyDisplay}
-                                </span>
-                                {showPath && ex.type && (
-                                  <span className={`inline-flex items-center px-1 py-0 rounded text-[9px] font-medium ${getTypeColor(getTypeColorKey(ex))} border border-current/20 opacity-70`}>
-                                    {getTypeDisplayName(ex, settings.terminologyMode)}
-                                  </span>
-                                )}
-                              </>
-                            )}
-                          </div>
-                        )}
-                      </td>
-                      {visibleDataColumns.map((col, idx) => {
-                        const meta = fieldMeta[col];
-                        if (isEditMode && editData) {
-                          const editVal = editData[col as keyof typeof editData];
-                          return (
-                            <td key={col + idx} className="w-[3.25rem] min-w-[3.25rem] px-1 py-1.5 text-center align-middle">
-                              <input
-                                type="number"
-                                min={meta.min}
-                                max={meta.max}
-                                step={meta.step}
-                                value={editVal ?? ""}
-                                onChange={(e) =>
-                                  handleEditChange(
-                                    entry.logId,
-                                    col,
-                                    e.target.value
-                                      ? meta.type === "weight" ? parseFloat(e.target.value) : parseInt(e.target.value)
-                                      : null
-                                  )
-                                }
-                                placeholder="—"
-                                className="w-full min-w-[52px] bg-ink-deep border border-jade-glow/30 rounded px-1 py-1 text-cloud-white text-center text-xs outline-none transition-all duration-200 hover:border-jade-glow/50 hover:bg-ink-dark/60 focus:border-jade-glow focus:shadow-[0_0_8px_rgba(58,143,143,0.4)]"
-                              />
-                            </td>
-                          );
-                        }
-                        return (
-                          <td
-                            key={col + idx}
-                            className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} w-[3.25rem] min-w-[3.25rem] text-center text-cloud-white text-xs align-middle`}
-                            style={getZeroValueStyle(entry[col], visibleDataColumnTypes[idx])}
-                          >
-                            {displayVal(entry[col])}
-                          </td>
-                        );
-                      })}
-                      {anyModifier && showModifier && (
-                        isEditMode && editData ? (
-                          <td className="w-[4.5rem] min-w-[4.5rem] px-1 py-1.5 text-center align-middle">
-                            <input
-                              type="text"
-                              value={editData.modifier ?? ""}
-                              onChange={(e) => handleEditChange(entry.logId, "modifier", e.target.value || null)}
-                              placeholder="—"
-                              className="w-full min-w-[52px] bg-ink-deep border border-jade-glow/30 rounded px-1 py-1 text-amber-400 text-center text-xs outline-none transition-all duration-200 hover:border-jade-glow/50 hover:bg-ink-dark/60 focus:border-jade-glow focus:shadow-[0_0_8px_rgba(58,143,143,0.4)]"
-                            />
-                          </td>
-                        ) : (
-                          <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} w-[4.5rem] min-w-[4.5rem] text-center text-amber-400 text-xs whitespace-nowrap align-middle`} title={entry.modifier || ""}>
-                            {entry.modifier || "—"}
-                          </td>
-                        )
-                      )}
-                      {anyBand && showBand && (
-                        isEditMode && editData ? (
-                          <td className="w-[5rem] min-w-[5rem] px-1 py-1.5 text-center align-middle">
-                            <select
-                              value={editData.resistanceBandKg != null ? String(editData.resistanceBandKg) : ""}
-                              onChange={(e) =>
-                                handleEditChange(
-                                  entry.logId,
-                                  "resistanceBandKg",
-                                  e.target.value ? parseFloat(e.target.value) : null
-                                )
-                              }
-                              className="w-full min-w-[70px] bg-ink-deep border border-jade-glow/30 rounded px-1 py-1 text-sky-300 text-center text-xs outline-none transition-all duration-200 focus:border-jade-glow focus:shadow-[0_0_8px_rgba(58,143,143,0.4)]"
-                            >
-                              <option value="">—</option>
-                              {RESISTANCE_BAND_OPTIONS.map((kg) => (
-                                <option key={kg} value={String(kg)}>
-                                  {formatResistanceBandLabel(kg)}
-                                </option>
-                              ))}
-                            </select>
-                          </td>
-                        ) : (
-                          <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} w-[5rem] min-w-[5rem] text-center text-sky-300 text-xs whitespace-nowrap align-middle`}>
-                            {entry.resistanceBandKg != null ? formatResistanceBandLabel(entry.resistanceBandKg) : "—"}
-                          </td>
-                        )
-                      )}
-                      {anyVariant && showVariant && (
-                        isEditMode && editData ? (
-                          <td className="w-[6.5rem] min-w-[6.5rem] px-1 py-1.5 text-center align-middle">
-                            <select
-                              value={editData.variant ?? ""}
-                              onChange={(e) => handleEditChange(entry.logId, "variant", e.target.value || null)}
-                              className="w-full min-w-[70px] bg-ink-deep border border-jade-glow/30 rounded px-1 py-1 text-purple-400 text-center text-xs outline-none transition-all duration-200 focus:border-jade-glow focus:shadow-[0_0_8px_rgba(58,143,143,0.4)]"
-                            >
-                              <option value="">—</option>
-                              {variantSelectOptions.map((variantName) => (
-                                <option key={variantName} value={variantName}>
-                                  {variantName}
-                                </option>
-                              ))}
-                            </select>
-                          </td>
-                        ) : (
-                          <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} w-[6.5rem] min-w-[6.5rem] text-center text-purple-400 text-xs whitespace-nowrap align-middle`} title={entry.variant || ""}>
-                            {entry.variant
-                              ? variationDisplay === "full"
-                                ? entry.variant
-                                : abbreviateVariantText(entry.variant)
-                              : "—"}
-                          </td>
-                        )
-                      )}
-                      {showNotes && (
-                        isEditMode && editData ? (
-                          <td className="w-[9rem] min-w-[9rem] px-1.5 py-1.5 align-middle">
-                            <input
-                              type="text"
-                              value={editData.notes ?? ""}
-                              onChange={(e) => handleEditChange(entry.logId, "notes", e.target.value || null)}
-                              placeholder="Add notes..."
-                              className="w-full min-w-[100px] bg-ink-deep border border-jade-glow/30 rounded px-2 py-1 text-cloud-white text-xs placeholder:text-mist-dark outline-none transition-all duration-200 focus:border-jade-glow focus:shadow-[0_0_8px_rgba(58,143,143,0.4)]"
-                            />
-                          </td>
-                        ) : (
-                          <td className={`${effectiveCompact ? 'px-1 py-1' : 'px-1.5 py-1.5'} w-[9rem] min-w-[9rem] text-mist-light text-xs whitespace-nowrap align-middle`} title={entry.notes || ""}>
-                            {entry.notes || "—"}
-                            {entry.completed && <span className="text-jade-glow ml-1">✦</span>}
-                          </td>
-                        )
-                      )}
-                      {isEditMode && (
-                        <td className="px-1 py-1.5 text-center align-middle">
-                          <motion.button
-                            whileHover={{ scale: 1.2 }}
-                            whileTap={{ scale: 0.9 }}
-                            onClick={() => setDeleteConfirm({ logId: entry.logId, exerciseName: entryDisplayName })}
-                            className="text-crimson-light hover:text-crimson-glow transition-colors text-lg"
-                            title="Delete this log record"
-                            disabled={isDeleting}
-                          >
-                            ✕
-                          </motion.button>
-                        </td>
-                      )}
-                    </motion.tr>
-                  );
-                })}
-              </AnimatePresence>
-            )}
-          </tbody>
-        </table>
+  // Show message if no bodyweight set
+  if (!userBodyweightKg || userBodyweightKg <= 0) {
+    return (
+      <div className={`border border-ink-light/20 bg-ink-mid/15 ${isMobile ? "rounded-xl px-3 py-2.5" : "rounded-lg px-2.5 py-2"}`}>
+        <span className="text-[9px] text-mist-dark/70 uppercase tracking-wider font-medium">Your Tier</span>
+        <p className={`${isMobile ? "text-[11px]" : "text-[10px]"} text-mist-dark mt-1`}>
+          Set your bodyweight in Settings to see your tier.
+        </p>
       </div>
-    </GlowCard>
+    );
+  }
 
-    {/* Delete Confirmation Modal — portalled to escape stacking context */}
-    {typeof document !== "undefined" && createPortal(
-      <AnimatePresence>
-        {deleteConfirm && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px]"
-              onClick={() => setDeleteConfirm(null)}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[340px] max-w-[90vw] bg-ink-deep border border-ink-light rounded-xl shadow-2xl p-5"
-              style={{ boxShadow: "0 0 30px rgba(200, 50, 50, 0.15), 0 20px 40px rgba(0,0,0,0.4)" }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h3 className="text-sm font-semibold text-crimson-light mb-3">Delete Training Record</h3>
-              <p className="text-xs text-mist-light mb-5 leading-relaxed">
-                Are you sure you want to permanently delete the log record for{" "}
-                <span className="text-cloud-white font-medium">{deleteConfirm.exerciseName}</span>?
-                This action cannot be undone.
-              </p>
-              <div className="flex gap-3">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => handleDeleteLog(deleteConfirm.logId)}
-                  disabled={isDeleting}
-                  className="flex-1 px-4 py-2 text-xs font-semibold rounded-lg bg-crimson-deep/30 border border-crimson/50 text-crimson-light hover:bg-crimson-deep/50 transition-all duration-200 disabled:opacity-50"
-                >
-                  {isDeleting ? "Deleting..." : "Delete Record"}
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setDeleteConfirm(null)}
-                  disabled={isDeleting}
-                  className="flex-1 px-4 py-2 text-xs font-semibold rounded-lg border border-ink-light text-mist-light hover:bg-ink-mid/30 transition-all duration-200 disabled:opacity-50"
-                >
-                  Cancel
-                </motion.button>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>,
-      document.body
-    )}
-
-    {/* Level Picker Modal — portalled to escape stacking context */}
-    {typeof document !== "undefined" && createPortal(
-      <AnimatePresence>
-        {levelPicker && (() => {
-          const ex = exerciseLookup.get(levelPicker.exerciseId);
-          if (!ex) return null;
-          const tiers = [...ex.tiers].sort((a, b) => a.level - b.level);
-          const current = editingData[levelPicker.logId]?.level
-            ?? entries.find((e) => e.logId === levelPicker.logId)?.level
-            ?? 1;
-
-          return (
-            <>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px]"
-                onClick={() => setLevelPicker(null)}
-              />
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[360px] max-w-[92vw] bg-ink-deep border border-ink-light rounded-xl shadow-2xl p-4"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <h3 className="text-sm font-semibold text-cloud-white mb-3">Change Progression Tier</h3>
-                <p className="text-[11px] text-mist-light mb-3">{stripBwPercentHint(getExerciseDisplayName(ex, settings.terminologyMode))}</p>
-                <div className="max-h-[280px] overflow-y-auto space-y-1 pr-1">
-                  {tiers.map((t) => {
-                    const active = t.level === current;
-                    return (
-                      <button
-                        key={t.id}
-                        onClick={() => {
-                          handleEditChange(levelPicker.logId, "level", t.level);
-                          setLevelPicker(null);
-                        }}
-                        className={`w-full text-left px-2.5 py-2 rounded border transition-colors ${active ? "border-jade-glow/50 bg-jade-deep/20 text-jade-light" : "border-ink-light/40 bg-ink-mid/20 text-mist-light hover:border-jade-glow/35 hover:bg-jade-deep/10"}`}
-                      >
-                        <span className="text-[11px] font-semibold">Lv.{t.level} - {stripBwPercentHint(getExerciseDisplayName(t, settings.terminologyMode))}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="mt-3 flex justify-end">
-                  <button
-                    onClick={() => setLevelPicker(null)}
-                    className="px-3 py-1.5 text-xs rounded border border-ink-light text-mist-light hover:bg-ink-mid/30"
-                  >
-                    Close
-                  </button>
-                </div>
-              </motion.div>
-            </>
-          );
-        })()}
-      </AnimatePresence>,
-      document.body
-    )}
-    </>
+  // Get average weight from last 3 sessions
+  const logs = exercise.userProgress?.[0]?.logs ?? [];
+  const sortedLogs = [...logs].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
-}
 
-// ── Hold Training Log Table (separate table below main for hold-based exercises) ──
-
-function HoldTrainingLogTable({
-  exercises,
-  selectedLogFilter,
-  onSelectExercise,
-  onRefresh,
-  userId,
-}: {
-  exercises: ProgressionExercise[];
-  selectedLogFilter: LogTableFilter | null;
-  onSelectExercise: (filter: LogTableFilter | null) => void;
-  onRefresh: () => void;
-  userId: string;
-}) {
-  const allEntries = useMemo(() => flattenLogs(exercises), [exercises]);
-  const tableEntries = useMemo(() => allEntries.filter((entry) => entry.hasHold), [allEntries]);
-  const exerciseLookup = useMemo(() => new Map(exercises.map((exercise) => [exercise.id, exercise])), [exercises]);
-
-  const isSelectedGymExercise = selectedLogFilter
-    ? (() => {
-        const selectedExercise = exerciseLookup.get(selectedLogFilter.exerciseId);
-        return selectedExercise ? isGymCategoryExercise(selectedExercise) : false;
-      })()
-    : false;
-
-  const entries = allEntries.filter(
-    (entry) =>
-      entry.hasHold &&
-      (!selectedLogFilter ||
-        (entry.exerciseId === selectedLogFilter.exerciseId &&
-          (isSelectedGymExercise || entry.levelNameLevel === selectedLogFilter.levelNameLevel)))
-  );
-  const { settings } = useDisplaySettings();
-  const { isMobile } = useAppContext();
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [editingData, setEditingData] = useState<Record<string, {
-    reps1: number | null; holdTime: number | null;
-    reps2: number | null; holdTime2: number | null;
-    reps3: number | null; holdTime3: number | null;
-    level: number;
-    modifier: string | null; resistanceBandKg: number | null; variant: string | null; notes: string | null;
-  }>>({});
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<{ logId: string; exerciseName: string } | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [levelPicker, setLevelPicker] = useState<{ logId: string; exerciseId: string } | null>(null);
-
-  const logMode = settings.progressionLogMode ?? "name-illumination-realm";
-  const compactSetting = settings.progressionLogCompact ?? "compact";
-  const glowIntensity = settings.glowIntensityProgressionLog ?? 100;
-  const columnColors = settings.progressionColumnColorsEnabled ?? true;
-  const columnGrouped = settings.progressionColumnOrderGrouped ?? true;
-  const variationDisplay = settings.progressionVariationDisplay ?? "abbreviation";
-  const dateFormat = settings.dateFormat || "dd-mmm-yyyy";
-  const visibleColumnKeys = settings.progressionHoldVisibleColumns ?? DEFAULT_PROGRESSION_HOLD_VISIBLE_COLUMNS;
-  const visibleColumnSet = useMemo(() => new Set(visibleColumnKeys), [visibleColumnKeys]);
-  const showDate = visibleColumnSet.has("date");
-  const showLevel = visibleColumnSet.has("level");
-  const showCategory = visibleColumnSet.has("category");
-  const showModifier = visibleColumnSet.has("modifier");
-  const showBand = visibleColumnSet.has("band");
-  const showVariant = visibleColumnSet.has("variant");
-  const showNotes = visibleColumnSet.has("notes");
-
-  const effectiveCompact = compactSetting === "compact" || (compactSetting === "auto" && isMobile);
-
-  const showIllumination = logMode !== "name-only";
-  const showRealm = logMode === "name-illumination-realm" || logMode === "name-illumination-realm-path";
-  const showPath = logMode === "name-illumination-realm-path";
-
-  const anyModifier = tableEntries.some((entry) => entry.modifier);
-  const anyBand = true;
-  const anyVariant = isEditMode || tableEntries.some((entry) => entry.variant);
-
-  const getZeroValueStyle = (value: number | null, colType: string): React.CSSProperties | undefined => {
-    if (value === 0) return { backgroundColor: 'var(--ink-mid)', color: 'var(--mist-dark)' };
-    if (columnColors && colType === 'reps') return { backgroundColor: 'var(--col-reps-bg)' };
-    if (columnColors && colType === 'hold') return { backgroundColor: 'rgba(94, 184, 232, 0.08)' };
-    return undefined;
-  };
-
-  const handleEditModeToggle = () => {
-    if (!isEditMode) {
-      setIsEditMode(true);
-      startTransition(() => {
-        const newData: typeof editingData = {};
-        entries.forEach(entry => {
-          newData[entry.logId] = {
-            reps1: entry.reps1, holdTime: entry.holdTime,
-            reps2: entry.reps2, holdTime2: entry.holdTime2,
-            reps3: entry.reps3, holdTime3: entry.holdTime3,
-            level: entry.level,
-            modifier: entry.modifier, resistanceBandKg: entry.resistanceBandKg, variant: entry.variant, notes: entry.notes,
-          };
-        });
-        setEditingData(newData);
-      });
-    } else {
-      setIsEditMode(false);
+  // Group by session date (unique dates), take last 3 sessions
+  const sessionDates = new Set<string>();
+  const sessionLogs: typeof sortedLogs = [];
+  for (const log of sortedLogs) {
+    const dateKey = new Date(log.createdAt).toDateString();
+    if (sessionDates.size < 3 || sessionDates.has(dateKey)) {
+      sessionDates.add(dateKey);
+      sessionLogs.push(log);
     }
-  };
+    if (sessionDates.size >= 3 && !sessionDates.has(dateKey)) break;
+  }
 
-  const handleEditChange = (logId: string, field: string, value: string | number | null) => {
-    setEditingData(prev => ({ ...prev, [logId]: { ...prev[logId], [field]: value } }));
-  };
+  // Collect all weights from those sessions (subtract band assistance)
+  const allWeights: number[] = [];
+  for (const log of sessionLogs) {
+    const { resistanceBandKg: bandKg, modifierWeightKg } = parseModifierWithBand(log.modifier);
+    if (log.weight1 && log.weight1 > 0) allWeights.push(getEffectiveWeight(log.weight1, bandKg, modifierWeightKg));
+    if (log.weight2 && log.weight2 > 0) allWeights.push(getEffectiveWeight(log.weight2, bandKg, modifierWeightKg));
+    if (log.weight3 && log.weight3 > 0) allWeights.push(getEffectiveWeight(log.weight3, bandKg, modifierWeightKg));
+  }
 
-  const handleSaveChanges = async () => {
-    setIsSaving(true);
-    try {
-      const updates = Object.entries(editingData).map(([id, data]) => ({
-        id,
-        level: data.level,
-        weight1: null, weight2: null, weight3: null,
-        reps1: data.reps1, holdTime: data.holdTime,
-        reps2: data.reps2, holdTime2: data.holdTime2,
-        reps3: data.reps3, holdTime3: data.holdTime3,
-        modifier: buildModifierWithBand(data.modifier, data.resistanceBandKg, data.level), variant: data.variant, notes: data.notes,
-      }));
-      const res = await fetch("/api/progressions/logs/update", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ updates, userId }),
-      });
-      if (res.ok) {
-        setSaveMessage({ type: "success", text: "Timed hold logs updated!" });
-        setIsEditMode(false);
-        setEditingData({});
-        onRefresh();
-      } else {
-        const data = await res.json();
-        setSaveMessage({ type: "error", text: data.error || "Failed to save changes" });
-      }
-    } catch {
-      setSaveMessage({ type: "error", text: "Network error — unable to save changes" });
-    } finally {
-      setIsEditMode(false);
-      setIsSaving(false);
-    }
-  };
+  // No data state
+  if (allWeights.length === 0) {
+    return (
+      <div className={`border border-ink-light/20 bg-ink-mid/15 ${isMobile ? "rounded-xl px-3 py-2.5" : "rounded-lg px-2.5 py-2"}`}>
+        <span className="text-[9px] text-mist-dark/70 uppercase tracking-wider font-medium">Your Tier</span>
+        <div className="flex gap-[3px] mt-1.5 mb-1.5">
+          {TIER_STANDARDS.map((t) => (
+            <div key={t.tier} className="flex-1 h-[6px] rounded-full bg-ink-light/25" />
+          ))}
+        </div>
+        <p className={`${isMobile ? "text-[11px]" : "text-[10px]"} text-mist-dark`}>
+          Log your first session to see your tier!
+        </p>
+      </div>
+    );
+  }
 
-  const handleCancel = () => {
-    setIsEditMode(false);
-    setEditingData({});
-  };
-
-  const handleDeleteLog = async (logId: string) => {
-    setIsDeleting(true);
-    try {
-      const res = await fetch("/api/progressions/logs/delete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ logId, userId }),
-      });
-      if (res.ok) {
-        setSaveMessage({ type: "success", text: "Log record deleted successfully" });
-        setDeleteConfirm(null);
-        onRefresh();
-      } else {
-        const data = await res.json();
-        setSaveMessage({ type: "error", text: data.error || "Failed to delete record" });
-      }
-    } catch {
-      setSaveMessage({ type: "error", text: "Network error — unable to delete record" });
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  if (entries.length === 0) return null;
-
-  const holdFields = columnGrouped
-    ? [
-        { key: "holdTime", label: "T1", type: "hold" },
-        { key: "holdTime2", label: "T2", type: "hold" },
-        { key: "holdTime3", label: "T3", type: "hold" },
-        { key: "reps1", label: "W1", type: "reps" },
-        { key: "reps2", label: "W2", type: "reps" },
-        { key: "reps3", label: "W3", type: "reps" },
-      ] as const
-    : [
-        { key: "holdTime", label: "T1", type: "hold" },
-        { key: "reps1", label: "W1", type: "reps" },
-        { key: "holdTime2", label: "T2", type: "hold" },
-        { key: "reps2", label: "W2", type: "reps" },
-        { key: "holdTime3", label: "T3", type: "hold" },
-        { key: "reps3", label: "W3", type: "reps" },
-      ] as const;
-
-  const visibleHoldFields = holdFields.filter((field) => visibleColumnSet.has(field.key));
+  const avgWeight = allWeights.reduce((s, w) => s + w, 0) / allWeights.length;
+  const { currentTier, percentage, nextTierWeight } = calculateTier(avgWeight, userBodyweightKg);
+  const sessionCount = sessionDates.size;
+  const nextTierInfo = TIER_STANDARDS.find((t) => t.tier === currentTier.tier + 1);
 
   return (
-    <>
-    <GlowCard className={isMobile ? "w-full !p-0 border-x-0 rounded-none" : "w-full !p-0"} glow="jade" hoverable={false}>
-      {/* Edit header bar */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-jade-glow/20">
-        <div className="flex items-center gap-2">
-          {saveMessage && (
-            <motion.span
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className={`text-[11px] ${saveMessage.type === "success" ? "text-jade-light" : "text-crimson-light"}`}
-            >
-              {saveMessage.text}
-            </motion.span>
-          )}
+    <div className={`border border-ink-light/20 bg-ink-mid/15 ${isMobile ? "rounded-xl px-3 py-2.5" : "rounded-lg px-2.5 py-2"}`}>
+      <span className="text-[9px] text-mist-dark/70 uppercase tracking-wider font-medium">Your Tier</span>
+
+      {/* Segmented progress bar */}
+      <div className="flex gap-[3px] mt-1.5 mb-1.5">
+        {TIER_STANDARDS.map((t) => (
+          <div
+            key={t.tier}
+            className="flex-1 h-[6px] rounded-full transition-all duration-300"
+            style={{
+              backgroundColor: t.tier <= currentTier.tier ? t.color : "rgba(255,255,255,0.08)",
+              opacity: t.tier === currentTier.tier ? 1 : t.tier < currentTier.tier ? 0.7 : 0.4,
+              boxShadow: t.tier === currentTier.tier ? `0 0 6px ${t.color}60` : "none",
+            }}
+            title={`Tier ${t.tier}: ${t.name}`}
+          />
+        ))}
+      </div>
+
+      {/* Tier info */}
+      <div className="space-y-0.5">
+        <div className="flex items-center gap-1.5">
+          <span
+            className={`${isMobile ? "text-[12px]" : "text-[11px]"} font-semibold`}
+            style={{ color: currentTier.color }}
+          >
+            Tier {currentTier.tier}: {currentTier.name}
+          </span>
         </div>
-        <div className="flex items-center gap-2">
-          {isEditMode ? (
-            <>
-              <GlowButton variant="jade" size="sm" onClick={handleSaveChanges} disabled={isSaving}>
-                {isSaving ? "Saving..." : "✓ Save"}
-              </GlowButton>
-              <GlowButton variant="ghost" size="sm" onClick={handleCancel} disabled={isSaving}>
-                ✕ Cancel
-              </GlowButton>
-            </>
-          ) : (
-            <button
-              onClick={handleEditModeToggle}
-              className="text-xs px-3 py-1 rounded border border-jade-glow/40 text-jade-light hover:bg-jade-deep/10 hover:scale-105 active:scale-95 transition-all duration-100"
-            >
-              ✎ Edit
-            </button>
+        <div className={`${isMobile ? "text-[10px]" : "text-[9px]"} text-mist-dark`}>
+          Avg: {avgWeight.toFixed(1)}kg ({percentage.toFixed(1)}% BW)
+          {sessionCount < 3 && <span className="text-mist-dark/60"> (based on {sessionCount} session{sessionCount !== 1 ? "s" : ""})</span>}
+          {nextTierWeight && nextTierInfo && (
+            <span className="text-mist-light/70"> → {nextTierWeight.toFixed(1)}kg for {nextTierInfo.name}</span>
           )}
         </div>
       </div>
-
-      <div className="overflow-x-auto -mx-4 px-4" style={{ WebkitOverflowScrolling: "touch" }}>
-        <table className={`text-xs border-collapse w-full`} style={{ whiteSpace: "nowrap", minWidth: effectiveCompact ? "450px" : (isEditMode ? "720px" : "650px") }}>
-          <thead>
-            <tr className="border-b border-jade-glow/30 text-mist-dark">
-              {showDate && <th className={`${effectiveCompact ? 'py-1 px-1' : 'py-2 px-1.5'} w-[6.5rem] min-w-[6.5rem] text-left font-semibold uppercase tracking-wider text-[11px]`}>Date</th>}
-              {showLevel && <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} w-[3.25rem] min-w-[3.25rem] text-center font-semibold uppercase tracking-wider text-[11px]`}>Lvl</th>}
-              {showCategory && <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} w-[5.25rem] min-w-[5.25rem] text-center font-semibold uppercase tracking-wider text-[11px]`}>Category</th>}
-              <th className={`${effectiveCompact ? 'py-1 px-1' : 'py-2 px-1.5'} text-left font-semibold uppercase tracking-wider text-[11px]`}>Exercise</th>
-              {visibleHoldFields.map((field) => (
-                <th
-                  key={field.key}
-                  className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} w-[3.25rem] min-w-[3.25rem] text-center ${field.type === 'hold' ? 'font-bold' : 'font-semibold'} tabular-nums uppercase tracking-wider text-[11px]`}
-                  style={columnColors ? { color: field.type === 'hold' ? '#5eb8e8' : 'var(--col-reps)' } : undefined}
-                >
-                  {field.label}
-                </th>
-              ))}
-              {anyModifier && showModifier && (
-                <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} w-[4.5rem] min-w-[4.5rem] text-center font-semibold uppercase tracking-wider text-[11px] text-amber-400`}>Mod</th>
-              )}
-              {anyBand && showBand && (
-                <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} w-[5rem] min-w-[5rem] text-center font-semibold uppercase tracking-wider text-[11px] text-sky-300`}>Band</th>
-              )}
-              {anyVariant && showVariant && (
-                <th className={`${effectiveCompact ? 'py-1 px-0.5' : 'py-2 px-1'} w-[6.5rem] min-w-[6.5rem] text-center font-semibold uppercase tracking-wider text-[11px] text-purple-400`}>Variant</th>
-              )}
-              {showNotes && <th className={`${effectiveCompact ? 'py-1 px-1' : 'py-2 px-1.5'} w-[9rem] min-w-[9rem] text-left font-semibold uppercase tracking-wider text-[11px]`}>Notes</th>}
-              {isEditMode && <th className="px-1 py-2 text-center font-semibold text-mist-glow text-[11px] align-middle">⋮</th>}
-            </tr>
-          </thead>
-          <tbody>
-            <AnimatePresence initial={false}>
-              {entries.map((entry, _i) => {
-                const ex = exerciseLookup.get(entry.exerciseId);
-                const editData = editingData[entry.logId];
-                const previewLevel = isEditMode && editData ? editData.level : entry.level;
-                const activeModifier = isEditMode && editData ? editData.modifier : entry.modifier;
-                const activeVariant = isEditMode && editData ? editData.variant : entry.variant;
-                const tier = ex?.tiers.find(t => t.level === previewLevel);
-                const displayTier = ex?.tiers.find(t => t.level === entry.levelNameLevel);
-                const tierDifficulty = ex ? getWeightedDifficulty(ex, previewLevel, activeVariant, activeModifier) : '';
-                const tierDifficultyDisplay = getDifficultyDisplayName(
-                  { difficulty: tierDifficulty, wuxiaDifficulty: tierDifficulty },
-                  settings.terminologyMode
-                ) || tierDifficulty;
-                const diffColorClass = tierDifficulty ? getDifficultyColorClass(tierDifficulty) : '';
-                const exerciseGlow = tierDifficulty ? getDifficultyGlowStyleScaled(tierDifficulty, glowIntensity) : {};
-                const activeBand = isEditMode && editData ? editData.resistanceBandKg : entry.resistanceBandKg;
-                const isBandAssistedCali = getExerciseCategoryLabel(ex) === "Cali" && typeof activeBand === "number" && activeBand > 0;
-                const displayGlowStyle = isBandAssistedCali
-                  ? getBandAdjustedGlowStyle(exerciseGlow as React.CSSProperties, activeBand)
-                  : exerciseGlow;
-                const softDimStyle = isBandAssistedCali
-                  ? ({ opacity: getBandSoftDimOpacity(activeBand) } as React.CSSProperties)
-                  : undefined;
-                const entryDisplayName = isEditMode && ex
-                  ? stripBwPercentHint(getExerciseDisplayName(tier || ex, settings.terminologyMode))
-                  : displayTier
-                  ? stripBwPercentHint(getExerciseDisplayName(displayTier, settings.terminologyMode))
-                  : ex ? stripBwPercentHint(getExerciseDisplayName(ex, settings.terminologyMode)) : stripBwPercentHint(entry.exerciseName);
-                const shownLevel = previewLevel;
-                const exerciseVariantOptions = (ex?.variations ?? []).map((v) => v.name).filter(Boolean);
-                const selectedVariantValue = editData?.variant ?? "";
-                const variantSelectOptions =
-                  selectedVariantValue && !exerciseVariantOptions.includes(selectedVariantValue)
-                    ? [...exerciseVariantOptions, selectedVariantValue]
-                    : exerciseVariantOptions;
-
-                return (
-                  <motion.tr
-                    key={entry.logId}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.12, ease: "easeOut" }}
-                    className={`border-b transition-all duration-100 ${
-                      isEditMode
-                        ? "border-jade-glow/15 bg-jade-deep/5 hover:bg-jade-deep/10"
-                        : "border-ink-light/50 hover:bg-ink-mid/10"
-                    }`}
-                  >
-                    {showDate && <td className={`${effectiveCompact ? 'px-1 py-1' : 'px-1.5 py-1.5'} w-[6.5rem] min-w-[6.5rem] text-mist-light text-xs align-middle whitespace-nowrap`}>{formatDate(entry.date, dateFormat)}</td>}
-                    {showLevel && (
-                      <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} w-[3.25rem] min-w-[3.25rem] text-center align-middle`}>
-                        <span className="text-[10px] text-gold" title={stripBwPercentHint(tier?.name || entry.tierName)}>{shownLevel}</span>
-                      </td>
-                    )}
-                    {showCategory && (
-                      <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} w-[5.25rem] min-w-[5.25rem] text-center align-middle`}>
-                        <span className={`text-[10px] font-semibold ${getExerciseCategoryLabel(ex) === "GYM" ? "text-gold" : "text-jade-light"}`}>
-                          {getExerciseCategoryLabel(ex)}
-                        </span>
-                      </td>
-                    )}
-                    <td
-                      className={`${effectiveCompact ? 'px-1 py-1' : 'px-1.5 py-1.5'} align-middle whitespace-nowrap cursor-pointer hover:bg-jade-deep/10 transition-colors ${isEditMode ? 'ring-1 ring-jade-glow/20' : ''}`}
-                      style={{ minWidth: "120px" }}
-                      onClick={() => {
-                        if (isEditMode) {
-                          setLevelPicker({ logId: entry.logId, exerciseId: entry.exerciseId });
-                          return;
-                        }
-                        const nextFilter: LogTableFilter = {
-                          exerciseId: entry.exerciseId,
-                          levelNameLevel: (
-                            (() => {
-                              const clickedExercise = exerciseLookup.get(entry.exerciseId);
-                              return clickedExercise && isGymCategoryExercise(clickedExercise) ? null : entry.levelNameLevel;
-                            })()
-                          ),
-                        };
-                        const isSameFilter =
-                          selectedLogFilter?.exerciseId === nextFilter.exerciseId &&
-                          selectedLogFilter?.levelNameLevel === nextFilter.levelNameLevel;
-                        onSelectExercise(isSameFilter ? null : nextFilter);
-                      }}
-                    >
-                      {!showIllumination ? (
-                        <span className="text-xs text-cloud-white" style={softDimStyle} title={entryDisplayName}>
-                          {entryDisplayName}
-                        </span>
-                      ) : (
-                        <div
-                          className="px-2 py-1 rounded-md border inline-flex items-center gap-1.5"
-                          style={
-                            glowIntensity > 0
-                              ? ({ ...(displayGlowStyle as React.CSSProperties), ...(softDimStyle || {}) } as React.CSSProperties)
-                              : softDimStyle
-                          }
-                          title={entryDisplayName}
-                        >
-                          <span className={`text-xs font-normal ${diffColorClass}`}>
-                            {entryDisplayName}
-                          </span>
-                          {showRealm && ex && (
-                            <>
-                              <span className={`inline-flex items-center px-1 py-0 rounded text-[9px] font-medium ${diffColorClass} border border-current/20 opacity-80`}>
-                                {tierDifficultyDisplay}
-                              </span>
-                              {showPath && ex.type && (
-                                <span className={`inline-flex items-center px-1 py-0 rounded text-[9px] font-medium ${getTypeColor(getTypeColorKey(ex))} border border-current/20 opacity-70`}>
-                                  {getTypeDisplayName(ex, settings.terminologyMode)}
-                                </span>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      )}
-                    </td>
-                    {visibleHoldFields.map((field) => {
-                      const value = entry[field.key as keyof typeof entry] as number | null;
-                      if (isEditMode && editData) {
-                        const editVal = editData[field.key as keyof typeof editData];
-                        return (
-                          <td key={field.key} className="w-[3.25rem] min-w-[3.25rem] px-1 py-1.5 text-center align-middle">
-                            <input
-                              type="number"
-                              min="0"
-                              max={field.type === "reps" ? "500" : "9999"}
-                              value={editVal ?? ""}
-                              onChange={(e) =>
-                                handleEditChange(
-                                  entry.logId,
-                                  field.key,
-                                  e.target.value ? parseInt(e.target.value) : null
-                                )
-                              }
-                              placeholder="—"
-                              className="w-full min-w-[52px] bg-ink-deep border border-jade-glow/30 rounded px-1 py-1 text-cloud-white text-center text-xs outline-none transition-all duration-200 hover:border-jade-glow/50 hover:bg-ink-dark/60 focus:border-jade-glow focus:shadow-[0_0_8px_rgba(58,143,143,0.4)]"
-                            />
-                          </td>
-                        );
-                      }
-                      if (field.type === "hold") {
-                        return (
-                          <td key={field.key} className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} w-[3.25rem] min-w-[3.25rem] text-center text-xs font-medium align-middle`} style={{ color: '#5eb8e8', ...getZeroValueStyle(value, 'hold') }}>
-                            {value != null ? `${value}s` : "—"}
-                          </td>
-                        );
-                      }
-                      return (
-                        <td key={field.key} className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} w-[3.25rem] min-w-[3.25rem] text-center text-cloud-white text-xs align-middle`} style={getZeroValueStyle(value, 'reps')}>
-                          {displayVal(value)}
-                        </td>
-                      );
-                    })}
-                    {anyModifier && showModifier && (
-                      isEditMode && editData ? (
-                        <td className="w-[4.5rem] min-w-[4.5rem] px-1 py-1.5 text-center align-middle">
-                          <input
-                            type="text"
-                            value={editData.modifier ?? ""}
-                            onChange={(e) => handleEditChange(entry.logId, "modifier", e.target.value || null)}
-                            placeholder="—"
-                            className="w-full min-w-[52px] bg-ink-deep border border-jade-glow/30 rounded px-1 py-1 text-amber-400 text-center text-xs outline-none transition-all duration-200 hover:border-jade-glow/50 hover:bg-ink-dark/60 focus:border-jade-glow focus:shadow-[0_0_8px_rgba(58,143,143,0.4)]"
-                          />
-                        </td>
-                      ) : (
-                        <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} w-[4.5rem] min-w-[4.5rem] text-center text-amber-400 text-xs whitespace-nowrap align-middle`} title={entry.modifier || ""}>
-                          {entry.modifier || "—"}
-                        </td>
-                      )
-                    )}
-                    {anyBand && showBand && (
-                      isEditMode && editData ? (
-                        <td className="w-[5rem] min-w-[5rem] px-1 py-1.5 text-center align-middle">
-                          <select
-                            value={editData.resistanceBandKg != null ? String(editData.resistanceBandKg) : ""}
-                            onChange={(e) =>
-                              handleEditChange(
-                                entry.logId,
-                                "resistanceBandKg",
-                                e.target.value ? parseFloat(e.target.value) : null
-                              )
-                            }
-                            className="w-full min-w-[70px] bg-ink-deep border border-jade-glow/30 rounded px-1 py-1 text-sky-300 text-center text-xs outline-none transition-all duration-200 focus:border-jade-glow focus:shadow-[0_0_8px_rgba(58,143,143,0.4)]"
-                          >
-                            <option value="">—</option>
-                            {RESISTANCE_BAND_OPTIONS.map((kg) => (
-                              <option key={kg} value={String(kg)}>
-                                {formatResistanceBandLabel(kg)}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                      ) : (
-                        <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} w-[5rem] min-w-[5rem] text-center text-sky-300 text-xs whitespace-nowrap align-middle`}>
-                          {entry.resistanceBandKg != null ? formatResistanceBandLabel(entry.resistanceBandKg) : "—"}
-                        </td>
-                      )
-                    )}
-                    {anyVariant && showVariant && (
-                      isEditMode && editData ? (
-                        <td className="w-[6.5rem] min-w-[6.5rem] px-1 py-1.5 text-center align-middle">
-                          <select
-                            value={editData.variant ?? ""}
-                            onChange={(e) => handleEditChange(entry.logId, "variant", e.target.value || null)}
-                            className="w-full min-w-[70px] bg-ink-deep border border-jade-glow/30 rounded px-1 py-1 text-purple-400 text-center text-xs outline-none transition-all duration-200 focus:border-jade-glow focus:shadow-[0_0_8px_rgba(58,143,143,0.4)]"
-                          >
-                            <option value="">—</option>
-                            {variantSelectOptions.map((variantName) => (
-                              <option key={variantName} value={variantName}>
-                                {variantName}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                      ) : (
-                        <td className={`${effectiveCompact ? 'px-0.5 py-1' : 'px-1 py-1.5'} w-[6.5rem] min-w-[6.5rem] text-center text-purple-400 text-xs whitespace-nowrap align-middle`} title={entry.variant || ""}>
-                          {entry.variant
-                            ? variationDisplay === "full"
-                              ? entry.variant
-                              : abbreviateVariantText(entry.variant)
-                            : "—"}
-                        </td>
-                      )
-                    )}
-                    {showNotes && (
-                      isEditMode && editData ? (
-                        <td className="w-[9rem] min-w-[9rem] px-1.5 py-1.5 align-middle">
-                          <input
-                            type="text"
-                            value={editData.notes ?? ""}
-                            onChange={(e) => handleEditChange(entry.logId, "notes", e.target.value || null)}
-                            placeholder="Add notes..."
-                            className="w-full min-w-[100px] bg-ink-deep border border-jade-glow/30 rounded px-2 py-1 text-cloud-white text-xs placeholder:text-mist-dark outline-none transition-all duration-200 focus:border-jade-glow focus:shadow-[0_0_8px_rgba(58,143,143,0.4)]"
-                          />
-                        </td>
-                      ) : (
-                        <td className={`${effectiveCompact ? 'px-1 py-1' : 'px-1.5 py-1.5'} w-[9rem] min-w-[9rem] text-mist-light text-xs whitespace-nowrap align-middle`} title={entry.notes || ""}>
-                          {entry.notes || "—"}
-                          {entry.completed && <span className="text-jade-glow ml-1">✦</span>}
-                        </td>
-                      )
-                    )}
-                    {isEditMode && (
-                      <td className="px-1 py-1.5 text-center align-middle">
-                        <motion.button
-                          whileHover={{ scale: 1.2 }}
-                          whileTap={{ scale: 0.9 }}
-                          onClick={() => setDeleteConfirm({ logId: entry.logId, exerciseName: entryDisplayName })}
-                          className="text-crimson-light hover:text-crimson-glow transition-colors text-lg"
-                          title="Delete this log record"
-                          disabled={isDeleting}
-                        >
-                          ✕
-                        </motion.button>
-                      </td>
-                    )}
-                  </motion.tr>
-                );
-              })}
-            </AnimatePresence>
-          </tbody>
-        </table>
-      </div>
-    </GlowCard>
-
-    {/* Delete Confirmation Modal — portalled to escape stacking context */}
-    {typeof document !== "undefined" && createPortal(
-      <AnimatePresence>
-        {deleteConfirm && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px]"
-              onClick={() => setDeleteConfirm(null)}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[340px] max-w-[90vw] bg-ink-deep border border-ink-light rounded-xl shadow-2xl p-5"
-              style={{ boxShadow: "0 0 30px rgba(200, 50, 50, 0.15), 0 20px 40px rgba(0,0,0,0.4)" }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h3 className="text-sm font-semibold text-crimson-light mb-3">Delete Training Record</h3>
-              <p className="text-xs text-mist-light mb-5 leading-relaxed">
-                Are you sure you want to permanently delete the log record for{" "}
-                <span className="text-cloud-white font-medium">{deleteConfirm.exerciseName}</span>?
-                This action cannot be undone.
-              </p>
-              <div className="flex gap-3">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => handleDeleteLog(deleteConfirm.logId)}
-                  disabled={isDeleting}
-                  className="flex-1 px-4 py-2 text-xs font-semibold rounded-lg bg-crimson-deep/30 border border-crimson/50 text-crimson-light hover:bg-crimson-deep/50 transition-all duration-200 disabled:opacity-50"
-                >
-                  {isDeleting ? "Deleting..." : "Delete Record"}
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setDeleteConfirm(null)}
-                  disabled={isDeleting}
-                  className="flex-1 px-4 py-2 text-xs font-semibold rounded-lg border border-ink-light text-mist-light hover:bg-ink-mid/30 transition-all duration-200 disabled:opacity-50"
-                >
-                  Cancel
-                </motion.button>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>,
-      document.body
-    )}
-
-    {/* Level Picker Modal — portalled to escape stacking context */}
-    {typeof document !== "undefined" && createPortal(
-      <AnimatePresence>
-        {levelPicker && (() => {
-          const ex = exerciseLookup.get(levelPicker.exerciseId);
-          if (!ex) return null;
-          const tiers = [...ex.tiers].sort((a, b) => a.level - b.level);
-          const current = editingData[levelPicker.logId]?.level
-            ?? entries.find((e) => e.logId === levelPicker.logId)?.level
-            ?? 1;
-
-          return (
-            <>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px]"
-                onClick={() => setLevelPicker(null)}
-              />
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[360px] max-w-[92vw] bg-ink-deep border border-ink-light rounded-xl shadow-2xl p-4"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <h3 className="text-sm font-semibold text-cloud-white mb-3">Change Progression Tier</h3>
-                <p className="text-[11px] text-mist-light mb-3">{stripBwPercentHint(getExerciseDisplayName(ex, settings.terminologyMode))}</p>
-                <div className="max-h-[280px] overflow-y-auto space-y-1 pr-1">
-                  {tiers.map((t) => {
-                    const active = t.level === current;
-                    return (
-                      <button
-                        key={t.id}
-                        onClick={() => {
-                          handleEditChange(levelPicker.logId, "level", t.level);
-                          setLevelPicker(null);
-                        }}
-                        className={`w-full text-left px-2.5 py-2 rounded border transition-colors ${active ? "border-jade-glow/50 bg-jade-deep/20 text-jade-light" : "border-ink-light/40 bg-ink-mid/20 text-mist-light hover:border-jade-glow/35 hover:bg-jade-deep/10"}`}
-                      >
-                        <span className="text-[11px] font-semibold">Lv.{t.level} - {stripBwPercentHint(getExerciseDisplayName(t, settings.terminologyMode))}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="mt-3 flex justify-end">
-                  <button
-                    onClick={() => setLevelPicker(null)}
-                    className="px-3 py-1.5 text-xs rounded border border-ink-light text-mist-light hover:bg-ink-mid/30"
-                  >
-                    Close
-                  </button>
-                </div>
-              </motion.div>
-            </>
-          );
-        })()}
-      </AnimatePresence>,
-      document.body
-    )}
-    </>
+    </div>
   );
 }
-
-const MemoTrainingLogTable = memo(TrainingLogTable);
-const MemoHoldTrainingLogTable = memo(HoldTrainingLogTable);
 
 // ── Inline Log Form (appears above table for selected exercises) ──
 
@@ -2284,6 +1134,8 @@ function InlineLogForm({
   onViewDetail: _onViewDetail,
   onExit,
   draftStorageKey,
+  physique,
+  userId,
 }: {
   queueItemId: string;
   exercise: ProgressionExercise;
@@ -2299,6 +1151,8 @@ function InlineLogForm({
   onViewDetail: (exerciseId: string) => void;
   onExit?: () => void;
   draftStorageKey?: string | null;
+  physique: UserPhysiqueSettings;
+  userId: string | null;
 }) {
   const [w1, setW1] = useState("");
   const [r1, setR1] = useState("");
@@ -2310,11 +1164,11 @@ function InlineLogForm({
   const [hold2, setHold2] = useState("");
   const [hold3, setHold3] = useState("");
   const [notes, setNotes] = useState("");
-  const [selectedModifier, setSelectedModifier] = useState("");
+  const [selectedModifierKg, setSelectedModifierKg] = useState("");
   const [selectedResistanceBand, setSelectedResistanceBand] = useState("");
   const [selectedVariation, setSelectedVariation] = useState("");
   // Track which config fields were auto-populated from last session (for asterisk indicator)
-  const [autoPopulated, setAutoPopulated] = useState<{ modifier: boolean; band: boolean; variation: boolean }>({ modifier: false, band: false, variation: false });
+  const [autoPopulated, setAutoPopulated] = useState<{ modifierKg: boolean; band: boolean; variation: boolean }>({ modifierKg: false, band: false, variation: false });
   const [submitting, setSubmitting] = useState(false);
   const [saved, setSaved] = useState(false);
   const [shakeError, setShakeError] = useState(false);
@@ -2329,6 +1183,7 @@ function InlineLogForm({
   const [timerReps, setTimerReps] = useState("");
   const [activeMobileSet, setActiveMobileSet] = useState<1 | 2 | 3>(1);
   const [draftReady, setDraftReady] = useState(false);
+  const [latestCheckInWeightKg, setLatestCheckInWeightKg] = useState<number | null>(null);
   const prevDraftKeyRef = useRef<string | null>(null);
   const showHold = inputMode === "hold";
   const { settings } = useDisplaySettings();
@@ -2345,9 +1200,9 @@ function InlineLogForm({
   const showPath = mode === "name-illumination-realm-path";
   const isScrollStyle = cardStyle === "scroll-card";
 
-  const _diffColorClass = getDifficultyColorClass(getWeightedDifficulty(exercise, selectedLevel, selectedVariation || undefined, selectedModifier || undefined));
-  const _glowStyle = getDifficultyGlowStyleScaled(getWeightedDifficulty(exercise, selectedLevel, selectedVariation || undefined, selectedModifier || undefined), glowIntensity);
-  const currentDifficulty = getWeightedDifficulty(exercise, selectedLevel, selectedVariation || undefined, selectedModifier || undefined);
+  const _diffColorClass = getDifficultyColorClass(getWeightedDifficulty(exercise, selectedLevel, selectedVariation || undefined, undefined));
+  const _glowStyle = getDifficultyGlowStyleScaled(getWeightedDifficulty(exercise, selectedLevel, selectedVariation || undefined, undefined), glowIntensity);
+  const currentDifficulty = getWeightedDifficulty(exercise, selectedLevel, selectedVariation || undefined, undefined);
   const currentDifficultyDisplay = getDifficultyDisplayName(
     { difficulty: currentDifficulty, wuxiaDifficulty: currentDifficulty },
     settings.terminologyMode
@@ -2360,6 +1215,34 @@ function InlineLogForm({
     : "⭐";
   const isGymExercise = isGymCategoryExercise(exercise);
   const showResistanceBand = supportsResistanceBandAssistance(exercise);
+  const showAddedWeight = supportsResistanceBandAssistance(exercise);
+  const showBodyweightQuickFill = supportsBodyweightQuickFill(exercise);
+  const canUseBwQuickFill = !showHold && showBodyweightQuickFill;
+  const availableVariationOptions = useMemo(() => {
+    const options = new Set<string>();
+
+    for (const variation of exercise.variations ?? []) {
+      const name = String(variation.name || "").trim();
+      if (name) options.add(name);
+    }
+
+    const logs = exercise.userProgress?.flatMap((up) => up.logs) ?? [];
+    for (const log of logs) {
+      const variant = String(log.variant || "").trim();
+      if (variant) options.add(variant);
+    }
+
+    const current = String(selectedVariation || "").trim();
+    if (current) options.add(current);
+
+    for (const fallbackOption of getDefaultVariationOptions(exercise)) {
+      const value = String(fallbackOption || "").trim();
+      if (value) options.add(value);
+    }
+
+    return Array.from(options).sort((a, b) => a.localeCompare(b));
+  }, [exercise, exercise.variations, exercise.userProgress, selectedVariation]);
+
   const handleBackNavigation = useCallback(() => {
     if (onExit) {
       onExit();
@@ -2408,8 +1291,10 @@ function InlineLogForm({
     return `${weightValue || "-"} ${weightUnit} • ${repsValue || "-"} reps`;
   };
 
-  const mobilePanelBorder = `${getDifficultyStyle(currentDifficulty).glowColor}30`;
-  const useSetPanelLayout = true;
+  const mobilePanelBorder = `${getTierGlowFromLogs(exercise, physique.bodyWeightKg).glowColor}30`;
+  const popupLoggerStyle = settings.popupLoggerStyle ?? "classic";
+  const useSetPanelLayout = popupLoggerStyle === "classic";
+  const useMinimalLayout = popupLoggerStyle === "minimal";
   const setInputClass = `w-full border bg-ink-dark text-cloud-white outline-none transition-all duration-200 placeholder:text-mist-dark/35 hover:border-jade-glow/40 hover:bg-ink-dark/80 focus:bg-ink-mid/40 focus:border-jade-glow/60 focus:shadow-[0_0_8px_rgba(58,143,143,0.2)] ${isMobile ? "rounded-xl px-3 py-3 text-sm" : "rounded-lg px-2.5 py-2 text-xs"}`;
 
   useEffect(() => {
@@ -2420,6 +1305,31 @@ function InlineLogForm({
     setTimerTick(0);
     setActiveMobileSet(1);
   }, [exercise, exercise.id, selectedLevel]);
+
+  useEffect(() => {
+    if (!canUseBwQuickFill || !userId) {
+      setLatestCheckInWeightKg(null);
+      return;
+    }
+
+    let cancelled = false;
+    fetch(`/api/checkins/latest-weight?userId=${encodeURIComponent(userId)}`)
+      .then(async (res) => {
+        if (!res.ok) return null;
+        const json = await res.json() as { weight?: number | null };
+        const parsed = typeof json.weight === "number" && Number.isFinite(json.weight) && json.weight > 0
+          ? json.weight
+          : null;
+        if (!cancelled) setLatestCheckInWeightKg(parsed);
+      })
+      .catch(() => {
+        if (!cancelled) setLatestCheckInWeightKg(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [canUseBwQuickFill, userId, exercise.id]);
 
   useEffect(() => {
     const draftKey = draftStorageKey ?? null;
@@ -2445,7 +1355,7 @@ function InlineLogForm({
         setHold2(typeof draft.hold2 === "string" ? draft.hold2 : "");
         setHold3(typeof draft.hold3 === "string" ? draft.hold3 : "");
         setNotes(typeof draft.notes === "string" ? draft.notes : "");
-        setSelectedModifier(typeof draft.selectedModifier === "string" ? draft.selectedModifier : "");
+        setSelectedModifierKg(typeof draft.selectedModifierKg === "string" ? draft.selectedModifierKg : "");
         setSelectedResistanceBand(typeof draft.selectedResistanceBand === "string" ? draft.selectedResistanceBand : "");
         setSelectedVariation(typeof draft.selectedVariation === "string" ? draft.selectedVariation : "");
         setWeightUnit(draft.weightUnit === "lbs" ? "lbs" : "kg");
@@ -2465,7 +1375,7 @@ function InlineLogForm({
     if (!draftReady) return;
 
     // Only pre-fill if all config fields are currently empty (not overriding draft data)
-    if (selectedModifier || selectedResistanceBand || selectedVariation) return;
+    if (selectedModifierKg || selectedResistanceBand || selectedVariation) return;
 
     // Find the most recent log for this exercise
     const logs = exercise.userProgress?.flatMap((up) => up.logs) ?? [];
@@ -2477,12 +1387,12 @@ function InlineLogForm({
     const latestLog = sortedLogs[0];
     if (!latestLog) return;
 
-    const { baseModifier, resistanceBandKg } = parseModifierWithBand(latestLog.modifier);
-    const autoFlags = { modifier: false, band: false, variation: false };
-    if (baseModifier) { setSelectedModifier(baseModifier); autoFlags.modifier = true; }
+    const { resistanceBandKg, modifierWeightKg } = parseModifierWithBand(latestLog.modifier);
+    const autoFlags = { modifierKg: false, band: false, variation: false };
+    if (modifierWeightKg != null) { setSelectedModifierKg(String(modifierWeightKg)); autoFlags.modifierKg = true; }
     if (resistanceBandKg != null) { setSelectedResistanceBand(String(resistanceBandKg)); autoFlags.band = true; }
     if (latestLog.variant) { setSelectedVariation(latestLog.variant); autoFlags.variation = true; }
-    if (autoFlags.modifier || autoFlags.band || autoFlags.variation) {
+    if (autoFlags.modifierKg || autoFlags.band || autoFlags.variation) {
       setAutoPopulated(autoFlags);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2505,7 +1415,7 @@ function InlineLogForm({
           hold2,
           hold3,
           notes,
-          selectedModifier,
+          selectedModifierKg,
           selectedResistanceBand,
           selectedVariation,
           weightUnit,
@@ -2529,7 +1439,7 @@ function InlineLogForm({
     hold2,
     hold3,
     notes,
-    selectedModifier,
+    selectedModifierKg,
     selectedResistanceBand,
     selectedVariation,
     weightUnit,
@@ -2630,7 +1540,7 @@ function InlineLogForm({
       setShakeError(true);
       return;
     }
-    const hasData = w1 || r1 || w2 || r2 || w3 || r3 || hold || hold2 || hold3 || notes || selectedModifier || selectedResistanceBand || selectedVariation;
+    const hasData = w1 || r1 || w2 || r2 || w3 || r3 || hold || hold2 || hold3 || notes || selectedModifierKg || selectedResistanceBand || selectedVariation;
     if (!hasData) return;
     setSubmitting(true);
     setSaved(false);
@@ -2640,6 +1550,7 @@ function InlineLogForm({
         return weightUnit === "lbs" ? Math.round(n * 453.592) / 1000 : n;
       };
       const resistanceBandKg = selectedResistanceBand ? parseFloat(selectedResistanceBand) : undefined;
+      const modifierWeightKg = selectedModifierKg ? parseFloat(selectedModifierKg) : undefined;
       await onSubmit(queueItemId, exercise.id, selectedLevel, {
         weight1: w1 ? toKg(w1) : undefined,
         reps1: r1 ? parseInt(r1) : undefined,
@@ -2650,14 +1561,14 @@ function InlineLogForm({
         holdTime: hold ? parseInt(hold) : undefined,
         holdTime2: hold2 ? parseInt(hold2) : undefined,
         holdTime3: hold3 ? parseInt(hold3) : undefined,
-        modifier: buildModifierWithBand(selectedModifier || undefined, resistanceBandKg, selectedLevel) ?? undefined,
+        modifier: buildModifierWithBand(null, resistanceBandKg, selectedLevel, modifierWeightKg) ?? undefined,
         resistanceBandKg: resistanceBandKg ?? undefined,
         variant: selectedVariation || undefined,
         notes: notes || undefined,
       });
       resetEntryFields();
       setNotes("");
-      setSelectedModifier("");
+      setSelectedModifierKg("");
       setSelectedResistanceBand("");
       setSelectedVariation("");
       if (draftStorageKey) {
@@ -2682,8 +1593,9 @@ function InlineLogForm({
     }
   };
 
-  const tierName = getTierName(exercise, selectedLevel);
-  const diffStyle = getDifficultyStyle(currentDifficulty);
+  const _tierName = getTierName(exercise, selectedLevel);
+  const tierGlow = getTierGlowFromLogs(exercise, physique.bodyWeightKg);
+  const diffStyle = { glowColor: tierGlow.glowColor };
 
   return (
     <motion.div
@@ -2700,7 +1612,7 @@ function InlineLogForm({
           boxShadow: `0 0 20px ${diffStyle.glowColor}88, 0 0 40px ${diffStyle.glowColor}50, 0 0 70px ${diffStyle.glowColor}22, inset 0 0 16px ${diffStyle.glowColor}25, inset 0 0 0 1px ${diffStyle.glowColor}35, inset 0 1px 0 rgba(255,255,255,0.07)`,
         }}
       >
-        {/* Difficulty accent stripe */}
+        {/* Tier accent stripe */}
         <div
           className="absolute left-0 top-0 bottom-0 w-[3px]"
           style={{ background: `linear-gradient(to bottom, ${diffStyle.glowColor}, ${diffStyle.glowColor}40)` }}
@@ -2726,7 +1638,7 @@ function InlineLogForm({
                 border: `1px solid ${diffStyle.glowColor}30`,
               }}
             >
-              {currentDifficultyDisplay}
+              {tierGlow.tierName}
             </span>
             {showPath && exercise.type && (
               <span className={`text-[9px] font-medium px-1.5 py-0 rounded-full ${getTypeColor(typeKey)} bg-ink-dark/40 border border-current/15 shrink-0`}>
@@ -2756,47 +1668,20 @@ function InlineLogForm({
         {useSetPanelLayout ? (
           <div className={`pl-2 ${isMobile ? "space-y-3" : "space-y-2"}`}>
             <div className="grid gap-2">
-              <label className="block space-y-1">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-mist-dark">Level</span>
-                <select
-                  value={selectedLevel}
-                  disabled={isGymExercise}
-                  onChange={(e) => {
-                    if (isGymExercise) return;
-                    const nextLevel = Number(e.target.value);
-                    setInputMode(getTierInputMode(exercise, nextLevel));
-                    onChangeLevel(exercise.id, nextLevel);
-                  }}
-                  className={`w-full border bg-ink-dark outline-none transition-colors ${isGymExercise ? "cursor-not-allowed opacity-90" : "cursor-pointer"} ${isMobile ? "rounded-xl px-3 py-3 text-sm" : "rounded-lg px-2.5 py-2 text-xs"}`}
-                  style={{ borderColor: `${diffStyle.glowColor}30`, color: diffStyle.glowColor }}
-                >
-                  {isGymExercise ? (
-                    <option value={selectedLevel}>Auto — Lv.{selectedLevel} ({tierName})</option>
-                  ) : (
-                    exercise.tiers.map((t) => {
-                      const logs = exercise.userProgress[0]?.logs ?? [];
-                      const count = logs.filter((l) =>
-                        l.level === t.level
-                        && (!selectedModifier || l.modifier === selectedModifier)
-                        && (!selectedVariation || l.variant === selectedVariation)
-                        && (showHold
-                          ? (l.holdTime != null || l.holdTime2 != null || l.holdTime3 != null)
-                          : (l.weight1 != null || l.weight2 != null || l.weight3 != null))
-                      ).length;
-                      return (
-                        <option key={t.id} value={t.level}>
-                          Lv.{t.level} — {t.name} ({count})
-                        </option>
-                      );
-                    })
-                  )}
-                </select>
-              </label>
-
-              <div className={`flex items-center justify-between gap-2 border border-ink-light/20 bg-ink-mid/15 ${isMobile ? "rounded-xl px-3 py-2" : "rounded-lg px-2.5 py-1.5"}`}>
-                <span className="text-[10px] uppercase tracking-[0.14em] text-mist-dark">Tier</span>
-                <span className={`${isMobile ? "text-[11px]" : "text-[10px]"} text-mist-light truncate`}>{tierName}</span>
+              {/* Category & Type info */}
+              <div className={`flex items-center gap-2 border border-ink-light/20 bg-ink-mid/15 ${isMobile ? "rounded-xl px-3 py-2" : "rounded-lg px-2.5 py-1.5"}`}>
+                <span className={`${isMobile ? "text-[11px]" : "text-[10px]"} text-mist-light`}>
+                  {parseCategoryTags(exercise.category)[0] || "Exercise"} • {exercise.weighted ? "Weighted" : exercise.bodyweight ? "Bodyweight" : "Timed"}
+                </span>
               </div>
+
+              {/* Tier Progress Bar */}
+              {!showHold && (
+                <TierProgressBar
+                  exercise={exercise}
+                  userBodyweightKg={physique.bodyWeightKg}
+                />
+              )}
 
               <div className={`grid gap-2 ${showHold ? "grid-cols-1" : "grid-cols-2"}`}>
                 {!showHold && (
@@ -2847,24 +1732,25 @@ function InlineLogForm({
                   </button>
                 </div>
               </div>
+
             </div>
 
-            {((exercise.modifiers && exercise.modifiers.length > 0) || showResistanceBand || (exercise.variations && exercise.variations.length > 0)) && (
+            {(showAddedWeight || showResistanceBand || availableVariationOptions.length > 0) && (
               <div className="grid gap-2">
-                {exercise.modifiers && exercise.modifiers.length > 0 && (
+                {showAddedWeight && (
                   <label className="block space-y-1">
                     <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-mist-dark">
-                      Modifier{autoPopulated.modifier && <span className="text-gold/70 ml-0.5" title="Pre-filled from last session">*</span>}
+                      Added Weight{autoPopulated.modifierKg && <span className="text-amber-400/70 ml-0.5" title="Pre-filled from last session">*</span>}
                     </span>
                     <select
-                      value={selectedModifier}
-                      onChange={(e) => { setSelectedModifier(e.target.value); setAutoPopulated(prev => ({ ...prev, modifier: false })); }}
-                      className={`w-full border border-ink-light/20 bg-ink-dark text-gold outline-none focus:border-gold/40 transition-colors cursor-pointer ${isMobile ? "rounded-xl px-3 py-3 text-sm" : "rounded-lg px-2.5 py-2 text-xs"}`}
+                      value={selectedModifierKg}
+                      onChange={(e) => { setSelectedModifierKg(e.target.value); setAutoPopulated(prev => ({ ...prev, modifierKg: false })); }}
+                      className={`w-full border border-ink-light/20 bg-ink-dark text-amber-400 outline-none focus:border-amber-400/40 transition-colors cursor-pointer ${isMobile ? "rounded-xl px-3 py-3 text-sm" : "rounded-lg px-2.5 py-2 text-xs"}`}
                     >
-                      <option value="">No modifier</option>
-                      {exercise.modifiers.filter(m => m.available).map((m) => (
-                        <option key={m.id} value={m.type}>
-                          {m.type}{m.difficultyMod !== 0 ? ` (${m.difficultyMod > 0 ? "+" : ""}${m.difficultyMod})` : ""}
+                      <option value="">No added weight</option>
+                      {MODIFIER_WEIGHT_OPTIONS.map((kg) => (
+                        <option key={kg} value={String(kg)}>
+                          {formatModifierWeightLabel(kg)}
                         </option>
                       ))}
                     </select>
@@ -2889,7 +1775,7 @@ function InlineLogForm({
                     </select>
                   </label>
                 )}
-                {exercise.variations && exercise.variations.length > 0 && (
+                {availableVariationOptions.length > 0 && (
                   <label className="block space-y-1">
                     <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-mist-dark">
                       Variation{autoPopulated.variation && <span className="text-crimson-light/70 ml-0.5" title="Pre-filled from last session">*</span>}
@@ -2900,9 +1786,9 @@ function InlineLogForm({
                       className={`w-full border border-ink-light/20 bg-ink-dark text-crimson-light outline-none focus:border-crimson/40 transition-colors cursor-pointer ${isMobile ? "rounded-xl px-3 py-3 text-sm" : "rounded-lg px-2.5 py-2 text-xs"}`}
                     >
                       <option value="">No variation</option>
-                      {exercise.variations.map((v) => (
-                        <option key={v.id} value={v.name}>
-                          {v.name}
+                      {availableVariationOptions.map((variationName) => (
+                        <option key={variationName} value={variationName}>
+                          {variationName}
                         </option>
                       ))}
                     </select>
@@ -2968,7 +1854,19 @@ function InlineLogForm({
 
                         <div className={`grid grid-cols-2 ${isMobile ? "gap-2" : "gap-1.5"}`}>
                           <label className="block space-y-1">
-                            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-mist-dark">{setConfig.primaryLabel}</span>
+                            <div className="flex items-center justify-between min-h-[18px]">
+                              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-mist-dark">{setConfig.primaryLabel}</span>
+                              {canUseBwQuickFill && latestCheckInWeightKg != null && (
+                                <button
+                                  type="button"
+                                  onClick={() => setConfig.setPrimary(String(latestCheckInWeightKg))}
+                                  className="text-[9px] font-bold px-2 py-1 rounded-md border border-jade-glow/55 bg-jade-deep/35 text-jade-light hover:bg-jade-deep/60 hover:-translate-y-[1px] hover:shadow-[0_0_10px_rgba(58,143,143,0.45)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-jade-glow/70 transition-all duration-150"
+                                  title={`Apply last check-in weight (${latestCheckInWeightKg}kg)`}
+                                >
+                                  BW
+                                </button>
+                              )}
+                            </div>
                             <input
                               type="number"
                               min="0"
@@ -2992,7 +1890,10 @@ function InlineLogForm({
                           </label>
 
                           <label className="block space-y-1">
-                            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-mist-dark">{setConfig.secondaryLabel}</span>
+                            <div className="flex items-center justify-between min-h-[18px]">
+                              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-mist-dark">{setConfig.secondaryLabel}</span>
+                              <span className="invisible text-[9px] font-bold px-2 py-1">BW</span>
+                            </div>
                             <input
                               type="number"
                               min="0"
@@ -3074,48 +1975,128 @@ function InlineLogForm({
               </div>
             </div>
           </div>
+        ) : useMinimalLayout ? (
+          /* ── Minimal Layout: Vertical stacked sets ── */
+          <div className="pl-2 space-y-2">
+            {/* Category & Type info */}
+            <div className="flex items-center gap-2 border border-ink-light/20 bg-ink-mid/15 rounded-lg px-2.5 py-1.5">
+              <span className="text-[10px] text-mist-light">
+                {parseCategoryTags(exercise.category)[0] || "Exercise"} • {exercise.weighted ? "Weighted" : exercise.bodyweight ? "Bodyweight" : "Timed"}
+              </span>
+            </div>
+
+            {/* Tier Progress Bar */}
+            {!showHold && (
+              <TierProgressBar
+                exercise={exercise}
+                userBodyweightKg={physique.bodyWeightKg}
+              />
+            )}
+
+            {/* Mode + Unit toggle */}
+            <div className="flex gap-2">
+              {!showHold && (
+                <div className="flex rounded-lg overflow-hidden border border-ink-light/30 flex-1">
+                  <button onClick={() => setWeightUnit("kg")} className={`flex-1 py-1.5 text-[10px] font-semibold transition-all ${weightUnit === "kg" ? "bg-jade-deep/70 text-cloud-white" : "bg-ink-mid/55 text-mist-light"}`}>KG</button>
+                  <button onClick={() => setWeightUnit("lbs")} className={`flex-1 py-1.5 text-[10px] font-semibold transition-all border-l border-ink-light/30 ${weightUnit === "lbs" ? "bg-jade-deep/70 text-cloud-white" : "bg-ink-mid/55 text-mist-light"}`}>LBS</button>
+                </div>
+              )}
+              <div className="flex rounded-lg overflow-hidden border border-ink-light/30 flex-1">
+                <button onClick={() => { setInputMode("weight"); resetEntryFields(); }} className={`flex-1 py-1.5 text-[10px] font-semibold transition-all ${inputMode === "weight" ? "bg-jade-deep/55 text-cloud-white" : "bg-ink-mid/60 text-mist-light"}`}>Weight</button>
+                <button onClick={() => { setInputMode("hold"); resetEntryFields(); }} className={`flex-1 py-1.5 text-[10px] font-semibold transition-all border-l border-ink-light/30 ${inputMode === "hold" ? "bg-mountain-blue/30 text-cloud-white" : "bg-ink-mid/60 text-mist-light"}`}>Hold</button>
+              </div>
+            </div>
+
+            {/* Stacked sets — each row: set label + value + reps */}
+            {[
+              { id: 1, vLabel: showHold ? "T1" : "W1", rLabel: "R1", vGet: showHold ? hold : w1, vSet: showHold ? setHold : setW1, rGet: r1, rSet: setR1 },
+              { id: 2, vLabel: showHold ? "T2" : "W2", rLabel: "R2", vGet: showHold ? hold2 : w2, vSet: showHold ? setHold2 : setW2, rGet: r2, rSet: setR2 },
+              { id: 3, vLabel: showHold ? "T3" : "W3", rLabel: "R3", vGet: showHold ? hold3 : w3, vSet: showHold ? setHold3 : setW3, rGet: r3, rSet: setR3 },
+            ].map((s) => (
+              <div key={s.id} className="flex items-center gap-2">
+                <span className="text-[10px] font-bold w-5 text-right" style={{ color: diffStyle.glowColor }}>{s.vLabel}</span>
+                <input
+                  type="number" min="0" step={showHold ? undefined : "0.5"}
+                  value={s.vGet} onChange={(e) => { s.vSet(e.target.value); if (shakeError && s.id === 1) setShakeError(false); }}
+                  placeholder={showHold ? "sec" : "0.0"}
+                  className={`flex-1 rounded-lg px-2 py-2 text-xs text-center outline-none bg-ink-dark border text-cloud-white placeholder:text-mist-dark/30 focus:bg-ink-mid/40${shakeError && s.id === 1 ? " animate-shake" : ""}`}
+                  style={{ borderColor: shakeError && s.id === 1 ? "rgba(220,50,50,0.7)" : showHold ? "rgba(94,184,232,0.3)" : `${diffStyle.glowColor}40` }}
+                />
+                {canUseBwQuickFill && latestCheckInWeightKg != null && (
+                  <button
+                    type="button"
+                    onClick={() => s.vSet(String(latestCheckInWeightKg))}
+                    className="text-[9px] font-bold px-2 py-1 rounded-md border border-jade-glow/55 bg-jade-deep/35 text-jade-light hover:bg-jade-deep/60 hover:-translate-y-[1px] hover:shadow-[0_0_10px_rgba(58,143,143,0.45)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-jade-glow/70 transition-all duration-150 shrink-0"
+                    title={`Apply last check-in weight (${latestCheckInWeightKg}kg)`}
+                  >
+                    BW
+                  </button>
+                )}
+                <span className="text-[10px] font-bold w-5 text-right text-gold/80">{s.rLabel}</span>
+                <input
+                  type="number" min="0" max="500"
+                  value={s.rGet} onChange={(e) => { s.rSet(e.target.value); if (shakeError && s.id === 1) setShakeError(false); }}
+                  placeholder="—"
+                  className={`w-16 rounded-lg px-2 py-2 text-xs text-center outline-none bg-ink-dark border text-cloud-white placeholder:text-mist-dark/30 focus:border-gold/50 focus:bg-ink-mid/40${shakeError && s.id === 1 ? " animate-shake" : ""}`}
+                  style={{ borderColor: shakeError && s.id === 1 ? "rgba(220,50,50,0.7)" : "rgba(196,168,74,0.2)" }}
+                />
+              </div>
+            ))}
+
+            {/* Quick modifier/variant selectors (collapsed) */}
+            {(showAddedWeight || showResistanceBand || availableVariationOptions.length > 0) && (
+              <div className="flex flex-wrap gap-1.5">
+                {showAddedWeight && (
+                  <select value={selectedModifierKg} onChange={(e) => setSelectedModifierKg(e.target.value)} className="bg-ink-dark border border-ink-light/20 rounded-lg px-2 py-1.5 text-[10px] text-amber-400 outline-none cursor-pointer">
+                    <option value="">+Wt: none</option>
+                    {MODIFIER_WEIGHT_OPTIONS.map((kg) => <option key={kg} value={String(kg)}>{formatModifierWeightLabel(kg)}</option>)}
+                  </select>
+                )}
+                {showResistanceBand && (
+                  <select value={selectedResistanceBand} onChange={(e) => setSelectedResistanceBand(e.target.value)} className="bg-ink-dark border border-ink-light/20 rounded-lg px-2 py-1.5 text-[10px] text-sky-300 outline-none cursor-pointer">
+                    <option value="">Band: none</option>
+                    {RESISTANCE_BAND_OPTIONS.map((kg) => <option key={kg} value={String(kg)}>{kg}kg</option>)}
+                  </select>
+                )}
+                {availableVariationOptions.length > 0 && (
+                  <select value={selectedVariation} onChange={(e) => setSelectedVariation(e.target.value)} className="bg-ink-dark border border-ink-light/20 rounded-lg px-2 py-1.5 text-[10px] text-crimson-light outline-none cursor-pointer">
+                    <option value="">Var: none</option>
+                    {availableVariationOptions.map((variationName) => <option key={variationName} value={variationName}>{variationName}</option>)}
+                  </select>
+                )}
+              </div>
+            )}
+
+            {/* Notes */}
+            <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes..."
+              className="w-full rounded-lg px-2.5 py-2 text-xs outline-none bg-ink-dark border border-ink-light/20 text-cloud-white placeholder:text-mist-dark/40 focus:border-mist-mid/30" />
+
+            {/* Actions */}
+            <div className="flex gap-2">
+              {showHold && (
+                <button type="button" onClick={() => { setShowTimerModal(true); setTimerTarget(getNextTimerTarget()); setTimerReps(""); resetTimer(); }}
+                  className="flex-1 py-2 rounded-lg border text-[10px] font-bold text-cloud-white transition-all"
+                  style={{ background: "rgba(94,184,232,0.22)", borderColor: "rgba(94,184,232,0.6)" }}>
+                  Timer
+                </button>
+              )}
+              <motion.button onClick={handleSubmit} disabled={submitting}
+                whileTap={!submitting ? { scale: 0.97 } : {}}
+                className="flex-1 py-2 rounded-lg text-xs font-semibold disabled:opacity-40 cursor-pointer"
+                style={{ background: `${diffStyle.glowColor}18`, border: `1px solid ${diffStyle.glowColor}35`, color: diffStyle.glowColor }}>
+                {submitting ? "Saving…" : saved ? "✦ Logged!" : "Log Set"}
+              </motion.button>
+            </div>
+          </div>
         ) : (
           <>
-            {/* Controls row: Level + Mode + Modifiers */}
+            {/* Controls row: Category info + Modifiers */}
             <div className="flex items-center gap-2 mb-2.5 pl-2 flex-wrap">
-              <select
-                value={selectedLevel}
-                disabled={isGymExercise}
-                onChange={(e) => {
-                  if (isGymExercise) return;
-                  const nextLevel = Number(e.target.value);
-                  setInputMode(getTierInputMode(exercise, nextLevel));
-                  onChangeLevel(exercise.id, nextLevel);
-                }}
-                className={`bg-ink-dark border rounded px-2 py-1 text-xs outline-none transition-colors ${isGymExercise ? "cursor-not-allowed opacity-90" : "cursor-pointer"}`}
-                style={{
-                  borderColor: `${diffStyle.glowColor}30`,
-                  color: diffStyle.glowColor,
-                }}
-              >
-                {isGymExercise ? (
-                  <option value={selectedLevel}>Auto — Lv.{selectedLevel} ({tierName})</option>
-                ) : (
-                  exercise.tiers.map((t) => {
-                    const logs = exercise.userProgress[0]?.logs ?? [];
-                    const count = logs.filter((l) =>
-                      l.level === t.level
-                      && (!selectedModifier || l.modifier === selectedModifier)
-                      && (!selectedVariation || l.variant === selectedVariation)
-                      && (showHold
-                        ? (l.holdTime != null || l.holdTime2 != null || l.holdTime3 != null)
-                        : (l.weight1 != null || l.weight2 != null || l.weight3 != null))
-                    ).length;
-                    return (
-                      <option key={t.level} value={t.level}>
-                        Lv.{t.level} — {t.name} ({count})
-                      </option>
-                    );
-                  })
-                )}
-              </select>
-
-              <span className="text-[10px] text-mist-dark/70 truncate hidden sm:inline">{tierName}</span>
+              <div className="flex items-center gap-2 border border-ink-light/20 bg-ink-mid/15 rounded-lg px-2.5 py-1.5">
+                <span className="text-[10px] text-mist-light">
+                  {parseCategoryTags(exercise.category)[0] || "Exercise"} • {exercise.weighted ? "Weighted" : exercise.bodyweight ? "Bodyweight" : "Timed"}
+                </span>
+              </div>
               <div className="flex-1" />
 
               {!showHold && (
@@ -3165,25 +2146,36 @@ function InlineLogForm({
                   Hold
                 </button>
               </div>
+
             </div>
 
-            {((exercise.modifiers && exercise.modifiers.length > 0) || showResistanceBand || (exercise.variations && exercise.variations.length > 0)) && (
+            {/* Tier Progress Bar */}
+            {!showHold && (
+              <div className="pl-2 mb-2.5">
+                <TierProgressBar
+                  exercise={exercise}
+                  userBodyweightKg={physique.bodyWeightKg}
+                />
+              </div>
+            )}
+
+            {(showAddedWeight || showResistanceBand || availableVariationOptions.length > 0) && (
               <div className="flex items-center gap-2 mb-2.5 pl-2 flex-wrap">
-                {exercise.modifiers && exercise.modifiers.length > 0 && (
+                {showAddedWeight && (
                   <div className="relative">
                     <select
-                      value={selectedModifier}
-                      onChange={(e) => { setSelectedModifier(e.target.value); setAutoPopulated(prev => ({ ...prev, modifier: false })); }}
-                      className="bg-ink-dark border border-ink-light/20 rounded px-2 py-1 text-xs text-gold outline-none focus:border-gold/40 transition-colors cursor-pointer"
+                      value={selectedModifierKg}
+                      onChange={(e) => { setSelectedModifierKg(e.target.value); setAutoPopulated(prev => ({ ...prev, modifierKg: false })); }}
+                      className="bg-ink-dark border border-ink-light/20 rounded px-2 py-1 text-xs text-amber-400 outline-none focus:border-amber-400/40 transition-colors cursor-pointer"
                     >
-                      <option value="">No modifier</option>
-                      {exercise.modifiers.filter(m => m.available).map((m) => (
-                        <option key={m.id} value={m.type}>
-                          {m.type}{m.difficultyMod !== 0 ? ` (${m.difficultyMod > 0 ? "+" : ""}${m.difficultyMod})` : ""}
+                      <option value="">No added weight</option>
+                      {MODIFIER_WEIGHT_OPTIONS.map((kg) => (
+                        <option key={kg} value={String(kg)}>
+                          {formatModifierWeightLabel(kg)}
                         </option>
                       ))}
                     </select>
-                    {autoPopulated.modifier && <span className="absolute -top-1.5 -right-1 text-[10px] text-gold/70" title="Pre-filled from last session">*</span>}
+                    {autoPopulated.modifierKg && <span className="absolute -top-1.5 -right-1 text-[10px] text-amber-400/70" title="Pre-filled from last session">*</span>}
                   </div>
                 )}
                 {showResistanceBand && (
@@ -3203,7 +2195,7 @@ function InlineLogForm({
                     {autoPopulated.band && <span className="absolute -top-1.5 -right-1 text-[10px] text-sky-300/70" title="Pre-filled from last session">*</span>}
                   </div>
                 )}
-                {exercise.variations && exercise.variations.length > 0 && (
+                {availableVariationOptions.length > 0 && (
                   <div className="relative">
                     <select
                       value={selectedVariation}
@@ -3211,9 +2203,9 @@ function InlineLogForm({
                       className="bg-ink-dark border border-ink-light/20 rounded px-2 py-1 text-xs text-crimson-light outline-none focus:border-crimson/40 transition-colors cursor-pointer"
                     >
                       <option value="">No variation</option>
-                      {exercise.variations.map((v) => (
-                        <option key={v.id} value={v.name}>
-                          {v.name}
+                      {availableVariationOptions.map((variationName) => (
+                        <option key={variationName} value={variationName}>
+                          {variationName}
                       </option>
                     ))}
                   </select>
@@ -3245,6 +2237,25 @@ function InlineLogForm({
                   </>
                 )}
                 <div className="text-[9px] text-center uppercase tracking-widest font-semibold text-mist-dark/50 pb-0.5">Notes</div>
+
+                {/* BW auto-fill row for bodyweight exercises */}
+                {canUseBwQuickFill && latestCheckInWeightKg != null && (
+                  <>
+                    <button type="button" onClick={() => setW1(String(latestCheckInWeightKg))}
+                      className="text-[9px] font-bold px-1 py-0.5 rounded-md border border-jade-glow/55 bg-jade-deep/35 text-jade-light hover:bg-jade-deep/60 hover:-translate-y-[1px] hover:shadow-[0_0_10px_rgba(58,143,143,0.45)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-jade-glow/70 transition-all duration-150"
+                      title={`Apply last check-in weight (${latestCheckInWeightKg}kg)`}>BW</button>
+                    <div />
+                    <button type="button" onClick={() => setW2(String(latestCheckInWeightKg))}
+                      className="text-[9px] font-bold px-1 py-0.5 rounded-md border border-jade-glow/55 bg-jade-deep/35 text-jade-light hover:bg-jade-deep/60 hover:-translate-y-[1px] hover:shadow-[0_0_10px_rgba(58,143,143,0.45)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-jade-glow/70 transition-all duration-150"
+                      title={`Apply last check-in weight (${latestCheckInWeightKg}kg)`}>BW</button>
+                    <div />
+                    <button type="button" onClick={() => setW3(String(latestCheckInWeightKg))}
+                      className="text-[9px] font-bold px-1 py-0.5 rounded-md border border-jade-glow/55 bg-jade-deep/35 text-jade-light hover:bg-jade-deep/60 hover:-translate-y-[1px] hover:shadow-[0_0_10px_rgba(58,143,143,0.45)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-jade-glow/70 transition-all duration-150"
+                      title={`Apply last check-in weight (${latestCheckInWeightKg}kg)`}>BW</button>
+                    <div />
+                    <div />
+                  </>
+                )}
 
                 {!showHold ? (
                   <>
@@ -3458,6 +2469,7 @@ function ProgressionSidebar({
   selectedDayFilter,
   setSelectedDayFilter,
   onDrawerOpen,
+  userBodyweightKg,
 }: {
   exercises: ProgressionExercise[];
   selectedIds: Set<string>;
@@ -3481,6 +2493,7 @@ function ProgressionSidebar({
   selectedDayFilter: number | null;
   setSelectedDayFilter: (v: number | null) => void;
   onDrawerOpen: () => void;
+  userBodyweightKg: number | null;
 }) {
   const { isMobile } = useAppContext();
   const { settings } = useDisplaySettings();
@@ -3520,7 +2533,6 @@ function ProgressionSidebar({
   const cardStyle = settings.progressionSidebarStyle ?? "default";
   const glowIntensity = settings.glowIntensityProgressionSidebar ?? 100;
   const loreVisible = settings.progressionSidebarLoreVisible ?? true;
-  const expandTiers = settings.progressionSidebarExpandTiers ?? true;
 
   const hiddenSidebarExerciseNames = new Set([
     "dumbbell bicep curl",
@@ -3530,6 +2542,7 @@ function ProgressionSidebar({
   ]);
 
   const showIllumination = displayMode !== "name-only";
+  const useThemeColor = settings.progressionSidebarUseThemeColor ?? false;
   const showRealm = displayMode === "name-illumination-realm" || displayMode === "name-illumination-realm-path";
   const showPath = displayMode === "name-illumination-realm-path";
   const isScrollStyle = cardStyle === "scroll-card";
@@ -3610,16 +2623,6 @@ function ProgressionSidebar({
         const bCount = b.userProgress[0]?.logs?.length ?? 0;
         return bCount - aCount;
       }
-      case "level-high": {
-        const aLvl = levelDefaults[a.id] || autoLevelByExerciseId[a.id] || (a.userProgress[0]?.currentLevel ?? 1);
-        const bLvl = levelDefaults[b.id] || autoLevelByExerciseId[b.id] || (b.userProgress[0]?.currentLevel ?? 1);
-        return bLvl - aLvl;
-      }
-      case "level-low": {
-        const aLvl = levelDefaults[a.id] || autoLevelByExerciseId[a.id] || (a.userProgress[0]?.currentLevel ?? 1);
-        const bLvl = levelDefaults[b.id] || autoLevelByExerciseId[b.id] || (b.userProgress[0]?.currentLevel ?? 1);
-        return aLvl - bLvl;
-      }
       case "selected": {
         const aS = selectedIds.has(a.id) ? 0 : 1;
         const bS = selectedIds.has(b.id) ? 0 : 1;
@@ -3632,7 +2635,6 @@ function ProgressionSidebar({
   });
 
   const [showFilters, setShowFilters] = useState(false);
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   const activeFiltersCount = (filterCategory ? 1 : 0) + (filterType ? 1 : 0) + (filterEquipment ? 1 : 0);
   const searchQuery = searchTerm.trim();
@@ -3655,21 +2657,11 @@ function ProgressionSidebar({
     return groups;
   }, [isSearchActive, sorted]);
 
-  const toggleExpand = useCallback((id: string) => {
-    setExpandedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  }, []);
-
   const sortOptions = [
     { key: "a-z", label: "A–Z", icon: "↕" },
     { key: "z-a", label: "Z–A", icon: "↕" },
     { key: "recent", label: "Recent", icon: "◷" },
     { key: "most-logged", label: "Most Logged", icon: "▤" },
-    { key: "level-high", label: "Level ↓", icon: "▾" },
-    { key: "level-low", label: "Level ↑", icon: "▴" },
     { key: "selected", label: "Selected", icon: "✦" },
   ] as const;
 
@@ -3992,7 +2984,6 @@ function ProgressionSidebar({
             <button
               onClick={() => {
                 for (const id of [...selectedIds]) onToggleExercise(id);
-                setExpandedIds(new Set());
               }}
               className="flex items-center gap-1 px-2 py-0.5 rounded-md border border-crimson/40 bg-crimson-deep/20 text-crimson-light hover:bg-crimson-deep/35 hover:border-crimson/60 transition-all duration-150 text-[10px] font-semibold"
               title="Unselect all"
@@ -4082,18 +3073,11 @@ function ProgressionSidebar({
               const effectiveLevel = levelDefaults[exercise.id] || autoLevelByExerciseId[exercise.id] || currentLevel;
               const typeColor = getTypeColor(getTypeColorKey(exercise));
               const displayName = getExerciseDisplayName(exercise, settings.terminologyMode);
-              const levelDifficulty = getWeightedDifficulty(exercise, effectiveLevel);
-              const levelDifficultyDisplay = getDifficultyDisplayName(
-                { difficulty: levelDifficulty, wuxiaDifficulty: levelDifficulty },
-                settings.terminologyMode
-              ) || levelDifficulty;
-              const levelDiffColor = 'text-jade-glow';
+              const sidebarTierInfo = getTierGlowFromLogs(exercise, userBodyweightKg);
+              const levelDifficultyDisplay = sidebarTierInfo.tierName;
+              const levelDiffColor = '';
               const glowStyle = {};
               const logCount = exercise.userProgress[0]?.logs?.length ?? 0;
-              const isExpanded = expandTiers && expandedIds.has(exercise.id);
-              const isGymExercise = isGymCategoryExercise(exercise);
-              const gymAutoLevel = autoLevelByExerciseId[exercise.id] || effectiveLevel;
-              const selectedTierId = selectedTierIds[exercise.id];
               const isSearchMatch = isSearchActive && matchesLooseSearchInFields(searchQuery, [
                 exercise.name,
                 exercise.wuxiaName,
@@ -4119,111 +3103,12 @@ function ProgressionSidebar({
                 </button>
               );
 
-              // Shared tier expansion panel
-              const tierPanel = isExpanded && exercise.tiers.length > 0 ? (
-                <AnimatePresence initial={false}>
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2, ease: "easeInOut" }}
-                    className="overflow-hidden"
-                  >
-                    <div className="pt-1.5 mt-1.5 border-t border-ink-light/20 space-y-0.5">
-                      {exercise.tiers.map((tier) => {
-                        const isCurrent = selectedTierId ? tier.id === selectedTierId : tier.level === effectiveLevel;
-                        const isActiveTier = isActive && isCurrent;
-                        const isAutoTier = isGymExercise && tier.level === gymAutoLevel;
-                        const canSelectTier = !isGymExercise || isAutoTier;
-                        const tierLogCount = (exercise.userProgress[0]?.logs ?? []).filter((log) => log.level === tier.level).length;
-                        return (
-                          <div
-                            key={tier.id}
-                            onClick={canSelectTier ? (e) => {
-                              e.stopPropagation();
-                              if (isActive && isCurrent) return;
-                              // Click to add/switch tier; for gym this is only the auto tier.
-                              onSelectWithLevel(exercise.id, tier.level, tier.id);
-                            } : undefined}
-                            className={`group/tier flex items-center gap-1.5 px-1.5 py-[3px] rounded text-[10px] ${
-                              isGymExercise
-                                ? (isAutoTier ? 'bg-ink-mid/35 cursor-pointer transition-colors duration-150 hover:bg-jade-deep/22 hover:shadow-[inset_0_0_0_1px_rgba(58,143,143,0.3)]' : 'cursor-default pointer-events-none opacity-70')
-                                : 'cursor-pointer'
-                            } ${
-                              isGymExercise
-                                ? ''
-                                : (isActiveTier
-                                  ? 'transition-colors duration-150 bg-jade-deep/25'
-                                  : isCurrent && isActive
-                                    ? 'transition-colors duration-150 bg-jade-deep/15 hover:bg-jade-deep/22'
-                                    : 'transition-colors duration-150 hover:bg-jade-deep/14')
-                            }`}
-                          >
-                            <span className={`font-mono shrink-0 text-center ${
-                              isGymExercise
-                                ? (isAutoTier ? 'min-w-[1.5rem] px-1 py-0.5 rounded border border-mist-light/35 bg-ink-dark/55 text-mist-light font-semibold' : 'w-4 text-mist-dark/70')
-                                : (isActiveTier ? 'min-w-[1.5rem] px-1 py-0.5 rounded border border-gold/40 bg-gold/10 text-gold font-bold shadow-[0_0_6px_rgba(196,168,74,0.2)]' : isCurrent && isActive ? 'w-4 text-gold font-bold' : 'w-4 text-mist-dark/60')
-                            }`}>
-                              {tier.level}
-                            </span>
-                            <span className={`truncate flex-1 transition-[text-shadow,color] duration-150 ${
-                              isGymExercise
-                                ? (isAutoTier ? 'text-mist-light font-semibold' : 'text-mist-dark')
-                                : (isCurrent && isActive ? 'text-jade-light font-semibold' : 'text-mist-light/85')
-                            } ${isCurrent && isActive ? 'font-medium' : 'opacity-90'} ${!isGymExercise ? 'group-hover/tier:text-jade-light group-hover/tier:[text-shadow:0_0_8px_rgba(58,143,143,0.4)]' : ''}`} title={tier.wuxiaName || tier.name}>
-                              {getExerciseDisplayName(tier, settings.terminologyMode)}
-                            </span>
-                            <span className={`shrink-0 min-w-[1.3rem] text-right text-[9px] font-semibold ${isCurrent && isActive ? 'text-jade-light' : 'text-mist-mid/85'}`}>
-                              {tierLogCount}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </motion.div>
-                </AnimatePresence>
-              ) : null;
-
-              // Chevron indicator (only in expand-tiers mode)
-              const chevron = expandTiers && exercise.tiers.length > 0 ? (
-                <button
-                  onClick={(e) => { e.stopPropagation(); toggleExpand(exercise.id); }}
-                  className={`shrink-0 inline-flex items-center justify-center w-5 h-5 rounded border transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jade-glow/30 ${
-                    isExpanded
-                      ? 'border-jade/40 bg-jade-deep/20 text-jade-light hover:border-jade/60 hover:bg-jade-deep/30'
-                      : 'border-ink-light/40 bg-ink-dark/35 text-mist-dark hover:text-mist-light hover:border-ink-light/70 hover:bg-ink-mid/30'
-                  }`}
-                  title={isExpanded ? "Collapse tiers" : "Expand tiers"}
-                  aria-label={isExpanded ? "Collapse tiers" : "Expand tiers"}
-                >
-                  <svg className={`w-3 h-3 shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              ) : null;
-
-              // Row click handler: expand/collapse tiers when available, otherwise toggle selection
+              // Row click handler: toggle selection (add to queue or remove)
               const handleRowClick = () => {
-                // If expandTiers mode and exercise has tiers, toggle expansion
-                if (expandTiers && exercise.tiers.length > 0) {
-                  setExpandedIds((prev) => {
-                    const next = new Set(prev);
-                    if (next.has(exercise.id)) {
-                      next.delete(exercise.id);
-                    } else {
-                      next.add(exercise.id);
-                    }
-                    return next;
-                  });
-                  return;
-                }
-
-                // Otherwise, toggle selection (add to queue or remove)
                 if (isActive) {
                   onToggleExercise(exercise.id);
                   return;
                 }
-
                 onAddExercise(exercise.id);
               };
 
@@ -4238,28 +3123,25 @@ function ProgressionSidebar({
                         ${isActive
                           ? 'bg-jade-deep/28 border-jade-glow/55 shadow-[0_0_10px_rgba(58,143,143,0.2)]'
                           : isSearchMatch
-                            ? 'bg-jade-deep/10 border-jade-glow/45 shadow-[0_0_10px_rgba(58,143,143,0.16)] hover:bg-jade-deep/15'
-                            : 'bg-ink-dark/40 border-ink-light/50 hover:bg-ink-mid/20 hover:border-ink-light/70'
+                            ? 'bg-jade-deep/10 border-jade-glow/45 shadow-[0_0_10px_rgba(58,143,143,0.16)] hover:bg-jade-deep/18 hover:shadow-[0_0_14px_rgba(58,143,143,0.22)]'
+                            : 'bg-ink-dark/40 border-ink-light/50 hover:bg-ink-mid/30 hover:border-jade-glow/30 hover:shadow-[0_2px_10px_rgba(0,0,0,0.25)] hover:-translate-y-[1px]'
                         }
                       `}
                       style={showIllumination && isActive ? glowStyle as React.CSSProperties : undefined}
                       onClick={handleRowClick}
                     >
                       {/* Selection indicator */}
-                      <div className={`w-1 h-4 rounded-full shrink-0 transition-all duration-200 ${isActive ? 'bg-jade-glow' : 'bg-transparent group-hover:bg-ink-light/40'}`} />
-                      {chevron}
-                      <span className={`text-[11px] truncate flex-1 ${showIllumination ? levelDiffColor : isActive ? 'text-cloud-white' : 'text-mist-light'}`} title={displayName}>
+                      <div className={`w-1 h-4 rounded-full shrink-0 transition-all duration-200 ${isActive ? 'bg-jade-glow' : 'bg-transparent group-hover:bg-jade-glow/40'}`} />
+                      <span className={`text-[11px] truncate flex-1 transition-colors duration-150 ${isActive ? 'text-cloud-white' : 'text-mist-light group-hover:text-cloud-white/90'}`} style={showIllumination && !useThemeColor ? { color: sidebarTierInfo.glowColor } : undefined} title={displayName}>
                         {displayName}
                       </span>
                       {logCount > 0 && (
                         <span className="text-[8px] text-mist-dark/70 font-mono shrink-0">{logCount}</span>
                       )}
-                      <span className="text-[9px] text-gold/80 shrink-0 font-mono">Lv.{effectiveLevel}</span>
-                      <span className={`shrink-0 text-[8px] font-medium px-1 py-0 rounded ${!expandTiers ? levelDiffColor : levelDiffColor + ' opacity-70'}`}>
-                        {!expandTiers ? levelDifficultyDisplay : levelDifficultyDisplay.split(" ").map(w => w[0]).join("")}
+                      <span className={`shrink-0 text-[8px] font-medium px-1 py-0 rounded ${useThemeColor ? 'text-jade-glow' : ''}`} style={!useThemeColor ? { color: sidebarTierInfo.glowColor } : undefined}>
+                        {levelDifficultyDisplay}
                       </span>
                     </div>
-                    {expandTiers && tierPanel}
                   </div>
                 );
                 return;
@@ -4280,8 +3162,8 @@ function ProgressionSidebar({
                         ${isActive
                           ? 'bg-jade-deep/24 border-jade-glow/55 shadow-[0_0_14px_rgba(58,143,143,0.2)]'
                           : isSearchMatch
-                            ? 'bg-jade-deep/10 border-jade-glow/45 shadow-[0_0_10px_rgba(58,143,143,0.16)] hover:bg-jade-deep/14'
-                            : 'bg-ink-dark/45 border-ink-light/50 hover:border-ink-light/70 hover:bg-ink-mid/15'
+                            ? 'bg-jade-deep/10 border-jade-glow/45 shadow-[0_0_10px_rgba(58,143,143,0.16)] hover:bg-jade-deep/18 hover:shadow-[0_0_16px_rgba(58,143,143,0.24)]'
+                            : 'bg-ink-dark/45 border-ink-light/50 hover:border-jade-glow/30 hover:bg-ink-mid/25 hover:shadow-[0_3px_12px_rgba(0,0,0,0.3)] hover:-translate-y-[1px]'
                         }
                       `}
                       style={showIllumination && glowIntensity > 0 ? glowStyle as React.CSSProperties : undefined}
@@ -4290,19 +3172,17 @@ function ProgressionSidebar({
                       <div className="flex items-start gap-2">
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5 min-w-0">
-                            <div className={`w-1 h-4 rounded-full shrink-0 transition-all duration-200 ${isActive ? 'bg-jade-glow' : 'bg-transparent group-hover:bg-ink-light/40'}`} />
-                            {chevron}
-                            <h3 className={`text-[11px] font-semibold ${showIllumination ? levelDiffColor : 'text-cloud-white'} truncate flex-1`} title={displayName}>
+                            <div className={`w-1 h-4 rounded-full shrink-0 transition-all duration-200 ${isActive ? 'bg-jade-glow' : 'bg-transparent group-hover:bg-jade-glow/40'}`} />
+                            <h3 className={`text-[11px] font-semibold ${showIllumination && !useThemeColor ? '' : showIllumination && useThemeColor ? 'text-jade-glow' : 'text-cloud-white'} truncate flex-1`} style={showIllumination && !useThemeColor ? { color: sidebarTierInfo.glowColor } : undefined} title={displayName}>
                               {displayName}
                             </h3>
                             {logCount > 0 && (
                               <span className="text-[8px] text-mist-dark/70 font-mono shrink-0">{logCount}</span>
                             )}
-                            <span className="text-[9px] text-gold/70 shrink-0 font-mono">Lv.{effectiveLevel}</span>
                           </div>
 
                           <div className="mt-1 flex items-center gap-1.5 flex-wrap">
-                            <span className={`text-[8px] font-semibold px-1.5 py-0.5 rounded ${levelDiffColor} bg-ink-dark/55 border border-current/20`}>
+                            <span className={`text-[8px] font-semibold px-1.5 py-0.5 rounded bg-ink-dark/55 border border-current/20 ${useThemeColor ? 'text-jade-glow' : ''}`} style={!useThemeColor ? { color: sidebarTierInfo.glowColor } : undefined}>
                               {levelDifficultyDisplay}
                             </span>
                             {showPath && (
@@ -4321,8 +3201,6 @@ function ProgressionSidebar({
                               {exercise.story}
                             </p>
                           )}
-
-                          {expandTiers && tierPanel}
                         </div>
                       </div>
                     </div>
@@ -4345,24 +3223,22 @@ function ProgressionSidebar({
                       ${isActive
                         ? 'bg-jade-deep/24 border-jade-glow/55 shadow-[0_0_12px_rgba(58,143,143,0.2)]'
                         : isSearchMatch
-                          ? 'bg-jade-deep/10 border-jade-glow/45 shadow-[0_0_10px_rgba(58,143,143,0.16)] hover:bg-jade-deep/14'
-                          : 'bg-ink-dark/45 border-ink-light/50 hover:border-ink-light/70 hover:bg-ink-mid/15'
+                          ? 'bg-jade-deep/10 border-jade-glow/45 shadow-[0_0_10px_rgba(58,143,143,0.16)] hover:bg-jade-deep/18 hover:shadow-[0_0_16px_rgba(58,143,143,0.24)]'
+                          : 'bg-ink-dark/45 border-ink-light/50 hover:border-jade-glow/30 hover:bg-ink-mid/25 hover:shadow-[0_3px_12px_rgba(0,0,0,0.3)] hover:-translate-y-[1px]'
                       }
                     `}
                     style={showIllumination ? glowStyle as React.CSSProperties : undefined}
                     onClick={handleRowClick}
                   >
                     <div className="flex items-center gap-1.5">
-                      <div className={`w-1 h-4 rounded-full shrink-0 transition-all duration-200 ${isActive ? 'bg-jade-glow' : 'bg-transparent group-hover:bg-ink-light/40'}`} />
-                      {chevron}
-                      <div className={`text-[11px] font-semibold ${showIllumination ? levelDiffColor : isActive ? 'text-cloud-white' : 'text-mist-light'} transition-colors duration-150 truncate flex-1`} title={displayName}>
+                      <div className={`w-1 h-4 rounded-full shrink-0 transition-all duration-200 ${isActive ? 'bg-jade-glow' : 'bg-transparent group-hover:bg-jade-glow/40'}`} />
+                      <div className={`text-[11px] font-semibold ${useThemeColor && showIllumination ? 'text-jade-glow' : isActive ? 'text-cloud-white' : 'text-mist-light group-hover:text-cloud-white/90'} transition-colors duration-150 truncate flex-1`} style={showIllumination && !useThemeColor ? { color: sidebarTierInfo.glowColor } : undefined} title={displayName}>
                         {displayName}
                       </div>
                       {logCount > 0 && (
                         <span className="text-[8px] text-mist-dark/70 font-mono shrink-0">{logCount}</span>
                       )}
-                      <span className="text-[9px] text-gold/70 shrink-0 font-mono">Lv.{effectiveLevel}</span>
-                      <span className={`shrink-0 text-[8px] font-medium px-1.5 py-0 rounded ${levelDiffColor} bg-ink-dark/30 border border-current/15`}>
+                      <span className={`shrink-0 text-[8px] font-medium px-1.5 py-0 rounded bg-ink-dark/30 border border-current/15 ${useThemeColor ? 'text-jade-glow' : ''}`} style={!useThemeColor ? { color: sidebarTierInfo.glowColor } : undefined}>
                         {levelDifficultyDisplay}
                       </span>
                     </div>
@@ -4384,7 +3260,6 @@ function ProgressionSidebar({
                         {exercise.story}
                       </p>
                     )}
-                    {expandTiers && tierPanel}
                   </div>
                 </motion.div>
               );
@@ -4652,7 +3527,7 @@ export default function ProgressionPage() {
       }
 
       const configParts: string[] = [];
-      if (draft.selectedModifier) configParts.push(`Mod: ${draft.selectedModifier}`);
+      if (draft.selectedModifierKg) configParts.push(`+${parseFloat(draft.selectedModifierKg)}kg`);
       if (draft.selectedResistanceBand) configParts.push(`Band: ${formatResistanceBandLabel(parseFloat(draft.selectedResistanceBand))}`);
       if (draft.selectedVariation) configParts.push(`Var: ${draft.selectedVariation}`);
 
@@ -4705,6 +3580,30 @@ export default function ProgressionPage() {
     window.addEventListener("user-physique-updated", handlePhysiqueUpdate as EventListener);
     return () => window.removeEventListener("user-physique-updated", handlePhysiqueUpdate as EventListener);
   }, [userId]);
+
+  // ── Weight standards from DB (admin-configured BW% per exercise+gender) ──
+  const [weightStandards, setWeightStandards] = useState<WeightStandardsMap>({});
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/weight-standards");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        const map: WeightStandardsMap = {};
+        for (const item of data.standards ?? []) {
+          if (!map[item.exerciseId]) map[item.exerciseId] = { male: null, female: null };
+          if (item.gender === "MALE") map[item.exerciseId].male = item;
+          else if (item.gender === "FEMALE") map[item.exerciseId].female = item;
+        }
+        setWeightStandards(map);
+      } catch {
+        // Silently fall back to hardcoded standards
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // ── Persist level defaults in localStorage ──
   useEffect(() => {
@@ -4889,7 +3788,7 @@ export default function ProgressionPage() {
           weight1: data.weight1,
           weight2: data.weight2,
           weight3: data.weight3,
-        }, data.resistanceBandKg)
+        }, data.modifier, weightStandards)
       : null;
     const effectiveLevel =
       exercise && isGymCategoryExercise(exercise)
@@ -4929,11 +3828,11 @@ export default function ProgressionPage() {
   const autoLevelByExerciseId = useMemo(() => {
     const map: Record<string, number> = {};
     for (const ex of exercises) {
-      const level = getAutoGymLevel(ex, physique);
+      const level = getAutoGymLevel(ex, physique, weightStandards);
       if (level != null) map[ex.id] = level;
     }
     return map;
-  }, [exercises, physique]);
+  }, [exercises, physique, weightStandards]);
 
   const categories = [
     ...new Set(exercises.flatMap((e) => parseCategoryTags(e.category))),
@@ -5129,6 +4028,7 @@ export default function ProgressionPage() {
       selectedDayFilter={selectedDayFilter}
       setSelectedDayFilter={setSelectedDayFilter}
       onDrawerOpen={handleDrawerOpen}
+      userBodyweightKg={physique.bodyWeightKg}
     />
   );
 
@@ -5177,17 +4077,14 @@ export default function ProgressionPage() {
                   const isFilterActiveForRow =
                     selectedLogFilter?.exerciseId === exercise.id &&
                     selectedLogFilter?.levelNameLevel === queueFilterLevel;
-                  const selectedTier = exercise.tiers.find((tier) => tier.level === level);
                   const rowDifficulty = getWeightedDifficulty(exercise, level) || exercise.difficulty;
-                  const difficultyStyle = getDifficultyStyle(rowDifficulty);
-                  const conventionalDifficulty = getDifficultyDisplayName(
-                    { difficulty: rowDifficulty, wuxiaDifficulty: rowDifficulty },
-                    "normal"
-                  ) || rowDifficulty;
-                  const displayName = stripBwPercentHint(getExerciseDisplayName(selectedTier || exercise, settings.terminologyMode));
+                  const rowTierGlow = getTierGlowFromLogs(exercise, physique.bodyWeightKg);
+                  const difficultyStyle = { glowColor: rowTierGlow.glowColor, glowShadow: `0 0 8px ${rowTierGlow.glowColor}30, inset 0 0 8px ${rowTierGlow.glowColor}10`, textColor: "" };
+                  const conventionalDifficulty = rowTierGlow.tierName;
+                  const displayName = stripBwPercentHint(getExerciseDisplayName(exercise, settings.terminologyMode));
                   const altName = settings.terminologyMode === "fantasy"
-                    ? stripBwPercentHint(selectedTier?.name || exercise.name || "")
-                    : stripBwPercentHint(selectedTier?.wuxiaName || exercise.wuxiaName || "");
+                    ? stripBwPercentHint(exercise.name || "")
+                    : stripBwPercentHint(exercise.wuxiaName || "");
                   const showAltName = !!altName && altName !== displayName;
                   const draftSummary = draftSummaries[exercise.id];
                   const openLogger = () => {
@@ -5223,7 +4120,7 @@ export default function ProgressionPage() {
                         style={{ backgroundColor: difficultyStyle.glowColor, boxShadow: `0 0 10px ${difficultyStyle.glowColor}` }}
                       />
                       <div className="min-w-0 flex-1 pl-1 text-left">
-                        <div className={`truncate text-[11px] font-semibold ${difficultyStyle.textColor}`}>
+                        <div className="truncate text-[11px] font-semibold" style={{ color: difficultyStyle.glowColor }}>
                           {displayName}
                         </div>
                         {showAltName && (
@@ -5232,7 +4129,7 @@ export default function ProgressionPage() {
                           </div>
                         )}
                         <div className="mt-0.5 flex items-center gap-2 text-[10px]">
-                          <span className="text-mist-dark">Lv.{level}</span>
+                          <span className="text-mist-dark">{exercise.category || exercise.type || ''}</span>
                           <span className="font-semibold" style={{ color: difficultyStyle.glowColor }}>{conventionalDifficulty}</span>
                         </div>
                         {draftSummary && (() => {
@@ -5306,7 +4203,7 @@ export default function ProgressionPage() {
             </section>
           )}
 
-          {/* Training Log Table */}
+          {/* Training Log Table (Unified) */}
           <section className={`space-y-3 rounded-lg border p-2 transition-colors ${selectedLogFilter ? "border-jade-glow/25 bg-ink-mid/20" : "border-transparent bg-transparent"}`}>
             <div className="flex items-center justify-between gap-2 px-1 sm:px-0">
               <h3 className="text-xs text-mist-light uppercase tracking-wider">Training Log</h3>
@@ -5324,32 +4221,17 @@ export default function ProgressionPage() {
               </button>
             </div>
             <div className="-mx-4 sm:-mx-6">
-              <MemoTrainingLogTable
+              <MemoUnifiedTrainingLogTable
                 exercises={exercises}
                 physique={physique}
                 selectedLogFilter={selectedLogFilter}
                 onSelectExercise={setSelectedLogFilter}
                 onRefresh={fetchExercises}
                 userId={userId || ''}
+                weightStandards={weightStandards}
               />
             </div>
           </section>
-
-          {/* Timed Hold Log Table */}
-          {exercises.some(hasHoldBasedTiers) && (
-            <section className={`space-y-3 rounded-lg border p-2 transition-colors ${selectedLogFilter ? "border-mountain-blue-glow/20 bg-ink-mid/20" : "border-transparent bg-transparent"}`}>
-              <h3 className="text-xs text-mountain-blue-glow uppercase tracking-wider px-1 sm:px-0">Timed Hold Log</h3>
-              <div className="-mx-4 sm:-mx-6">
-                <MemoHoldTrainingLogTable
-                  exercises={exercises}
-                  selectedLogFilter={selectedLogFilter}
-                  onSelectExercise={setSelectedLogFilter}
-                  onRefresh={fetchExercises}
-                  userId={userId || ''}
-                />
-              </div>
-            </section>
-          )}
         </div>
       )}
 
@@ -5422,6 +4304,8 @@ export default function ProgressionPage() {
                     onViewDetail={handleViewExercise}
                     onExit={() => setActiveQueueItemId(null)}
                     draftStorageKey={getDraftStorageKey(activeLoggerExercise.id)}
+                    physique={physique}
+                    userId={userId ?? null}
                   />
                 </div>
               </motion.div>

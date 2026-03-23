@@ -102,15 +102,31 @@ export default function UserPhysiqueButton({ userId, userName, className }: User
 
           <div className="space-y-1.5">
             <label className="block text-[11px] text-mist-light uppercase tracking-wider">Gender</label>
-            <select
-              value={gender}
-              onChange={(e) => setGender(e.target.value as UserGender)}
-              className="w-full bg-ink-dark border border-ink-light rounded-lg px-3 py-2 text-sm text-cloud-white outline-none focus:border-jade-glow/50"
-            >
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-              <option value="other">Other / Prefer not to say</option>
-            </select>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setGender("male")}
+                className={`flex-1 px-3 py-2 rounded-lg text-sm border transition-all duration-200 ${
+                  gender === "male"
+                    ? "border-jade-glow/50 bg-jade-deep/30 text-jade-light"
+                    : "border-ink-light bg-ink-dark text-mist-light hover:border-jade/30"
+                }`}
+              >
+                ♂️ Male
+              </button>
+              <button
+                type="button"
+                onClick={() => setGender("female")}
+                className={`flex-1 px-3 py-2 rounded-lg text-sm border transition-all duration-200 ${
+                  gender === "female"
+                    ? "border-jade-glow/50 bg-jade-deep/30 text-jade-light"
+                    : "border-ink-light bg-ink-dark text-mist-light hover:border-jade/30"
+                }`}
+              >
+                ♀️ Female
+              </button>
+            </div>
+            <p className="text-[9px] text-mist-dark/70 italic">Gender affects weight standard calculations for your tier</p>
           </div>
 
           <div className="space-y-1.5">

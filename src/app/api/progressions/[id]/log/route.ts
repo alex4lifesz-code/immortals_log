@@ -22,7 +22,7 @@ export async function POST(
 
     // Find or create user progression
     const exercise = await prisma.progressionExercise.findFirst({
-      where: { id, userId },
+      where: { id },
     });
     if (!exercise) {
       return NextResponse.json({ error: "Exercise not found" }, { status: 404 });

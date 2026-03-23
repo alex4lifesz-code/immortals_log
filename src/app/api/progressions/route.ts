@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// GET /api/progressions?userId=X — fetch all progression exercises for a user
+// GET /api/progressions?userId=X — fetch shared progression exercise library plus user's progress
 export async function GET(req: NextRequest) {
   try {
     const userId = req.nextUrl.searchParams.get("userId");
@@ -10,7 +10,6 @@ export async function GET(req: NextRequest) {
     }
 
     const exercises = await prisma.progressionExercise.findMany({
-      where: { userId },
       include: {
         tiers: { orderBy: { level: "asc" } },
         variations: true,
@@ -32,7 +31,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// DELETE /api/progressions?userId=X — remove all progression data for a user
+// DELETE /api/progressions?userId=X — remove user's progression data only
 export async function DELETE(req: NextRequest) {
   try {
     const userId = req.nextUrl.searchParams.get("userId");
@@ -40,10 +39,8 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "userId is required" }, { status: 400 });
     }
 
-    // Delete user progression levels (logs cascade)
+  // Delete user progression levels (logs cascade)
     await prisma.userProgressionLevel.deleteMany({ where: { userId } });
-    // Delete progression exercises (tiers, variations, modifiers cascade)
-    await prisma.progressionExercise.deleteMany({ where: { userId } });
 
     return NextResponse.json({ success: true });
   } catch (error) {

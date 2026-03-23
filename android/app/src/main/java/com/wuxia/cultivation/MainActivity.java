@@ -2,15 +2,38 @@ package com.wuxia.cultivation;
 
 import android.os.Build;
 import android.os.Bundle;
+import android.graphics.Color;
 import android.view.View;
 import android.view.WindowManager;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
+import android.webkit.JavascriptInterface;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
+
+    public class NavigationBarBridge {
+        @JavascriptInterface
+        public void setColor(String color, boolean darkButtons) {
+            runOnUiThread(() -> {
+                try {
+                    int parsed = Color.parseColor(color);
+                    getWindow().setNavigationBarColor(parsed);
+
+                    View decorView = getWindow().getDecorView();
+                    WindowInsetsControllerCompat controller =
+                            WindowCompat.getInsetsController(getWindow(), decorView);
+                    if (controller != null) {
+                        controller.setAppearanceLightNavigationBars(darkButtons);
+                    }
+                } catch (IllegalArgumentException ignored) {
+                    // Ignore malformed colors from JS side.
+                }
+            });
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -80,6 +103,9 @@ public class MainActivity extends BridgeActivity {
             settings.setDomStorageEnabled(true);
             settings.setDatabaseEnabled(true);
             settings.setMediaPlaybackRequiresUserGesture(false);
+
+            // Expose runtime system-bar color control for JS theme synchronisation.
+            webView.addJavascriptInterface(new NavigationBarBridge(), "NavigationBar");
 
             // Rendering pipeline optimisations
             webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);

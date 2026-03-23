@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { serializeDayAssignments } from "@/lib/constants";
 
-// GET /api/progressions/[id]?userId=X — get a single progression exercise with full details
+// GET /api/progressions/[id]?userId=X — get a shared progression exercise with requesting user's progress
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -15,7 +15,7 @@ export async function GET(
     }
 
     const exercise = await prisma.progressionExercise.findFirst({
-      where: { id, userId },
+      where: { id },
       include: {
         tiers: { orderBy: { level: "asc" } },
         variations: true,

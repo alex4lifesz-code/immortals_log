@@ -19,9 +19,9 @@ export async function PUT(
       return NextResponse.json({ error: "currentLevel must be a positive number" }, { status: 400 });
     }
 
-    // Verify the exercise belongs to the user
+    // Verify the exercise exists in shared library
     const exercise = await prisma.progressionExercise.findFirst({
-      where: { id, userId },
+      where: { id },
     });
     if (!exercise) {
       return NextResponse.json({ error: "Exercise not found" }, { status: 404 });

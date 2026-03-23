@@ -24,12 +24,20 @@ const config: CapacitorConfig = {
     appendUserAgent: " CapacitorNative/3.0",
   },
   plugins: {
+    App: {
+      launchUrl: "",
+    },
     SplashScreen: {
       launchAutoHide: true,
       launchShowDuration: 1500,
       backgroundColor: "#0d0f14",
       showSpinner: false,
       androidScaleType: "CENTER_CROP",
+    },
+    StatusBar: {
+      backgroundColor: "#0d0f14",
+      style: "DARK",
+      overlaysWebView: false,
     },
     Keyboard: {
       resize: "body",

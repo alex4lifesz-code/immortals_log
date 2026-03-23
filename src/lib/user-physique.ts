@@ -1,4 +1,4 @@
-export type UserGender = "male" | "female" | "other";
+export type UserGender = "male" | "female";
 
 export interface UserPhysiqueSettings {
   gender: UserGender;
@@ -7,7 +7,7 @@ export interface UserPhysiqueSettings {
 }
 
 export const DEFAULT_USER_PHYSIQUE: UserPhysiqueSettings = {
-  gender: "other",
+  gender: "male",
   bodyWeightKg: null,
   syncWeightFromCheckins: false,
 };
@@ -20,8 +20,8 @@ function normalizeBodyWeight(value: unknown): number | null {
 }
 
 function normalizeGender(value: unknown): UserGender {
-  if (value === "male" || value === "female" || value === "other") return value;
-  return "other";
+  if (value === "male" || value === "female") return value;
+  return "male";
 }
 
 export function getUserPhysiqueStorageKey(userId: string): string {

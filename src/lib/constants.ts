@@ -11,51 +11,23 @@ export interface NavItem {
 export const defaultNavItems: NavItem[] = [
   { id: "dashboard", label: "Dao Hall", icon: "⛩️", path: "/dashboard", pinned: false, visible: true },
   { id: "workout", label: "Training Grounds", icon: "⚔️", path: "/dashboard/workout", pinned: false, visible: true },
-  { id: "exercises", label: "Technique Scroll", icon: "📜", path: "/dashboard/exercises", pinned: false, visible: true },
   { id: "checkin", label: "Sect Register", icon: "📋", path: "/dashboard/checkin", pinned: false, visible: true },
-  { id: "history", label: "Ancient Records", icon: "📖", path: "/dashboard/history", pinned: false, visible: true },
-  { id: "community", label: "Sect Hall", icon: "🏯", path: "/dashboard/community", pinned: false, visible: true },
+  { id: "exercise-library", label: "Exercise Library", icon: "📚", path: "/dashboard/exercise-library", pinned: false, visible: true },
   { id: "settings", label: "Inner Chamber", icon: "⚙️", path: "/dashboard/settings", pinned: false, visible: true },
   { id: "admin", label: "Administrative Palace", icon: "👑", path: "/dashboard/admin", pinned: false, visible: true },
 ];
 
-export const DIFFICULTY_LEVELS = [
-  "Mortal",
-  "Foundation Establishment",
-  "Core Formation",
-  "Nascent Soul",
-  "Soul Splitting",
-  "Tribulation Transcendence",
-  "Immortal",
-  "Heavenly Dao",
-] as const;
+// TODO: These will be populated dynamically from the new exercise database system
+export const DIFFICULTY_LEVELS = [] as const;
 
-export const EXERCISE_TYPES = [
-  "Upper Heaven",
-  "Lower Realms",
-  "Heart Meridian",
-  "Unified Realm",
-] as const;
+// TODO: These will be populated dynamically from the new exercise database system
+export const EXERCISE_TYPES = [] as const;
 
-export const TARGET_GROUPS = [
-  "Iron Body Conditioning",
-  "Lightfoot Movement",
-  "Meridian Flow",
-  "Inner Strength",
-  "Sword Forms",
-  "Palm Techniques",
-  "Breathing Arts",
-  "Mental Cultivation",
-  "Energy Circulation",
-  "Combat Reflexes",
-] as const;
+// TODO: These will be populated dynamically from the new exercise database system
+export const TARGET_GROUPS = [] as const;
 
-export const TARGET_GROUP_CATEGORIES: { label: string; groups: string[] }[] = [
-  { label: "Body Arts", groups: ["Iron Body Conditioning", "Lightfoot Movement"] },
-  { label: "Internal Arts", groups: ["Meridian Flow", "Inner Strength", "Energy Circulation", "Breathing Arts"] },
-  { label: "Combat Arts", groups: ["Sword Forms", "Palm Techniques", "Combat Reflexes"] },
-  { label: "Mind Arts", groups: ["Mental Cultivation"] },
-];
+// TODO: These will be populated dynamically from the new exercise database system
+export const TARGET_GROUP_CATEGORIES: { label: string; groups: string[] }[] = [];
 
 export type DifficultyLevel = (typeof DIFFICULTY_LEVELS)[number];
 export type ExerciseType = (typeof EXERCISE_TYPES)[number];
