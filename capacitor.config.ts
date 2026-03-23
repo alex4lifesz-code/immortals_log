@@ -25,7 +25,7 @@ const config: CapacitorConfig = {
   },
   plugins: {
     App: {
-      launchUrl: "",
+      disableBackButtonHandler: false,
     },
     SplashScreen: {
       launchAutoHide: true,
