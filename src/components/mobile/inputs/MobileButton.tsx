@@ -1,16 +1,26 @@
 "use client";
 
 import { motion } from "framer-motion";
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ReactNode } from "react";
 
 type MobileButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 
-interface MobileButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface MobileButtonProps {
   children: ReactNode;
   variant?: MobileButtonVariant;
+  className?: string;
+  disabled?: boolean;
+  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
+  form?: string;
+  type?: "button" | "submit" | "reset";
 }
 
-export default function MobileButton({ children, className = "", variant = "primary", ...props }: MobileButtonProps) {
+export default function MobileButton({ 
+  children, 
+  className = "", 
+  variant = "primary", 
+  ...props 
+}: MobileButtonProps) {
   const variantClass =
     variant === "secondary"
       ? "bg-ink-mid text-cloud-white border-border"
@@ -24,7 +34,7 @@ export default function MobileButton({ children, className = "", variant = "prim
     <motion.button
       whileTap={{ scale: 0.95 }}
       className={`min-h-12 rounded-xl border px-4 py-3 text-sm font-semibold transition-colors ${variantClass} ${className}`}
-      {...props}
+      {...(props as any)}
     >
       {children}
     </motion.button>
