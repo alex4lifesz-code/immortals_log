@@ -7,6 +7,21 @@ echo "DATABASE_URL: ${DATABASE_URL}"
 # Extract file path from DATABASE_URL (e.g. "file:/app/data/cultivation.db" -> "/app/data/cultivation.db")
 DB_PATH=$(echo "$DATABASE_URL" | sed 's|^file:||')
 SEED_DB_PATH="${SEED_DB_PATH:-/app/seed/cultivation.db}"
+JWT_SECRET_FILE="${JWT_SECRET_FILE:-/app/data/jwt-secret}"
+
+# Ensure JWT secret exists in container runtime. If missing, generate once and persist.
+if [ -z "${JWT_SECRET:-}" ]; then
+  if [ -f "$JWT_SECRET_FILE" ]; then
+    JWT_SECRET=$(cat "$JWT_SECRET_FILE")
+    echo "Loaded JWT_SECRET from $JWT_SECRET_FILE"
+  else
+    echo "JWT_SECRET not provided. Generating persistent secret at $JWT_SECRET_FILE"
+    JWT_SECRET=$(node -e 'process.stdout.write(require("crypto").randomBytes(32).toString("base64"))')
+    printf "%s" "$JWT_SECRET" > "$JWT_SECRET_FILE"
+    chmod 600 "$JWT_SECRET_FILE" || true
+  fi
+  export JWT_SECRET
+fi
 
 # â”€â”€ Full database reset (set RESET_DB=true in environment to trigger) â”€â”€
 if [ "${RESET_DB:-false}" = "true" ]; then
