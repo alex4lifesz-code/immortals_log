@@ -7,6 +7,57 @@ import { AuthError } from "./types";
 
 const COOKIE_NAME = "auth-token";
 
+function parseBooleanEnv(value: string | undefined): boolean | null {
+  if (!value) return null;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "true" || normalized === "1" || normalized === "yes") {
+    return true;
+  }
+  if (normalized === "false" || normalized === "0" || normalized === "no") {
+    return false;
+  }
+  return null;
+}
+
+function shouldUseSecureCookie(request?: Request): boolean {
+  const explicit = parseBooleanEnv(process.env.COOKIE_SECURE);
+  if (explicit !== null) {
+    return explicit;
+  }
+
+  if (request) {
+    const forwardedProto = request.headers
+      .get("x-forwarded-proto")
+      ?.split(",")[0]
+      .trim()
+      .toLowerCase();
+
+    if (forwardedProto === "https") {
+      return true;
+    }
+    if (forwardedProto === "http") {
+      return false;
+    }
+
+    try {
+      return new URL(request.url).protocol === "https:";
+    } catch {
+      // Fall through to app URL / environment-based fallback.
+    }
+  }
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL;
+  if (appUrl) {
+    try {
+      return new URL(appUrl).protocol === "https:";
+    } catch {
+      // Invalid URL should not crash auth cookie setup.
+    }
+  }
+
+  return process.env.NODE_ENV === "production";
+}
+
 function getJwtSecret(): Uint8Array {
   const secret = process.env.JWT_SECRET;
   if (!secret) {
@@ -149,10 +200,11 @@ export async function requireAdmin(request: Request): Promise<AuthContext> {
 export function setAuthCookie(
   response: Response,
   token: string,
-  rememberMe: boolean
+  rememberMe: boolean,
+  request?: Request
 ): void {
   const maxAge = rememberMe ? 7 * 24 * 60 * 60 : 24 * 60 * 60;
-  const isProduction = process.env.NODE_ENV === "production";
+  const isSecure = shouldUseSecureCookie(request);
 
   // Build Set-Cookie header value
   const parts = [
@@ -163,7 +215,7 @@ export function setAuthCookie(
     `Max-Age=${maxAge}`,
   ];
 
-  if (isProduction) {
+  if (isSecure) {
     parts.push("Secure");
   }
 

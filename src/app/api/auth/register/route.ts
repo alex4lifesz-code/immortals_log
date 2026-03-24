@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    setAuthCookie(response, token, false);
+    setAuthCookie(response, token, false, req);
 
     return response;
   } catch (error) {

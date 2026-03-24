@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    setAuthCookie(response, token, !!rememberMe);
+    setAuthCookie(response, token, !!rememberMe, req);
 
     // Reset rate limit on successful login
     loginLimiter.reset(clientId);
