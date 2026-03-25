@@ -350,9 +350,6 @@ function DisplaySettingsModal({ onClose }: { onClose: () => void }) {
                       onChange={(v) => updateSettings({ sidebarPosition: v as "left" | "right" })}
                     />
                   </SettingRow>
-                  <SettingRow label="Quick View panel">
-                    <Toggle checked={settings.rightPanelVisible} onChange={(v) => updateSettings({ rightPanelVisible: v })} />
-                  </SettingRow>
                 </div>
               </div>
 

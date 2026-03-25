@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, Reorder } from "framer-motion";
-import { useState, useEffect, memo } from "react";
+import { useState, memo } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
@@ -11,7 +11,7 @@ import { t } from "@/lib/terminology";
 import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
 
 function LeftSidebar() {
-  const { getSortedNavItems, collapsed, isMobile, reorderNavItems } = useAppContext();
+  const { getSortedNavItems, isMobile, reorderNavItems } = useAppContext();
   const { logout, user } = useAuth();
   const { settings } = useDisplaySettings();
   const terminologyMode = settings.terminologyMode ?? "fantasy";
@@ -20,22 +20,9 @@ function LeftSidebar() {
   const isAdmin = user?.role === "admin";
   const items = getSortedNavItems().filter(item => (item.id !== "admin" || isAdmin));
   const [isDragging, setIsDragging] = useState(false);
-  const [isCompactDesktop, setIsCompactDesktop] = useState(false);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const updateCompactDesktop = () => {
-      setIsCompactDesktop(window.innerWidth <= 1280);
-    };
-
-    updateCompactDesktop();
-    window.addEventListener("resize", updateCompactDesktop);
-    return () => window.removeEventListener("resize", updateCompactDesktop);
-  }, []);
-
-  // Hide on mobile or when collapsed to reduce visual noise
-  if (isMobile || collapsed || isCompactDesktop) return null;
+  // Hide only on mobile; keep desktop sidebar visible until mobile layout kicks in.
+  if (isMobile) return null;
 
   return (
     <motion.aside

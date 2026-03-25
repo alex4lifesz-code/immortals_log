@@ -551,7 +551,7 @@ function UnifiedTrainingLogTable({
 
   return (
     <>
-      <GlowCard className={useMobileTableStyling ? "w-full !p-0 border-x-0 rounded-none relative overflow-hidden" : "w-full !p-0 relative overflow-hidden"} glow="jade" hoverable={false}>
+      <GlowCard className="w-full !p-0 relative overflow-hidden" glow="jade" hoverable={false}>
         {/* Edit header bar */}
         {entries.length > 0 && (
           <div className="flex items-center justify-between px-3 py-2 border-b border-jade-glow/20">
@@ -588,7 +588,7 @@ function UnifiedTrainingLogTable({
           </div>
         )}
 
-        <div className="overflow-x-auto -mx-2 px-2 sm:mx-0 sm:px-0" style={{ WebkitOverflowScrolling: "touch" }}>
+        <div className={`overflow-x-auto -mx-2 px-2 sm:mx-0 sm:px-0 ${useMobileTableStyling ? "scrollbar-hide" : ""}`} style={{ WebkitOverflowScrolling: "touch" }}>
           <table
             className="text-xs border-collapse w-max"
             style={{ whiteSpace: "nowrap", width: "max-content", minWidth: tableMinWidth }}
@@ -1011,8 +1011,6 @@ function UnifiedTrainingLogTable({
           </table>
         </div>
 
-        {/* Hard right-edge mask: hides browser text rasterization artifacts past the last cell. */}
-        <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-1 bg-ink-dark border-l border-ink-light/60" />
       </GlowCard>
 
       {/* Delete Confirmation Modal — portalled */}

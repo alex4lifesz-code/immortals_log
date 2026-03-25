@@ -143,8 +143,6 @@ export interface DisplaySettings {
   sidebarPosition: "left" | "right";
   // Training Grounds side panel width (pixels)
   sidebarWidth: number;
-  // Quick View right panel visible
-  rightPanelVisible: boolean;
   // Active technique cards: compact mode
   activeCardCompact: boolean;
   // Date display format preference
@@ -230,7 +228,6 @@ const DEFAULT_SETTINGS: DisplaySettings = {
   sidebarStyle: "default",
   sidebarPosition: "left",
   sidebarWidth: 320,
-  rightPanelVisible: true,
   activeCardCompact: false,
   dateFormat: "dd-mmm-yyyy",
   fontFamily: "system",

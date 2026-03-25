@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAppContext } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
-import { useState, memo, useCallback, useMemo, type ReactNode } from "react";
+import { useState, memo, useCallback, useMemo, useEffect, useRef, type ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { t } from "@/lib/terminology";
 import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
@@ -32,6 +32,8 @@ function BottomBar() {
   const isAdmin = user?.role === "admin";
   const items = getSortedNavItems().filter(item => (item.id !== "admin" || isAdmin));
   const [menuOpen, setMenuOpen] = useState(false);
+  const [navVisible, setNavVisible] = useState(true);
+  const lastScrollYRef = useRef(0);
 
   const effectiveMobile = isMobile;
 
@@ -56,6 +58,45 @@ function BottomBar() {
     setMenuOpen(prev => !prev);
   }, []);
 
+  useEffect(() => {
+    if (!effectiveMobile) return;
+
+    const scrollContainer = document.querySelector<HTMLElement>("[data-mobile-scroll-container='true']");
+    const getScrollTop = () => (scrollContainer ? scrollContainer.scrollTop : window.scrollY);
+
+    lastScrollYRef.current = getScrollTop();
+    let ticking = false;
+
+    const onScroll = () => {
+      if (ticking) return;
+
+      ticking = true;
+      window.requestAnimationFrame(() => {
+        const currentY = getScrollTop();
+        const delta = currentY - lastScrollYRef.current;
+        const threshold = 8;
+
+        if (currentY <= 16) {
+          setNavVisible(true);
+        } else if (delta > threshold) {
+          setNavVisible(false);
+        } else if (delta < -threshold) {
+          setNavVisible(true);
+        }
+
+        lastScrollYRef.current = currentY;
+        ticking = false;
+      });
+    };
+
+    const target: EventTarget = scrollContainer ?? window;
+    target.addEventListener("scroll", onScroll as EventListener, { passive: true });
+
+    return () => {
+      target.removeEventListener("scroll", onScroll as EventListener);
+    };
+  }, [effectiveMobile]);
+
   // Show the APK-style bottom nav whenever mobile viewport is active.
   if (!effectiveMobile) return null;
 
@@ -76,7 +117,11 @@ function BottomBar() {
         )}
       </AnimatePresence>
 
-      <div className="fixed bottom-0 left-0 right-0 z-50">
+      <motion.div
+        className="fixed bottom-0 left-0 right-0 z-50"
+        animate={{ y: navVisible || menuOpen ? 0 : 120 }}
+        transition={{ type: "tween", duration: 0.2, ease: "easeOut" }}
+      >
         {/* Expanded menu drawer */}
         <AnimatePresence>
           {menuOpen && (
@@ -255,7 +300,7 @@ function BottomBar() {
             )}
           </motion.button>
         </nav>
-      </div>
+      </motion.div>
     </>
   );
 }

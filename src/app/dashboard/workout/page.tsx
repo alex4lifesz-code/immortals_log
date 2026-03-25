@@ -472,7 +472,7 @@ export default function ProgressionPage() {
 
   if (loading) {
     return (
-      <PageLayout sidebar={sidebar} title="Training Grounds" subtitle="Record your cultivation sessions">
+      <PageLayout sidebar={sidebar} title="Training Grounds" subtitle="Record your cultivation sessions" mobileContentPaddingClass="p-2 pb-24">
         <div className="flex items-center justify-center py-20">
           <p className="text-mist-mid text-sm animate-pulse">Loading exercises…</p>
         </div>
@@ -481,7 +481,7 @@ export default function ProgressionPage() {
   }
 
   return (
-    <PageLayout sidebar={sidebar} title="Training Grounds" subtitle="Record your cultivation sessions">
+    <PageLayout sidebar={sidebar} title="Training Grounds" subtitle="Record your cultivation sessions" mobileContentPaddingClass="p-2 pb-24">
       {exercises.length === 0 ? (
         <EmptyState />
       ) : (
@@ -619,7 +619,7 @@ export default function ProgressionPage() {
             </section>
           )}
 
-          <section className={`space-y-3 rounded-lg border p-2 transition-colors ${selectedLogFilter ? "border-jade-glow/25 bg-ink-mid/20" : "border-transparent bg-transparent"}`}>
+          <section className={`space-y-3 rounded-lg border py-2 px-0 transition-colors ${selectedLogFilter ? "border-jade-glow/25 bg-ink-mid/20" : "border-transparent bg-transparent"}`}>
             <div className="flex items-center justify-between gap-2 px-1 sm:px-0">
               <h3 className="text-xs text-mist-light uppercase tracking-wider">Training Log</h3>
               <button
@@ -635,7 +635,7 @@ export default function ProgressionPage() {
                 Clear Exercise Filter
               </button>
             </div>
-            <div className="-mx-2 sm:mx-0">
+            <div className="mx-0">
               <MemoUnifiedTrainingLogTable
                 exercises={exercises}
                 physique={physique}

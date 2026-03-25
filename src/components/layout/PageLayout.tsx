@@ -11,6 +11,9 @@ interface PageLayoutProps {
   title: string;
   subtitle?: string;
   sidebarLabel?: string;
+  contentWidth?: "centered" | "fluid";
+  contentMaxWidthClass?: string;
+  mobileContentPaddingClass?: string;
 }
 
 function PageLayout({
@@ -19,12 +22,14 @@ function PageLayout({
   title,
   subtitle,
   sidebarLabel,
+  contentWidth = "centered",
+  contentMaxWidthClass = "max-w-[1400px]",
+  mobileContentPaddingClass = "p-4 pb-24",
 }: PageLayoutProps) {
   const { panelPosition, isMobile, isNativeApp, mobileSidebarOpen, setMobileSidebarOpen } = useAppContext();
   const { settings, updateSettings } = useDisplaySettings();
   const effectivePosition = isMobile ? "top" : panelPosition;
   const mobileMode = isMobile;
-  const [mobileQuickViewOpen, setMobileQuickViewOpen] = useState(false);
   const mobileSidebarHistoryArmedRef = useRef(false);
   const sidebarTouchStartXRef = useRef<number | null>(null);
   const sidebarTouchCurrentXRef = useRef<number | null>(null);
@@ -32,33 +37,35 @@ function PageLayout({
   const sidebarWidth = settings.sidebarWidth || 320;
 
   const MIN_SIDEBAR_WIDTH = 200;
+  const contentContainerClass = contentWidth === "centered"
+    ? `mx-auto w-full ${contentMaxWidthClass}`
+    : "w-full";
 
   // Close mobile panels on escape
   useEffect(() => {
-    if (!mobileSidebarOpen && !mobileQuickViewOpen) return;
+    if (!mobileSidebarOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setMobileSidebarOpen(false);
-        setMobileQuickViewOpen(false);
       }
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [mobileSidebarOpen, mobileQuickViewOpen, setMobileSidebarOpen]);
+  }, [mobileSidebarOpen, setMobileSidebarOpen]);
 
   // Lock body scroll when mobile panels open
   useEffect(() => {
-    if (mobileSidebarOpen || mobileQuickViewOpen) {
+    if (mobileSidebarOpen) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
     }
     return () => { document.body.style.overflow = ""; };
-  }, [mobileSidebarOpen, mobileQuickViewOpen]);
+  }, [mobileSidebarOpen]);
 
   // Arm history while mobile drawers are open so Android back closes drawer first.
   useEffect(() => {
-    if (!mobileSidebarOpen && !mobileQuickViewOpen) {
+    if (!mobileSidebarOpen) {
       mobileSidebarHistoryArmedRef.current = false;
       return;
     }
@@ -70,36 +77,34 @@ function PageLayout({
     } catch {
       // Ignore history errors.
     }
-  }, [mobileSidebarOpen, mobileQuickViewOpen]);
+  }, [mobileSidebarOpen]);
 
   // Browser back should close mobile drawers before navigation.
   useEffect(() => {
     const onPopState = () => {
-      if (!mobileSidebarOpen && !mobileQuickViewOpen) return;
+      if (!mobileSidebarOpen) return;
       setMobileSidebarOpen(false);
-      setMobileQuickViewOpen(false);
       mobileSidebarHistoryArmedRef.current = false;
     };
 
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
-  }, [mobileSidebarOpen, mobileQuickViewOpen, setMobileSidebarOpen]);
+  }, [mobileSidebarOpen, setMobileSidebarOpen]);
 
   // Capacitor Android hardware back fallback for closing mobile drawers.
   useEffect(() => {
     const onBackButton = (event: Event) => {
-      if (!mobileSidebarOpen && !mobileQuickViewOpen) return;
+      if (!mobileSidebarOpen) return;
       if (typeof (event as { preventDefault?: () => void }).preventDefault === "function") {
         (event as { preventDefault: () => void }).preventDefault();
       }
       setMobileSidebarOpen(false);
-      setMobileQuickViewOpen(false);
       mobileSidebarHistoryArmedRef.current = false;
     };
 
     document.addEventListener("backbutton", onBackButton as EventListener);
     return () => document.removeEventListener("backbutton", onBackButton as EventListener);
-  }, [mobileSidebarOpen, mobileQuickViewOpen, setMobileSidebarOpen]);
+  }, [mobileSidebarOpen, setMobileSidebarOpen]);
 
   // Capacitor native Android back-button (reliable in APK webview).
   useEffect(() => {
@@ -111,9 +116,8 @@ function PageLayout({
         const mod = await import("@capacitor/app");
         if (cancelled) return;
         const result = await mod.App.addListener("backButton", () => {
-          if (!mobileSidebarOpen && !mobileQuickViewOpen) return;
+          if (!mobileSidebarOpen) return;
           setMobileSidebarOpen(false);
-          setMobileQuickViewOpen(false);
           mobileSidebarHistoryArmedRef.current = false;
         });
         if (cancelled) {
@@ -133,7 +137,7 @@ function PageLayout({
       if (!handle) return;
       void handle.remove();
     };
-  }, [mobileSidebarOpen, mobileQuickViewOpen, setMobileSidebarOpen]);
+  }, [mobileSidebarOpen, setMobileSidebarOpen]);
 
   const onSidebarTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
     sidebarTouchStartXRef.current = event.touches[0]?.clientX ?? null;
@@ -157,22 +161,11 @@ function PageLayout({
     }
   };
 
-  // Mutual exclusion: close QuickView when sidebar opens
-  useEffect(() => {
-    if (mobileSidebarOpen && mobileQuickViewOpen) {
-      const timer = window.setTimeout(() => {
-        setMobileQuickViewOpen(false);
-      }, 0);
-      return () => window.clearTimeout(timer);
-    }
-  }, [mobileSidebarOpen, mobileQuickViewOpen]);
-
   // Close sidebars when switching away from mobile
   useEffect(() => {
     if (!isMobile) {
       const timer = window.setTimeout(() => {
         setMobileSidebarOpen(false);
-        setMobileQuickViewOpen(false);
       }, 0);
       return () => window.clearTimeout(timer);
     }
@@ -238,28 +231,21 @@ function PageLayout({
       {sidebarPosition === "left" && desktopSidebar}
 
       {/* Main Content — full width on mobile */}
-      <div className={`flex-1 min-w-0 overflow-y-auto overflow-x-auto ${isMobile ? "p-4 pb-24" : "h-full overscroll-contain [scrollbar-gutter:stable] p-6"}`}>
+      <div
+        data-mobile-scroll-container={isMobile ? "true" : undefined}
+        className={`flex-1 min-w-0 overflow-y-auto overflow-x-auto ${isMobile ? `${mobileContentPaddingClass} scrollbar-hide` : "h-full overscroll-contain [scrollbar-gutter:stable] p-2"}`}
+      >
         <motion.div
           initial={{ y: 10, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.1 }}
         >
-          {mobileMode && sidebar && !mobileSidebarOpen && (
-            <button
-              onClick={() => setMobileSidebarOpen(true)}
-              className="fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] z-30 inline-flex items-center gap-1.5 rounded-xl border border-jade-glow/50 bg-ink-deep/92 px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-jade-glow shadow-[0_8px_20px_rgba(0,0,0,0.45)] transition-all duration-200 hover:border-jade-glow/70 hover:bg-ink-mid/85"
-              aria-label="Open filters"
-            >
-              <span>Filters</span>
-              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-              </svg>
-            </button>
-          )}
-          {subtitle && (
-            <p className="text-xs text-mist-dark mb-4 italic">{subtitle}</p>
-          )}
-          {children}
+          <div className={contentContainerClass}>
+            {subtitle && (
+              <p className="text-xs text-mist-dark mb-4 italic">{subtitle}</p>
+            )}
+            {children}
+          </div>
         </motion.div>
       </div>
 

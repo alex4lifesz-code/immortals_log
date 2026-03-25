@@ -150,7 +150,6 @@ function SettingsSidebar({ onLogout }: { onLogout: () => void }) {
         <h3 className="text-[10px] text-mountain-blue-glow uppercase tracking-wider mb-2 font-semibold">⚙️ Layout</h3>
         <div className="divide-y divide-ink-light/20">
           <SettingRow label="Panel Position" value={settings.sidebarPosition === "left" ? "Left" : "Right"} color="text-mountain-blue-glow" />
-          <SettingRow label="Quick View" value={settings.rightPanelVisible ? "Visible" : "Hidden"} color={settings.rightPanelVisible ? "text-mountain-blue-glow" : "text-mist-dark"} />
           <SettingRow label="Date Format" value={dateLabels[settings.dateFormat] || settings.dateFormat} color="text-mountain-blue-glow" />
         </div>
       </div>
@@ -531,7 +530,7 @@ export default function SettingsPage() {
                 <h4 className="text-[11px] font-semibold text-jade-glow uppercase tracking-wider">Layout &amp; Interface</h4>
                 <div className="flex-1 h-px bg-ink-light/30" />
               </div>
-              <p className="text-[10px] text-mist-dark mb-3 pl-1">Panel positioning, visibility, and interface options</p>
+              <p className="text-[10px] text-mist-dark mb-3 pl-1">Panel positioning and interface options</p>
               <div className="space-y-2 pl-1">
                 <div className="flex items-center justify-between gap-3 py-1.5">
                   <span className="text-[11px] text-mist-light shrink-0">Viewport behavior</span>
@@ -556,12 +555,6 @@ export default function SettingsPage() {
                       </button>
                     ))}
                   </div>
-                </div>
-                <div className="flex items-center justify-between gap-3 py-1.5">
-                  <span className="text-[11px] text-mist-light shrink-0">Quick View panel</span>
-                  <button type="button" role="switch" aria-checked={settings.rightPanelVisible} onClick={() => updateSettings({ rightPanelVisible: !settings.rightPanelVisible })} className={`relative shrink-0 w-8 h-[18px] rounded-full transition-colors ${settings.rightPanelVisible ? "bg-jade-glow" : "bg-ink-light"}`}>
-                    <span className={`absolute top-[2px] left-[2px] w-[14px] h-[14px] rounded-full bg-cloud-white shadow transition-transform ${settings.rightPanelVisible ? "translate-x-[14px]" : "translate-x-0"}`} />
-                  </button>
                 </div>
                 <div className="flex items-center justify-between gap-3 py-1.5">
                   <span className="text-[11px] text-mist-light shrink-0">Column colours (W/R)</span>

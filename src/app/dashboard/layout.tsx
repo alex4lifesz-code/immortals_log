@@ -7,7 +7,6 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import TopBar from "@/components/navigation/TopBar";
 import LeftSidebar from "@/components/navigation/LeftSidebar";
-import RightPanel from "@/components/navigation/RightPanel";
 import BottomBar from "@/components/navigation/BottomBar";
 import SwipeNavigation from "@/components/navigation/SwipeNavigation";
 import SetupWizard, { SETUP_WIZARD_COMPLETED_KEY } from "@/components/ui/SetupWizard";
@@ -34,19 +33,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
           <SwipeNavigation>
             <div className="h-full min-w-0">{children}</div>
           </SwipeNavigation>
-          <RightPanel />
         </div>
-        {isMobile && user && (
-          <div className="fixed right-3 bottom-20 z-50">
-            <div className="rounded-full border border-jade-glow/35 bg-ink-deep/90 px-3 py-2 shadow-[0_8px_24px_rgba(0,0,0,0.45)]">
-              <UserPhysiqueButton
-                userId={user.id}
-                userName="⚖ Profile"
-                className="text-xs font-semibold text-jade-light hover:text-jade-glow transition-colors"
-              />
-            </div>
-          </div>
-        )}
         <BottomBar />
       </div>
     </>
