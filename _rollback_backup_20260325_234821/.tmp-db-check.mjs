@@ -1,0 +1,13 @@
+import "dotenv/config";
+import { createClient } from "@libsql/client";
+const c = createClient({ url: process.env.DATABASE_URL });
+const upl = await c.execute('SELECT userId, COUNT(*) AS cnt FROM "UserProgressionLevel" GROUP BY userId');
+console.log('UserProgressionLevel by user');
+console.log(JSON.stringify(upl.rows, null, 2));
+const logs = await c.execute('SELECT upl.userId as userId, COUNT(pl.id) AS cnt FROM "ProgressionLog" pl JOIN "UserProgressionLevel" upl ON upl.id = pl.userProgressionId GROUP BY upl.userId ORDER BY cnt DESC');
+console.log('ProgressionLog by user (join via UserProgressionLevel)');
+console.log(JSON.stringify(logs.rows, null, 2));
+const latest = await c.execute('SELECT pl.id, upl.userId, pl.createdAt FROM "ProgressionLog" pl JOIN "UserProgressionLevel" upl ON upl.id = pl.userProgressionId ORDER BY pl.createdAt DESC LIMIT 5');
+console.log('Latest logs');
+console.log(JSON.stringify(latest.rows, null, 2));
+c.close();
