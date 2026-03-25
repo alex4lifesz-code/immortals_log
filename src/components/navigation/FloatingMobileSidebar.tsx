@@ -10,7 +10,7 @@ import { t } from "@/lib/terminology";
 import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
 
 function FloatingMobileSidebar() {
-  const { getSortedNavItems, isMobile, viewportMode, mobileSidebarOpen, setMobileSidebarOpen } = useAppContext();
+  const { getSortedNavItems, isMobile, mobileSidebarOpen, setMobileSidebarOpen } = useAppContext();
   const { user } = useAuth();
   const { settings } = useDisplaySettings();
   const terminologyMode = settings.terminologyMode ?? "fantasy";
@@ -55,10 +55,7 @@ function FloatingMobileSidebar() {
     }
   };
 
-  const effectiveMobile = isMobile || viewportMode === "mobile";
-
-  // Render in APK and in forced Mobile mode so preview matches app layout.
-  if (!effectiveMobile) return null;
+  if (!isMobile) return null;
 
   return (
     <>

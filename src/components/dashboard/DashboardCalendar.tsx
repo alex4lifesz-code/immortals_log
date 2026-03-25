@@ -39,65 +39,66 @@ export function formatDateLocal(date: Date): string {
 
 export function DashboardSidebar({ stats, allUsers, userColors, onColorChange }: { stats: { sessions: number; techniques: number; streak: number }; allUsers: DashboardUser[]; userColors: Record<string, string>; onColorChange: (userId: string, color: string) => void }) {
   return (
-    <div className="space-y-3">
-      <GlowButton variant="jade" size="sm" glow className="w-full">
-        ⚔️ Quick Training
-      </GlowButton>
-      <GlowButton variant="blue" size="sm" className="w-full">
-        📋 Today&apos;s Check-In
-      </GlowButton>
+    <div className="dashboard-sidebar-shell">
+      <div className="dashboard-sidebar-scroll sidebar-scroll space-y-3">
+        <GlowButton variant="jade" size="sm" glow className="w-full">
+          ⚔️ Quick Training
+        </GlowButton>
+        <GlowButton variant="blue" size="sm" className="w-full">
+          📋 Today&apos;s Check-In
+        </GlowButton>
 
-      <div className="ink-border rounded-lg p-3 bg-ink-dark space-y-2">
-        <h3 className="text-xs text-jade-glow uppercase">Cultivation Stats</h3>
-        <div className="space-y-2">
-          <div className="flex justify-between text-xs">
-            <span className="text-mist-mid">Training Sessions</span>
-            <span className="text-cloud-white">{stats.sessions}</span>
-          </div>
-          <div className="flex justify-between text-xs">
-            <span className="text-mist-mid">Techniques Known</span>
-            <span className="text-cloud-white">{stats.techniques}</span>
-          </div>
-          <div className="flex justify-between text-xs">
-            <span className="text-mist-mid">Check-In Streak</span>
-            <span className="text-jade-glow font-semibold">{stats.streak} days</span>
-          </div>
-        </div>
-      </div>
-
-      {allUsers.length > 0 && (
-        <div className="ink-border rounded-lg p-3 bg-ink-dark space-y-2">
-          <h3 className="text-xs text-jade-glow uppercase">Cultivator Colours</h3>
+        <div className="dashboard-sidebar-card space-y-2">
+          <h3 className="text-xs text-jade-glow uppercase">Cultivation Stats</h3>
           <div className="space-y-2">
-            {allUsers.map((u, idx) => (
-              <div key={u.id} className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <span
-                    className="w-2 h-2 rounded-full shrink-0"
-                    style={{ backgroundColor: userColors[u.id] || DEFAULT_CULTIVATOR_COLORS[idx % DEFAULT_CULTIVATOR_COLORS.length] }}
-                  />
-                  <span className="text-xs text-mist-light truncate">{u.name}</span>
-                </div>
-                <div className="flex gap-0.5 shrink-0">
-                  {CULTIVATOR_COLOR_OPTIONS.map((c) => (
-                    <button
-                      key={c.value}
-                      onClick={() => onColorChange(u.id, c.value)}
-                      className={`w-3.5 h-3.5 rounded-full border-2 transition-all ${
-                        (userColors[u.id] || DEFAULT_CULTIVATOR_COLORS[idx % DEFAULT_CULTIVATOR_COLORS.length]) === c.value
-                          ? "border-cloud-white scale-125 shadow-[0_0_6px_currentColor]"
-                          : "border-transparent hover:border-mist-dark hover:scale-110"
-                      }`}
-                      style={{ backgroundColor: c.value }}
-                      title={c.name}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
+            <div className="flex justify-between text-xs">
+              <span className="text-mist-mid">Training Sessions</span>
+              <span className="text-cloud-white">{stats.sessions}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-mist-mid">Techniques Known</span>
+              <span className="text-cloud-white">{stats.techniques}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-mist-mid">Check-In Streak</span>
+              <span className="text-jade-glow font-semibold">{stats.streak} days</span>
+            </div>
           </div>
         </div>
-      )}
+        {allUsers.length > 0 && (
+          <div className="dashboard-sidebar-card space-y-2">
+            <h3 className="text-xs text-jade-glow uppercase">Cultivator Colours</h3>
+            <div className="space-y-2">
+              {allUsers.map((u, idx) => (
+                <div key={u.id} className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ backgroundColor: userColors[u.id] || DEFAULT_CULTIVATOR_COLORS[idx % DEFAULT_CULTIVATOR_COLORS.length] }}
+                    />
+                    <span className="text-xs text-mist-light truncate">{u.name}</span>
+                  </div>
+                  <div className="flex gap-0.5 shrink-0">
+                    {CULTIVATOR_COLOR_OPTIONS.map((c) => (
+                      <button
+                        key={c.value}
+                        onClick={() => onColorChange(u.id, c.value)}
+                        className={`w-3.5 h-3.5 rounded-full border-2 transition-all ${
+                          (userColors[u.id] || DEFAULT_CULTIVATOR_COLORS[idx % DEFAULT_CULTIVATOR_COLORS.length]) === c.value
+                            ? "border-cloud-white scale-125 shadow-[0_0_6px_currentColor]"
+                            : "border-transparent hover:border-mist-dark hover:scale-110"
+                        }`}
+                        style={{ backgroundColor: c.value }}
+                        title={c.name}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -151,8 +152,8 @@ function CalendarDay({ date, checkedInUsers, isToday, isPast, hasNote, hasFuture
 // ── Calendar Widget ──
 
 export function Calendar({ checkInUsersByDate, currentMonth, setCurrentMonth, dayNotes, futureNoteDates, onDayClick, allUsers, userColors }: { checkInUsersByDate: Map<string, string[]>; currentMonth: Date; setCurrentMonth: (d: Date) => void; dayNotes?: Map<string, string>; futureNoteDates?: Set<string>; onDayClick?: (date: string) => void; allUsers: DashboardUser[]; userColors: Record<string, string> }) {
-  const { isMobile, viewportMode } = useAppContext();
-  const compactMode = isMobile || viewportMode === "mobile";
+  const { isMobile } = useAppContext();
+  const compactMode = isMobile;
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
   const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
   const days = [];

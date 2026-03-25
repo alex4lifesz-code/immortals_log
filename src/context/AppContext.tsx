@@ -10,7 +10,6 @@ import { api } from "@/lib/api-client";
 type ThemeMode = "dark" | "light";
 type ThemeStyle = Theme;
 type NavigationMode = "top" | "side";
-type ViewportMode = "auto" | "mobile" | "desktop";
 type TrainingMode = "simplified" | "detailed";
 
 interface AppState {
@@ -25,7 +24,6 @@ interface AppState {
   theme: ThemeMode;
   themeStyle: ThemeStyle;
   navigationMode: NavigationMode;
-  viewportMode: ViewportMode;
   topPanelExpanded: boolean;
   trainingMode: TrainingMode;
   mobileSidebarOpen: boolean;
@@ -43,7 +41,6 @@ interface AppContextType extends AppState {
   toggleTheme: () => void;
   setThemeStyle: (style: ThemeStyle) => void;
   setNavigationMode: (mode: NavigationMode) => void;
-  setViewportMode: (mode: ViewportMode) => void;
   setTopPanelExpanded: (expanded: boolean) => void;
   setTrainingMode: (mode: TrainingMode) => void;
   mobileSidebarOpen: boolean;
@@ -66,7 +63,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<ThemeMode>("dark");
   const [themeStyle, setThemeStyleState] = useState<ThemeStyle>("midnight-ink");
   const [navigationMode, setNavigationModeState] = useState<NavigationMode>("side");
-  const [viewportMode, setViewportModeState] = useState<ViewportMode>("auto");
   const [topPanelExpanded, setTopPanelExpandedState] = useState(true);
   const [trainingMode, setTrainingModeState] = useState<TrainingMode>("simplified");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -113,7 +109,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
         if (parsed.dualPageView !== undefined) setDualPageView(parsed.dualPageView);
         if (parsed.navigationMode) setNavigationModeState(parsed.navigationMode);
-        if (parsed.viewportMode) setViewportModeState(parsed.viewportMode);
         if (parsed.collapsed !== undefined) setCollapsed(parsed.collapsed);
         if (parsed.trainingMode) setTrainingModeState(parsed.trainingMode);
       }
@@ -129,12 +124,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       navItems,
       dualPageView,
       navigationMode,
-      viewportMode,
       collapsed,
       trainingMode,
     };
     localStorage.setItem("cultivation-nav-state", JSON.stringify(state));
-  }, [navItems, dualPageView, navigationMode, viewportMode, collapsed, trainingMode]);
+  }, [navItems, dualPageView, navigationMode, collapsed, trainingMode]);
 
   const setTheme = useCallback((t: ThemeMode) => {
     setThemeState(t);
@@ -240,52 +234,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => window.clearTimeout(timer);
   }, [theme, themeStyle, remotePrefsReady, user?.id]);
 
-  // Handle responsive layout changes (fixes bidirectional bug)
-  // Explicit viewport overrides are honoured on all platforms (browser + native).
-  // In auto mode, browsers default to desktop; native APK responds to screen size.
+  // Handle responsive layout changes using automatic width-based behavior.
   useEffect(() => {
     const checkSize = () => {
-      const windowWidth = window.innerWidth;
-      const actualIsMobileNow = windowWidth < 768;
+      const mobileNow = window.innerWidth < 768;
+      setIsMobile(mobileNow);
 
-      // ---------- EXPLICIT VIEWPORT OVERRIDES (any platform) ----------
-      if (viewportMode === "mobile") {
-        setIsMobile(true);
-        setCollapsed(true);
-        setPanelPosition("top");
-        setTopPanelExpandedState(false);
-        return;
-      }
-
-      if (viewportMode === "desktop") {
-        setIsMobile(false);
-        setCollapsed(false);
-        if (navigationMode === "side") {
-          setPanelPosition("left");
-        } else {
-          setPanelPosition("top");
-        }
-        setTopPanelExpandedState(true);
-        return;
-      }
-
-      // ---------- AUTO MODE: browser defaults to desktop ----------
-      if (!isNativeApp) {
-        setIsMobile(false);
-        setCollapsed(false);
-        if (navigationMode === "side") {
-          setPanelPosition("left");
-        } else {
-          setPanelPosition("top");
-        }
-        setTopPanelExpandedState(true);
-        return;
-      }
-
-      // ---------- AUTO MODE: native APK responds to screen size ----------
-      setIsMobile(actualIsMobileNow);
-
-      if (actualIsMobileNow) {
+      if (mobileNow) {
         setCollapsed(true);
         setPanelPosition("top");
         setTopPanelExpandedState(false);
@@ -303,7 +258,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     checkSize();
     window.addEventListener("resize", checkSize);
     return () => window.removeEventListener("resize", checkSize);
-  }, [viewportMode, navigationMode, isNativeApp]);
+  }, [navigationMode]);
 
   // Persist state changes
   useEffect(() => {
@@ -345,10 +300,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setNavigationModeState(mode);
   }, []);
 
-  const setViewportMode = useCallback((mode: ViewportMode) => {
-    setViewportModeState(mode);
-  }, []);
-
   const setTopPanelExpanded = useCallback((expanded: boolean) => {
     setTopPanelExpandedState(expanded);
   }, []);
@@ -370,7 +321,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         theme,
         themeStyle,
         navigationMode,
-        viewportMode,
         topPanelExpanded,
         trainingMode,
         setCurrentPage,
@@ -384,7 +334,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         toggleTheme,
         setThemeStyle,
         setNavigationMode,
-        setViewportMode,
         setTopPanelExpanded,
         setTrainingMode,
         mobileSidebarOpen,

@@ -470,10 +470,10 @@ export function InlineLogForm({
 
   return (
     <motion.div
-      initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 1, height: "auto" }}
-      exit={{ opacity: 0, height: 0 }}
-      transition={{ duration: 0.2 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.12 }}
     >
       <div
         className={`relative overflow-hidden border-2 rounded-2xl rounded-tr-[26px] rounded-bl-[26px] ${isCompact ? 'p-2' : 'p-3'}`}

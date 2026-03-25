@@ -282,25 +282,27 @@ function WeightStandardsEditorModal({ isOpen, onClose, exercise, userId, onSaved
 
 function WeightStandardsSidebar() {
   return (
-    <div className="space-y-3">
-      <GlowCard glow="jade" hoverable={false}>
-        <h3 className="text-xs text-jade-glow uppercase mb-2">Weight Standards</h3>
-        <p className="text-xs text-mist-dark">
-          Configure gender-specific strength standards for exercises. These determine user tier calculations
-          based on bodyweight percentage.
-        </p>
-      </GlowCard>
-      <GlowCard glow="blue" hoverable={false}>
-        <h3 className="text-xs text-mountain-blue-glow uppercase mb-2">Tier System</h3>
-        <div className="space-y-1">
-          {TIER_NAMES.map((name, i) => (
-            <div key={name} className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: TIER_COLORS[i] }} />
-              <span className="text-[10px] text-mist-light">Tier {i + 1}: {name}</span>
-            </div>
-          ))}
+    <div className="dashboard-sidebar-shell">
+      <div className="dashboard-sidebar-scroll sidebar-scroll space-y-3">
+        <div className="dashboard-sidebar-card">
+          <h3 className="text-xs text-jade-glow uppercase mb-2">Weight Standards</h3>
+          <p className="text-xs text-mist-dark">
+            Configure gender-specific strength standards for exercises. These determine user tier calculations
+            based on bodyweight percentage.
+          </p>
         </div>
-      </GlowCard>
+        <div className="dashboard-sidebar-card">
+          <h3 className="text-xs text-mountain-blue-glow uppercase mb-2">Tier System</h3>
+          <div className="space-y-1">
+            {TIER_NAMES.map((name, i) => (
+              <div key={name} className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: TIER_COLORS[i] }} />
+                <span className="text-[10px] text-mist-light">Tier {i + 1}: {name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

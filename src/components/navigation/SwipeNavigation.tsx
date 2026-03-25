@@ -57,7 +57,7 @@ function SwipeNavigation({
 
   return (
     <div
-      className="flex-1 overflow-auto"
+      className="flex-1 min-w-0 overflow-auto"
       style={{ willChange: 'transform', WebkitOverflowScrolling: 'touch' }}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}

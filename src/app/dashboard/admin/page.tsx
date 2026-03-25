@@ -32,13 +32,15 @@ interface SystemStats {
 
 function AdminSidebar() {
   return (
-    <div className="space-y-3">
-      <GlowCard glow="jade" hoverable={false}>
-        <h3 className="text-xs text-jade-glow uppercase mb-2">Administrative Palace</h3>
-        <p className="text-xs text-mist-dark">
-          Central control chamber for user governance, exercise library operations, and system data management.
-        </p>
-      </GlowCard>
+    <div className="dashboard-sidebar-shell">
+      <div className="dashboard-sidebar-scroll sidebar-scroll space-y-3">
+        <GlowCard glow="jade" hoverable={false}>
+          <h3 className="text-xs text-jade-glow uppercase mb-2">Administrative Palace</h3>
+          <p className="text-xs text-mist-dark">
+            Central control chamber for user governance, exercise library operations, and system data management.
+          </p>
+        </GlowCard>
+      </div>
     </div>
   );
 }

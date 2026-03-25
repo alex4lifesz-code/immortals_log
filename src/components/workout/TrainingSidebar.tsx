@@ -110,12 +110,12 @@ function TechniqueCard({ exercise, isSelected, onSelect, delay, displayMode, com
       <div ref={compactRef} className="relative">
         <div
           className={`
-            relative flex items-center gap-2 px-2.5 py-1.5 rounded-md border cursor-pointer transition-all duration-150
-            hover:brightness-110 group
+            relative flex items-center gap-2 px-2 py-1.5 rounded-md border cursor-pointer transition-colors duration-150
+            group
             ${showConventionalName ? 'rounded-b-none' : ''}
             ${isSelected
-              ? 'bg-jade-deep/30 border-jade-glow/50'
-              : 'bg-ink-dark border-ink-light/60 hover:border-jade/30 hover:bg-ink-mid/40'
+              ? 'bg-ink-mid/30 border-ink-light/65'
+              : 'bg-ink-dark border-ink-light/55 hover:border-ink-light/65 hover:bg-ink-mid/30'
             }
           `}
           style={showIllumination ? glowStyle as React.CSSProperties : undefined}
@@ -184,12 +184,12 @@ function TechniqueCard({ exercise, isSelected, onSelect, delay, displayMode, com
       >
         <div
           className={`
-            relative p-3 rounded-xl border cursor-pointer transition-all duration-300
-            hover:scale-[1.02] hover:shadow-2xl group shadow-[0_0_12px_rgba(58,143,143,0.2)]
+            relative p-2 rounded-xl border cursor-pointer transition-colors duration-150
+            group
             ${showConventionalName ? 'rounded-b-none' : ''}
             ${isSelected
-              ? 'bg-jade-deep/30 border-jade-glow/50 shadow-lg shadow-jade-glow/10'
-              : `bg-ink-dark border-ink-light hover:border-jade/30 hover:shadow-[0_0_20px_rgba(58,143,143,0.4)] ${showIllumination && glowIntensity >= 100 ? getDifficultyGlow(getDifficultyColorKey(exercise)) : ''}`
+              ? 'bg-ink-mid/30 border-ink-light/65'
+              : `bg-ink-dark border-ink-light/55 hover:border-ink-light/65 hover:bg-ink-mid/30 ${showIllumination && glowIntensity >= 100 ? getDifficultyGlow(getDifficultyColorKey(exercise)) : ''}`
             }
           `}
           style={!isSelected && showIllumination && glowIntensity > 0 && glowIntensity < 100 ? { boxShadow: `0 0 12px rgba(58,143,143,0.2), ${glowStyle.boxShadow || ''}` } : undefined}
@@ -275,13 +275,13 @@ function TechniqueCard({ exercise, isSelected, onSelect, delay, displayMode, com
       className="relative"
     >
       <div
-        className={`
-          relative p-2.5 rounded-lg border cursor-pointer transition-all duration-200
-          hover:scale-[1.02] hover:shadow-2xl group
+          className={`
+          relative p-2 rounded-lg border cursor-pointer transition-colors duration-150
+          group
           ${showConventionalName ? 'rounded-b-none' : ''}
           ${isSelected 
-            ? 'bg-jade-deep/30 border-jade-glow/50 shadow-lg shadow-jade-glow/10' 
-            : 'bg-ink-dark border-ink-light hover:border-jade/30 hover:bg-ink-mid/40'
+            ? 'bg-ink-mid/30 border-ink-light/65' 
+            : 'bg-ink-dark border-ink-light/55 hover:border-ink-light/65 hover:bg-ink-mid/30'
           }
         `}
         style={showIllumination ? glowStyle as React.CSSProperties : undefined}
@@ -513,9 +513,9 @@ export default function TrainingSidebar({
   }, [searchFilteredExercises, sortMode, workoutStatsByExercise]);
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="dashboard-sidebar-shell">
       {/* Header controls row: manage + compact toggle */}
-      <div className="px-2.5 pt-1 pb-1.5 shrink-0 flex items-center gap-1.5">
+      <div className="px-2 py-2 shrink-0 flex items-center gap-2">
         {selectedDayFilter !== null && !showEmptyDayAction && (
           <GlowButton
             onClick={(e) => { e.stopPropagation(); onDrawerOpen(); }}
@@ -529,9 +529,9 @@ export default function TrainingSidebar({
         )}
         <button
           onClick={() => setIsCompact(!isCompact)}
-          className={`ml-auto px-2 py-1 rounded-md text-[10px] font-semibold border transition-all duration-200 ${
+          className={`ml-auto px-2 py-1 rounded-md text-[10px] font-medium border transition-colors duration-150 ${
             isCompact
-              ? 'bg-jade-deep/30 border-jade-glow/40 text-jade-glow'
+              ? 'bg-ink-mid/25 border-ink-light/60 text-mist-light'
               : 'border-ink-light/60 text-mist-dark hover:text-mist-light hover:border-mist-dark'
           }`}
           title={isCompact ? "Expanded view" : "Compact view"}
@@ -555,16 +555,16 @@ export default function TrainingSidebar({
       </div>
 
       {/* Day Filter — compact controls */}
-      <div className="px-2.5 pb-2 border-b border-ink-light/30 shrink-0 space-y-1">
+      <div className="px-2 pb-2 border-b border-ink-light/25 shrink-0 space-y-2">
         {/* "All" + Favourites row */}
         <div className="flex gap-1">
           <button
             onClick={() => { setSelectedDayFilter(null); setFilterFavourites(false); }}
             className={`
-              flex-1 py-1 text-[10px] font-semibold rounded-md transition-all duration-200 relative border
+              flex-1 py-1.5 text-[10px] font-medium rounded-md transition-colors duration-150 relative border
               ${selectedDayFilter === null && !filterFavourites
-                ? 'bg-jade-deep/60 text-jade-glow border-jade-glow/40 shadow-[inset_0_0_12px_rgba(58,143,143,0.15)]'
-                : 'bg-ink-dark/60 text-mist-dark border-ink-light/40 hover:text-mist-light hover:bg-ink-mid/40'
+                ? 'bg-ink-mid/30 text-cloud-white border-ink-light/60'
+                : 'bg-ink-dark/60 text-mist-dark border-ink-light/40 hover:text-mist-light hover:bg-ink-mid/30'
               }
             `}
           >
@@ -574,9 +574,9 @@ export default function TrainingSidebar({
           <button
             onClick={() => setFilterFavourites(!filterFavourites)}
             className={`
-              px-2 py-1 text-[10px] font-semibold rounded-md transition-all duration-200 border shrink-0
+              px-2 py-1.5 text-[10px] font-medium rounded-md transition-colors duration-150 border shrink-0
               ${filterFavourites
-                ? 'bg-gold-dim/20 text-gold border-gold/40 shadow-[inset_0_0_12px_rgba(212,168,67,0.15)]'
+                ? 'bg-ink-mid/30 text-gold border-ink-light/60'
                 : 'bg-ink-dark/60 text-mist-dark border-ink-light/40 hover:text-gold-dim hover:border-gold/30'
               }
             `}
@@ -597,7 +597,7 @@ export default function TrainingSidebar({
             placeholder="Search..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-ink-dark border border-ink-light rounded-md pl-7 pr-3 py-1 text-[11px] text-cloud-white placeholder:text-mist-dark outline-none transition-all duration-300 focus:border-jade-glow focus:shadow-[0_0_12px_rgba(58,143,143,0.3)]"
+            className="w-full bg-ink-dark border border-ink-light/50 rounded-md pl-7 pr-3 py-1.5 text-[11px] text-cloud-white placeholder:text-mist-dark outline-none transition-colors duration-150 focus:border-ink-light/70"
           />
           {searchQuery && (
             <button
@@ -617,7 +617,7 @@ export default function TrainingSidebar({
           <select
             value={sortMode}
             onChange={(e) => setSortMode(e.target.value as SidebarSortMode)}
-            className="w-full bg-ink-dark border border-ink-light rounded-md px-2 py-1 text-[10px] text-cloud-white outline-none transition-all duration-200 focus:border-jade-glow focus:shadow-[0_0_10px_rgba(58,143,143,0.2)]"
+            className="w-full bg-ink-dark border border-ink-light/50 rounded-md px-2 py-1.5 text-[10px] text-cloud-white outline-none transition-colors duration-150 focus:border-ink-light/70"
           >
             <option value="custom">Custom order</option>
             <option value="recent">Most recent</option>
@@ -638,10 +638,10 @@ export default function TrainingSidebar({
                 key={day}
                 onClick={() => setSelectedDayFilter(index)}
                 className={`
-                  flex-1 py-1 text-[10px] font-semibold transition-all duration-200 relative flex flex-col items-center gap-0.5
+                  flex-1 py-1 text-[10px] font-medium transition-colors duration-150 relative flex flex-col items-center gap-0.5
                   ${index > 0 ? 'border-l border-ink-light/30' : ''}
                   ${isSelected
-                    ? 'bg-jade-deep/60 text-jade-glow shadow-[inset_0_0_12px_rgba(58,143,143,0.15)]'
+                    ? 'bg-ink-mid/30 text-cloud-white'
                     : hasExercises
                       ? 'bg-ink-dark/60 text-jade-light/80 hover:text-jade-light hover:bg-ink-mid/40'
                       : 'bg-ink-dark/60 text-mist-dark hover:text-mist-light hover:bg-ink-mid/40'
@@ -668,7 +668,7 @@ export default function TrainingSidebar({
       </div>
 
       {/* Technique List — the only scrollable area */}
-      <div className={`flex-1 overflow-y-auto px-2 py-1.5 sidebar-scroll ${isCompact ? 'space-y-0.5' : 'space-y-1.5'}`}>
+      <div className={`dashboard-sidebar-scroll sidebar-scroll px-2 py-2 ${isCompact ? 'space-y-0.5' : 'space-y-1.5'}`}>
         {isLoadingExercises ? (
           <div className="space-y-2">
             {[1, 2, 3, 4, 5].map(i => (

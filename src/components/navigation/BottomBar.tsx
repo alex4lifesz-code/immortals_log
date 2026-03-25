@@ -23,7 +23,7 @@ const NAV_ICON_MAP: Record<string, ReactNode> = {
 };
 
 function BottomBar() {
-  const { getSortedNavItems, isMobile, viewportMode, setMobileSidebarOpen, mobileSidebarOpen, activeDrawerClose } = useAppContext();
+  const { getSortedNavItems, isMobile, setMobileSidebarOpen } = useAppContext();
   const { logout, user } = useAuth();
   const { settings } = useDisplaySettings();
   const terminologyMode = settings.terminologyMode ?? "fantasy";
@@ -33,7 +33,7 @@ function BottomBar() {
   const items = getSortedNavItems().filter(item => (item.id !== "admin" || isAdmin));
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const effectiveMobile = isMobile || viewportMode === "mobile";
+  const effectiveMobile = isMobile;
 
   const primaryItems = useMemo(() => [
     items.find(i => i.path === "/dashboard"),
@@ -52,20 +52,11 @@ function BottomBar() {
     setMobileSidebarOpen(false);
   }, [router, setMobileSidebarOpen]);
 
-  const handleFABPress = useCallback(() => {
-    if (activeDrawerClose) {
-      activeDrawerClose();
-      return;
-    }
-    setMobileSidebarOpen(!mobileSidebarOpen);
-  }, [setMobileSidebarOpen, mobileSidebarOpen, activeDrawerClose]);
-
   const handleMenuToggle = useCallback(() => {
     setMenuOpen(prev => !prev);
   }, []);
 
-  // Show the APK-style bottom nav whenever mobile viewport is active,
-  // including manual "Mobile mode" on web.
+  // Show the APK-style bottom nav whenever mobile viewport is active.
   if (!effectiveMobile) return null;
 
   // Build nav button order: [item0, item1, FAB, item2, More]
@@ -197,51 +188,6 @@ function BottomBar() {
               </motion.button>
             );
           })}
-
-          {/* ── Centre FAB — Side Panel Toggle / Drawer Close ── */}
-          <div className="relative flex flex-col items-center -mt-4 z-10">
-            <motion.button
-              whileTap={{ scale: 0.88 }}
-              onClick={handleFABPress}
-              aria-label={activeDrawerClose ? "Close drawer" : mobileSidebarOpen ? "Close menu" : "Open menu"}
-              aria-expanded={mobileSidebarOpen || undefined}
-              className={`w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-colors ${
-                activeDrawerClose
-                  ? "bg-crimson-glow/90"
-                  : mobileSidebarOpen
-                    ? "bg-[var(--accent)]"
-                    : "bg-gradient-to-br from-[var(--accent)]/70 to-[var(--accent)]/90"
-              }`}
-              style={{
-                boxShadow: activeDrawerClose
-                  ? '0 4px 20px rgba(220,38,38,0.4), 0 0 30px rgba(220,38,38,0.15)'
-                  : mobileSidebarOpen
-                    ? `0 4px 20px color-mix(in srgb, var(--accent) 50%, transparent), 0 0 40px color-mix(in srgb, var(--accent) 15%, transparent)`
-                    : `0 4px 16px color-mix(in srgb, var(--accent) 30%, transparent), 0 0 30px color-mix(in srgb, var(--accent) 10%, transparent)`,
-                WebkitTapHighlightColor: 'transparent',
-              }}
-            >
-              <motion.svg
-                initial={false}
-                animate={{ rotate: activeDrawerClose ? 90 : mobileSidebarOpen ? 90 : 0 }}
-                transition={{ type: "spring", stiffness: 300, damping: 22 }}
-                className={`w-6 h-6 ${activeDrawerClose ? "text-cloud-white" : mobileSidebarOpen ? "text-ink-deep" : "text-cloud-white"}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                strokeWidth={2.2}
-              >
-                {activeDrawerClose || mobileSidebarOpen ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h10M4 18h16" />
-                )}
-              </motion.svg>
-            </motion.button>
-            <span className={`text-[9px] font-semibold mt-0.5 tracking-wide ${activeDrawerClose ? "text-crimson-glow" : mobileSidebarOpen ? "text-[var(--accent)]" : "text-mist-dark"}`}>
-              {activeDrawerClose ? "Close" : "Menu"}
-            </span>
-          </div>
 
           {/* Right nav item (3rd primary) */}
           {primaryItems.slice(2, 3).map((item) => {

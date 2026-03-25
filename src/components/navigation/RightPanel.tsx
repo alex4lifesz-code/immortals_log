@@ -67,14 +67,14 @@ function RightPanel() {
   if (collapsed && !isMobile) return null;
 
   return (
-    <div className="relative flex shrink-0">
-      {/* Collapse / Expand toggle tab */}
+    <>
+      {/* Collapse / Expand toggle tab (fixed overlay trigger) */}
       <button
         onClick={() => updateSettings({ rightPanelVisible: !visible })}
         aria-label={visible ? "Hide Quick View panel" : "Show Quick View panel"}
         aria-expanded={visible}
         aria-controls="right-panel"
-        className="absolute -left-4 top-1/2 -translate-y-1/2 z-30 w-4 h-10 bg-ink-dark border border-ink-light rounded-l flex items-center justify-center hover:bg-ink-mid transition-colors group"
+        className="fixed right-0 top-1/2 -translate-y-1/2 z-40 w-4 h-10 bg-ink-dark border border-ink-light rounded-l flex items-center justify-center hover:bg-ink-mid transition-colors group"
         title={visible ? "Hide Quick View" : "Show Quick View"}
       >
         <svg
@@ -88,15 +88,15 @@ function RightPanel() {
         </svg>
       </button>
 
-      <AnimatePresence mode="wait">
+      <AnimatePresence>
         {visible && (
           <motion.aside
             id="right-panel"
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 256, opacity: 1 }}
-            exit={{ width: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: "easeInOut" }}
-            className="bg-ink-deep border-l border-ink-light flex flex-col py-4 overflow-hidden"
+            initial={{ x: "100%", opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: "100%", opacity: 0 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
+            className="fixed right-0 top-12 bottom-0 z-30 w-64 bg-ink-deep/98 border-l border-ink-light flex flex-col py-4 overflow-hidden shadow-2xl"
           >
             <div className="w-64 min-w-[16rem]">
               <div className="px-4 mb-4">
@@ -150,7 +150,7 @@ function RightPanel() {
           </motion.aside>
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 }
 

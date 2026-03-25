@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { ReactNode, useState, useEffect, useCallback, useRef, memo } from "react";
+import { ReactNode, useState, useEffect, useRef, memo } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 
@@ -20,10 +20,10 @@ function PageLayout({
   subtitle,
   sidebarLabel,
 }: PageLayoutProps) {
-  const { panelPosition, isMobile, isNativeApp, viewportMode, mobileSidebarOpen, setMobileSidebarOpen } = useAppContext();
+  const { panelPosition, isMobile, isNativeApp, mobileSidebarOpen, setMobileSidebarOpen } = useAppContext();
   const { settings, updateSettings } = useDisplaySettings();
   const effectivePosition = isMobile ? "top" : panelPosition;
-  const mobileMode = isMobile && (isNativeApp || viewportMode === "mobile");
+  const mobileMode = isMobile;
   const [mobileQuickViewOpen, setMobileQuickViewOpen] = useState(false);
   const mobileSidebarHistoryArmedRef = useRef(false);
   const sidebarTouchStartXRef = useRef<number | null>(null);
@@ -31,44 +31,7 @@ function PageLayout({
   const sidebarPosition = settings.sidebarPosition || "left";
   const sidebarWidth = settings.sidebarWidth || 320;
 
-  // Resize state
-  const [isResizing, setIsResizing] = useState(false);
-  const resizeRef = useRef<{ startX: number; startWidth: number } | null>(null);
-
   const MIN_SIDEBAR_WIDTH = 200;
-  const MAX_SIDEBAR_WIDTH_RATIO = 0.4;
-
-  const handleResizeStart = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    resizeRef.current = { startX: e.clientX, startWidth: sidebarWidth };
-    setIsResizing(true);
-  }, [sidebarWidth]);
-
-  useEffect(() => {
-    if (!isResizing) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!resizeRef.current) return;
-      const maxWidth = window.innerWidth * MAX_SIDEBAR_WIDTH_RATIO;
-      const delta = sidebarPosition === "left"
-        ? e.clientX - resizeRef.current.startX
-        : resizeRef.current.startX - e.clientX;
-      const newWidth = Math.max(MIN_SIDEBAR_WIDTH, Math.min(maxWidth, resizeRef.current.startWidth + delta));
-      updateSettings({ sidebarWidth: Math.round(newWidth) });
-    };
-
-    const handleMouseUp = () => {
-      setIsResizing(false);
-      resizeRef.current = null;
-    };
-
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isResizing, sidebarPosition, updateSettings]);
 
   // Close mobile panels on escape
   useEffect(() => {
@@ -215,29 +178,11 @@ function PageLayout({
     }
   }, [isMobile, setMobileSidebarOpen]);
 
-  // Resize handle element
-  const resizeHandle = sidebar && !isMobile && effectivePosition !== "top" ? (
-    <div
-      onMouseDown={handleResizeStart}
-      className={`w-1 shrink-0 cursor-col-resize group relative transition-colors duration-200 ${
-        isResizing ? "bg-jade-glow/40" : "bg-transparent hover:bg-jade-glow/20"
-      }`}
-      title="Drag to resize"
-    >
-      <div className={`absolute inset-y-0 ${sidebarPosition === "left" ? "-right-0.5 left-0" : "right-0 -left-0.5"} w-2`} />
-      <div className="absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 flex flex-col gap-0.5 opacity-0 group-hover:opacity-60 transition-opacity">
-        <div className="w-0.5 h-0.5 rounded-full bg-mist-dark" />
-        <div className="w-0.5 h-0.5 rounded-full bg-mist-dark" />
-        <div className="w-0.5 h-0.5 rounded-full bg-mist-dark" />
-      </div>
-    </div>
-  ) : null;
-
   // Desktop sidebar element
   const desktopSidebar = sidebar && !isMobile && effectivePosition !== "top" ? (
     <motion.div
       layout
-      className="border-ink-light bg-ink-deep/50 shrink-0 overflow-hidden flex flex-col"
+      className="sticky top-0 self-start h-full border-ink-light bg-ink-deep/50 shrink-0 overflow-hidden flex flex-col"
       style={{
         width: `${sidebarWidth}px`,
         minWidth: `${MIN_SIDEBAR_WIDTH}px`,
@@ -262,7 +207,7 @@ function PageLayout({
           </svg>
         </button>
       </div>
-      <div className="flex-1 min-h-0 px-1.5 overflow-y-auto scrollbar-hide">
+      <div className="flex-1 min-h-0 px-1.5 overflow-y-auto sidebar-scroll overscroll-contain">
         {sidebar}
       </div>
       <div className="h-2 shrink-0" />
@@ -287,32 +232,29 @@ function PageLayout({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
-      className={`flex ${effectivePosition === "top" || isMobile ? "flex-col" : "flex-row"} h-full relative`}
-      style={isResizing ? { userSelect: "none" } : undefined}
+      className={`flex ${effectivePosition === "top" || isMobile ? "flex-col" : "flex-row"} relative ${isMobile ? "min-h-full" : "h-full overflow-hidden"}`}
     >
       {/* Desktop sidebar — left position */}
       {sidebarPosition === "left" && desktopSidebar}
-      {sidebarPosition === "left" && resizeHandle}
 
       {/* Main Content — full width on mobile */}
-      <div className={`flex-1 overflow-y-auto ${isMobile ? "p-4 pb-24" : "p-6"}`}>
+      <div className={`flex-1 min-w-0 overflow-y-auto overflow-x-auto ${isMobile ? "p-4 pb-24" : "h-full overscroll-contain [scrollbar-gutter:stable] p-6"}`}>
         <motion.div
           initial={{ y: 10, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.1 }}
         >
           {mobileMode && sidebar && !mobileSidebarOpen && (
-            <div className="mb-3 flex justify-end">
-              <button
-                onClick={() => setMobileSidebarOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-jade-glow/45 bg-jade-deep/25 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-jade-glow shadow-[0_0_10px_rgba(58,143,143,0.22)] transition-all hover:border-jade-glow/70 hover:bg-jade-deep/35"
-              >
-                <span>Filters</span>
-                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                </svg>
-              </button>
-            </div>
+            <button
+              onClick={() => setMobileSidebarOpen(true)}
+              className="fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] z-30 inline-flex items-center gap-1.5 rounded-xl border border-jade-glow/50 bg-ink-deep/92 px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-jade-glow shadow-[0_8px_20px_rgba(0,0,0,0.45)] transition-all duration-200 hover:border-jade-glow/70 hover:bg-ink-mid/85"
+              aria-label="Open filters"
+            >
+              <span>Filters</span>
+              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
+            </button>
           )}
           {subtitle && (
             <p className="text-xs text-mist-dark mb-4 italic">{subtitle}</p>
@@ -322,7 +264,6 @@ function PageLayout({
       </div>
 
       {/* Desktop sidebar — right position */}
-      {sidebarPosition === "right" && resizeHandle}
       {sidebarPosition === "right" && desktopSidebar}
 
       {/* ── Mobile slide-in sidebar (page panel) — native APK only ── */}
@@ -334,7 +275,7 @@ function PageLayout({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
+              transition={{ duration: 0.18 }}
               className="fixed inset-0 z-40 bg-void-black/60 backdrop-blur-[2px]"
               onClick={() => setMobileSidebarOpen(false)}
             />
@@ -352,9 +293,9 @@ function PageLayout({
                   setMobileSidebarOpen(false);
                 }
               }}
-              transition={{ type: "spring", damping: 28, stiffness: 300, mass: 0.8 }}
+              transition={{ type: "spring", damping: 31, stiffness: 360, mass: 0.72 }}
               className="fixed inset-y-0 left-0 z-50 bg-ink-deep/98 border-r border-jade-glow/15 flex flex-col shadow-2xl touch-pan-y"
-              style={{ width: "min(92vw, 420px)" }}
+              style={{ width: "min(88vw, 380px)" }}
               onTouchStart={onSidebarTouchStart}
               onTouchMove={onSidebarTouchMove}
               onTouchEnd={onSidebarTouchEnd}

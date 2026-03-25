@@ -298,11 +298,15 @@ function UnifiedTrainingLogTable({
       })()
     : false;
 
-  const entries = allEntries.filter(
-    (entry) =>
-      !selectedLogFilter ||
-      (entry.exerciseId === selectedLogFilter.exerciseId &&
-        (isSelectedGymExercise || entry.levelNameLevel === selectedLogFilter.levelNameLevel))
+  const entries = useMemo(
+    () =>
+      allEntries.filter(
+        (entry) =>
+          !selectedLogFilter ||
+          (entry.exerciseId === selectedLogFilter.exerciseId &&
+            (isSelectedGymExercise || entry.levelNameLevel === selectedLogFilter.levelNameLevel))
+      ),
+    [allEntries, selectedLogFilter, isSelectedGymExercise]
   );
   const { settings } = useDisplaySettings();
   const { isMobile } = useAppContext();
@@ -341,15 +345,24 @@ function UnifiedTrainingLogTable({
   const showStandardWeight = visibleColumnSet.has("standardWeight");
   const showAvgWeight = visibleColumnSet.has("avgWeight");
 
-  const effectiveCompact = compactSetting === "compact" || (compactSetting === "auto" && isMobile);
+  const useMobileTableStyling = isMobile;
+  const effectiveCompact = compactSetting === "compact" || (compactSetting === "auto" && useMobileTableStyling);
 
   const showIllumination = logMode !== "name-only";
   const showRealm = logMode === "name-illumination-realm" || logMode === "name-illumination-realm-path";
   const showPath = logMode === "name-illumination-realm-path";
 
   const shouldRenderModifierColumn = showModifier;
-  const anyBand = true;
+  const anyBand = useMemo(
+    () => entries.some((entry) => entry.resistanceBandKg != null),
+    [entries]
+  );
   const shouldRenderVariantColumn = showVariant;
+  const reduceColumnsForSmallScreens = useMobileTableStyling && !isEditMode;
+  const showVariantColumnResponsive = shouldRenderVariantColumn && !reduceColumnsForSmallScreens;
+  const showNotesResponsive = showNotes && !reduceColumnsForSmallScreens;
+  const showStandardWeightResponsive = showStandardWeight && !reduceColumnsForSmallScreens;
+  const showAvgWeightResponsive = showAvgWeight && !reduceColumnsForSmallScreens;
 
   // Determine column headers based on exercise types visible in the entries
   const entryExerciseTypes = useMemo(() => entries.map((e) => e.exerciseType), [entries]);
@@ -362,6 +375,37 @@ function UnifiedTrainingLogTable({
   const visibleDataIndices = useMemo(() => {
     return headerKeys.map((key, idx) => ({ key, idx })).filter(({ key }) => visibleColumnSet.has(key as import("@/context/DisplaySettingsContext").UnifiedVisibleColumnKey));
   }, [headerKeys, visibleColumnSet]);
+
+  const tableMinWidth = useMemo(() => {
+    const renderedColumnCount =
+      (showDate ? 1 : 0) +
+      (showCategory ? 1 : 0) +
+      1 +
+      visibleDataIndices.length +
+      (shouldRenderModifierColumn ? 1 : 0) +
+      (anyBand && showBand ? 1 : 0) +
+      (showVariantColumnResponsive ? 1 : 0) +
+      (showNotesResponsive ? 1 : 0) +
+      (showStandardWeightResponsive ? 1 : 0) +
+      (showAvgWeightResponsive ? 1 : 0) +
+      (isEditMode ? 1 : 0);
+
+    const base = renderedColumnCount * (effectiveCompact ? 62 : 74);
+    return `${Math.max(base, effectiveCompact ? 360 : 560)}px`;
+  }, [
+    anyBand,
+    effectiveCompact,
+    isEditMode,
+    showAvgWeightResponsive,
+    showBand,
+    showCategory,
+    showDate,
+    showNotesResponsive,
+    showStandardWeightResponsive,
+    showVariantColumnResponsive,
+    shouldRenderModifierColumn,
+    visibleDataIndices.length,
+  ]);
 
   const getZeroValueStyle = (value: number | null, colType: string, exType: ExerciseType): React.CSSProperties | undefined => {
     if (value === 0) return { backgroundColor: "var(--ink-mid)", color: "var(--mist-dark)" };
@@ -425,7 +469,7 @@ function UnifiedTrainingLogTable({
           notes: data.notes,
         };
       });
-      const res = await api.post<{ error?: string }>("/api/progressions/logs/update", { updates });
+      await api.post<{ error?: string }>("/api/progressions/logs/update", { updates });
       setSaveMessage({ type: "success", text: "Training logs updated successfully!" });
       setIsEditMode(false);
       setEditingData({});
@@ -437,7 +481,6 @@ function UnifiedTrainingLogTable({
         setSaveMessage({ type: "error", text: "Network error — unable to save changes" });
       }
     } finally {
-      setIsEditMode(false);
       setIsSaving(false);
     }
   };
@@ -472,10 +515,10 @@ function UnifiedTrainingLogTable({
     visibleDataIndices.length +
     (shouldRenderModifierColumn ? 1 : 0) +
     (anyBand && showBand ? 1 : 0) +
-    (shouldRenderVariantColumn ? 1 : 0) +
-    (showNotes ? 1 : 0) +
-    (showStandardWeight ? 1 : 0) +
-    (showAvgWeight ? 1 : 0) +
+    (showVariantColumnResponsive ? 1 : 0) +
+    (showNotesResponsive ? 1 : 0) +
+    (showStandardWeightResponsive ? 1 : 0) +
+    (showAvgWeightResponsive ? 1 : 0) +
     (isEditMode ? 1 : 0);
 
   /** Render the value for a given data column */
@@ -503,9 +546,12 @@ function UnifiedTrainingLogTable({
     return `val${fieldIndex + 1}`;
   };
 
+  const headerTypographyClass = "font-semibold text-[10px] sm:text-[11px] normal-case sm:uppercase tracking-normal sm:tracking-wide";
+  const headerPadClass = effectiveCompact ? "py-1.5" : "py-2.5";
+
   return (
     <>
-      <GlowCard className={isMobile ? "w-full !p-0 border-x-0 rounded-none" : "w-full !p-0"} glow="jade" hoverable={false}>
+      <GlowCard className={useMobileTableStyling ? "w-full !p-0 border-x-0 rounded-none relative overflow-hidden" : "w-full !p-0 relative overflow-hidden"} glow="jade" hoverable={false}>
         {/* Edit header bar */}
         {entries.length > 0 && (
           <div className="flex items-center justify-between px-3 py-2 border-b border-jade-glow/20">
@@ -542,67 +588,67 @@ function UnifiedTrainingLogTable({
           </div>
         )}
 
-        <div className="overflow-x-auto -mx-4 px-4" style={{ WebkitOverflowScrolling: "touch" }}>
+        <div className="overflow-x-auto -mx-2 px-2 sm:mx-0 sm:px-0" style={{ WebkitOverflowScrolling: "touch" }}>
           <table
-            className="text-xs border-collapse w-full"
-            style={{ whiteSpace: "nowrap", minWidth: effectiveCompact ? "400px" : isEditMode ? "720px" : "650px" }}
+            className="text-xs border-collapse w-max"
+            style={{ whiteSpace: "nowrap", width: "max-content", minWidth: tableMinWidth }}
           >
             <thead>
               <tr className="border-b border-jade-glow/30 text-mist-dark">
                 {showDate && (
-                  <th className={`${effectiveCompact ? "py-1 px-1" : "py-2 px-1.5"} w-[6.5rem] min-w-[6.5rem] text-left font-semibold uppercase tracking-wider text-[11px]`}>
+                  <th className={`${headerPadClass} px-1 sm:px-1.5 w-[6rem] min-w-[6rem] text-center ${headerTypographyClass}`}>
                     Date
                   </th>
                 )}
                 {showCategory && (
-                  <th className={`${effectiveCompact ? "py-1 px-0.5" : "py-2 px-1"} w-[5.25rem] min-w-[5.25rem] text-center font-semibold uppercase tracking-wider text-[11px]`}>
+                  <th className={`${headerPadClass} px-0.5 sm:px-1 w-[5rem] min-w-[5rem] text-center ${headerTypographyClass}`}>
                     Category
                   </th>
                 )}
-                <th className={`${effectiveCompact ? "py-1 px-1" : "py-2 px-1.5"} text-left font-semibold uppercase tracking-wider text-[11px]`}>
+                <th className={`${headerPadClass} px-1 sm:px-1.5 text-left ${headerTypographyClass}`}>
                   Exercise
                 </th>
                 {visibleDataIndices.map(({ idx }) => (
                   <th
                     key={headerLabels[idx] + idx}
-                    className={`${effectiveCompact ? "py-1 px-0.5" : "py-2 px-1"} w-[3.25rem] min-w-[3.25rem] text-center font-semibold tabular-nums uppercase tracking-wider text-[11px]`}
+                    className={`${headerPadClass} px-0.5 sm:px-1 w-[3.25rem] min-w-[3.25rem] text-center tabular-nums ${headerTypographyClass}`}
                     style={columnColors ? { color: headerTypes[idx] === "value" ? "var(--col-weight)" : "var(--col-reps)" } : undefined}
                   >
                     {headerLabels[idx]}
                   </th>
                 ))}
                 {shouldRenderModifierColumn && (
-                  <th className={`${effectiveCompact ? "py-1 px-0.5" : "py-2 px-1"} w-[4.5rem] min-w-[4.5rem] text-center font-semibold uppercase tracking-wider text-[11px] text-amber-400`}>
+                  <th className={`${headerPadClass} px-0.5 sm:px-1 w-[4.5rem] min-w-[4.5rem] text-center ${headerTypographyClass} text-amber-400`}>
                     Mod
                   </th>
                 )}
                 {anyBand && showBand && (
-                  <th className={`${effectiveCompact ? "py-1 px-0.5" : "py-2 px-1"} w-[5rem] min-w-[5rem] text-center font-semibold uppercase tracking-wider text-[11px] text-sky-300`}>
+                  <th className={`${headerPadClass} px-0.5 sm:px-1 w-[5rem] min-w-[5rem] text-center ${headerTypographyClass} text-sky-300`}>
                     Band
                   </th>
                 )}
-                {shouldRenderVariantColumn && (
-                  <th className={`${effectiveCompact ? "py-1 px-0.5" : "py-2 px-1"} w-[6.5rem] min-w-[6.5rem] text-center font-semibold uppercase tracking-wider text-[11px] text-purple-400`}>
+                {showVariantColumnResponsive && (
+                  <th className={`${headerPadClass} px-0.5 sm:px-1 w-[6.5rem] min-w-[6.5rem] text-center ${headerTypographyClass} text-purple-400`}>
                     Variant
                   </th>
                 )}
-                {showNotes && (
-                  <th className={`${effectiveCompact ? "py-1 px-1" : "py-2 px-1.5"} w-[9rem] min-w-[9rem] text-left font-semibold uppercase tracking-wider text-[11px]`}>
+                {showNotesResponsive && (
+                  <th className={`${headerPadClass} px-1 sm:px-1.5 w-[9rem] min-w-[9rem] text-center ${headerTypographyClass}`}>
                     Notes
                   </th>
                 )}
-                {showStandardWeight && (
-                  <th className={`${effectiveCompact ? "py-1 px-0.5" : "py-2 px-1"} w-[4rem] min-w-[4rem] text-center font-semibold uppercase tracking-wider text-[11px] text-emerald-400`}>
+                {showStandardWeightResponsive && (
+                  <th className={`${headerPadClass} px-0.5 sm:px-1 w-[4rem] min-w-[4rem] text-center ${headerTypographyClass} text-emerald-400`}>
                     Next
                   </th>
                 )}
-                {showAvgWeight && (
-                  <th className={`${effectiveCompact ? "py-1 px-0.5" : "py-2 px-1"} w-[4rem] min-w-[4rem] text-center font-semibold uppercase tracking-wider text-[11px] text-cyan-400`}>
+                {showAvgWeightResponsive && (
+                  <th className={`${headerPadClass} px-0.5 sm:px-1 w-[4rem] min-w-[4rem] text-center ${headerTypographyClass} text-cyan-400`}>
                     Avg
                   </th>
                 )}
                 {isEditMode && (
-                  <th className="px-1 py-2 text-center font-semibold text-mist-glow text-[11px] align-middle">⋮</th>
+                  <th className={`${headerPadClass} px-1 text-center ${headerTypographyClass} text-mist-glow align-middle`}>⋮</th>
                 )}
               </tr>
             </thead>
@@ -670,19 +716,19 @@ function UnifiedTrainingLogTable({
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.12, ease: "easeOut" }}
-                        className={`border-b transition-all duration-100 ${
+                        className={`border-b transition-colors duration-100 ${
                           isEditMode
                             ? "border-jade-glow/15 bg-jade-deep/5 hover:bg-jade-deep/10"
                             : "border-ink-light/50 hover:bg-ink-mid/10"
                         }`}
                       >
                         {showDate && (
-                          <td className={`${effectiveCompact ? "px-1 py-1" : "px-1.5 py-1.5"} w-[6.5rem] min-w-[6.5rem] text-mist-light text-xs align-middle whitespace-nowrap`}>
+                          <td className={`${effectiveCompact ? "px-1 py-1" : "px-1 py-1.5"} w-[6rem] min-w-[6rem] text-center text-mist-light text-xs align-middle whitespace-nowrap`}>
                             {formatDate(entry.date, dateFormat)}
                           </td>
                         )}
                         {showCategory && (
-                          <td className={`${effectiveCompact ? "px-0.5 py-1" : "px-1 py-1.5"} w-[5.25rem] min-w-[5.25rem] text-center align-middle`}>
+                          <td className={`${effectiveCompact ? "px-0.5 py-1" : "px-0.5 py-1.5"} w-[5rem] min-w-[5rem] text-center align-middle`}>
                             <span
                               className={`text-[10px] font-semibold ${
                                 getExerciseCategoryLabel(ex) === "GYM"
@@ -763,7 +809,7 @@ function UnifiedTrainingLogTable({
                             const editVal = editData[editField as keyof typeof editData] as number | null;
                             const isValue = colType === "value";
                             return (
-                              <td key={headerLabels[idx] + idx} className="w-[3.25rem] min-w-[3.25rem] px-1 py-1.5 text-center align-middle">
+                              <td key={headerLabels[idx] + idx} className="w-[3.25rem] min-w-[3.25rem] px-1 py-1.5 text-center align-middle overflow-hidden [contain:paint]">
                                 <input
                                   type="number"
                                   min="0"
@@ -795,7 +841,7 @@ function UnifiedTrainingLogTable({
                           return (
                             <td
                               key={headerLabels[idx] + idx}
-                              className={`${effectiveCompact ? "px-0.5 py-1" : "px-1 py-1.5"} w-[3.25rem] min-w-[3.25rem] text-center text-xs align-middle ${!valueColor ? "text-cloud-white" : ""}`}
+                              className={`${effectiveCompact ? "px-0.5 py-1" : "px-1 py-1.5"} w-[3.25rem] min-w-[3.25rem] text-center text-xs leading-tight align-middle whitespace-nowrap overflow-hidden [contain:paint] ${!valueColor ? "text-cloud-white" : ""}`}
                               style={{
                                 ...getZeroValueStyle(rawValue, colType, entry.exerciseType),
                                 ...(valueColor ? { color: valueColor } : {}),
@@ -862,7 +908,7 @@ function UnifiedTrainingLogTable({
                             </td>
                           )
                         )}
-                        {shouldRenderVariantColumn && (
+                        {showVariantColumnResponsive && (
                           isEditMode && editData ? (
                             <td className="w-[6.5rem] min-w-[6.5rem] px-1 py-1.5 text-center align-middle">
                               <select
@@ -891,7 +937,7 @@ function UnifiedTrainingLogTable({
                             </td>
                           )
                         )}
-                        {showNotes && (
+                        {showNotesResponsive && (
                           isEditMode && editData ? (
                             <td className="w-[9rem] min-w-[9rem] px-1.5 py-1.5 align-middle">
                               <input
@@ -912,7 +958,7 @@ function UnifiedTrainingLogTable({
                             </td>
                           )
                         )}
-                        {showStandardWeight && (() => {
+                        {showStandardWeightResponsive && (() => {
                           const stdKg = getNextTierStandardWeightKg(
                             ex,
                             [entry.origWeight1, entry.origWeight2, entry.origWeight3],
@@ -930,7 +976,7 @@ function UnifiedTrainingLogTable({
                             </td>
                           );
                         })()}
-                        {showAvgWeight && (() => {
+                        {showAvgWeightResponsive && (() => {
                           const avgKg = getEntryAvgWeight(entry);
                           const avgDisplay = avgKg != null ? (weightUnit === "lbs" ? kgToLbs(avgKg) : Math.round(avgKg * 10) / 10) : null;
                           return (
@@ -964,6 +1010,9 @@ function UnifiedTrainingLogTable({
             </tbody>
           </table>
         </div>
+
+        {/* Hard right-edge mask: hides browser text rasterization artifacts past the last cell. */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-1 bg-ink-dark border-l border-ink-light/60" />
       </GlowCard>
 
       {/* Delete Confirmation Modal — portalled */}

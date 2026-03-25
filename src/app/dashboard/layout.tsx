@@ -9,7 +9,6 @@ import TopBar from "@/components/navigation/TopBar";
 import LeftSidebar from "@/components/navigation/LeftSidebar";
 import RightPanel from "@/components/navigation/RightPanel";
 import BottomBar from "@/components/navigation/BottomBar";
-import FloatingMobileSidebar from "@/components/navigation/FloatingMobileSidebar";
 import SwipeNavigation from "@/components/navigation/SwipeNavigation";
 import SetupWizard, { SETUP_WIZARD_COMPLETED_KEY } from "@/components/ui/SetupWizard";
 import ConnectivityBanner from "@/components/system/ConnectivityBanner";
@@ -17,72 +16,27 @@ import { useAppContext } from "@/context/AppContext";
 import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
-  const { viewportMode, isNativeApp } = useAppContext();
+  const { isMobile } = useAppContext();
   const { user } = useAuth();
   const [showWizard, setShowWizard] = useState(() => {
     if (typeof window === "undefined") return false;
     return !localStorage.getItem(SETUP_WIZARD_COMPLETED_KEY);
   });
-  const [mobilePreviewScale, setMobilePreviewScale] = useState(1);
-  const [previewBaseWidth, setPreviewBaseWidth] = useState<number | null>(null);
-
-  const isDesktopMobilePreview = viewportMode === "mobile" && !isNativeApp;
-
-  useEffect(() => {
-    if (!isDesktopMobilePreview) {
-      const resetTimer = window.setTimeout(() => {
-        setMobilePreviewScale(1);
-        setPreviewBaseWidth(null);
-      }, 0);
-      return () => window.clearTimeout(resetTimer);
-    }
-
-    if (previewBaseWidth === null) {
-      const initTimer = window.setTimeout(() => {
-        setPreviewBaseWidth(window.innerWidth);
-      }, 0);
-      return () => window.clearTimeout(initTimer);
-    }
-
-    const updateMobilePreviewScale = () => {
-      const widthRatio = window.innerWidth / previewBaseWidth;
-      const nextScale = Math.max(0.65, Math.min(1.65, widthRatio));
-
-      setMobilePreviewScale(Number(nextScale.toFixed(3)));
-    };
-
-    const raf = window.requestAnimationFrame(updateMobilePreviewScale);
-    window.addEventListener("resize", updateMobilePreviewScale);
-    return () => {
-      window.cancelAnimationFrame(raf);
-      window.removeEventListener("resize", updateMobilePreviewScale);
-    };
-  }, [isDesktopMobilePreview, previewBaseWidth]);
 
   return (
     <>
       {showWizard && <SetupWizard onComplete={() => setShowWizard(false)} />}
-      <div
-        className="h-screen flex flex-col overflow-hidden"
-        style={
-          isDesktopMobilePreview
-            ? {
-                zoom: mobilePreviewScale,
-              }
-            : undefined
-        }
-      >
+      <div className="h-screen flex flex-col overflow-hidden">
         <TopBar />
         <ConnectivityBanner />
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex min-w-0 overflow-y-hidden overflow-x-auto">
           <LeftSidebar />
           <SwipeNavigation>
-            <div className="flex-1 overflow-auto">{children}</div>
+            <div className="h-full min-w-0">{children}</div>
           </SwipeNavigation>
           <RightPanel />
         </div>
-        <FloatingMobileSidebar />
-        {(isNativeApp || viewportMode === "mobile") && user && (
+        {isMobile && user && (
           <div className="fixed right-3 bottom-20 z-50">
             <div className="rounded-full border border-jade-glow/35 bg-ink-deep/90 px-3 py-2 shadow-[0_8px_24px_rgba(0,0,0,0.45)]">
               <UserPhysiqueButton

@@ -326,19 +326,35 @@ export default function ProgressionPage() {
     return map;
   }, [exercises, physique, weightStandards]);
 
-  const categories = [...new Set(exercises.flatMap((e) => parseCategoryTags(e.category)))].sort();
-  const types = [...new Set(exercises.map((e) => e.type).filter((t): t is string => !!t && t.trim().length > 0))].sort();
-  const equipmentTypes = [...new Set(exercises.flatMap(getEquipmentTags))].sort();
+  const exerciseLookup = useMemo(
+    () => new Map(exercises.map((exercise) => [exercise.id, exercise])),
+    [exercises]
+  );
+
+  const categories = useMemo(
+    () => [...new Set(exercises.flatMap((e) => parseCategoryTags(e.category)))].sort(),
+    [exercises]
+  );
+
+  const types = useMemo(
+    () => [...new Set(exercises.map((e) => e.type).filter((t): t is string => !!t && t.trim().length > 0))].sort(),
+    [exercises]
+  );
+
+  const equipmentTypes = useMemo(
+    () => [...new Set(exercises.flatMap(getEquipmentTags))].sort(),
+    [exercises]
+  );
 
   const selectedExercises = useMemo(
     () => readyToLogQueueItems
       .map((item) => {
-        const exercise = exercises.find((candidate) => candidate.id === item.exerciseId);
+        const exercise = exerciseLookup.get(item.exerciseId);
         if (!exercise) return null;
         return { queueItemId: item.id, exercise };
       })
       .filter((item): item is { queueItemId: string; exercise: ProgressionExercise } => Boolean(item)),
-    [exercises, readyToLogQueueItems]
+    [exerciseLookup, readyToLogQueueItems]
   );
 
   const loggerTargetQueueItemId = activeQueueItemId;
@@ -346,7 +362,7 @@ export default function ProgressionPage() {
     ? readyToLogQueueItems.find((item) => item.id === loggerTargetQueueItemId) ?? null
     : null;
   const activeLoggerExercise = activeLoggerQueueItem
-    ? exercises.find((exercise) => exercise.id === activeLoggerQueueItem.exerciseId) ?? null
+    ? exerciseLookup.get(activeLoggerQueueItem.exerciseId) ?? null
     : null;
 
   useEffect(() => {
@@ -619,7 +635,7 @@ export default function ProgressionPage() {
                 Clear Exercise Filter
               </button>
             </div>
-            <div className="-mx-4 sm:-mx-6">
+            <div className="-mx-2 sm:mx-0">
               <MemoUnifiedTrainingLogTable
                 exercises={exercises}
                 physique={physique}

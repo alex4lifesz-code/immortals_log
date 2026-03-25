@@ -64,7 +64,7 @@ const UNIFIED_COLUMN_OPTIONS: Array<{ key: UnifiedVisibleColumnKey; label: strin
 ];
 
 function SettingsSidebar({ onLogout }: { onLogout: () => void }) {
-  const { themeStyle, viewportMode } = useAppContext();
+  const { themeStyle } = useAppContext();
   const { settings } = useDisplaySettings();
 
   const themeLabels: Record<string, string> = {
@@ -95,16 +95,17 @@ function SettingsSidebar({ onLogout }: { onLogout: () => void }) {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="dashboard-sidebar-shell">
+      <div className="dashboard-sidebar-scroll sidebar-scroll space-y-3">
       {/* Settings Overview */}
-      <div className="ink-border rounded-lg p-3 bg-ink-dark">
+      <div className="dashboard-sidebar-card">
         <h3 className="text-[10px] text-gold uppercase tracking-wider mb-2 font-semibold">🎨 Appearance</h3>
         <div className="divide-y divide-ink-light/20">
           <SettingRow label="Theme" value={themeLabels[themeStyle] || themeStyle} color="text-gold" />
         </div>
       </div>
 
-      <div className="ink-border rounded-lg p-3 bg-ink-dark">
+      <div className="dashboard-sidebar-card">
         <h3 className="text-[10px] text-jade-glow uppercase tracking-wider mb-2 font-semibold">📋 Display</h3>
         <div className="divide-y divide-ink-light/20">
           <SettingRow label="Active Cards" value={modeLabels[settings.activeCardMode] || settings.activeCardMode} />
@@ -125,7 +126,7 @@ function SettingsSidebar({ onLogout }: { onLogout: () => void }) {
         </div>
       </div>
 
-      <div className="ink-border rounded-lg p-3 bg-ink-dark">
+      <div className="dashboard-sidebar-card">
         <h3 className="text-[10px] text-gold uppercase tracking-wider mb-2 font-semibold">🏛️ Progression</h3>
         <div className="divide-y divide-ink-light/20">
           <SettingRow label="Sidebar" value={modeLabels[settings.progressionSidebarMode] || settings.progressionSidebarMode} color="text-gold" />
@@ -145,10 +146,9 @@ function SettingsSidebar({ onLogout }: { onLogout: () => void }) {
         </div>
       </div>
 
-      <div className="ink-border rounded-lg p-3 bg-ink-dark">
+      <div className="dashboard-sidebar-card">
         <h3 className="text-[10px] text-mountain-blue-glow uppercase tracking-wider mb-2 font-semibold">⚙️ Layout</h3>
         <div className="divide-y divide-ink-light/20">
-          <SettingRow label="Viewport" value={viewportMode === "auto" ? "Auto" : viewportMode === "mobile" ? "Mobile" : "Desktop"} color="text-mountain-blue-glow" />
           <SettingRow label="Panel Position" value={settings.sidebarPosition === "left" ? "Left" : "Right"} color="text-mountain-blue-glow" />
           <SettingRow label="Quick View" value={settings.rightPanelVisible ? "Visible" : "Hidden"} color={settings.rightPanelVisible ? "text-mountain-blue-glow" : "text-mist-dark"} />
           <SettingRow label="Date Format" value={dateLabels[settings.dateFormat] || settings.dateFormat} color="text-mountain-blue-glow" />
@@ -156,7 +156,7 @@ function SettingsSidebar({ onLogout }: { onLogout: () => void }) {
       </div>
 
       {/* Quick Actions */}
-      <div className="ink-border rounded-lg p-3 bg-ink-dark">
+      <div className="dashboard-sidebar-card">
         <h3 className="text-[10px] text-crimson-glow uppercase tracking-wider mb-2 font-semibold">⚡ Quick Actions</h3>
         <div className="space-y-1.5">
           <GlowButton
@@ -169,6 +169,7 @@ function SettingsSidebar({ onLogout }: { onLogout: () => void }) {
           </GlowButton>
         </div>
       </div>
+      </div>
     </div>
   );
 }
@@ -178,8 +179,6 @@ export default function SettingsPage() {
   const {
     themeStyle,
     setThemeStyle,
-    viewportMode,
-    setViewportMode,
   } = useAppContext();
   const { settings, updateSettings, resetSettings } = useDisplaySettings();
   const [showWizard, setShowWizard] = useState(false);
@@ -535,41 +534,10 @@ export default function SettingsPage() {
               <p className="text-[10px] text-mist-dark mb-3 pl-1">Panel positioning, visibility, and interface options</p>
               <div className="space-y-2 pl-1">
                 <div className="flex items-center justify-between gap-3 py-1.5">
-                  <span className="text-[11px] text-mist-light shrink-0">Viewport mode</span>
-                  <div className="flex rounded-md border border-ink-light overflow-hidden">
-                    {([
-                      { value: "mobile" as const, label: "📱 Mobile" },
-                      { value: "desktop" as const, label: "🖥️ Desktop" },
-                    ]).map((opt, idx) => (
-                      <button
-                        key={opt.value}
-                        onClick={() => setViewportMode(opt.value)}
-                        className={`px-2.5 py-1 text-[10px] font-medium transition-all ${
-                          viewportMode === opt.value
-                            ? "bg-jade-deep/30 text-jade-glow border-jade-glow/30"
-                            : "text-mist-dark hover:text-mist-light hover:bg-ink-mid/20"
-                        } ${idx > 0 ? "border-l border-ink-light" : ""}`}
-                        aria-pressed={viewportMode === opt.value}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex items-center justify-between gap-3 py-1.5">
-                  <span className="text-[11px] text-mist-light shrink-0">Follow device automatically</span>
-                  <button
-                    type="button"
-                    onClick={() => setViewportMode("auto")}
-                    className={`text-[10px] px-2.5 py-1 rounded-md border transition-all ${
-                      viewportMode === "auto"
-                        ? "border-jade-glow/40 bg-jade-deep/20 text-jade-glow"
-                        : "border-ink-light text-mist-dark hover:text-mist-light hover:border-mist-dark"
-                    }`}
-                    aria-pressed={viewportMode === "auto"}
-                  >
-                    {viewportMode === "auto" ? "Auto Mode Active" : "Switch to Auto"}
-                  </button>
+                  <span className="text-[11px] text-mist-light shrink-0">Viewport behavior</span>
+                  <span className="text-[10px] px-2.5 py-1 rounded-md border border-jade-glow/40 bg-jade-deep/20 text-jade-glow">
+                    Automatic
+                  </span>
                 </div>
                 <div className="flex items-center justify-between gap-3 py-1.5">
                   <span className="text-[11px] text-mist-light shrink-0">Panel position</span>

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import GlowCard from "@/components/ui/GlowCard";
 import GlowButton from "@/components/ui/GlowButton";
 import PageSkeleton from "@/components/ui/PageSkeleton";
@@ -10,6 +10,7 @@ import PageLayout from "@/components/layout/PageLayout";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
+import { useAppContext } from "@/context/AppContext";
 import { formatDateWithPreference } from "@/lib/constants";
 import { syncWeightFromLatestCheckin } from "@/lib/user-physique";
 import { api } from "@/lib/api-client";
@@ -44,9 +45,17 @@ const quickActions = [
   { label: "Settings", icon: "⚙️", path: "/dashboard/settings", glow: "gold" as const },
 ];
 
+function getDayDiffFromToday(dateString: string): number {
+  const rowDate = new Date(dateString + "T00:00:00");
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  return Math.floor((now.getTime() - rowDate.getTime()) / 86400000);
+}
+
 export default function DaoHallPage() {
   const { user } = useAuth();
   const { settings } = useDisplaySettings();
+  const { isMobile } = useAppContext();
   const dateFormat = settings.dateFormat || "dd-mmm-yyyy";
   const router = useRouter();
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -410,14 +419,10 @@ export default function DaoHallPage() {
 
   const handleSectEditSave = async () => {
     try {
-      const filtered = checkInRows.filter(row => {
-        const rowDate = new Date(row.date + 'T00:00:00');
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
-        const diffDays = Math.floor((now.getTime() - rowDate.getTime()) / 86400000);
-        return diffDays >= 0 && diffDays < sectFilterDays;
-      });
-      for (const row of filtered) {
+      const changedRows: Array<{ date: string; entries: Record<string, { present: boolean; weight: string; comment: string }> }> = [];
+      for (const row of filteredCheckInRows) {
+        const diffDays = getDayDiffFromToday(row.date);
+        if (diffDays < 0) continue;
         const edited = sectEditData[row.date];
         if (!edited) continue;
         let changed = false;
@@ -430,10 +435,17 @@ export default function DaoHallPage() {
           if (newWeight !== original.weight || newComment !== original.comment) changed = true;
           entries[u.id] = { present: original.present, weight: newWeight, comment: newComment };
         }
-        if (changed) {
-          await api.post("/api/checkins", { date: row.date, entries });
-        }
+        if (changed) changedRows.push({ date: row.date, entries });
       }
+
+      if (changedRows.length > 0) {
+        const saveResults = await Promise.allSettled(
+          changedRows.map((row) => api.post("/api/checkins", { date: row.date, entries: row.entries }))
+        );
+        const failed = saveResults.find((result) => result.status === "rejected");
+        if (failed) throw new Error("Failed to save one or more sect register rows");
+      }
+
       setCheckInRows(prev => prev.map(row => {
         const edited = sectEditData[row.date];
         if (!edited) return row;
@@ -462,13 +474,29 @@ export default function DaoHallPage() {
   };
 
   // Filtered check-in rows for Sect Register
-  const filteredCheckInRows = checkInRows.filter(row => {
-    const rowDate = new Date(row.date + 'T00:00:00');
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    const diffDays = Math.floor((now.getTime() - rowDate.getTime()) / 86400000);
-    return diffDays >= -1 && diffDays < sectFilterDays;
-  });
+  const filteredCheckInRows = useMemo(
+    () => checkInRows.filter((row) => {
+      const diffDays = getDayDiffFromToday(row.date);
+      return diffDays >= -1 && diffDays < sectFilterDays;
+    }),
+    [checkInRows, sectFilterDays]
+  );
+
+  const useMobileTableStyling = isMobile;
+  const compactSectRegister = useMobileTableStyling && !isSectEditMode;
+
+  const sectRegisterGridTemplateColumns = useMemo(
+    () => `${isSectEditMode ? '104px' : '80px'} repeat(${allUsers.length}, 44px) ${compactSectRegister ? '72px' : `repeat(${allUsers.length}, 48px)`} minmax(180px, 1fr)`,
+    [allUsers.length, compactSectRegister, isSectEditMode]
+  );
+
+  const sectRegisterMinWidth = useMemo(() => {
+    const dateCol = isSectEditMode ? 104 : 80;
+    const checkCols = allUsers.length * 44;
+    const weightCols = compactSectRegister ? 72 : allUsers.length * 48;
+    const commentsCol = 180;
+    return `${dateCol + checkCols + weightCols + commentsCol}px`;
+  }, [allUsers.length, compactSectRegister, isSectEditMode]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -712,20 +740,24 @@ export default function DaoHallPage() {
                 </motion.div>
               )}
 
-              <div className="overflow-x-auto -mx-4 px-4" style={{ WebkitOverflowScrolling: 'touch' }}>
-                <div className="min-w-[480px]">
+              <div className="overflow-x-auto -mx-2 px-2 sm:mx-0 sm:px-0" style={{ WebkitOverflowScrolling: 'touch' }}>
+                <div style={{ minWidth: sectRegisterMinWidth }}>
                   {/* Grid header */}
                   <div
-                    className="grid gap-0 text-[10px] uppercase tracking-wider font-semibold text-mist-dark border-b border-jade-glow/30 pb-1.5 mb-1"
-                    style={{ gridTemplateColumns: `${isSectEditMode ? '104px' : '80px'} repeat(${allUsers.length}, 44px) repeat(${allUsers.length}, 48px) 1fr` }}
+                    className="grid gap-0 text-[10px] sm:text-[11px] normal-case sm:uppercase tracking-normal sm:tracking-wide font-semibold text-mist-dark border-b border-jade-glow/30 pb-2 mb-1"
+                    style={{ gridTemplateColumns: sectRegisterGridTemplateColumns }}
                   >
                     <div className="px-1">Date</div>
                     {allUsers.map((u) => (
                       <div key={`h-c-${u.id}`} className="text-center px-0.5">{u.name}</div>
                     ))}
-                    {allUsers.map((u) => (
-                      <div key={`h-w-${u.id}`} className="text-center px-0.5">{u.name.charAt(0)}.Wt</div>
-                    ))}
+                    {compactSectRegister ? (
+                      <div className="text-center px-0.5">Wt</div>
+                    ) : (
+                      allUsers.map((u) => (
+                        <div key={`h-w-${u.id}`} className="text-center px-0.5">{u.name.charAt(0)}.Wt</div>
+                      ))
+                    )}
                     <div className="px-1">Comments</div>
                   </div>
 
@@ -754,7 +786,7 @@ export default function DaoHallPage() {
                                 ? "border-jade-glow/15 bg-jade-deep/5 hover:bg-jade-deep/10"
                                 : `border-ink-light/50 hover:bg-ink-mid/10 ${isWeekend ? "bg-ink-dark/20" : ""}`
                             }`}
-                            style={{ gridTemplateColumns: `${isSectEditMode ? '104px' : '80px'} repeat(${allUsers.length}, 44px) repeat(${allUsers.length}, 48px) 1fr` }}
+                            style={{ gridTemplateColumns: sectRegisterGridTemplateColumns }}
                           >
                             {/* Date + Day */}
                             <div className="px-1 flex items-center gap-1">
@@ -827,25 +859,47 @@ export default function DaoHallPage() {
                             })}
 
                             {/* Weight columns */}
-                            {allUsers.map((u) => (
-                              <div key={`w-${row.date}-${u.id}`} className="text-center px-0.5">
-                                {isSectEditMode && u.id === user.id ? (
-                                  <input
-                                    type="number"
-                                    step="0.1"
-                                    value={sectEditData[row.date]?.[u.id]?.weight ?? row.entries[u.id]?.weight ?? ""}
-                                    onChange={(e) => handleSectEditChange(row.date, u.id, "weight", e.target.value)}
-                                    placeholder="—"
-                                    className="w-full bg-ink-deep border border-jade-glow/30 rounded px-1 py-0.5 text-cloud-white
-                                               text-center text-[11px] outline-none focus:border-jade-glow"
-                                  />
-                                ) : (
-                                  <span className={`text-[11px] ${row.entries[u.id]?.weight ? "text-cloud-white" : "text-mist-dark/50"}`}>
-                                    {row.entries[u.id]?.weight || "—"}
-                                  </span>
-                                )}
+                            {compactSectRegister ? (
+                              <div className="text-center px-0.5">
+                                {(() => {
+                                  const ownWeight = user ? row.entries[user.id]?.weight : "";
+                                  const numericWeights = allUsers
+                                    .map((u) => Number(row.entries[u.id]?.weight))
+                                    .filter((value) => Number.isFinite(value) && value > 0);
+                                  const avgWeight = numericWeights.length > 0
+                                    ? (numericWeights.reduce((sum, value) => sum + value, 0) / numericWeights.length).toFixed(1)
+                                    : "—";
+                                  return (
+                                    <span
+                                      className={`text-[11px] ${ownWeight ? "text-cloud-white" : "text-mist-dark/70"}`}
+                                      title={`You: ${ownWeight || "—"} • Avg: ${avgWeight}`}
+                                    >
+                                      {ownWeight || avgWeight}
+                                    </span>
+                                  );
+                                })()}
                               </div>
-                            ))}
+                            ) : (
+                              allUsers.map((u) => (
+                                <div key={`w-${row.date}-${u.id}`} className="text-center px-0.5">
+                                  {isSectEditMode && u.id === user.id ? (
+                                    <input
+                                      type="number"
+                                      step="0.1"
+                                      value={sectEditData[row.date]?.[u.id]?.weight ?? row.entries[u.id]?.weight ?? ""}
+                                      onChange={(e) => handleSectEditChange(row.date, u.id, "weight", e.target.value)}
+                                      placeholder="—"
+                                      className="w-full bg-ink-deep border border-jade-glow/30 rounded px-1 py-0.5 text-cloud-white
+                                                 text-center text-[11px] outline-none focus:border-jade-glow"
+                                    />
+                                  ) : (
+                                    <span className={`text-[11px] ${row.entries[u.id]?.weight ? "text-cloud-white" : "text-mist-dark/50"}`}>
+                                      {row.entries[u.id]?.weight || "—"}
+                                    </span>
+                                  )}
+                                </div>
+                              ))
+                            )}
 
                             {/* Comments */}
                             <div className="px-1 min-w-0">
