@@ -413,27 +413,9 @@ export default function ProgressionPage() {
       if (activeQueueItemId) { setActiveQueueItemId(null); loggerHistoryArmedRef.current = false; return; }
       setSelectedLogFilter(null); filterHistoryArmedRef.current = false;
     };
+    // Retained for compatibility with environments dispatching custom backbutton events.
     document.addEventListener("backbutton", onBackButton as EventListener);
     return () => document.removeEventListener("backbutton", onBackButton as EventListener);
-  }, [activeQueueItemId, selectedLogFilter]);
-
-  useEffect(() => {
-    let handle: { remove: () => Promise<void> } | null = null;
-    let cancelled = false;
-    const register = async () => {
-      try {
-        const mod = await import("@capacitor/app");
-        if (cancelled) return;
-        const result = await mod.App.addListener("backButton", () => {
-          if (activeQueueItemId) { setActiveQueueItemId(null); loggerHistoryArmedRef.current = false; return; }
-          if (selectedLogFilter) { setSelectedLogFilter(null); filterHistoryArmedRef.current = false; }
-        });
-        if (cancelled) { void result.remove(); return; }
-        handle = result;
-      } catch { /* Capacitor App plugin unavailable outside native runtime */ }
-    };
-    void register();
-    return () => { cancelled = true; if (!handle) return; void handle.remove(); };
   }, [activeQueueItemId, selectedLogFilter]);
 
   // ── Render ──

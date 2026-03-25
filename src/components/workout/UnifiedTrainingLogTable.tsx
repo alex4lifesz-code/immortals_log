@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useMemo, startTransition, memo } from "react";
+import { useState, useMemo, startTransition, memo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import GlowButton from "@/components/ui/GlowButton";
 import GlowCard from "@/components/ui/GlowCard";
@@ -309,7 +309,7 @@ function UnifiedTrainingLogTable({
     [allEntries, selectedLogFilter, isSelectedGymExercise]
   );
   const { settings } = useDisplaySettings();
-  const { isMobile } = useAppContext();
+  const { isMobile, setMobileSidebarOpen } = useAppContext();
 
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingData, setEditingData] = useState<Record<string, {
@@ -325,6 +325,9 @@ function UnifiedTrainingLogTable({
   const [deleteConfirm, setDeleteConfirm] = useState<{ logId: string; exerciseName: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [levelPicker, setLevelPicker] = useState<{ logId: string; exerciseId: string } | null>(null);
+  const [pullHintHeight, setPullHintHeight] = useState(0);
+  const pullStartYRef = useRef<number | null>(null);
+  const hintTimeoutRef = useRef<number | null>(null);
 
   const logMode = settings.progressionLogMode ?? "name-illumination-realm";
   const compactSetting = settings.progressionLogCompact ?? "compact";
@@ -347,6 +350,50 @@ function UnifiedTrainingLogTable({
 
   const useMobileTableStyling = isMobile;
   const effectiveCompact = compactSetting === "compact" || (compactSetting === "auto" && useMobileTableStyling);
+
+  useEffect(() => {
+    return () => {
+      if (hintTimeoutRef.current !== null) {
+        window.clearTimeout(hintTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const onPullHintStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (!useMobileTableStyling) return;
+    const touch = event.touches[0];
+    if (!touch) return;
+    if (hintTimeoutRef.current !== null) {
+      window.clearTimeout(hintTimeoutRef.current);
+      hintTimeoutRef.current = null;
+    }
+    pullStartYRef.current = touch.clientY;
+  };
+
+  const onPullHintMove = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (!useMobileTableStyling || pullStartYRef.current == null) return;
+    const touch = event.touches[0];
+    if (!touch) return;
+    const dy = touch.clientY - pullStartYRef.current;
+    if (dy <= 0) return;
+    event.preventDefault();
+    setPullHintHeight(Math.min(52, dy));
+  };
+
+  const onPullHintEnd = () => {
+    if (!useMobileTableStyling) return;
+    const shouldReveal = pullHintHeight >= 28;
+    pullStartYRef.current = null;
+    if (!shouldReveal) {
+      setPullHintHeight(0);
+      return;
+    }
+    setPullHintHeight(52);
+    hintTimeoutRef.current = window.setTimeout(() => {
+      setPullHintHeight(0);
+      hintTimeoutRef.current = null;
+    }, 2000);
+  };
 
   const showIllumination = logMode !== "name-only";
   const showRealm = logMode === "name-illumination-realm" || logMode === "name-illumination-realm-path";
@@ -552,6 +599,32 @@ function UnifiedTrainingLogTable({
   return (
     <>
       <GlowCard className="w-full !p-0 relative overflow-hidden" glow="jade" hoverable={false}>
+        {useMobileTableStyling && (
+          <div className="border-b border-jade-glow/15 bg-ink-dark/35">
+            <div
+              className="overflow-hidden transition-[max-height] duration-150 ease-out"
+              style={{ maxHeight: `${pullHintHeight}px` }}
+            >
+              <button
+                type="button"
+                onClick={() => setMobileSidebarOpen(true)}
+                className="w-full px-3 py-2 text-[11px] font-semibold text-jade-light/90 text-center bg-jade-deep/20"
+              >
+                ↠ Swipe right to add workout
+              </button>
+            </div>
+            <div
+              className="flex items-center justify-center gap-2 py-1.5 select-none"
+              onTouchStart={onPullHintStart}
+              onTouchMove={onPullHintMove}
+              onTouchEnd={onPullHintEnd}
+            >
+              <span className="h-1 w-10 rounded-full bg-ink-light/75" />
+              <span className="text-[9px] uppercase tracking-[0.08em] text-mist-dark">Pull down</span>
+            </div>
+          </div>
+        )}
+
         {/* Edit header bar */}
         {entries.length > 0 && (
           <div className="flex items-center justify-between px-3 py-2 border-b border-jade-glow/20">

@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import { NavItem, defaultNavItems } from "@/lib/constants";
-import { isNativePlatform } from "@/lib/platform";
 import { useAuth } from "@/context/AuthContext";
 import { CONFIG, type Theme } from "@/lib/config";
 import { api } from "@/lib/api-client";
@@ -19,8 +18,6 @@ interface AppState {
   currentPage: string;
   collapsed: boolean;
   isMobile: boolean;
-  /** True when running inside the Capacitor native APK, false in browsers */
-  isNativeApp: boolean;
   theme: ThemeMode;
   themeStyle: ThemeStyle;
   navigationMode: NavigationMode;
@@ -59,7 +56,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [currentPage, setCurrentPage] = useState("dashboard");
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [isNativeApp] = useState(() => typeof window !== "undefined" ? isNativePlatform() : false);
   const [theme, setThemeState] = useState<ThemeMode>("dark");
   const [themeStyle, setThemeStyleState] = useState<ThemeStyle>("midnight-ink");
   const [navigationMode, setNavigationModeState] = useState<NavigationMode>("side");
@@ -73,8 +69,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const registerDrawerClose = useCallback((closeFn: (() => void) | null) => {
     setActiveDrawerClose(() => closeFn);
   }, []);
-
-  // Detect native vs browser platform on mount — already handled via lazy initializer above
 
   // Load saved state from localStorage
   /* eslint-disable react-hooks/set-state-in-effect -- hydration from localStorage on mount */
@@ -317,7 +311,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         currentPage,
         collapsed,
         isMobile,
-        isNativeApp,
         theme,
         themeStyle,
         navigationMode,

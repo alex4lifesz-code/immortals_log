@@ -73,12 +73,6 @@ export default function RootLayout({
             __html: `(function(){try{var t=localStorage.getItem('cultivation-theme');if(t==='light'){document.documentElement.classList.remove('dark');document.documentElement.classList.add('light')}var s=localStorage.getItem('cultivation-theme-style');if(s&&['midnight-ink','mountain-mist','calligraphy','sakura','sakura-dark'].indexOf(s)!==-1){document.documentElement.classList.add(s)}}catch(e){}})()`
           }}
         />
-        {/* Platform detection for native-specific style hooks */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var isNative=false;if(window.Capacitor&&window.Capacitor.isNativePlatform){isNative=window.Capacitor.isNativePlatform()}else if(window.Capacitor&&window.Capacitor.getPlatform&&window.Capacitor.getPlatform()!=='web'){isNative=true}else if(window.Capacitor&&window.Capacitor.platform&&window.Capacitor.platform!=='web'){isNative=true}else if(/; wv\\)/.test(navigator.userAgent)&&/Android/.test(navigator.userAgent)){isNative=true}else if(/CapacitorNative/.test(navigator.userAgent)){isNative=true}if(isNative){document.documentElement.classList.add('native-apk')}else{document.documentElement.classList.remove('native-apk')}}catch(e){}})()`
-          }}
-        />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${roboto.variable} ${cinzel.variable} ${notoSerif.variable} ${crimsonText.variable} ${maShanZheng.variable} antialiased bg-void-black text-cloud-white transition-colors duration-500`}

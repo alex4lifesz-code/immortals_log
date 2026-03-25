@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <string name="app_name">Cultivation Workout</string>
-    <string name="title_activity_main">Cultivation Workout</string>
-    <string name="package_name">com.wuxia.cultivation</string>
-    <string name="custom_url_scheme">com.wuxia.cultivation</string>
-</resources>

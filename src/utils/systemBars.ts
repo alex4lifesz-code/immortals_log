@@ -1,19 +1,6 @@
 "use client";
 
-import { isNativePlatform } from "@/lib/platform";
 import { normalizeToHex, shouldUseDarkIcons } from "@/utils/colorConversion";
-
-let StatusBarModule: typeof import("@capacitor/status-bar") | null = null;
-
-async function getStatusBar() {
-  if (StatusBarModule) return StatusBarModule;
-  try {
-    StatusBarModule = await import("@capacitor/status-bar");
-    return StatusBarModule;
-  } catch {
-    return null;
-  }
-}
 
 async function setNavigationBarViaBridge(hex: string, darkIcons: boolean) {
   if (typeof window === "undefined") return;
@@ -33,23 +20,17 @@ async function setNavigationBarViaBridge(hex: string, darkIcons: boolean) {
 }
 
 export async function setStatusBarColor(color: string) {
-  if (!isNativePlatform()) return;
+  if (typeof window === "undefined") return;
   const hex = normalizeToHex(color);
   if (!hex) return;
 
-  const statusBar = await getStatusBar();
-  if (!statusBar) return;
-
-  try {
-    await statusBar.StatusBar.setBackgroundColor({ color: hex });
-    await statusBar.StatusBar.setStyle({ style: shouldUseDarkIcons(hex) ? statusBar.Style.Light : statusBar.Style.Dark });
-  } catch {
-    // Best effort.
-  }
+  // Web runtime: expose resolved values for optional diagnostics/future integrations.
+  document.documentElement.style.setProperty("--resolved-status-bar-color", hex);
+  document.documentElement.style.setProperty("--resolved-status-bar-dark-icons", shouldUseDarkIcons(hex) ? "1" : "0");
 }
 
 export async function setNavigationBarColor(color: string) {
-  if (!isNativePlatform()) return;
+  if (typeof window === "undefined") return;
   const hex = normalizeToHex(color);
   if (!hex) return;
   await setNavigationBarViaBridge(hex, shouldUseDarkIcons(hex));

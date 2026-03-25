@@ -33,7 +33,7 @@
 | **Database** | SQLite via libSQL | — |
 | **ORM** | Prisma | ^7.4.1 |
 | **Auth** | Custom (bcryptjs) — no JWT/session tokens | ^3.0.3 |
-| **Mobile** | Capacitor (Android APK) | ^8.2.0 |
+| **Mobile** | Responsive web (browser) | — |
 | **Deployment** | Docker (standalone build) | — |
 | **Spreadsheet** | xlsx.js for import/export | ^0.18.5 |
 
@@ -371,10 +371,8 @@ dangerouslySetInnerHTML={{
   __html: `...vp.setAttribute('content','width=1280,initial-scale=0.25,user-scalable=yes')...`
 }}
 ```
-- In browser mode, viewport is forced to 1280px width at 0.25x scale
-- This means mobile browsers see a zoomed-out desktop view, not a responsive mobile view
-- Only the Capacitor APK gets proper mobile viewport
-- **Impact:** Browser users on phones/tablets cannot get a mobile-responsive experience
+- This historical behavior has been removed in favor of responsive mobile web layouts.
+- Browser users on phones/tablets now receive the mobile view via standard breakpoints.
 
 ### 4.4 Touch Targets Too Small for Mobile
 
@@ -520,7 +518,6 @@ fetch("/api/users/preferences", { ... }).catch(() => {
 | Theme list | Multiple files | — | Array of 5 theme names |
 | Day abbreviations | `constants.ts` | ~77-100 | 3 separate arrays for same concept |
 | Difficulty color mapping | `constants.ts` + `globals.css` | — | Duplicated in JS and CSS |
-| Capacitor server URL | `capacitor.config.ts` | ~3 | `http://192.168.1.105:3000/` |
 | Items per page | `exercise-library/page.tsx` | ~5 | 20 |
 | Analytics magic multipliers | `exercise-analytics.ts` | ~233 | `repsTotal * 1.4 + holdTotal * 0.8 + vol * 0.02 + level * 10` |
 

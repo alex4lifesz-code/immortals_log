@@ -370,5 +370,3 @@ input[type="number"] {
   }
 }
 
-/* ===== Native APK Optimisations (extracted) ===== */
-@import "./native-apk.css";

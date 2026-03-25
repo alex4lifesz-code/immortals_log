@@ -1,50 +1,26 @@
 "use client";
 
-import { isNativePlatform } from "@/lib/platform";
-
 export type HapticLevel = "light" | "medium" | "heavy";
 
-let HapticsModule: typeof import("@capacitor/haptics") | null = null;
-
-async function getHaptics() {
-  if (HapticsModule) return HapticsModule;
-  try {
-    HapticsModule = await import("@capacitor/haptics");
-    return HapticsModule;
-  } catch {
-    return null;
-  }
-}
+const vibrationMap: Record<HapticLevel, number> = {
+  light: 12,
+  medium: 24,
+  heavy: 40,
+};
 
 export async function triggerHaptic(level: HapticLevel) {
-  if (typeof window === "undefined" || !isNativePlatform()) return;
-  const mod = await getHaptics();
-  if (!mod) return;
-
-  const styleMap: Record<HapticLevel, "Light" | "Medium" | "Heavy"> = {
-    light: "Light",
-    medium: "Medium",
-    heavy: "Heavy",
-  };
-
+  if (typeof window === "undefined" || typeof navigator === "undefined" || !navigator.vibrate) return;
   try {
-    const style = mod.ImpactStyle[styleMap[level] as keyof typeof mod.ImpactStyle];
-    if (style !== undefined) {
-      await mod.Haptics.impact({ style });
-    }
+    navigator.vibrate(vibrationMap[level]);
   } catch {
     // Best-effort only; do not block UX.
   }
 }
 
 export async function hapticSelection() {
-  if (typeof window === "undefined" || !isNativePlatform()) return;
-  const mod = await getHaptics();
-  if (!mod) return;
+  if (typeof window === "undefined" || typeof navigator === "undefined" || !navigator.vibrate) return;
   try {
-    await mod.Haptics.selectionStart();
-    await mod.Haptics.selectionChanged();
-    await mod.Haptics.selectionEnd();
+    navigator.vibrate([8, 8, 8]);
   } catch {
     // Ignore unsupported devices.
   }

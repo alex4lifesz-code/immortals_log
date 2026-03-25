@@ -1,66 +1,53 @@
 "use client";
 
-import { memo, useRef, useCallback } from "react";
+import { memo, useCallback, useRef } from "react";
 import { useAppContext } from "@/context/AppContext";
-
-// SwipeNavigation v2.0: Tap-based navigation is primary.
-// Horizontal swipe-to-open sidebar is enabled only in native APK
-// for quick access to the filter/sidebar panel.
 
 function SwipeNavigation({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { isNativeApp, setMobileSidebarOpen, mobileSidebarOpen, isMobile } = useAppContext();
-  const touchStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
-  const isSwipingRef = useRef(false);
+  const { isMobile, mobileSidebarOpen, setMobileSidebarOpen } = useAppContext();
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
-  const onTouchStart = useCallback((e: React.TouchEvent) => {
-    if (!isNativeApp || !isMobile) return;
-    const touch = e.touches[0];
+  const onTouchStart = useCallback((event: React.TouchEvent<HTMLDivElement>) => {
+    if (!isMobile) return;
+    const touch = event.touches[0];
     if (!touch) return;
-    touchStartRef.current = { x: touch.clientX, y: touch.clientY, t: Date.now() };
-    isSwipingRef.current = false;
-  }, [isNativeApp, isMobile]);
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+  }, [isMobile]);
 
-  const onTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!touchStartRef.current || !isNativeApp || !isMobile) return;
-    const touch = e.touches[0];
-    if (!touch) return;
+  const onTouchEnd = useCallback((event: React.TouchEvent<HTMLDivElement>) => {
+    if (!isMobile || !touchStartRef.current || mobileSidebarOpen) {
+      touchStartRef.current = null;
+      return;
+    }
+
+    const touch = event.changedTouches[0];
+    if (!touch) {
+      touchStartRef.current = null;
+      return;
+    }
+
     const dx = touch.clientX - touchStartRef.current.x;
     const dy = touch.clientY - touchStartRef.current.y;
+    const startedInLeftZone = touchStartRef.current.x <= 84;
+    const isHorizontalSwipe = Math.abs(dx) > Math.abs(dy) * 1.05;
+    const isRightSwipe = dx >= 44;
 
-    // Disambiguate: if vertical movement is dominant, it's a scroll — bail out
-    if (Math.abs(dy) > Math.abs(dx) * 1.2) {
-      touchStartRef.current = null;
-      return;
-    }
-
-    // Only consider edge swipes from the left 40px for opening
-    if (touchStartRef.current.x < 40 && dx > 30) {
-      isSwipingRef.current = true;
-    }
-  }, [isNativeApp, isMobile]);
-
-  const onTouchEnd = useCallback(() => {
-    if (!touchStartRef.current || !isNativeApp || !isMobile) {
-      touchStartRef.current = null;
-      return;
-    }
-    if (isSwipingRef.current && !mobileSidebarOpen) {
+    if (startedInLeftZone && isHorizontalSwipe && isRightSwipe) {
       setMobileSidebarOpen(true);
     }
+
     touchStartRef.current = null;
-    isSwipingRef.current = false;
-  }, [isNativeApp, isMobile, mobileSidebarOpen, setMobileSidebarOpen]);
+  }, [isMobile, mobileSidebarOpen, setMobileSidebarOpen]);
 
   return (
     <div
       className="flex-1 min-w-0 overflow-auto"
       style={{ willChange: 'transform', WebkitOverflowScrolling: 'touch' }}
       onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
       {children}

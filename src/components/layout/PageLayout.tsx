@@ -26,7 +26,7 @@ function PageLayout({
   contentMaxWidthClass = "max-w-[1400px]",
   mobileContentPaddingClass = "p-4 pb-24",
 }: PageLayoutProps) {
-  const { panelPosition, isMobile, isNativeApp, mobileSidebarOpen, setMobileSidebarOpen } = useAppContext();
+  const { panelPosition, isMobile, mobileSidebarOpen, setMobileSidebarOpen } = useAppContext();
   const { settings, updateSettings } = useDisplaySettings();
   const effectivePosition = isMobile ? "top" : panelPosition;
   const mobileMode = isMobile;
@@ -89,54 +89,6 @@ function PageLayout({
 
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
-  }, [mobileSidebarOpen, setMobileSidebarOpen]);
-
-  // Capacitor Android hardware back fallback for closing mobile drawers.
-  useEffect(() => {
-    const onBackButton = (event: Event) => {
-      if (!mobileSidebarOpen) return;
-      if (typeof (event as { preventDefault?: () => void }).preventDefault === "function") {
-        (event as { preventDefault: () => void }).preventDefault();
-      }
-      setMobileSidebarOpen(false);
-      mobileSidebarHistoryArmedRef.current = false;
-    };
-
-    document.addEventListener("backbutton", onBackButton as EventListener);
-    return () => document.removeEventListener("backbutton", onBackButton as EventListener);
-  }, [mobileSidebarOpen, setMobileSidebarOpen]);
-
-  // Capacitor native Android back-button (reliable in APK webview).
-  useEffect(() => {
-    let handle: { remove: () => Promise<void> } | null = null;
-    let cancelled = false;
-
-    const register = async () => {
-      try {
-        const mod = await import("@capacitor/app");
-        if (cancelled) return;
-        const result = await mod.App.addListener("backButton", () => {
-          if (!mobileSidebarOpen) return;
-          setMobileSidebarOpen(false);
-          mobileSidebarHistoryArmedRef.current = false;
-        });
-        if (cancelled) {
-          void result.remove();
-          return;
-        }
-        handle = result;
-      } catch {
-        // Capacitor App plugin unavailable outside native runtime.
-      }
-    };
-
-    void register();
-
-    return () => {
-      cancelled = true;
-      if (!handle) return;
-      void handle.remove();
-    };
   }, [mobileSidebarOpen, setMobileSidebarOpen]);
 
   const onSidebarTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {

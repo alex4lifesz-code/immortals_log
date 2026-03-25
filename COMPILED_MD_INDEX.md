@@ -5,7 +5,6 @@ This file compiles the current project Markdown references into a single deploym
 ## Core
 
 - README.md
-- ANDROID_BUILD_GUIDE.md
 - TRAINING_GROUNDS_USER_GUIDE.md
 - TRAINING_SCHEDULE_FRAMEWORK.md
 
@@ -25,5 +24,5 @@ This file compiles the current project Markdown references into a single deploym
 ## Cleanup Status
 
 - Temporary import/debug scripts and one-off root artifacts were removed.
-- Connectivity messaging was added for Android users when backend/database connectivity fails.
+- Connectivity messaging was added for users when backend/database connectivity fails.
 - Docker image build and local run validation steps are documented in this chat run.
