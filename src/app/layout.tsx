@@ -48,8 +48,8 @@ const maShanZheng = Ma_Shan_Zheng({
 });
 
 export const metadata: Metadata = {
-  title: "Cultivation Workout — 修炼之路",
-  description: "Forge your body through martial cultivation",
+  title: "Immortal's Log — 修炼之路",
+  description: "Track your martial cultivation journey in Immortal's Log",
 };
 
 export const viewport = {

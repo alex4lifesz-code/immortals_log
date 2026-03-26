@@ -80,7 +80,7 @@ function DesktopNavBar() {
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); router.push("/dashboard"); } }}
             whileHover={{ scale: 1.05 }}
           >
-            ⚔️ Immortals Log
+            ⚔️ Immortal's Log
           </motion.span>
         </div>
 
