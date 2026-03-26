@@ -177,11 +177,11 @@ function CalendarDay({ date, checkedInUsers, isToday, isPast, hasNote, hasFuture
           ))}
         </div>
       )}
-      {hasNote && (
+      {(hasNote || hasFutureNote) && (
         <div className={`absolute ${compact ? "top-0 right-0" : "top-0.5 right-0.5"} ${compact ? "text-[7px]" : "text-[8px]"} text-gold-glow`}>📝</div>
       )}
       {hasFutureNote && (
-        <div className={`absolute ${compact ? "bottom-0 right-0" : "bottom-0.5 right-0.5"} ${compact ? "text-[6px]" : "text-[7px]"} font-bold text-jade-glow/70 uppercase leading-none drop-shadow-[0_0_3px_rgba(58,143,143,0.4)]`}>{compact ? "•" : "note"}</div>
+        <div className={`absolute ${compact ? "top-0 right-0" : "top-0.5 right-0.5"} ${compact ? "text-[8px]" : "text-[10px]"} text-gold-glow drop-shadow-[0_0_3px_rgba(232,200,74,0.5)]`}>✏️</div>
       )}
     </motion.div>
   );

@@ -34,13 +34,14 @@ interface DayNote {
   userName?: string;
 }
 
-interface CommunityNote {
-  id: string;
-  date: string;
-  content: string;
-  pinned: boolean;
-  createdAt: string;
-  user: { id: string; name: string; username: string };
+interface MemberStats {
+  totalCheckIns: number;
+  totalDays: number;
+  consistencyPercent: number;
+  avgWeight: number | null;
+  latestWeight: number | null;
+  weightChange: number | null;
+  lastCheckInDate: string | null;
 }
 
 function formatDateLocal(date: Date): string {
@@ -74,116 +75,6 @@ function getCompactUserLabel(name: string): string {
   return initials || trimmed.slice(0, 3).toUpperCase();
 }
 
-function CheckInSidebar({
-  onAddToday,
-  onAddCustom,
-  users,
-  dayNotes,
-  onToggleNotes,
-  showNotesPanel,
-  isMobile,
-}: {
-  onAddToday: () => void;
-  onAddCustom: () => void;
-  users: User[];
-  dayNotes: DayNote[];
-  onToggleNotes: () => void;
-  showNotesPanel: boolean;
-  isMobile: boolean;
-}) {
-  if (isMobile) {
-    return (
-      <div className="rounded-xl border border-jade-glow/25 backdrop-blur-sm p-2 shadow-[var(--shadow-elev-1)]" style={{ background: "var(--surface-gradient-strong)" }}>
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <h3 className="text-[11px] font-semibold uppercase tracking-[0.09em] text-gold">Sect Register</h3>
-          <span className="rounded-full border border-ink-light/35 bg-ink-dark/55 px-2 py-0.5 text-[10px] text-mist-light">{users.length} cultivators</span>
-        </div>
-
-        <div className="mb-2 flex flex-wrap gap-2">
-          <GlowButton variant="jade" size="sm" className="min-w-[140px] flex-1" onClick={onAddToday}>
-            📅 Add Today
-          </GlowButton>
-          <GlowButton variant="gold" size="sm" className="min-w-[140px] flex-1" onClick={onAddCustom}>
-            📆 Add Date
-          </GlowButton>
-          <GlowButton
-            variant={showNotesPanel ? "jade" : "ghost"}
-            size="sm"
-            className="min-w-[140px] flex-1"
-            onClick={onToggleNotes}
-          >
-            📝 {showNotesPanel ? "Hide" : "Show"} Notes {dayNotes.length > 0 && `(${dayNotes.length})`}
-          </GlowButton>
-          <GlowButton variant="ghost" size="sm" className="min-w-[140px] flex-1">
-            📊 Export
-          </GlowButton>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-1.5">
-          {users.length === 0 ? (
-            <p className="text-xs text-mist-dark italic">No cultivators yet</p>
-          ) : (
-            users.map((listedUser) => (
-              <span
-                key={listedUser.id}
-                className="inline-flex items-center gap-1 rounded-full border border-ink-light/35 bg-ink-dark/55 px-2 py-1 text-[10px] text-mist-light"
-              >
-                <span className="h-1.5 w-1.5 rounded-full bg-jade-glow" />
-                {listedUser.name}
-              </span>
-            ))
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="dashboard-sidebar-shell">
-      <div className="dashboard-sidebar-scroll sidebar-scroll space-y-3">
-        <GlowButton variant="jade" size="sm" className="w-full" onClick={onAddToday}>
-          📅 Add Today&apos;s Date
-        </GlowButton>
-        <GlowButton variant="gold" size="sm" className="w-full" onClick={onAddCustom}>
-          📆 Add Custom Date
-        </GlowButton>
-        <GlowButton 
-          variant={showNotesPanel ? "jade" : "ghost"} 
-          size="sm" 
-          className="w-full" 
-          onClick={onToggleNotes}
-        >
-          📝 {showNotesPanel ? "Hide" : "Show"} Day Notes {dayNotes.length > 0 && `(${dayNotes.length})`}
-        </GlowButton>
-        <GlowButton variant="ghost" size="sm" className="w-full">
-          📊 Export Records
-        </GlowButton>
-
-        <div className="dashboard-sidebar-card pt-3">
-          <h3 className="text-xs text-mist-dark uppercase mb-2">
-            Registered Cultivators
-          </h3>
-          <div className="space-y-1">
-            {users.length === 0 ? (
-              <p className="text-xs text-mist-dark italic">No cultivators yet</p>
-            ) : (
-              users.map((user) => (
-                <div
-                  key={user.id}
-                  className="text-xs text-mist-light flex items-center gap-2 py-1"
-                >
-                  <span className="w-2 h-2 bg-jade-glow rounded-full" />
-                  {user.name}
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function CheckInPage() {
   const { user } = useAuth();
   const { isMobile } = useAppContext();
@@ -196,8 +87,6 @@ export default function CheckInPage() {
   const [customDate, setCustomDate] = useState("");
   const [dayNotes, setDayNotes] = useState<DayNote[]>([]);
   const [editingNote, setEditingNote] = useState<{ date: string; note: string } | null>(null);
-  const [showNotesPanel, setShowNotesPanel] = useState(false);
-  const [communityNotes, setCommunityNotes] = useState<CommunityNote[]>([]);
   const [isEditMode, setIsEditMode] = useState(false);
   const [preEditSnapshot, setPreEditSnapshot] = useState<CheckInRow[]>([]);
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">(() => {
@@ -220,25 +109,7 @@ export default function CheckInPage() {
     localStorage.setItem("checkin-notes-updated-at", String(Date.now()));
   }, []);
 
-  const fetchCommunityNotes = useCallback(async () => {
-    try {
-      const data = await api.get<{ notes: CommunityNote[] }>("/api/checkins/notes");
-      setCommunityNotes(data.notes || []);
-    } catch (err) {
-      console.error("Failed to fetch community notes:", err);
-    }
-  }, []);
 
-  const handleDeleteCommunityNote = useCallback(async (noteId: string) => {
-    if (!user) return;
-    try {
-      await api.delete("/api/checkins/notes", { noteId });
-      setCommunityNotes(prev => prev.filter(n => n.id !== noteId));
-      broadcastNotesUpdated();
-    } catch (err) {
-      console.error("Failed to delete community note:", err);
-    }
-  }, [broadcastNotesUpdated, user]);
 
   const handleDeleteRow = useCallback(async (date: string) => {
     try {
@@ -250,23 +121,6 @@ export default function CheckInPage() {
       console.error("Failed to delete row:", err);
     }
   }, [broadcastNotesUpdated]);
-
-  const handleTogglePinNote = useCallback(async (noteId: string, pinned: boolean) => {
-    if (!user) return;
-    try {
-      await api.patch("/api/checkins/notes", { noteId, pinned });
-      setCommunityNotes(prev =>
-        prev.map(n => n.id === noteId ? { ...n, pinned } : n)
-          .sort((a, b) => {
-            if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-          })
-      );
-      broadcastNotesUpdated();
-    } catch (err) {
-      console.error("Failed to toggle pin:", err);
-    }
-  }, [broadcastNotesUpdated, user]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -302,27 +156,7 @@ export default function CheckInPage() {
 
   useEffect(() => {
     fetchData();
-    fetchCommunityNotes();
-  }, [fetchData, fetchCommunityNotes]);
-
-  useEffect(() => {
-    const handleNotesUpdated = () => {
-      fetchCommunityNotes();
-    };
-
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === "checkin-notes-updated-at") {
-        fetchCommunityNotes();
-      }
-    };
-
-    window.addEventListener("checkin-notes-updated", handleNotesUpdated);
-    window.addEventListener("storage", handleStorage);
-    return () => {
-      window.removeEventListener("checkin-notes-updated", handleNotesUpdated);
-      window.removeEventListener("storage", handleStorage);
-    };
-  }, [fetchCommunityNotes]);
+  }, [fetchData]);
 
   // Show weight prompt on page load if user hasn't logged weight today
   useEffect(() => {
@@ -554,10 +388,39 @@ export default function CheckInPage() {
     [rows, sortOrder]
   );
 
-  // Total check-in counts per user
-  const totalCheckIns = useMemo(
-    () => users.reduce<Record<string, number>>((acc, u) => {
-      acc[u.id] = rows.filter((r) => r.entries[u.id]?.present).length;
+  const memberStats = useMemo(
+    () => users.reduce<Record<string, MemberStats>>((acc, u) => {
+      const userRows = rows.filter((r) => r.entries[u.id]);
+      const checkedInRows = userRows.filter((r) => r.entries[u.id]?.present);
+
+      const weightsByDate = userRows
+        .map((r) => ({
+          date: r.date,
+          value: Number(r.entries[u.id]?.weight),
+        }))
+        .filter((item) => Number.isFinite(item.value) && item.value > 0)
+        .sort((a, b) => a.date.localeCompare(b.date));
+
+      const weights = weightsByDate.map((item) => item.value);
+      const avgWeight = weights.length > 0 ? weights.reduce((sum, w) => sum + w, 0) / weights.length : null;
+      const firstWeight = weights.length > 0 ? weights[0] : null;
+      const latestWeight = weights.length > 0 ? weights[weights.length - 1] : null;
+      const weightChange = firstWeight !== null && latestWeight !== null ? latestWeight - firstWeight : null;
+      const lastCheckInDate = checkedInRows.reduce<string | null>(
+        (latest, row) => (!latest || row.date > latest ? row.date : latest),
+        null
+      );
+
+      acc[u.id] = {
+        totalCheckIns: checkedInRows.length,
+        totalDays: userRows.length,
+        consistencyPercent: userRows.length > 0 ? Math.round((checkedInRows.length / userRows.length) * 100) : 0,
+        avgWeight,
+        latestWeight,
+        weightChange,
+        lastCheckInDate,
+      };
+
       return acc;
     }, {}),
     [rows, users]
@@ -592,29 +455,14 @@ export default function CheckInPage() {
     <PageLayout
       title="Sect Register"
       subtitle="Record attendance and physical metrics of all cultivators"
-      sidebar={isMobile ? undefined : <CheckInSidebar onAddToday={addTodayRow} onAddCustom={() => setShowCustomDateModal(true)} users={users} dayNotes={dayNotes} onToggleNotes={() => setShowNotesPanel(!showNotesPanel)} showNotesPanel={showNotesPanel} isMobile={false} />}
       sidebarLabel="Check-In"
       mobileContentPaddingClass="p-2 pb-24"
     >
-      {isMobile && (
-        <section className="mb-3">
-          <CheckInSidebar
-            onAddToday={addTodayRow}
-            onAddCustom={() => setShowCustomDateModal(true)}
-            users={users}
-            dayNotes={dayNotes}
-            onToggleNotes={() => setShowNotesPanel(!showNotesPanel)}
-            showNotesPanel={showNotesPanel}
-            isMobile
-          />
-        </section>
-      )}
-
       {loading ? (
         <PageSkeleton statCards={2} wideBlock rows={5} />
       ) : (
         <div className="flex flex-col gap-4">
-          {(dayNotes.length > 0 || communityNotes.length > 0) && (
+          {dayNotes.length > 0 && (
             <div className="flex flex-wrap items-start gap-4">
               {/* Cultivation Journal — personal day notes */}
               {dayNotes.length > 0 && (
@@ -675,59 +523,103 @@ export default function CheckInPage() {
                 </motion.div>
               )}
 
-              {/* Community Notes — attributed notes from sect members */}
-              {communityNotes.length > 0 && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  transition={{ duration: 0.25 }}
-                  className="min-w-[280px] flex-1"
-                >
-                  <div
-                    className="h-full border border-ink-light rounded-lg p-4"
-                    style={{ background: "var(--surface-gradient-strong)" }}
-                  >
-                    <h3 className="text-xs text-mountain-blue-glow uppercase tracking-wider mb-3 flex items-center gap-2">
-                      🏯 Sect Member Notes
-                    </h3>
-                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                      {communityNotes.map((cn) => (
-                        <motion.div
-                          key={cn.id}
-                          initial={{ x: -10, opacity: 0 }}
-                          animate={{ x: 0, opacity: 1 }}
-                          className="flex items-start gap-2 text-xs group"
-                        >
-                          {cn.pinned && (
-                            <span className="text-gold-glow shrink-0" title="Pinned">📌</span>
-                          )}
-                          <span className="text-jade-glow font-mono shrink-0 text-[10px]">{cn.date}</span>
-                          <span className="text-gold shrink-0 font-medium">{cn.user.name}:</span>
-                          <span className="text-mist-light flex-1">{cn.content}</span>
-                          {user && cn.user.id === user.id && (
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                              <button
-                                onClick={() => handleTogglePinNote(cn.id, !cn.pinned)}
-                                className={`hover:text-gold-glow transition-colors ${cn.pinned ? 'text-gold-glow' : 'text-mist-dark'}`}
-                                title={cn.pinned ? "Unpin" : "Pin note"}
-                              >
-                                📌
-                              </button>
-                              <button
-                                onClick={() => handleDeleteCommunityNote(cn.id)}
-                                className="text-mist-dark hover:text-crimson-light transition-colors"
-                                title="Delete note"
-                              >
-                                ✕
-                              </button>
+            </div>
+          )}
+
+          {/* Sect Member Statistics (separate from the table) */}
+          {users.length > 0 && (
+            <div
+              className="rounded-xl border border-ink-light/40 p-4"
+              style={{ background: "var(--surface-gradient-strong)" }}
+            >
+              <h3 className="mb-3 flex items-center gap-2 text-xs uppercase tracking-wider text-gold-glow">
+                Sect Member Statistics
+              </h3>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+              {users.map((u) => (
+                (() => {
+                  const stats = memberStats[u.id];
+                  if (!stats) return null;
+
+                  const consistencyColor =
+                    stats.consistencyPercent >= 80
+                      ? "text-jade-glow"
+                      : stats.consistencyPercent >= 60
+                        ? "text-gold-glow"
+                        : "text-mist-light";
+
+                  const weightTrendColor =
+                    stats.weightChange === null
+                      ? "text-mist-dark"
+                      : stats.weightChange > 0
+                        ? "text-crimson-light"
+                        : "text-jade-glow";
+
+                  return (
+                    <motion.div
+                      key={u.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="space-y-2 rounded-lg border border-ink-light/40 p-3"
+                      style={{ background: "var(--surface-gradient-strong)" }}
+                    >
+                      <div className="flex items-center justify-between border-b border-ink-light/30 pb-2">
+                        <span className="text-sm font-semibold text-jade-glow">{u.name}</span>
+                        {stats.lastCheckInDate && (
+                          <span className="text-[9px] text-mist-dark">
+                            Last: {formatDateWithPreference(stats.lastCheckInDate, dateFormat)}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-mist-light">Check-ins</span>
+                        <span className="font-semibold text-jade-glow">
+                          {stats.totalCheckIns}/{stats.totalDays}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-mist-light">Consistency</span>
+                        <div className="flex items-center gap-1.5">
+                          <div className="h-1.5 w-20 overflow-hidden rounded-full bg-ink-light/30">
+                            <div
+                              className="h-full bg-jade-glow/50 transition-all duration-300"
+                              style={{ width: `${stats.consistencyPercent}%` }}
+                            />
+                          </div>
+                          <span className={`w-10 text-right font-semibold ${consistencyColor}`}>
+                            {stats.consistencyPercent}%
+                          </span>
+                        </div>
+                      </div>
+
+                      {stats.avgWeight !== null && (
+                        <>
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-mist-light">Avg Weight</span>
+                            <span className="font-semibold text-gold-glow">{stats.avgWeight.toFixed(1)} lb</span>
+                          </div>
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-mist-light">Latest Weight</span>
+                            <span className="font-semibold text-mist-light">{stats.latestWeight?.toFixed(1) || "-"} lb</span>
+                          </div>
+                          {stats.weightChange !== null && (
+                            <div className="flex items-center justify-between border-t border-ink-light/30 pt-1 text-xs">
+                              <span className="text-mist-light">Weight Change</span>
+                              <span className={`font-semibold ${weightTrendColor}`}>
+                                {stats.weightChange > 0 ? "+" : ""}
+                                {stats.weightChange.toFixed(1)} lb
+                              </span>
                             </div>
                           )}
-                        </motion.div>
-                      ))}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
+                        </>
+                      )}
+                    </motion.div>
+                  );
+                })()
+              ))}
+              </div>
             </div>
           )}
 
@@ -777,22 +669,6 @@ export default function CheckInPage() {
                 </div>
               )}
 
-              {/* Total Check-In Counts */}
-              {users.length > 0 && (
-                <div
-                  className="mb-3 flex flex-wrap gap-3 rounded-lg border border-ink-light/30 p-2"
-                  style={{ background: "var(--surface-gradient-strong)" }}
-                >
-                  <span className="text-[10px] text-mist-dark uppercase tracking-wider self-center">Totals:</span>
-                  {users.map((u) => (
-                    <div key={u.id} className="flex items-center gap-1.5 text-[10px]">
-                      <span className="text-mist-light">{u.name}:</span>
-                      <span className="text-jade-glow font-semibold">{totalCheckIns[u.id] || 0}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
               <div style={{ minWidth: checkinGridMinWidth }}>
                 {/* Grid header */}
                 <div
@@ -820,13 +696,10 @@ export default function CheckInPage() {
                   <div className="px-1">Comments</div>
                 </div>
 
-                {/* Rows */}
                 {sortedRows.length === 0 ? (
                   <div className="flex flex-col items-center py-10 text-center">
                     <div className="text-2xl opacity-30 mb-2">📋</div>
-                    <p className="text-xs text-mist-dark">
-                      No records yet
-                    </p>
+                    <p className="text-xs text-mist-dark">No records yet</p>
                     <p className="text-[10px] text-mist-dark/60 mt-1">
                       Check-in records will be created automatically
                     </p>

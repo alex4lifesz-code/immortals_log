@@ -41,12 +41,6 @@ interface CommunityNote {
   user: { id: string; name: string; username: string };
 }
 
-const quickActions = [
-  { label: "Start Training", icon: "⚔️", path: "/dashboard/workout", glow: "jade" as const },
-  { label: "Check In", icon: "📋", path: "/dashboard/checkin", glow: "blue" as const },
-  { label: "Settings", icon: "⚙️", path: "/dashboard/settings", glow: "gold" as const },
-];
-
 function getDayDiffFromToday(dateString: string): number {
   const rowDate = new Date(dateString + "T00:00:00");
   const now = new Date();
@@ -618,83 +612,72 @@ export default function DaoHallPage() {
         <PageSkeleton statCards={4} wideBlock rows={3} />
       ) : (
         <div className="space-y-6">
-          {/* Calendar */}
-          <Calendar checkInUsersByDate={checkInUsersByDate} currentMonth={currentMonth} setCurrentMonth={setCurrentMonth} dayNotes={dayNotes} futureNoteDates={new Set(futureNotes.map(n => n.date))} onDayClick={handleDayClick} allUsers={allUsers} userColors={userColors} />
-
-          {/* Quick Actions */}
-          <div>
-            <h3 className="text-sm text-jade-glow uppercase mb-3">Quick Actions</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {quickActions
-                .map((action, i) => (
-                <motion.div
-                  key={action.path}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.1 }}
+          {/* Upcoming Notes and Calendar */}
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* Future Notes Log */}
+            <GlowCard glow="gold" className="p-4 space-y-3 flex-1">
+              <div className="flex items-center gap-2 pb-2 border-b border-gold-dim/20">
+                <h3 className="text-sm text-gold-glow uppercase tracking-wider font-semibold">Upcoming Notes</h3>
+                {futureNotes.length > 0 && (
+                  <span className="text-[9px] text-gold-glow bg-gold-dim/20 px-2 py-0.5 rounded-full font-medium">{futureNotes.length}</span>
+                )}
+                <button
+                  onClick={() => router.push("/dashboard/checkin")}
+                  className="ml-auto text-[9px] text-gold-light/70 hover:text-gold-glow transition-colors flex items-center gap-1 hover:underline"
+                  title="Manage notes in Sect Register"
                 >
-                  <GlowButton
-                    variant={action.glow}
-                    className="w-full text-center"
-                    onClick={() => router.push(action.path)}
-                  >
-                    <div className="flex flex-col items-center gap-1">
-                      <span className="text-lg">{action.icon}</span>
-                      <span className="text-xs">{action.label}</span>
-                    </div>
-                  </GlowButton>
-                </motion.div>
-              ))}
+                  Manage →
+                </button>
+              </div>
+              {futureNotes.length > 0 ? (
+                <div className="space-y-2">
+                  {futureNotes.map((note) => {
+                    const noteUserIdx = allUsers.findIndex(u => u.id === note.user.id);
+                    const noteColor = normalizeCultivatorColor(userColors[note.user.id] || DEFAULT_CULTIVATOR_COLORS[noteUserIdx >= 0 ? noteUserIdx % DEFAULT_CULTIVATOR_COLORS.length : 0]);
+                    return (
+                      <motion.div
+                        key={note.id}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        onClick={() => handleDayClick(note.date)}
+                        className="p-3 rounded-lg border border-ink-light/40 bg-gradient-to-r from-ink-dark/40 to-ink-mid/20 hover:from-gold-dim/15 hover:to-gold-dim/10 hover:border-gold-dim/50 transition-all duration-300 cursor-pointer group"
+                        title="Click to view in calendar"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div
+                            className="w-2 h-2 rounded-full shrink-0 mt-1.5 shadow-lg"
+                            style={{ backgroundColor: noteColor, boxShadow: `0 0 6px ${getCultivatorGlowColor(noteColor, 0.6)}` }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-[11px] font-semibold" style={{ color: noteColor }}>
+                                {note.user.name}
+                              </span>
+                              <span className="text-[9px] text-mist-mid bg-ink-mid/40 px-1.5 py-0.5 rounded">
+                                {formatDateWithPreference(note.date, dateFormat)}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-mist-light leading-relaxed">{note.content}</p>
+                          </div>
+                          <span className="text-mist-dark/40 group-hover:text-gold-glow shrink-0 transition-colors ml-2">↗</span>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="py-6 text-center">
+                  <p className="text-[10px] text-mist-mid">No upcoming notes</p>
+                  <p className="text-[9px] text-mist-dark/60 mt-1">Schedule notes on future dates to see them here</p>
+                </div>
+              )}
+            </GlowCard>
+
+            {/* Calendar */}
+            <div className="flex-1">
+              <Calendar checkInUsersByDate={checkInUsersByDate} currentMonth={currentMonth} setCurrentMonth={setCurrentMonth} dayNotes={dayNotes} futureNoteDates={new Set(futureNotes.map(n => n.date))} onDayClick={handleDayClick} allUsers={allUsers} userColors={userColors} />
             </div>
           </div>
-
-          {/* Future Notes Log */}
-          <GlowCard glow="gold" className="p-3 space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="text-sm">📝</span>
-              <h3 className="text-xs text-gold-glow uppercase tracking-wider font-semibold">Upcoming Notes</h3>
-              {futureNotes.length > 0 && (
-                <span className="text-[9px] text-mist-dark bg-ink-mid/60 px-1.5 py-0.5 rounded-full">{futureNotes.length}</span>
-              )}
-              <button
-                onClick={() => router.push("/dashboard/checkin")}
-                className="ml-auto text-[10px] text-jade-light/70 hover:text-jade-glow transition-colors flex items-center gap-1"
-                title="Manage notes in Sect Register"
-              >
-                Manage in Register →
-              </button>
-            </div>
-            {futureNotes.length > 0 ? (
-              <div className="space-y-1">
-                {futureNotes.map((note) => {
-                  const noteUserIdx = allUsers.findIndex(u => u.id === note.user.id);
-                  const noteColor = normalizeCultivatorColor(userColors[note.user.id] || DEFAULT_CULTIVATOR_COLORS[noteUserIdx >= 0 ? noteUserIdx % DEFAULT_CULTIVATOR_COLORS.length : 0]);
-                  return (
-                    <motion.div
-                      key={note.id}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      className="flex items-center gap-2 px-2 py-1.5 rounded-md border border-ink-light/30 bg-ink-dark/30 hover:bg-ink-mid/20 transition-colors"
-                    >
-                      <div
-                        className="w-1.5 h-1.5 rounded-full shrink-0"
-                        style={{ backgroundColor: noteColor, boxShadow: `0 0 4px ${getCultivatorGlowColor(noteColor, 0.5)}` }}
-                      />
-                      <span className="text-[10px] font-medium shrink-0" style={{ color: noteColor }}>
-                        {note.user.name}
-                      </span>
-                      <span className="text-[10px] text-mist-dark shrink-0">
-                        {formatDateWithPreference(note.date, dateFormat)}
-                      </span>
-                      <span className="text-[10px] text-mist-light truncate flex-1">{note.content}</span>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-[10px] text-mist-dark italic py-1">No upcoming notes. Add notes to future calendar dates to see them here.</p>
-            )}
-          </GlowCard>
 
           {/* Sect Register Table — Check-In Records */}
           <GlowCard glow="jade" className="w-full">

@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import PageLayout from "@/components/layout/PageLayout";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
@@ -11,7 +12,6 @@ import { getExerciseDisplayName } from "@/lib/exercise-name";
 import { DEFAULT_USER_PHYSIQUE, loadUserPhysique } from "@/lib/user-physique";
 import type { UserPhysiqueSettings } from "@/lib/user-physique";
 import ExerciseManagementDrawer from "@/components/workout/ExerciseManagementDrawer";
-import { MemoTrainingLogTable } from "@/components/workout/TrainingLogTable";
 import { ExerciseInfoModal } from "@/components/workout/ExerciseInfoModal";
 import { SetLoggerPanel } from "@/components/workout/SetLoggerPanel";
 import { TrainingGroundsSidebar } from "@/components/workout/TrainingGroundsSidebar";
@@ -33,6 +33,7 @@ import {
 } from "./utils";
 
 export default function ProgressionPage() {
+  const router = useRouter();
   const { settings } = useDisplaySettings();
   const { user } = useAuth();
   const { isMobile } = useAppContext();
@@ -909,19 +910,21 @@ export default function ProgressionPage() {
                           type="button"
                           onClick={(event) => {
                             event.stopPropagation();
-                            const nextFilter: LogTableFilter = { exerciseId: exercise.id, levelNameLevel: queueFilterLevel };
-                            const isSameFilter = selectedLogFilter?.exerciseId === nextFilter.exerciseId && selectedLogFilter?.levelNameLevel === nextFilter.levelNameLevel;
-                            setSelectedLogFilter(isSameFilter ? null : nextFilter);
+                            const params = new URLSearchParams({ exerciseId: exercise.id });
+                            if (typeof queueFilterLevel === "number") {
+                              params.set("level", String(queueFilterLevel));
+                            }
+                            router.push(`/dashboard/history?${params.toString()}`);
                           }}
                           className={`inline-flex h-6 items-center justify-center rounded-md border px-2 text-[10px] font-semibold leading-none transition-all duration-150 ${
                             isFilterActiveForRow
                               ? "border-jade-glow/70 bg-jade-deep/35 text-jade-glow"
                               : "border-jade/40 bg-jade-deep/10 text-jade-light hover:bg-jade-deep/25 hover:border-jade-glow/60"
                           }`}
-                          aria-label={`${isFilterActiveForRow ? "Clear" : "Apply"} log filter for ${stripBwPercentHint(exercise.wuxiaName || exercise.name)}`}
-                          title={isFilterActiveForRow ? "Clear log filter" : "Filter logs to this exercise/tier"}
+                          aria-label={`Open history for ${stripBwPercentHint(exercise.wuxiaName || exercise.name)}`}
+                          title="Open training history"
                         >
-                          Filter
+                          History
                         </button>
                       </div>
                       </motion.div>
@@ -932,18 +935,6 @@ export default function ProgressionPage() {
             </section>
           )}
 
-          <section className="space-y-3 -mx-1 px-1 sm:mx-0 sm:px-0">
-            <div className="mx-0">
-              <MemoTrainingLogTable
-                exercises={exercises}
-                physique={physique}
-                selectedLogFilter={selectedLogFilter}
-                onSelectExercise={setSelectedLogFilter}
-                onRefresh={fetchExercises}
-                userId={userId || ''}
-              />
-            </div>
-          </section>
         </div>
       )}
 

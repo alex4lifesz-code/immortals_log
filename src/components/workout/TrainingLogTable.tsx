@@ -587,7 +587,7 @@ function TrainingLogTable({
                   </td>
                 </tr>
               ) : (
-                <AnimatePresence initial={false}>
+                <>
                   {entries.map((entry) => {
                     const ex = exerciseLookup.get(entry.exerciseId);
                     const editData = editingData[entry.logId];
@@ -622,16 +622,12 @@ function TrainingLogTable({
                     const isTimedEntry = entry.exerciseType === "timed";
 
                     return (
-                      <motion.tr
+                      <tr
                         key={entry.logId}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.12, ease: "easeOut" }}
-                        className={`border-b transition-colors duration-100 ${
+                        className={`border-b ${
                           isEditMode
-                            ? "border-jade-glow/15 bg-jade-deep/5 hover:bg-jade-deep/10"
-                            : "border-ink-light/50 hover:bg-ink-mid/10"
+                            ? "border-jade-glow/15 bg-jade-deep/5"
+                            : "border-ink-light/50"
                         }`}
                       >
                         {showDate && (
@@ -657,7 +653,7 @@ function TrainingLogTable({
                           </td>
                         )}
                         <td
-                          className={`${effectiveCompact ? "px-1 py-1" : "px-1.5 py-1.5"} align-middle whitespace-nowrap cursor-pointer hover:bg-jade-deep/10 transition-colors ${isEditMode ? "ring-1 ring-jade-glow/20" : ""}`}
+                          className={`${effectiveCompact ? "px-1 py-1" : "px-1.5 py-1.5"} align-middle whitespace-nowrap cursor-pointer ${isEditMode ? "ring-1 ring-jade-glow/20" : ""}`}
                           style={{ minWidth: "120px" }}
                           onClick={() => {
                             if (isEditMode) {
@@ -675,12 +671,12 @@ function TrainingLogTable({
                           }}
                         >
                           {!showIllumination ? (
-                            <span className="text-xs text-cloud-white" style={softDimStyle} title={entryDisplayName}>
+                            <span className="text-xs text-cloud-white hover:bg-jade-deep/20 transition-colors duration-100 px-1 py-0.5 rounded" style={softDimStyle} title={entryDisplayName}>
                               {entryDisplayName}
                             </span>
                           ) : (
                             <div
-                              className="px-2 py-1 rounded-md border inline-flex items-center gap-1.5"
+                              className="px-2 py-1 rounded-md border inline-flex items-center gap-1.5 hover:bg-jade-deep/20 transition-colors duration-100"
                               style={
                                 glowIntensity > 0
                                   ? ({ ...(displayGlowStyle as React.CSSProperties), ...(softDimStyle || {}) } as React.CSSProperties)
@@ -908,10 +904,10 @@ function TrainingLogTable({
                             </motion.button>
                           </td>
                         )}
-                      </motion.tr>
+                      </tr>
                     );
                   })}
-                </AnimatePresence>
+                </>
               )}
             </tbody>
           </table>
