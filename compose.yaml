@@ -1,11 +1,11 @@
 # ============================================
-# Wuxia Cultivation Tracker — Docker Compose
+# Immortals Log — Docker Compose
 # Production-grade deployment for Portainer
 # ============================================
 
 services:
   app:
-    image: ghcr.io/alex4lifesz-code/wuxia-log:${APP_VERSION:-latest}
+    image: ghcr.io/alex4lifesz-code/immortals_log:${APP_VERSION:-1.0.0}
     container_name: wuxia-cultivation-tracker
     restart: always
     ports:
@@ -49,10 +49,10 @@ services:
       options:
         max-size: "10m"
         max-file: "5"
-        tag: "wuxia-{{.Name}}"
+        tag: "immortals-log-{{.Name}}"
     labels:
-      com.centurylabs.description: "Wuxia Cultivation Workout Tracker"
-      com.centurylabs.version: "${APP_VERSION:-2.1.0}"
+      com.centurylabs.description: "Immortals Log"
+      com.centurylabs.version: "${APP_VERSION:-1.0.0}"
       com.centurylabs.maintainer: "Century Labs"
       com.centurylabs.environment: "production"
 
