@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 type User = {
@@ -23,10 +23,16 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const didHydrateRef = useRef(false);
   const router = useRouter();
 
   // Hydrate auth state from cookie-based session on mount
   useEffect(() => {
+    if (didHydrateRef.current) {
+      return;
+    }
+    didHydrateRef.current = true;
+
     let cancelled = false;
 
     async function hydrate() {
