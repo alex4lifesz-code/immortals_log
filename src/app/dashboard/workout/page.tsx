@@ -42,6 +42,7 @@ export default function ProgressionPage() {
   const [filterCategory, setFilterCategory] = useState("");
   const [filterType, setFilterType] = useState("");
   const [filterEquipment, setFilterEquipment] = useState("");
+  const [filterMuscleGroup, setFilterMuscleGroup] = useState("");
   const [detailExercise, setDetailExercise] = useState<ProgressionExercise | null>(null);
   const [levelDefaults, setLevelDefaults] = useState<Record<string, number>>({});
   const [selectedTierIds, setSelectedTierIds] = useState<Record<string, string>>({});
@@ -49,15 +50,21 @@ export default function ProgressionPage() {
   const [readyToLogQueueHydrated, setReadyToLogQueueHydrated] = useState(false);
   const [activeQueueItemId, setActiveQueueItemId] = useState<string | null>(null);
   const [selectedLogFilter, setSelectedLogFilter] = useState<LogTableFilter | null>(null);
+  const [throwingQueueItemId, setThrowingQueueItemId] = useState<string | null>(null);
+  const [hoveredQueueItemId, setHoveredQueueItemId] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedDayFilter, setSelectedDayFilter] = useState<number | null>(null);
-  const [showMobileRailSearch, setShowMobileRailSearch] = useState(false);
-  const [showMobileRailFilters, setShowMobileRailFilters] = useState(false);
-  const [mobileRailSort, setMobileRailSort] = useState<"most-recent" | "most-performed" | "a-z" | "z-a">("most-recent");
-  const [mobileRailPerformedOnly, setMobileRailPerformedOnly] = useState(false);
+  const [mobileRailOpenMenu, setMobileRailOpenMenu] = useState<"category" | "muscle" | "equipment" | null>(null);
   const [_exerciseOrder, setExerciseOrder] = useState<string[]>([]);
   const [physique, setPhysique] = useState<UserPhysiqueSettings>(DEFAULT_USER_PHYSIQUE);
   const mobileRailScrollRef = useRef<HTMLDivElement | null>(null);
+  const [railHasScrolled, setRailHasScrolled] = useState(false);
+  const [railCanScroll, setRailCanScroll] = useState(false);
+  const [railHintDirection, setRailHintDirection] = useState<"left" | "right">("right");
+  const railLastScrollLeftRef = useRef(0);
+  const queuePressStartedAtRef = useRef<number>(0);
+  const queuePressStartPointRef = useRef<{ x: number; y: number } | null>(null);
+  const queuePressMovedRef = useRef(false);
   const filterHistoryArmedRef = useRef(false);
   const loggerHistoryArmedRef = useRef(false);
 
@@ -199,6 +206,36 @@ export default function ProgressionPage() {
     try { localStorage.setItem(readyToLogQueueStorageKey, JSON.stringify(readyToLogQueueItems)); } catch { /* ignore */ }
   }, [readyToLogQueueStorageKey, readyToLogQueueHydrated, readyToLogQueueItems]);
 
+  useEffect(() => {
+    const el = mobileRailScrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const maxScrollLeft = Math.max(0, el.scrollWidth - el.clientWidth);
+      setRailCanScroll(maxScrollLeft > 8);
+      if (el.scrollLeft > 10) setRailHasScrolled(true);
+
+      if (maxScrollLeft <= 8) {
+        setRailHintDirection("right");
+        railLastScrollLeftRef.current = el.scrollLeft;
+        return;
+      }
+
+      if (el.scrollLeft <= 8) {
+        setRailHintDirection("right");
+      } else if (el.scrollLeft >= maxScrollLeft - 8) {
+        setRailHintDirection("left");
+      } else {
+        const previous = railLastScrollLeftRef.current;
+        if (el.scrollLeft > previous + 0.5) setRailHintDirection("right");
+        if (el.scrollLeft < previous - 0.5) setRailHintDirection("left");
+      }
+      railLastScrollLeftRef.current = el.scrollLeft;
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
+
   const updateLevelDefault = useCallback((exerciseId: string, level: number) => {
     setLevelDefaults((prev) => {
       const next = { ...prev, [exerciseId]: level };
@@ -225,9 +262,10 @@ export default function ProgressionPage() {
   }, [fetchExercises]);
 
   const addExercise = useCallback((exerciseId: string) => {
-    const queueItemId = createReadyToLogQueueItemId();
-    setReadyToLogQueueItems((prev) => [...prev, { id: queueItemId, exerciseId }]);
-    return queueItemId;
+    setReadyToLogQueueItems((prev) => {
+      if (prev.some((item) => item.exerciseId === exerciseId)) return prev;
+      return [...prev, { id: createReadyToLogQueueItemId(), exerciseId }];
+    });
   }, []);
 
   const selectedExerciseIds = useMemo(
@@ -329,6 +367,18 @@ export default function ProgressionPage() {
     [exercises]
   );
 
+  const muscleGroups = useMemo(() => {
+    const tags = new Set<string>();
+    for (const exercise of exercises) {
+      const raw = [exercise.primaryMuscles, exercise.secondaryMuscles].filter(Boolean).join(",");
+      if (!raw) continue;
+      for (const token of raw.split(/[|,\/]/).map((part) => part.trim()).filter(Boolean)) {
+        tags.add(token);
+      }
+    }
+    return [...tags].sort();
+  }, [exercises]);
+
   const selectedExercises = useMemo(
     () => readyToLogQueueItems
       .map((item) => {
@@ -350,6 +400,8 @@ export default function ProgressionPage() {
 
   const horizontalSidebarExercises = useMemo(() => {
     const filtered = exercises.map((exercise) => {
+      if (selectedExerciseIds.has(exercise.id)) return false;
+
       if (selectedDayFilter !== null) {
         if (!exercise.assignedDays || exercise.assignedDays.trim() === "") return false;
         const assignedDays = exercise.assignedDays
@@ -361,9 +413,10 @@ export default function ProgressionPage() {
 
       const categoryTags = parseCategoryTags(exercise.category);
       const equipmentTags = getEquipmentTags(exercise);
+      const muscleText = [exercise.primaryMuscles, exercise.secondaryMuscles].filter(Boolean).join(" ").toLowerCase();
       if (filterCategory && !categoryTags.includes(filterCategory)) return false;
-      if (filterType && exercise.type !== filterType) return false;
       if (filterEquipment && !equipmentTags.includes(filterEquipment)) return false;
+      if (filterMuscleGroup && !muscleText.includes(filterMuscleGroup.toLowerCase())) return false;
 
       if (searchTerm) {
         const normalized = searchTerm.trim().toLowerCase();
@@ -391,36 +444,25 @@ export default function ProgressionPage() {
       };
     }).filter((item): item is HorizontalRailExercise => item !== false);
 
-    const performedFiltered = mobileRailPerformedOnly
-      ? filtered.filter((item) => item.logCount > 0)
-      : filtered;
-
-    return [...performedFiltered]
+    return [...filtered]
       .sort((a, b) => {
-        if (mobileRailSort === "most-performed") {
-          if (a.logCount !== b.logCount) return b.logCount - a.logCount;
-          return b.latestTs - a.latestTs;
-        }
-        if (mobileRailSort === "a-z") return a.displayName.localeCompare(b.displayName);
-        if (mobileRailSort === "z-a") return b.displayName.localeCompare(a.displayName);
         if (a.latestTs !== b.latestTs) return b.latestTs - a.latestTs;
         return b.logCount - a.logCount;
       })
       .slice(0, 30);
   }, [
     exercises,
+    selectedExerciseIds,
     filterCategory,
     filterEquipment,
-    filterType,
-    mobileRailPerformedOnly,
-    mobileRailSort,
+    filterMuscleGroup,
     searchTerm,
     selectedDayFilter,
     settings.terminologyMode,
   ]);
 
   const handleMobileRailWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
-    const rail = mobileRailScrollRef.current;
+    const rail = event.currentTarget;
     if (!rail) return;
     if (rail.scrollWidth <= rail.clientWidth) {
       event.preventDefault();
@@ -436,6 +478,13 @@ export default function ProgressionPage() {
     event.preventDefault();
     event.stopPropagation();
   }, []);
+
+  const handleRailHintClick = useCallback(() => {
+    const rail = mobileRailScrollRef.current;
+    if (!rail) return;
+    const delta = railHintDirection === "right" ? 168 : -168;
+    rail.scrollBy({ left: delta, behavior: "smooth" });
+  }, [railHintDirection]);
 
   const loggerTargetQueueItemId = activeQueueItemId;
   const activeLoggerQueueItem = loggerTargetQueueItemId
@@ -549,180 +598,151 @@ export default function ProgressionPage() {
       ) : (
         <div className="px-0 py-2 sm:py-3 space-y-3 sm:space-y-4">
           {isMobile && (
-            <section className="sticky top-0 z-30 -mx-1 px-1">
+            <section className="-mx-1 px-1">
               <div
-                className="rounded-xl border border-jade-glow/25 backdrop-blur-sm px-2 py-1.5 shadow-[var(--shadow-elev-1)]"
+                className="rounded-2xl border border-jade-glow/35 backdrop-blur-sm px-2.5 py-2 shadow-[var(--shadow-elev-1)]"
                 style={{ background: "var(--surface-gradient-strong)" }}
               >
-                <div className="mb-1.5 flex items-center justify-between gap-2">
-                  <h3 className="text-[10px] uppercase tracking-[0.08em] text-mist-dark">Training Grounds</h3>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setShowMobileRailSearch((prev) => !prev)}
-                      className={`text-[10px] px-2 py-1 rounded border transition-colors ${
-                        showMobileRailSearch
-                          ? "border-jade-glow/55 text-jade-light bg-jade-deep/15"
-                          : "border-ink-light/35 text-mist-dark"
-                      }`}
-                    >
-                      Search
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowMobileRailFilters((prev) => !prev)}
-                      className={`text-[10px] px-2 py-1 rounded border transition-colors ${
-                        showMobileRailFilters
-                          ? "border-jade-glow/55 text-jade-light bg-jade-deep/15"
-                          : "border-ink-light/35 text-mist-dark"
-                      }`}
-                    >
-                      Filters
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        for (const id of [...selectedExerciseIds]) toggleExercise(id);
-                      }}
-                      disabled={selectedExerciseIds.size === 0}
-                      className={`text-[10px] px-2 py-1 rounded border transition-colors ${
-                        selectedExerciseIds.size > 0
-                          ? "border-crimson/45 text-crimson-light hover:bg-crimson-deep/20"
-                          : "border-ink-light/35 text-mist-dark"
-                      }`}
-                    >
-                      Clear Added
-                    </button>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <h3 className="text-[11px] font-semibold uppercase tracking-[0.09em] text-gold">Training Grounds</h3>
+                    <p className="mt-0.5 text-[10px] text-mist-dark">Quick add lane for mobile logging</p>
                   </div>
                 </div>
 
-                {showMobileRailSearch && (
-                  <div className="mb-1.5">
+                <div className="mb-2 flex items-center gap-2">
+                  <div className="relative flex-1">
                     <input
                       type="text"
                       value={searchTerm}
                       onChange={(event) => setSearchTerm(event.target.value)}
-                      placeholder="Search exercises..."
-                      className="w-full h-7 rounded-md border border-ink-light/40 bg-ink-dark/65 px-2 text-[10px] text-cloud-white placeholder:text-mist-dark outline-none focus:border-jade-glow/50"
+                      placeholder=""
+                      className="h-9 w-full rounded-lg border border-jade-glow/30 bg-ink-dark/70 pl-3 pr-8 text-[12px] text-cloud-white placeholder:text-mist-dark outline-none transition-colors focus:border-jade-glow/60"
                     />
+                    <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-mist-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <circle cx="11" cy="11" r="7" />
+                      <path strokeLinecap="round" d="M16.5 16.5l4 4" />
+                    </svg>
                   </div>
-                )}
-
-                {showMobileRailFilters && (
-                  <div className="mb-1.5 grid grid-cols-2 gap-1.5">
-                    <select
-                      value={filterCategory}
-                      onChange={(event) => setFilterCategory(event.target.value)}
-                      className="h-7 rounded-md border border-ink-light/40 bg-ink-dark/65 px-2 text-[10px] text-cloud-white outline-none"
-                    >
-                      <option value="">All Categories</option>
-                      {categories.map((category) => (
-                        <option key={category} value={category}>{category}</option>
-                      ))}
-                    </select>
-                    <select
-                      value={filterType}
-                      onChange={(event) => setFilterType(event.target.value)}
-                      className="h-7 rounded-md border border-ink-light/40 bg-ink-dark/65 px-2 text-[10px] text-cloud-white outline-none"
-                    >
-                      <option value="">All Types</option>
-                      {types.map((type) => (
-                        <option key={type} value={type}>{type}</option>
-                      ))}
-                    </select>
-                    <select
-                      value={filterEquipment}
-                      onChange={(event) => setFilterEquipment(event.target.value)}
-                      className="h-7 rounded-md border border-ink-light/40 bg-ink-dark/65 px-2 text-[10px] text-cloud-white outline-none"
-                    >
-                      <option value="">All Equipment</option>
-                      {equipmentTypes.map((equipment) => (
-                        <option key={equipment} value={equipment}>{equipment}</option>
-                      ))}
-                    </select>
-                    <select
-                      value={mobileRailSort}
-                      onChange={(event) => setMobileRailSort(event.target.value as "most-recent" | "most-performed" | "a-z" | "z-a")}
-                      className="h-7 rounded-md border border-ink-light/40 bg-ink-dark/65 px-2 text-[10px] text-cloud-white outline-none"
-                    >
-                      <option value="most-recent">Most Recent</option>
-                      <option value="most-performed">Most Performed</option>
-                      <option value="a-z">A-Z</option>
-                      <option value="z-a">Z-A</option>
-                    </select>
-                    <button
-                      type="button"
-                      onClick={() => setMobileRailPerformedOnly((prev) => !prev)}
-                      className={`h-7 rounded-md border px-2 text-[10px] font-medium transition-colors ${
-                        mobileRailPerformedOnly
-                          ? "border-jade-glow/60 text-jade-light bg-jade-deep/20"
-                          : "border-ink-light/40 text-mist-light"
-                      }`}
-                    >
-                      Performed Only
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFilterCategory("");
-                        setFilterType("");
-                        setFilterEquipment("");
-                        setMobileRailSort("most-recent");
-                        setMobileRailPerformedOnly(false);
-                      }}
-                      className="h-7 rounded-md border border-ink-light/40 px-2 text-[10px] text-mist-light transition-colors hover:text-cloud-white"
-                    >
-                      Reset Filters
-                    </button>
-                  </div>
-                )}
-
-                <p className="mb-1.5 text-[10px] text-mist-dark/90">Swipe horizontally to browse exercises</p>
+                </div>
 
                 <div
-                  ref={mobileRailScrollRef}
                   onWheelCapture={handleMobileRailWheel}
                   onWheel={handleMobileRailWheel}
-                  className="overflow-x-auto scrollbar-hide pb-1 cursor-ew-resize"
-                  style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: "contain", touchAction: "pan-x" }}
+                  className="mb-2 grid grid-cols-3 gap-2"
                 >
-                  <div className="flex min-w-max gap-2 pr-1 snap-x snap-mandatory">
+                    <div className="relative min-w-0">
+                      <button
+                        type="button"
+                        onClick={() => setMobileRailOpenMenu((prev) => (prev === "category" ? null : "category"))}
+                        className="flex h-9 w-full items-center justify-between rounded-lg border border-ink-light/45 bg-ink-dark/70 px-3 text-left text-[12px] font-medium text-cloud-white"
+                      >
+                        <span className="truncate">{filterCategory || "All Categories"}</span>
+                        <span className="ml-2 text-mist-dark">▾</span>
+                      </button>
+                      {mobileRailOpenMenu === "category" && (
+                        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 max-h-44 overflow-y-auto rounded-lg border border-jade-glow/35 bg-ink-deep/95 p-1 shadow-[var(--shadow-elev-2)]">
+                          <button type="button" onClick={() => { setFilterCategory(""); setMobileRailOpenMenu(null); }} className="mb-1 block w-full rounded-md px-2 py-2 text-left text-[12px] text-cloud-white hover:bg-ink-mid/60">All Categories</button>
+                          {categories.map((category) => (
+                            <button key={category} type="button" onClick={() => { setFilterCategory(category); setMobileRailOpenMenu(null); }} className="mb-1 block w-full rounded-md px-2 py-2 text-left text-[12px] text-cloud-white hover:bg-ink-mid/60">{category}</button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="relative min-w-0">
+                      <button
+                        type="button"
+                        onClick={() => setMobileRailOpenMenu((prev) => (prev === "muscle" ? null : "muscle"))}
+                        className="flex h-9 w-full items-center justify-between rounded-lg border border-ink-light/45 bg-ink-dark/70 px-3 text-left text-[12px] font-medium text-cloud-white"
+                      >
+                        <span className="truncate">{filterMuscleGroup || "Muscle Group"}</span>
+                        <span className="ml-2 text-mist-dark">▾</span>
+                      </button>
+                      {mobileRailOpenMenu === "muscle" && (
+                        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 max-h-44 overflow-y-auto rounded-lg border border-jade-glow/35 bg-ink-deep/95 p-1 shadow-[var(--shadow-elev-2)]">
+                          <button type="button" onClick={() => { setFilterMuscleGroup(""); setMobileRailOpenMenu(null); }} className="mb-1 block w-full rounded-md px-2 py-2 text-left text-[12px] text-cloud-white hover:bg-ink-mid/60">All Muscle Groups</button>
+                          {muscleGroups.map((muscle) => (
+                            <button key={muscle} type="button" onClick={() => { setFilterMuscleGroup(muscle); setMobileRailOpenMenu(null); }} className="mb-1 block w-full rounded-md px-2 py-2 text-left text-[12px] text-cloud-white hover:bg-ink-mid/60">{muscle}</button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="relative min-w-0">
+                      <button
+                        type="button"
+                        onClick={() => setMobileRailOpenMenu((prev) => (prev === "equipment" ? null : "equipment"))}
+                        className="flex h-9 w-full items-center justify-between rounded-lg border border-ink-light/45 bg-ink-dark/70 px-3 text-left text-[12px] font-medium text-cloud-white"
+                      >
+                        <span className="truncate">{filterEquipment || "All Equipment"}</span>
+                        <span className="ml-2 text-mist-dark">▾</span>
+                      </button>
+                      {mobileRailOpenMenu === "equipment" && (
+                        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 max-h-44 overflow-y-auto rounded-lg border border-jade-glow/35 bg-ink-deep/95 p-1 shadow-[var(--shadow-elev-2)]">
+                          <button type="button" onClick={() => { setFilterEquipment(""); setMobileRailOpenMenu(null); }} className="mb-1 block w-full rounded-md px-2 py-2 text-left text-[12px] text-cloud-white hover:bg-ink-mid/60">All Equipment</button>
+                          {equipmentTypes.map((equipment) => (
+                            <button key={equipment} type="button" onClick={() => { setFilterEquipment(equipment); setMobileRailOpenMenu(null); }} className="mb-1 block w-full rounded-md px-2 py-2 text-left text-[12px] text-cloud-white hover:bg-ink-mid/60">{equipment}</button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                </div>
+
+                <div className="relative">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-ink-deep/95 to-transparent" />
+                  <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-20 bg-gradient-to-l from-ink-deep/95 via-ink-deep/60 to-transparent" />
+                  {railCanScroll && (
+                    <button
+                      type="button"
+                      onClick={handleRailHintClick}
+                      aria-label={railHintDirection === "right" ? "Scroll carousel right" : "Scroll carousel left"}
+                      className={`absolute inset-y-0 z-20 flex items-center px-1.5 transition-opacity duration-150 ${railHintDirection === "right" ? "right-1" : "left-1"} ${railHasScrolled ? "opacity-70" : "opacity-100"}`}
+                    >
+                      <svg
+                        className="h-5 w-5 text-mist-light/70 animate-[swipe-hint_1.2s_ease-in-out_infinite]"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        strokeWidth={2}
+                      >
+                        {railHintDirection === "right"
+                          ? <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                          : <path strokeLinecap="round" strokeLinejoin="round" d="M15 5l-7 7 7 7" />
+                        }
+                      </svg>
+                    </button>
+                  )}
+
+                  <div
+                    ref={mobileRailScrollRef}
+                    onWheelCapture={handleMobileRailWheel}
+                    onWheel={handleMobileRailWheel}
+                    className="overflow-x-auto scrollbar-hide pb-1.5 scroll-smooth"
+                    style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: "contain", touchAction: "pan-x" }}
+                  >
+                    <div className="flex min-w-max gap-2 px-1.5 snap-x snap-mandatory [scroll-padding-inline:.5rem]">
                     {horizontalSidebarExercises.map((item) => {
                       const { exercise, logs, logCount, latestTs, displayName } = item;
-                      const isAdded = selectedExerciseIds.has(exercise.id);
                       const latestLabel = latestTs ? `${Math.max(1, Math.floor((Date.now() - latestTs) / 86400000))}d ago` : "No logs";
 
                       return (
                         <button
                           key={exercise.id}
                           type="button"
-                          onClick={() => {
-                            if (isAdded) {
-                              toggleExercise(exercise.id);
-                              return;
-                            }
-                            addExercise(exercise.id);
-                          }}
-                          className={`snap-start min-w-[148px] max-w-[148px] rounded-lg border px-2 py-1.5 text-left transition-all duration-150 ${
-                            isAdded
-                              ? "border-jade-glow/70 bg-jade-deep/20 shadow-[var(--glow-subtle)]"
-                              : "border-ink-light/35 bg-ink-dark/55 hover:border-jade-glow/45"
-                          }`}
+                          onClick={() => addExercise(exercise.id)}
+                          className="snap-start min-w-[148px] max-w-[148px] rounded-xl border border-ink-light/40 bg-gradient-to-br from-ink-mid/88 via-ink-dark/94 to-ink-deep px-2 py-2 text-left transition-all duration-200 active:scale-[0.985] hover:border-jade-glow/40"
                         >
-                          <div className="mb-1.5 h-14 rounded-md border border-ink-light/25 bg-gradient-to-r from-ink-mid/50 via-ink-light/10 to-ink-mid/50" />
-                          <div className="truncate text-[11px] font-semibold text-cloud-white">
+                          <div className="mb-2 h-14 rounded-lg border border-jade-glow/25 bg-gradient-to-r from-ink-mid/60 via-jade-deep/20 to-ink-mid/60" />
+                          <div className="truncate text-[12px] font-semibold text-cloud-white">
                             {displayName}
                           </div>
-                          <div className="mt-0.5 flex items-center justify-between gap-2 text-[10px] text-mist-dark">
+                          <div className="mt-1 flex items-center justify-between gap-2 text-[10px] text-mist-dark">
                             <span>{logCount} logs</span>
                             <span>{latestLabel}</span>
-                          </div>
-                          <div className={`mt-1 text-[10px] font-semibold ${isAdded ? "text-jade-light" : "text-mist-light"}`}>
-                            {isAdded ? "Added" : "Add Workout"}
                           </div>
                         </button>
                       );
                     })}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -753,11 +773,13 @@ export default function ProgressionPage() {
               <div className="space-y-0">
                 {selectedExercises.map(({ queueItemId, exercise }) => {
                   const isActiveLogger = loggerTargetQueueItemId === queueItemId;
+                  const isRowHovered = hoveredQueueItemId === queueItemId;
                   const level = getSelectedLevel(exercise, levelDefaults, autoLevelByExerciseId);
                   const queueFilterLevel = isGymCategoryExercise(exercise) ? null : level;
                   const isFilterActiveForRow =
                     selectedLogFilter?.exerciseId === exercise.id &&
                     selectedLogFilter?.levelNameLevel === queueFilterLevel;
+                  const isRowHighlighted = isActiveLogger || isFilterActiveForRow || isRowHovered;
                   const rowTierGlow = getTierGlowFromLogs(exercise, physique.bodyWeightKg);
                   const difficultyStyle = { glowColor: rowTierGlow.glowColor, glowShadow: `0 0 8px ${rowTierGlow.glowColor}30, inset 0 0 8px ${rowTierGlow.glowColor}10` };
                   const conventionalDifficulty = rowTierGlow.tierName;
@@ -769,23 +791,75 @@ export default function ProgressionPage() {
                   const draftSummary = draftSummaries[exercise.id];
                   const openLogger = () => setActiveQueueItemId(queueItemId);
                   return (
-                    <div
-                      key={queueItemId}
-                      className={`relative mb-1 flex items-center gap-2 rounded-md border px-2.5 py-2 cursor-pointer transform-gpu transition-[transform,background-color] duration-75 ease-out hover:-translate-y-0.5 ${
-                        isActiveLogger ? "bg-ink-mid/45" : "bg-ink-dark/45 hover:bg-ink-mid/35"
-                      }`}
-                      onClick={openLogger}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openLogger(); } }}
-                      style={{
-                        borderColor: difficultyStyle.glowColor,
-                        boxShadow: isActiveLogger
-                          ? `${difficultyStyle.glowShadow}, 0 0 14px ${difficultyStyle.glowColor}, inset 0 0 0 1px ${difficultyStyle.glowColor}`
-                          : `${difficultyStyle.glowShadow}, inset 0 0 0 1px ${difficultyStyle.glowColor}`,
-                        backgroundImage: "var(--surface-gradient-strong)",
-                      }}
-                    >
+                    <div key={queueItemId} className="relative mb-1 overflow-hidden rounded-md">
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex w-28 items-center justify-center border-l border-crimson/40 bg-crimson-deep/35 text-[10px] font-semibold tracking-wide text-crimson-light">
+                        Swipe left to remove
+                      </div>
+                      <motion.div
+                        drag="x"
+                        dragDirectionLock
+                        dragConstraints={{ left: -320, right: 0 }}
+                        dragElastic={0.05}
+                        dragMomentum
+                        dragTransition={{ power: 0.5, timeConstant: 180, modifyTarget: (target) => Math.min(0, target) }}
+                        animate={throwingQueueItemId === queueItemId ? { x: -260, opacity: 0.2, scale: 0.98 } : { x: 0, opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.16, ease: "easeOut" }}
+                        dragListener={throwingQueueItemId !== queueItemId}
+                        onDragEnd={(_, info) => {
+                          if (throwingQueueItemId === queueItemId) return;
+                          if (info.offset.x < -72 || info.velocity.x < -520) {
+                            setThrowingQueueItemId(queueItemId);
+                            window.setTimeout(() => {
+                              dismissQueueItem(queueItemId);
+                              setThrowingQueueItemId((prev) => (prev === queueItemId ? null : prev));
+                            }, 150);
+                          }
+                        }}
+                        className="relative flex items-center gap-2 rounded-md border px-2.5 py-2 cursor-pointer transform-gpu transition-[filter] duration-100 ease-out"
+                        onMouseEnter={() => setHoveredQueueItemId(queueItemId)}
+                        onMouseLeave={() => setHoveredQueueItemId((current) => (current === queueItemId ? null : current))}
+                        onPointerDown={(event) => {
+                          queuePressStartedAtRef.current = Date.now();
+                          queuePressStartPointRef.current = { x: event.clientX, y: event.clientY };
+                          queuePressMovedRef.current = false;
+                        }}
+                        onPointerMove={(event) => {
+                          if (!queuePressStartPointRef.current) return;
+                          const dx = Math.abs(event.clientX - queuePressStartPointRef.current.x);
+                          const dy = Math.abs(event.clientY - queuePressStartPointRef.current.y);
+                          if (dx > 8 || dy > 8) {
+                            queuePressMovedRef.current = true;
+                          }
+                        }}
+                        onPointerUp={(event) => {
+                          if (throwingQueueItemId === queueItemId) return;
+                          if (event.target instanceof Element && event.target.closest("button")) return;
+                          const heldMs = Date.now() - queuePressStartedAtRef.current;
+                          const isQuickTap = heldMs < 220 && !queuePressMovedRef.current;
+                          if (isQuickTap) {
+                            openLogger();
+                          }
+                          queuePressStartPointRef.current = null;
+                          queuePressMovedRef.current = false;
+                        }}
+                        onPointerCancel={() => {
+                          queuePressStartPointRef.current = null;
+                          queuePressMovedRef.current = false;
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openLogger(); } }}
+                        style={{
+                          borderColor: difficultyStyle.glowColor,
+                          boxShadow: isRowHighlighted
+                            ? `${difficultyStyle.glowShadow}, 0 0 14px ${difficultyStyle.glowColor}, inset 0 0 0 1px ${difficultyStyle.glowColor}`
+                            : `${difficultyStyle.glowShadow}, inset 0 0 0 1px ${difficultyStyle.glowColor}`,
+                          background: isRowHighlighted
+                            ? `linear-gradient(120deg, color-mix(in srgb, ${difficultyStyle.glowColor} 18%, var(--ink-mid)) 0%, color-mix(in srgb, ${difficultyStyle.glowColor} 8%, var(--ink-dark)) 100%)`
+                            : `linear-gradient(120deg, color-mix(in srgb, ${difficultyStyle.glowColor} 10%, var(--ink-dark)) 0%, color-mix(in srgb, ${difficultyStyle.glowColor} 4%, var(--ink-deep)) 100%)`,
+                          touchAction: "pan-y",
+                        }}
+                      >
                       <span
                         className="absolute left-0 top-0 h-full w-1 rounded-l-md"
                         style={{ backgroundColor: difficultyStyle.glowColor, boxShadow: `0 0 10px ${difficultyStyle.glowColor}` }}
@@ -849,15 +923,8 @@ export default function ProgressionPage() {
                         >
                           Filter
                         </button>
-                        <button
-                          type="button"
-                          onClick={(event) => { event.stopPropagation(); dismissQueueItem(queueItemId); }}
-                          className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-crimson/45 bg-crimson/10 text-[12px] font-bold leading-none text-crimson-light transition-all duration-150 hover:bg-crimson/20 hover:border-crimson/70"
-                          aria-label={`Remove ${stripBwPercentHint(exercise.wuxiaName || exercise.name)}`}
-                        >
-                          ✕
-                        </button>
                       </div>
+                      </motion.div>
                     </div>
                   );
                 })}
@@ -908,43 +975,38 @@ export default function ProgressionPage() {
         <AnimatePresence>
           {activeLoggerExercise && activeLoggerQueueItem && (
             <>
-              <motion.button
-                type="button"
+              <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.14 }}
-                onClick={() => setActiveQueueItemId(null)}
-                className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-[2px]"
-                aria-label="Close logger"
-              />
-              <motion.div
-                initial={isMobile ? { opacity: 0, y: 20 } : { opacity: 0, y: 14, scale: 0.97 }}
-                animate={isMobile ? { opacity: 1, y: 0 } : { opacity: 1, y: 0, scale: 1 }}
-                exit={isMobile ? { opacity: 0, y: 10 } : { opacity: 0, y: 10, scale: 0.97 }}
-                transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
-                className="fixed inset-0 z-[70] overflow-y-auto overscroll-contain p-2 sm:p-6 antialiased [text-rendering:optimizeLegibility]"
+                className="fixed inset-0 z-[70] overflow-hidden antialiased [text-rendering:optimizeLegibility]"
                 style={{ WebkitOverflowScrolling: "touch", WebkitFontSmoothing: "antialiased" }}
-                onClick={() => setActiveQueueItemId(null)}
+                aria-modal="true"
+                role="dialog"
               >
                 <div
-                  className="mx-auto w-full max-w-4xl pb-[calc(env(safe-area-inset-bottom)+7rem)]"
-                  onClick={(event) => event.stopPropagation()}
+                  className={isMobile
+                    ? "h-[100dvh] w-full overflow-y-auto overscroll-contain bg-[var(--background)]"
+                    : "h-full w-full overflow-y-auto overscroll-contain bg-[radial-gradient(circle_at_top,_color-mix(in_srgb,_var(--jade-glow)_16%,_transparent),_transparent_44%),_#0009] backdrop-blur-[4px] p-3 sm:p-8"
+                  }
                 >
-                  <SetLoggerPanel
-                    key={activeLoggerQueueItem.id}
-                    queueItemId={activeLoggerQueueItem.id}
-                    exercise={activeLoggerExercise}
-                    selectedLevel={getSelectedLevel(activeLoggerExercise, levelDefaults, autoLevelByExerciseId)}
-                    onSubmit={handleLog}
-                    onChangeLevel={updateLevelDefault}
-                    onDismiss={dismissQueueItem}
-                    onViewDetail={handleViewExercise}
-                    onExit={() => setActiveQueueItemId(null)}
-                    draftStorageKey={getDraftStorageKey(activeLoggerExercise.id)}
-                    physique={physique}
-                    userId={userId ?? null}
-                  />
+                  <div className={isMobile ? "w-full" : "mx-auto w-full max-w-[980px]"}>
+                    <SetLoggerPanel
+                      key={activeLoggerQueueItem.id}
+                      queueItemId={activeLoggerQueueItem.id}
+                      exercise={activeLoggerExercise}
+                      selectedLevel={getSelectedLevel(activeLoggerExercise, levelDefaults, autoLevelByExerciseId)}
+                      onSubmit={handleLog}
+                      onChangeLevel={updateLevelDefault}
+                      onDismiss={dismissQueueItem}
+                      onViewDetail={handleViewExercise}
+                      onExit={() => setActiveQueueItemId(null)}
+                      draftStorageKey={getDraftStorageKey(activeLoggerExercise.id)}
+                      physique={physique}
+                      userId={userId ?? null}
+                    />
+                  </div>
                 </div>
               </motion.div>
             </>

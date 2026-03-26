@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useCallback, useRef } from "react";
+import { usePathname } from "next/navigation";
 import { useAppContext } from "@/context/AppContext";
 
 function SwipeNavigation({
@@ -9,7 +10,9 @@ function SwipeNavigation({
   children: React.ReactNode;
 }) {
   const { isMobile, mobileSidebarOpen, setMobileSidebarOpen } = useAppContext();
+  const pathname = usePathname();
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const disableEdgeSidebarSwipe = pathname?.startsWith("/dashboard/workout");
 
   const onTouchStart = useCallback((event: React.TouchEvent<HTMLDivElement>) => {
     if (!isMobile) return;
@@ -19,7 +22,7 @@ function SwipeNavigation({
   }, [isMobile]);
 
   const onTouchEnd = useCallback((event: React.TouchEvent<HTMLDivElement>) => {
-    if (!isMobile || !touchStartRef.current || mobileSidebarOpen) {
+    if (!isMobile || disableEdgeSidebarSwipe || !touchStartRef.current || mobileSidebarOpen) {
       touchStartRef.current = null;
       return;
     }
@@ -41,7 +44,7 @@ function SwipeNavigation({
     }
 
     touchStartRef.current = null;
-  }, [isMobile, mobileSidebarOpen, setMobileSidebarOpen]);
+  }, [isMobile, disableEdgeSidebarSwipe, mobileSidebarOpen, setMobileSidebarOpen]);
 
   return (
     <div

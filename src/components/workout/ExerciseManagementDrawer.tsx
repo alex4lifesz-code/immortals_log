@@ -454,16 +454,17 @@ export default function ExerciseManagementDrawer({
 
               {/* Search — dark themed with icon prefix and glow focus */}
               <div className="relative">
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-mist-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
                 <input
                   type="text"
-                  placeholder="Search techniques..."
+                  placeholder=""
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-ink-deep border border-ink-light rounded-lg pl-10 pr-4 py-2.5 text-sm text-cloud-white placeholder:text-mist-dark outline-none transition-all duration-200 focus:border-jade-glow/50 focus:shadow-[0_0_12px_color-mix(in_srgb,var(--accent)_15%,transparent)]"
+                  className="w-full bg-ink-deep border border-ink-light rounded-lg pl-4 pr-10 py-2.5 text-sm text-cloud-white placeholder:text-mist-dark outline-none transition-all duration-200 focus:border-jade-glow/50 focus:shadow-[0_0_12px_color-mix(in_srgb,var(--accent)_15%,transparent)]"
                 />
+                <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-mist-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <circle cx="11" cy="11" r="7" />
+                  <path strokeLinecap="round" d="M16.5 16.5l4 4" />
+                </svg>
               </div>
 
               {/* Filter Controls — dynamic selects derived from actual exercise data */}

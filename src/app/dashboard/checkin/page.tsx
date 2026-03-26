@@ -81,6 +81,7 @@ function CheckInSidebar({
   dayNotes,
   onToggleNotes,
   showNotesPanel,
+  isMobile,
 }: {
   onAddToday: () => void;
   onAddCustom: () => void;
@@ -88,7 +89,55 @@ function CheckInSidebar({
   dayNotes: DayNote[];
   onToggleNotes: () => void;
   showNotesPanel: boolean;
+  isMobile: boolean;
 }) {
+  if (isMobile) {
+    return (
+      <div className="rounded-xl border border-jade-glow/25 backdrop-blur-sm p-2 shadow-[var(--shadow-elev-1)]" style={{ background: "var(--surface-gradient-strong)" }}>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <h3 className="text-[11px] font-semibold uppercase tracking-[0.09em] text-gold">Sect Register</h3>
+          <span className="rounded-full border border-ink-light/35 bg-ink-dark/55 px-2 py-0.5 text-[10px] text-mist-light">{users.length} cultivators</span>
+        </div>
+
+        <div className="mb-2 flex flex-wrap gap-2">
+          <GlowButton variant="jade" size="sm" className="min-w-[140px] flex-1" onClick={onAddToday}>
+            📅 Add Today
+          </GlowButton>
+          <GlowButton variant="gold" size="sm" className="min-w-[140px] flex-1" onClick={onAddCustom}>
+            📆 Add Date
+          </GlowButton>
+          <GlowButton
+            variant={showNotesPanel ? "jade" : "ghost"}
+            size="sm"
+            className="min-w-[140px] flex-1"
+            onClick={onToggleNotes}
+          >
+            📝 {showNotesPanel ? "Hide" : "Show"} Notes {dayNotes.length > 0 && `(${dayNotes.length})`}
+          </GlowButton>
+          <GlowButton variant="ghost" size="sm" className="min-w-[140px] flex-1">
+            📊 Export
+          </GlowButton>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5">
+          {users.length === 0 ? (
+            <p className="text-xs text-mist-dark italic">No cultivators yet</p>
+          ) : (
+            users.map((listedUser) => (
+              <span
+                key={listedUser.id}
+                className="inline-flex items-center gap-1 rounded-full border border-ink-light/35 bg-ink-dark/55 px-2 py-1 text-[10px] text-mist-light"
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-jade-glow" />
+                {listedUser.name}
+              </span>
+            ))
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="dashboard-sidebar-shell">
       <div className="dashboard-sidebar-scroll sidebar-scroll space-y-3">
@@ -543,9 +592,24 @@ export default function CheckInPage() {
     <PageLayout
       title="Sect Register"
       subtitle="Record attendance and physical metrics of all cultivators"
-      sidebar={<CheckInSidebar onAddToday={addTodayRow} onAddCustom={() => setShowCustomDateModal(true)} users={users} dayNotes={dayNotes} onToggleNotes={() => setShowNotesPanel(!showNotesPanel)} showNotesPanel={showNotesPanel} />}
+      sidebar={isMobile ? undefined : <CheckInSidebar onAddToday={addTodayRow} onAddCustom={() => setShowCustomDateModal(true)} users={users} dayNotes={dayNotes} onToggleNotes={() => setShowNotesPanel(!showNotesPanel)} showNotesPanel={showNotesPanel} isMobile={false} />}
       sidebarLabel="Check-In"
+      mobileContentPaddingClass="p-2 pb-24"
     >
+      {isMobile && (
+        <section className="mb-3">
+          <CheckInSidebar
+            onAddToday={addTodayRow}
+            onAddCustom={() => setShowCustomDateModal(true)}
+            users={users}
+            dayNotes={dayNotes}
+            onToggleNotes={() => setShowNotesPanel(!showNotesPanel)}
+            showNotesPanel={showNotesPanel}
+            isMobile
+          />
+        </section>
+      )}
+
       {loading ? (
         <PageSkeleton statCards={2} wideBlock rows={5} />
       ) : (

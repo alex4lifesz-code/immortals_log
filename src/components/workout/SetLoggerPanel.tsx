@@ -84,6 +84,8 @@ export function SetLoggerPanel({
   const [timerTarget, setTimerTarget] = useState<"hold" | "hold2" | "hold3">("hold");
   const [timerReps, setTimerReps] = useState("");
   const [activeMobileSet, setActiveMobileSet] = useState<1 | 2 | 3>(1);
+  const [expandedSetIds, setExpandedSetIds] = useState<Record<1 | 2 | 3, boolean>>({ 1: true, 2: false, 3: false });
+  const [setCount, setSetCount] = useState<1 | 2 | 3>(1);
   const [draftReady, setDraftReady] = useState(false);
   const [latestCheckInWeightKg, setLatestCheckInWeightKg] = useState<number | null>(null);
   const prevDraftKeyRef = useRef<string | null>(null);
@@ -165,6 +167,8 @@ export function SetLoggerPanel({
     setHold3("");
     resetTimer();
     setActiveMobileSet(1);
+    setExpandedSetIds({ 1: true, 2: false, 3: false });
+    setSetCount(1);
   };
 
   const mobileWeightSets = [
@@ -185,12 +189,42 @@ export function SetLoggerPanel({
     if (showHold) {
       const holdValue = setId === 1 ? hold : setId === 2 ? hold2 : hold3;
       const repsValue = setId === 1 ? r1 : setId === 2 ? r2 : r3;
-      return `${holdValue || "-"}s • ${repsValue || "-"} reps`;
+      return `${holdValue || "-"}s • ${repsValue || "-"}`;
     }
 
     const weightValue = setId === 1 ? w1 : setId === 2 ? w2 : w3;
     const repsValue = setId === 1 ? r1 : setId === 2 ? r2 : r3;
-    return `${weightValue || "-"} ${weightUnit} • ${repsValue || "-"} reps`;
+    return `${weightValue || "-"} ${weightUnit} • ${repsValue || "-"}`;
+  };
+
+  const clearSetValues = (setId: 1 | 2 | 3) => {
+    if (setId === 1) {
+      setW1("");
+      setR1("");
+      setHold("");
+      return;
+    }
+
+    if (setId === 2) {
+      setW2("");
+      setR2("");
+      setHold2("");
+      return;
+    }
+
+    setW3("");
+    setR3("");
+    setHold3("");
+  };
+
+  const handleRemoveSet = () => {
+    if (setCount <= 1) return;
+    const removingSet = setCount;
+    clearSetValues(removingSet);
+    const nextCount = (setCount - 1) as 1 | 2;
+    setSetCount(nextCount);
+    setExpandedSetIds((prev) => ({ ...prev, [removingSet]: false }));
+    setActiveMobileSet((prev) => (prev > nextCount ? nextCount : prev));
   };
 
   const mobilePanelBorder = `${getTierGlowFromLogs(exercise, physique.bodyWeightKg).glowColor}30`;
@@ -198,6 +232,7 @@ export function SetLoggerPanel({
   const useSetPanelLayout = popupLoggerStyle === "classic";
   const useMinimalLayout = popupLoggerStyle === "minimal";
   const setInputClass = `w-full border bg-ink-dark text-cloud-white outline-none transition-all duration-200 placeholder:text-mist-dark/35 hover:border-jade-glow/40 hover:bg-ink-dark/80 focus:bg-ink-mid/40 focus:border-jade-glow/60 focus:shadow-[var(--glow-subtle)] ${isMobile ? "rounded-xl px-3 py-3 text-sm" : "rounded-lg px-2.5 py-2 text-xs"}`;
+  const repOptions = useMemo(() => Array.from({ length: 20 }, (_, index) => String(index + 1)), []);
 
   useEffect(() => {
     setInputMode(getTierInputMode(exercise, selectedLevel));
@@ -206,6 +241,8 @@ export function SetLoggerPanel({
     setTimerElapsedMs(0);
     setTimerTick(0);
     setActiveMobileSet(1);
+    setExpandedSetIds({ 1: true, 2: false, 3: false });
+    setSetCount(1);
   }, [exercise, exercise.id, selectedLevel]);
 
   useEffect(() => {
@@ -263,6 +300,8 @@ export function SetLoggerPanel({
         setWeightUnit(draft.weightUnit === "lbs" ? "lbs" : "kg");
         setInputMode(draft.inputMode === "hold" ? "hold" : "weight");
         setActiveMobileSet(draft.activeMobileSet === 2 || draft.activeMobileSet === 3 ? draft.activeMobileSet : 1);
+        const hydratedSetCount = draft.setCount === 2 || draft.setCount === 3 ? draft.setCount : 1;
+        setSetCount(hydratedSetCount);
       }
     } catch {
       // Ignore draft parse/storage errors.
@@ -306,7 +345,7 @@ export function SetLoggerPanel({
         JSON.stringify({
           w1, r1, w2, r2, w3, r3, hold, hold2, hold3, notes,
           selectedModifierKg, selectedResistanceBand, selectedVariation,
-          weightUnit, inputMode, activeMobileSet,
+          weightUnit, inputMode, activeMobileSet, setCount,
         })
       );
     } catch {
@@ -316,7 +355,7 @@ export function SetLoggerPanel({
     draftStorageKey, draftReady,
     w1, r1, w2, r2, w3, r3, hold, hold2, hold3, notes,
     selectedModifierKg, selectedResistanceBand, selectedVariation,
-    weightUnit, inputMode, activeMobileSet,
+    weightUnit, inputMode, activeMobileSet, setCount,
   ]);
 
   useEffect(() => {
@@ -360,6 +399,10 @@ export function SetLoggerPanel({
 
   const getNextTimerTarget = (): "hold" | "hold2" | "hold3" => {
     if (!hold) return "hold";
+    if (setCount >= 2 && !hold2) return "hold2";
+    if (setCount >= 3 && !hold3) return "hold3";
+    if (setCount < 2) return "hold2";
+    if (setCount < 3) return "hold3";
     if (!hold2) return "hold2";
     return "hold3";
   };
@@ -389,10 +432,12 @@ export function SetLoggerPanel({
     if (timerTarget === "hold") {
       setHold(String(seconds));
       if (timerReps.trim()) setR1(timerReps.trim());
+      if (setCount < 2) setSetCount(2);
       setTimerTarget("hold2");
     } else if (timerTarget === "hold2") {
       setHold2(String(seconds));
       if (timerReps.trim()) setR2(timerReps.trim());
+      if (setCount < 3) setSetCount(3);
       setTimerTarget("hold3");
     } else {
       setHold3(String(seconds));
@@ -476,27 +521,42 @@ export function SetLoggerPanel({
       transition={{ duration: 0.12 }}
     >
       <div
-        className={`relative overflow-hidden border-2 rounded-2xl rounded-tr-[26px] rounded-bl-[26px] ${isCompact ? 'p-2' : 'p-3'}`}
+        className={isMobile
+          ? `relative min-h-[100dvh] overflow-hidden border-b ${isCompact ? 'p-2' : 'p-3 sm:p-4'}`
+          : `relative overflow-hidden rounded-[28px] border backdrop-blur-sm ${isCompact ? 'p-2' : 'p-3 sm:p-4'}`
+        }
         style={{
-          background: 'var(--ink-deep)',
-          borderColor: `${diffStyle.glowColor}d0`,
-          boxShadow: `0 0 20px ${diffStyle.glowColor}88, 0 0 40px ${diffStyle.glowColor}50, 0 0 70px ${diffStyle.glowColor}22, inset 0 0 16px ${diffStyle.glowColor}25, inset 0 0 0 1px ${diffStyle.glowColor}35, inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 7%, transparent)`,
+          background: 'linear-gradient(180deg, color-mix(in srgb, var(--ink-dark) 94%, black) 0%, color-mix(in srgb, var(--ink-deep) 96%, black) 52%, var(--ink-deep) 100%)',
+          borderColor: `${diffStyle.glowColor}4d`,
+          boxShadow: isMobile
+            ? `inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 3%, transparent)`
+            : `0 20px 36px #0009, inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 4%, transparent)`,
         }}
       >
         {/* Tier accent stripe */}
         <div
-          className="absolute left-0 top-0 bottom-0 w-[3px]"
-          style={{ background: `linear-gradient(to bottom, ${diffStyle.glowColor}, ${diffStyle.glowColor}40)` }}
+          className="absolute left-0 top-0 bottom-0 w-[2px]"
+          style={{ background: `linear-gradient(to bottom, ${diffStyle.glowColor}8c, ${diffStyle.glowColor}1f)` }}
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-24"
+          style={{ background: `linear-gradient(to bottom, color-mix(in srgb, ${diffStyle.glowColor} 9%, transparent) 0%, transparent 100%)` }}
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-14 -top-14 h-44 w-44 rounded-full blur-3xl"
+          style={{ background: `color-mix(in srgb, ${diffStyle.glowColor} 10%, transparent)` }}
         />
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-2.5 pl-2">
+        <div className="relative flex items-center justify-between mb-3 pl-2 pr-1 pb-2 border-b" style={{ borderColor: `${diffStyle.glowColor}2b` }}>
           <div className="flex items-center gap-2 min-w-0">
             {isScrollStyle && (
               <span className="text-sm opacity-80 shrink-0">{typeEmoji}</span>
             )}
             <h4
-              className={`${isCompact ? 'text-xs' : 'text-sm'} font-semibold truncate`}
+              className={`${isCompact ? 'text-xs' : 'text-sm'} font-semibold tracking-[0.02em] truncate`}
               style={{ color: diffStyle.glowColor }}
             >
               {displayName}
@@ -511,7 +571,7 @@ export function SetLoggerPanel({
           <div className="flex items-center gap-0.5">
             <button
               onClick={handleBackNavigation}
-              className="text-mist-dark/60 hover:text-crimson-light transition-colors text-sm px-1.5 py-0.5 rounded hover:bg-crimson-deep/10"
+              className="text-mist-dark/70 hover:text-crimson-light transition-colors text-sm px-1.5 py-0.5 rounded-md hover:bg-crimson-deep/20 border border-transparent hover:border-crimson/25"
               title="Back"
             >
               ✕
@@ -530,7 +590,13 @@ export function SetLoggerPanel({
           <div className={`pl-2 ${isMobile ? "space-y-3" : "space-y-2"}`}>
             <div className="grid gap-2">
               {/* Category & Type info */}
-              <div className={`flex items-center gap-2 border border-ink-light/20 bg-ink-mid/15 ${isMobile ? "rounded-xl px-3 py-2" : "rounded-lg px-2.5 py-1.5"}`}>
+              <div
+                className={`flex items-center gap-2 border ${isMobile ? "rounded-xl px-3 py-2" : "rounded-lg px-2.5 py-1.5"}`}
+                style={{
+                  borderColor: `${diffStyle.glowColor}2a`,
+                  background: `linear-gradient(120deg, color-mix(in srgb, ${diffStyle.glowColor} 5%, var(--ink-mid)) 0%, color-mix(in srgb, ${diffStyle.glowColor} 2%, var(--ink-dark)) 100%)`,
+                }}
+              >
                 <span className={`${isMobile ? "text-[11px]" : "text-[10px]"} text-mist-light`}>
                   {parseCategoryTags(exercise.category)[0] || "Exercise"} • {exercise.weighted ? "Weighted" : exercise.bodyweight ? "Bodyweight" : "Timed"}
                 </span>
@@ -538,12 +604,12 @@ export function SetLoggerPanel({
 
               <div className={`grid gap-2 ${showHold ? "grid-cols-1" : "grid-cols-2"}`}>
                 {!showHold && (
-                  <div className={`flex overflow-hidden border border-ink-light/30 ${isMobile ? "rounded-xl" : "rounded-lg"}`}>
+                  <div className={`flex overflow-hidden border border-ink-light/25 bg-ink-dark/40 ${isMobile ? "rounded-xl" : "rounded-lg"}`}>
                     <button
                       onClick={() => setWeightUnit("kg")}
                       className={`flex-1 font-semibold transition-all duration-200 border-r border-ink-light/30 ${isMobile ? "px-3 py-2.5 text-[11px]" : "px-2.5 py-2 text-[10px]"} ${
                         weightUnit === "kg"
-                          ? "bg-jade-deep/70 text-cloud-white border-jade-glow/50 shadow-[var(--glow-subtle)]"
+                          ? "bg-jade-deep/65 text-cloud-white border-jade-glow/45"
                           : "bg-ink-mid/55 text-mist-light/85 hover:bg-ink-mid/80 hover:text-cloud-white"
                       }`}
                     >
@@ -553,7 +619,7 @@ export function SetLoggerPanel({
                       onClick={() => setWeightUnit("lbs")}
                       className={`flex-1 font-semibold transition-all duration-200 ${isMobile ? "px-3 py-2.5 text-[11px]" : "px-2.5 py-2 text-[10px]"} ${
                         weightUnit === "lbs"
-                          ? "bg-jade-deep/70 text-cloud-white border-jade-glow/50 shadow-[var(--glow-subtle)]"
+                          ? "bg-jade-deep/65 text-cloud-white border-jade-glow/45"
                           : "bg-ink-mid/55 text-mist-light/85 hover:bg-ink-mid/80 hover:text-cloud-white"
                       }`}
                     >
@@ -562,12 +628,12 @@ export function SetLoggerPanel({
                   </div>
                 )}
 
-                <div className={`flex overflow-hidden border border-ink-light/30 ${isMobile ? "rounded-xl" : "rounded-lg"}`}>
+                <div className={`flex overflow-hidden border border-ink-light/25 bg-ink-dark/40 ${isMobile ? "rounded-xl" : "rounded-lg"}`}>
                   <button
                     onClick={() => { setInputMode("weight"); resetEntryFields(); }}
                     className={`flex-1 font-semibold transition-all duration-200 border-r ${isMobile ? "px-3 py-2.5 text-[11px]" : "px-2.5 py-2 text-[10px]"} ${
                       inputMode === "weight"
-                        ? "bg-jade-deep/55 text-cloud-white border-jade/40 shadow-[var(--glow-subtle)]"
+                        ? "bg-jade-deep/50 text-cloud-white border-jade/40"
                         : "bg-ink-mid/60 text-mist-light border-ink-light/30 hover:bg-ink-mid/80 hover:text-cloud-white"
                     }`}
                   >
@@ -577,7 +643,7 @@ export function SetLoggerPanel({
                     onClick={() => { setInputMode("hold"); resetEntryFields(); }}
                     className={`flex-1 font-semibold transition-all duration-200 ${isMobile ? "px-3 py-2.5 text-[11px]" : "px-2.5 py-2 text-[10px]"} ${
                       inputMode === "hold"
-                        ? "bg-mountain-blue/30 text-cloud-white shadow-[var(--glow-blue)]"
+                        ? "bg-mountain-blue/25 text-cloud-white"
                         : "bg-ink-mid/60 text-mist-light hover:bg-ink-mid/80 hover:text-cloud-white"
                     }`}
                   >
@@ -654,21 +720,27 @@ export function SetLoggerPanel({
               className={isMobile ? "space-y-2" : "grid gap-2"}
               style={isMobile ? undefined : { gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}
             >
-              {mobileSetConfigs.map((setConfig) => {
-                const isOpen = isMobile ? activeMobileSet === setConfig.id : true;
+              {mobileSetConfigs.slice(0, setCount).map((setConfig) => {
+                const isOpen = expandedSetIds[setConfig.id];
                 return (
                   <div
                     key={setConfig.id}
-                    className={`overflow-hidden border bg-ink-dark/55 ${isMobile ? "rounded-2xl" : "rounded-xl"}`}
+                    className={`overflow-hidden border ${isMobile ? "rounded-2xl" : "rounded-xl"}`}
                     style={{
-                      borderColor: isOpen ? `${diffStyle.glowColor}55` : mobilePanelBorder,
-                      boxShadow: isOpen ? `0 0 18px ${diffStyle.glowColor}22` : "none",
+                      background: isOpen
+                        ? `linear-gradient(140deg, color-mix(in srgb, ${diffStyle.glowColor} 7%, var(--ink-dark)) 0%, color-mix(in srgb, ${diffStyle.glowColor} 3%, var(--ink-deep)) 100%)`
+                        : "color-mix(in srgb, var(--ink-dark) 82%, black)",
+                      borderColor: isOpen ? `${diffStyle.glowColor}52` : mobilePanelBorder,
+                      boxShadow: isOpen
+                        ? `inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 6%, transparent)`
+                        : "inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 3%, transparent)",
                     }}
                   >
                     <button
                       type="button"
                       onClick={() => {
-                        if (isMobile) setActiveMobileSet(setConfig.id);
+                        setExpandedSetIds((prev) => ({ ...prev, [setConfig.id]: !prev[setConfig.id] }));
+                        setActiveMobileSet(setConfig.id);
                       }}
                       className={`flex w-full items-center justify-between gap-3 text-left ${isMobile ? "px-3 py-3" : "px-2.5 py-2"}`}
                     >
@@ -676,11 +748,9 @@ export function SetLoggerPanel({
                         <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-mist-dark">{setConfig.title}</div>
                         <div className={`mt-1 font-medium text-cloud-white ${isMobile ? "text-sm" : "text-xs"}`}>{getMobileSetSummary(setConfig.id)}</div>
                       </div>
-                      {isMobile && (
-                        <span className="text-lg leading-none" style={{ color: diffStyle.glowColor }}>
-                          {isOpen ? "−" : "+"}
-                        </span>
-                      )}
+                      <span className="text-lg leading-none" style={{ color: diffStyle.glowColor }}>
+                        {isOpen ? "−" : "+"}
+                      </span>
                     </button>
 
                     {isOpen && (
@@ -747,19 +817,20 @@ export function SetLoggerPanel({
                               <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-mist-dark">{setConfig.secondaryLabel}</span>
                               <span className="invisible text-[9px] font-bold px-2 py-1">BW</span>
                             </div>
-                            <input
-                              type="number"
-                              min="0"
-                              max="500"
+                            <select
                               value={setConfig.secondaryValue}
                               onChange={(e) => {
                                 setConfig.setSecondary(e.target.value);
                                 if (shakeError && setConfig.id === 1) setShakeError(false);
                               }}
-                              placeholder="reps"
                               className={`${setInputClass}${shakeError && setConfig.id === 1 ? ' animate-shake' : ''}`}
                               style={{ borderColor: shakeError && setConfig.id === 1 ? "var(--state-error-border)" : "color-mix(in srgb, var(--gold) 35%, transparent)" }}
-                            />
+                            >
+                              <option value=""></option>
+                              {repOptions.map((rep) => (
+                                <option key={rep} value={rep}>{rep}</option>
+                              ))}
+                            </select>
                           </label>
                         </div>
                       </div>
@@ -767,6 +838,31 @@ export function SetLoggerPanel({
                   </div>
                 );
               })}
+
+              <div className="grid gap-2 grid-cols-2">
+                <button
+                  type="button"
+                  onClick={handleRemoveSet}
+                  disabled={setCount <= 1}
+                  className={`w-full border border-dashed border-crimson/45 bg-crimson-deep/18 text-crimson-light hover:bg-crimson-deep/35 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${isMobile ? "rounded-xl px-3 py-2.5 text-[11px]" : "rounded-lg px-2.5 py-2 text-[10px]"}`}
+                >
+                  - Remove Set
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (setCount >= 3) return;
+                    const nextCount = (setCount + 1) as 2 | 3;
+                    setSetCount(nextCount);
+                    setExpandedSetIds((prev) => ({ ...prev, [nextCount]: true }));
+                    setActiveMobileSet(nextCount);
+                  }}
+                  disabled={setCount >= 3}
+                  className={`w-full border border-dashed border-jade-glow/45 bg-ink-mid/20 text-jade-light hover:bg-ink-mid/42 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${isMobile ? "rounded-xl px-3 py-2.5 text-[11px]" : "rounded-lg px-2.5 py-2 text-[10px]"}`}
+                >
+                  + Add Set
+                </button>
+              </div>
             </div>
 
             <label className="block space-y-1">
@@ -801,7 +897,7 @@ export function SetLoggerPanel({
                     style={{
                       background: "var(--timed-accent-soft)",
                       borderColor: "var(--timed-accent-border)",
-                      boxShadow: `0 0 12px ${diffStyle.glowColor}44`,
+                      boxShadow: `inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 7%, transparent)`,
                     }}
                     title="Open compact hold timer"
                   >
@@ -815,12 +911,18 @@ export function SetLoggerPanel({
                   animate={saved ? { scale: [1, 1.02, 1] } : { scale: 1 }}
                   whileTap={!submitting ? { scale: 0.98 } : {}}
                   transition={{ duration: 0.3 }}
-                  className={`w-full font-semibold disabled:opacity-40 cursor-pointer ${isMobile ? "rounded-xl px-4 py-3 text-sm" : "rounded-lg px-3 py-2 text-xs"}`}
+                  className={`w-full border font-bold uppercase tracking-[0.08em] disabled:opacity-40 cursor-pointer ${isMobile ? "rounded-xl px-4 py-3 text-sm" : "rounded-lg px-3 py-2 text-xs"}`}
                   style={{
-                    background: saved ? `${diffStyle.glowColor}30` : `${diffStyle.glowColor}18`,
-                    border: `1px solid ${saved ? `${diffStyle.glowColor}60` : `${diffStyle.glowColor}35`}`,
-                    color: diffStyle.glowColor,
-                    transition: 'background 0.3s, border-color 0.3s',
+                    background: saved
+                      ? `linear-gradient(180deg, color-mix(in srgb, ${diffStyle.glowColor} 28%, var(--ink-mid)) 0%, color-mix(in srgb, ${diffStyle.glowColor} 20%, var(--ink-dark)) 100%)`
+                      : `linear-gradient(180deg, color-mix(in srgb, ${diffStyle.glowColor} 22%, var(--ink-mid)) 0%, color-mix(in srgb, ${diffStyle.glowColor} 15%, var(--ink-dark)) 100%)`,
+                    borderColor: saved ? `${diffStyle.glowColor}72` : `${diffStyle.glowColor}55`,
+                    boxShadow: saved
+                      ? `inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 16%, transparent)`
+                      : `inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 12%, transparent)`,
+                    color: "var(--cloud-white)",
+                    textShadow: "0 1px 0 rgba(0,0,0,.35)",
+                    transition: 'background 0.3s, border-color 0.3s, box-shadow 0.3s',
                   }}
                 >
                   {submitting ? "Saving…" : saved ? "✦ Logged!" : "Log Training Data"}
@@ -875,13 +977,16 @@ export function SetLoggerPanel({
                   </button>
                 )}
                 <span className="text-[10px] font-bold w-5 text-right text-gold/80">{s.rLabel}</span>
-                <input
-                  type="number" min="0" max="500"
+                <select
                   value={s.rGet} onChange={(e) => { s.rSet(e.target.value); if (shakeError && s.id === 1) setShakeError(false); }}
-                  placeholder="—"
-                  className={`w-16 rounded-lg px-2 py-2 text-xs text-center outline-none bg-ink-dark border text-cloud-white placeholder:text-mist-dark/30 focus:border-gold/50 focus:bg-ink-mid/40${shakeError && s.id === 1 ? " animate-shake" : ""}`}
+                  className={`w-16 rounded-lg px-2 py-2 text-xs text-center outline-none bg-ink-dark border text-cloud-white focus:border-gold/50 focus:bg-ink-mid/40${shakeError && s.id === 1 ? " animate-shake" : ""}`}
                   style={{ borderColor: shakeError && s.id === 1 ? "var(--state-error-border)" : "color-mix(in srgb, var(--gold) 20%, transparent)" }}
-                />
+                >
+                  <option value=""></option>
+                  {repOptions.map((rep) => (
+                    <option key={rep} value={rep}>{rep}</option>
+                  ))}
+                </select>
               </div>
             ))}
 
@@ -921,8 +1026,14 @@ export function SetLoggerPanel({
               )}
               <motion.button onClick={handleSubmit} disabled={submitting}
                 whileTap={!submitting ? { scale: 0.97 } : {}}
-                className="flex-1 py-2 rounded-lg text-xs font-semibold disabled:opacity-40 cursor-pointer"
-                style={{ background: `${diffStyle.glowColor}18`, border: `1px solid ${diffStyle.glowColor}35`, color: diffStyle.glowColor }}>
+                className="flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-[0.08em] border disabled:opacity-40 cursor-pointer"
+                style={{
+                  background: `linear-gradient(180deg, color-mix(in srgb, ${diffStyle.glowColor} 30%, var(--ink-mid)) 0%, color-mix(in srgb, ${diffStyle.glowColor} 18%, var(--ink-dark)) 100%)`,
+                  borderColor: `${diffStyle.glowColor}66`,
+                  boxShadow: `0 8px 18px color-mix(in srgb, ${diffStyle.glowColor} 24%, transparent), inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 14%, transparent)`,
+                  color: "var(--cloud-white)",
+                  textShadow: "0 1px 0 rgba(0,0,0,.35)",
+                }}>
                 {submitting ? "Saving…" : saved ? "✦ Logged!" : "Log Set"}
               </motion.button>
             </div>
@@ -1090,40 +1201,70 @@ export function SetLoggerPanel({
                     <input type="number" min="0" step="0.5" value={w1} onChange={(e) => { setW1(e.target.value); if (shakeError) setShakeError(false); }} placeholder="—"
                       className={`w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-colors duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:bg-ink-mid/40${shakeError ? ' animate-shake' : ''}`}
                       style={{ borderColor: shakeError ? 'var(--state-error-border)' : `${diffStyle.glowColor}40` }} />
-                    <input type="number" min="0" max="500" value={r1} onChange={(e) => { setR1(e.target.value); if (shakeError) setShakeError(false); }} placeholder="—"
-                      className={`w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-colors duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:border-gold/50 focus:bg-ink-mid/40${shakeError ? ' animate-shake' : ''}`}
-                      style={{ borderColor: shakeError ? 'var(--state-error-border)' : 'color-mix(in srgb, var(--gold) 15%, transparent)' }} />
+                    <select value={r1} onChange={(e) => { setR1(e.target.value); if (shakeError) setShakeError(false); }}
+                      className={`w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-colors duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white focus:border-gold/50 focus:bg-ink-mid/40${shakeError ? ' animate-shake' : ''}`}
+                      style={{ borderColor: shakeError ? 'var(--state-error-border)' : 'color-mix(in srgb, var(--gold) 15%, transparent)' }}>
+                      <option value=""></option>
+                      {repOptions.map((rep) => (
+                        <option key={`compact-r1-${rep}`} value={rep}>{rep}</option>
+                      ))}
+                    </select>
                     <input type="number" min="0" step="0.5" value={w2} onChange={(e) => setW2(e.target.value)} placeholder="—"
                       className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:bg-ink-mid/40"
                       style={{ borderColor: `${diffStyle.glowColor}40` }} />
-                    <input type="number" min="0" max="500" value={r2} onChange={(e) => setR2(e.target.value)} placeholder="—"
-                      className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:border-gold/50 focus:bg-ink-mid/40"
-                      style={{ borderColor: 'color-mix(in srgb, var(--gold) 15%, transparent)' }} />
+                    <select value={r2} onChange={(e) => setR2(e.target.value)}
+                      className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white focus:border-gold/50 focus:bg-ink-mid/40"
+                      style={{ borderColor: 'color-mix(in srgb, var(--gold) 15%, transparent)' }}>
+                      <option value=""></option>
+                      {repOptions.map((rep) => (
+                        <option key={`compact-r2-${rep}`} value={rep}>{rep}</option>
+                      ))}
+                    </select>
                     <input type="number" min="0" step="0.5" value={w3} onChange={(e) => setW3(e.target.value)} placeholder="—"
                       className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:bg-ink-mid/40"
                       style={{ borderColor: `${diffStyle.glowColor}40` }} />
-                    <input type="number" min="0" max="500" value={r3} onChange={(e) => setR3(e.target.value)} placeholder="—"
-                      className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:border-gold/50 focus:bg-ink-mid/40"
-                      style={{ borderColor: 'color-mix(in srgb, var(--gold) 15%, transparent)' }} />
+                    <select value={r3} onChange={(e) => setR3(e.target.value)}
+                      className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white focus:border-gold/50 focus:bg-ink-mid/40"
+                      style={{ borderColor: 'color-mix(in srgb, var(--gold) 15%, transparent)' }}>
+                      <option value=""></option>
+                      {repOptions.map((rep) => (
+                        <option key={`compact-r3-${rep}`} value={rep}>{rep}</option>
+                      ))}
+                    </select>
                   </>
                 ) : (
                   <>
                     <input type="number" min="0" value={hold} onChange={(e) => { setHold(e.target.value); if (shakeError) setShakeError(false); }} placeholder="s"
                       className={`w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-colors duration-200 bg-ink-dark border border-mountain-blue/20 text-cloud-white placeholder:text-mist-dark/30 focus:border-mountain-blue-glow/50 focus:bg-ink-mid/40${shakeError ? ' animate-shake' : ''}`}
                       style={shakeError ? { borderColor: 'var(--state-error-border)' } : undefined} />
-                    <input type="number" min="0" max="500" value={r1} onChange={(e) => { setR1(e.target.value); if (shakeError) setShakeError(false); }} placeholder="—"
-                      className={`w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-colors duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:border-gold/50 focus:bg-ink-mid/40${shakeError ? ' animate-shake' : ''}`}
-                      style={{ borderColor: shakeError ? 'var(--state-error-border)' : 'color-mix(in srgb, var(--gold) 15%, transparent)' }} />
+                    <select value={r1} onChange={(e) => { setR1(e.target.value); if (shakeError) setShakeError(false); }}
+                      className={`w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-colors duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white focus:border-gold/50 focus:bg-ink-mid/40${shakeError ? ' animate-shake' : ''}`}
+                      style={{ borderColor: shakeError ? 'var(--state-error-border)' : 'color-mix(in srgb, var(--gold) 15%, transparent)' }}>
+                      <option value=""></option>
+                      {repOptions.map((rep) => (
+                        <option key={`compact-hold-r1-${rep}`} value={rep}>{rep}</option>
+                      ))}
+                    </select>
                     <input type="number" min="0" value={hold2} onChange={(e) => setHold2(e.target.value)} placeholder="s"
                       className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-mountain-blue/20 text-cloud-white placeholder:text-mist-dark/30 focus:border-mountain-blue-glow/50 focus:bg-ink-mid/40" />
-                    <input type="number" min="0" max="500" value={r2} onChange={(e) => setR2(e.target.value)} placeholder="—"
-                      className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:border-gold/50 focus:bg-ink-mid/40"
-                      style={{ borderColor: 'color-mix(in srgb, var(--gold) 15%, transparent)' }} />
+                    <select value={r2} onChange={(e) => setR2(e.target.value)}
+                      className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white focus:border-gold/50 focus:bg-ink-mid/40"
+                      style={{ borderColor: 'color-mix(in srgb, var(--gold) 15%, transparent)' }}>
+                      <option value=""></option>
+                      {repOptions.map((rep) => (
+                        <option key={`compact-hold-r2-${rep}`} value={rep}>{rep}</option>
+                      ))}
+                    </select>
                     <input type="number" min="0" value={hold3} onChange={(e) => setHold3(e.target.value)} placeholder="s"
                       className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-mountain-blue/20 text-cloud-white placeholder:text-mist-dark/30 focus:border-mountain-blue-glow/50 focus:bg-ink-mid/40" />
-                    <input type="number" min="0" max="500" value={r3} onChange={(e) => setR3(e.target.value)} placeholder="—"
-                      className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white placeholder:text-mist-dark/30 focus:border-gold/50 focus:bg-ink-mid/40"
-                      style={{ borderColor: 'color-mix(in srgb, var(--gold) 15%, transparent)' }} />
+                    <select value={r3} onChange={(e) => setR3(e.target.value)}
+                      className="w-full rounded-md px-1 py-1.5 text-center text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/30 text-cloud-white focus:border-gold/50 focus:bg-ink-mid/40"
+                      style={{ borderColor: 'color-mix(in srgb, var(--gold) 15%, transparent)' }}>
+                      <option value=""></option>
+                      {repOptions.map((rep) => (
+                        <option key={`compact-hold-r3-${rep}`} value={rep}>{rep}</option>
+                      ))}
+                    </select>
                   </>
                 )}
                 <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes..."
@@ -1160,12 +1301,18 @@ export function SetLoggerPanel({
                 whileHover={!submitting ? { scale: 1.06, boxShadow: `0 0 10px ${diffStyle.glowColor}50` } : {}}
                 whileTap={!submitting ? { scale: 0.96 } : {}}
                 transition={{ duration: 0.3 }}
-                className="px-4 py-1.5 rounded-md text-xs font-semibold disabled:opacity-40 cursor-pointer"
+                className="px-4 py-1.5 rounded-md text-xs font-bold uppercase tracking-[0.08em] border disabled:opacity-40 cursor-pointer"
                 style={{
-                  background: saved ? `${diffStyle.glowColor}30` : `${diffStyle.glowColor}18`,
-                  border: `1px solid ${saved ? `${diffStyle.glowColor}60` : `${diffStyle.glowColor}35`}`,
-                  color: diffStyle.glowColor,
-                  transition: 'background 0.3s, border-color 0.3s',
+                  background: saved
+                    ? `linear-gradient(180deg, color-mix(in srgb, ${diffStyle.glowColor} 42%, var(--ink-mid)) 0%, color-mix(in srgb, ${diffStyle.glowColor} 30%, var(--ink-dark)) 100%)`
+                    : `linear-gradient(180deg, color-mix(in srgb, ${diffStyle.glowColor} 32%, var(--ink-mid)) 0%, color-mix(in srgb, ${diffStyle.glowColor} 20%, var(--ink-dark)) 100%)`,
+                  borderColor: saved ? `${diffStyle.glowColor}88` : `${diffStyle.glowColor}66`,
+                  boxShadow: saved
+                    ? `0 0 18px ${diffStyle.glowColor}66, inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 20%, transparent)`
+                    : `0 8px 18px color-mix(in srgb, ${diffStyle.glowColor} 26%, transparent), inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 14%, transparent)`,
+                  color: "var(--cloud-white)",
+                  textShadow: "0 1px 0 rgba(0,0,0,.35)",
+                  transition: 'background 0.3s, border-color 0.3s, box-shadow 0.3s',
                 }}
               >
                 {submitting ? "Saving…" : saved ? "✦ Logged!" : "Log Set"}
