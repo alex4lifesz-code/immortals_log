@@ -603,7 +603,7 @@ export default function DataManagement() {
           name: "Bench Press",
           wuxiaName: "Iron Chest Seal",
           difficulty: "Beginner",
-          wuxiaDifficulty: "Mortal",
+          wuxiaDifficulty: "Beginner",
           type: "GYM",
           wuxiaType: "Body Tempering",
           story: "A foundational chest pressing movement performed on a flat bench. Develops raw pushing power and sets the foundation for upper-body cultivation.",
@@ -629,7 +629,7 @@ export default function DataManagement() {
             {
               level: 1,
               name: "Foundation Press",
-              wuxiaName: "Mortal Imprint",
+              wuxiaName: "Foundation Press",
               difficulty: "Beginner",
               description: "Press the bar for 3 sets of 8–12 reps with controlled form.",
               targetReps: 10,

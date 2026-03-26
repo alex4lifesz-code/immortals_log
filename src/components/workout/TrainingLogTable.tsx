@@ -189,7 +189,7 @@ function formatDate(dateString: string, dateFormat: "dd-mm-yyyy" | "dd-mmm-yyyy"
 
 // ── The Unified Training Log Table ──
 
-function UnifiedTrainingLogTable({
+function TrainingLogTable({
   exercises,
   physique,
   selectedLogFilter,
@@ -279,8 +279,8 @@ function UnifiedTrainingLogTable({
   const showStandardWeightResponsive = showStandardWeight && !reduceColumnsForSmallScreens;
   const showAvgWeightResponsive = showAvgWeight && !reduceColumnsForSmallScreens;
 
-  // Keep headers stable across filter states by deriving from the full training log.
-  const entryExerciseTypes = useMemo(() => allEntries.map((e) => e.exerciseType), [allEntries]);
+  // Determine column headers based on exercise types visible in the entries
+  const entryExerciseTypes = useMemo(() => entries.map((e) => e.exerciseType), [entries]);
   const { labels: headerLabels, types: headerTypes, keys: headerKeys } = useMemo(
     () => getColumnHeaders(entryExerciseTypes, columnGrouped),
     [entryExerciseTypes, columnGrouped],
@@ -1044,6 +1044,6 @@ function UnifiedTrainingLogTable({
   );
 }
 
-const MemoUnifiedTrainingLogTable = memo(UnifiedTrainingLogTable);
-export { UnifiedTrainingLogTable, MemoUnifiedTrainingLogTable };
+const MemoTrainingLogTable = memo(TrainingLogTable);
+export { TrainingLogTable, MemoTrainingLogTable };
 export type { UnifiedFlatLogEntry };

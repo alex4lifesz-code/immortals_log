@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { ReactNode, useState, useEffect, useRef, memo } from "react";
 import { useAppContext } from "@/context/AppContext";
-import { useDisplaySettings } from "@/context/DisplaySettingsContext";
+import { DISPLAY_DEFAULTS } from "@/context/DisplaySettingsContext";
 
 interface PageLayoutProps {
   children: ReactNode;
@@ -27,14 +27,12 @@ function PageLayout({
   mobileContentPaddingClass = "p-4 pb-24",
 }: PageLayoutProps) {
   const { panelPosition, isMobile, mobileSidebarOpen, setMobileSidebarOpen } = useAppContext();
-  const { settings, updateSettings } = useDisplaySettings();
   const effectivePosition = isMobile ? "top" : panelPosition;
   const mobileMode = isMobile;
   const mobileSidebarHistoryArmedRef = useRef(false);
   const sidebarTouchStartXRef = useRef<number | null>(null);
   const sidebarTouchCurrentXRef = useRef<number | null>(null);
-  const sidebarPosition = settings.sidebarPosition || "left";
-  const sidebarWidth = settings.sidebarWidth || 320;
+  const sidebarWidth = DISPLAY_DEFAULTS.sidebarWidth;
 
   const MIN_SIDEBAR_WIDTH = 200;
   const contentContainerClass = contentWidth === "centered"
@@ -127,30 +125,14 @@ function PageLayout({
   const desktopSidebar = sidebar && !isMobile && effectivePosition !== "top" ? (
     <motion.div
       layout
-      className="sticky top-0 self-start h-full border-ink-light bg-ink-deep/50 shrink-0 overflow-hidden flex flex-col"
+      className="sticky top-0 self-start h-full border-r border-l-0 border-ink-light/50 bg-ink-deep/50 shrink-0 overflow-hidden flex flex-col"
       style={{
         width: `${sidebarWidth}px`,
         minWidth: `${MIN_SIDEBAR_WIDTH}px`,
-        borderRight: sidebarPosition === "left" ? "1px solid" : "none",
-        borderLeft: sidebarPosition === "right" ? "1px solid" : "none",
-        borderColor: "rgba(55,65,81,0.5)",
       }}
     >
       <div className="px-5 pt-4 pb-2.5 shrink-0 flex items-center justify-between">
         <h2 className="text-xs text-jade-glow uppercase tracking-widest font-semibold">{title}</h2>
-        <button
-          onClick={() => updateSettings({ sidebarPosition: sidebarPosition === "left" ? "right" : "left" })}
-          className="p-1 rounded-md border border-ink-light/50 text-mist-dark hover:text-jade-glow hover:border-jade-glow/40 hover:bg-jade-deep/20 transition-all duration-200"
-          title={`Move panel to ${sidebarPosition === "left" ? "right" : "left"}`}
-        >
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            {sidebarPosition === "left" ? (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 4h7v16h-7V4zM3 4h8v8H3V4z" />
-            ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h7v16H3V4zm10 0h8v8h-8V4z" />
-            )}
-          </svg>
-        </button>
       </div>
       <div className="flex-1 min-h-0 px-1.5 overflow-y-auto sidebar-scroll overscroll-contain">
         {sidebar}
@@ -179,8 +161,8 @@ function PageLayout({
       transition={{ duration: 0.3 }}
       className={`flex ${effectivePosition === "top" || isMobile ? "flex-col" : "flex-row"} relative ${isMobile ? "min-h-full" : "h-full overflow-hidden"}`}
     >
-      {/* Desktop sidebar — left position */}
-      {sidebarPosition === "left" && desktopSidebar}
+      {/* Desktop sidebar */}
+      {desktopSidebar}
 
       {/* Main Content — full width on mobile */}
       <div
@@ -201,8 +183,6 @@ function PageLayout({
         </motion.div>
       </div>
 
-      {/* Desktop sidebar — right position */}
-      {sidebarPosition === "right" && desktopSidebar}
 
       {/* ── Mobile slide-in sidebar (page panel) — native APK only ── */}
       <AnimatePresence>

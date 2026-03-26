@@ -32,7 +32,7 @@ interface Exercise {
   story?: string;
 }
 
-interface TrainingSidebarProps {
+interface SessionSidebarProps {
   exercises: Exercise[];
   selectedTechniques: string[];
   onSelectTechnique: (exerciseId: string) => void;
@@ -369,7 +369,7 @@ function TechniqueCard({ exercise, isSelected, onSelect, delay, displayMode, com
   );
 }
 
-export default function TrainingSidebar({ 
+export default function SessionSidebar({ 
   exercises, 
   selectedTechniques,
   onSelectTechnique, 
@@ -377,7 +377,7 @@ export default function TrainingSidebar({
   isMobile: _isMobile,
   onDrawerOpen,
   refreshTrigger = 0,
-}: TrainingSidebarProps) {
+}: SessionSidebarProps) {
   const { user } = useAuth();
   const [selectedDayFilter, setSelectedDayFilter] = useState<number | null>(null);
   const [sortMode, setSortMode] = useState<SidebarSortMode>("custom");

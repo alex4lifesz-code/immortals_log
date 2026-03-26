@@ -78,6 +78,75 @@
   --col-reps: #c4a84a;
   --col-reps-bg: rgba(196, 168, 74, 0.08);
 
+  /* Exercise/training colors */
+  --exercise-glow: var(--accent);
+  --timed-color: #5eb8e8;
+
+  /* Chart colors */
+  --chart-primary: #64f0c8;
+  --chart-secondary: #f4c76a;
+  --chart-bar: #4ac0ff;
+  --chart-whisker: #9bb0bb;
+  --chart-down: #ff8f8f;
+  --chart-bg: rgba(16, 18, 22, 0.45);
+    --chart-primary-rgb: 100 240 200; /* RGB components of --chart-primary for dynamic opacity */
+    --chart-grid: rgba(255, 255, 255, 0.13); /* grid/guide line color in charts */
+
+    /* Shared UI effect tokens */
+    --shadow-elev-1: 0 6px 20px rgb(0 0 0 / 0.18);
+    --shadow-elev-2: 0 16px 30px rgb(0 0 0 / 0.55);
+    --surface-gradient-strong: linear-gradient(
+      104deg,
+      color-mix(in srgb, var(--ink-deep) 92%, black) 0%,
+      color-mix(in srgb, var(--ink-dark) 92%, black) 100%
+    );
+    --danger-modal-glow: 0 0 30px color-mix(in srgb, var(--crimson-light) 35%, transparent), 0 20px 40px rgb(0 0 0 / 0.4);
+    --timed-cell-bg: color-mix(in srgb, var(--timed-color) 8%, transparent);
+    --timed-accent-soft: color-mix(in srgb, var(--timed-color) 22%, transparent);
+    --timed-accent-border: color-mix(in srgb, var(--timed-color) 60%, transparent);
+    --state-error-border: color-mix(in srgb, var(--crimson-light) 70%, transparent);
+
+    /* Theme preview swatches */
+    --theme-preview-midnight-1: #0d0f14;
+    --theme-preview-midnight-2: #1a1e2e;
+    --theme-preview-midnight-3: #3a8f8f;
+    --theme-preview-midnight-4: #c43030;
+    --theme-preview-mountain-1: #f5f0eb;
+    --theme-preview-mountain-2: #c8c0b8;
+    --theme-preview-mountain-3: #2d7a7a;
+    --theme-preview-mountain-4: #a04040;
+    --theme-preview-calligraphy-1: #1a1a1a;
+    --theme-preview-calligraphy-2: #303030;
+    --theme-preview-calligraphy-3: #5a5a5a;
+    --theme-preview-calligraphy-4: #808080;
+    --theme-preview-sakura-1: #faf6f5;
+    --theme-preview-sakura-2: #f5d0d2;
+    --theme-preview-sakura-3: #f5e0d0;
+    --theme-preview-sakura-4: #b8c8d8;
+    --theme-preview-sakura-dark-1: #0c080e;
+    --theme-preview-sakura-dark-2: #1a1420;
+    --theme-preview-sakura-dark-3: #d4508a;
+    --theme-preview-sakura-dark-4: #e898aa;
+
+    /* Cultivator colors */
+    --cultivator-jade: #3a8f8f;
+    --cultivator-jade-rgb: 58 143 143;
+    --cultivator-gold: #d4a843;
+    --cultivator-gold-rgb: 212 168 67;
+    --cultivator-crimson: #c9433e;
+    --cultivator-crimson-rgb: 201 67 62;
+    --cultivator-azure: #4a9eff;
+    --cultivator-azure-rgb: 74 158 255;
+    --cultivator-violet: #9b59b6;
+    --cultivator-violet-rgb: 155 89 182;
+    --cultivator-emerald: #2ecc71;
+    --cultivator-emerald-rgb: 46 204 113;
+    --cultivator-amber: #f39c12;
+    --cultivator-amber-rgb: 243 156 18;
+    --cultivator-rose: #e74c8c;
+    --cultivator-rose-rgb: 231 76 140;
+    --system-bar-fallback: #0d0f14;
+
   /* Difficulty glows */
   --glow-difficulty-green: 0 0 15px rgba(34, 197, 94, 0.3), 0 0 30px rgba(34, 197, 94, 0.1);
   --glow-difficulty-amber: 0 0 15px rgba(245, 158, 11, 0.3), 0 0 30px rgba(245, 158, 11, 0.1);

@@ -59,16 +59,6 @@ const terminologyMap: Record<string, string> = {
   "Import Check-In XLSX": "Import Check-In XLSX",
   "Export Check-In Records": "Export Check-In Records",
 
-  // ── Stats & Realms ──
-  "Mortal": "Beginner",
-  "Foundation Establishment": "Novice",
-  "Core Formation": "Intermediate",
-  "Nascent Soul": "Advanced",
-  "Soul Splitting": "Expert",
-  "Tribulation Transcendence": "Elite",
-  "Immortal": "Master",
-  "Heavenly Dao": "Grandmaster",
-
   // ── Exercise Types ──
   "Upper Heaven": "Upper Body",
   "Lower Realms": "Lower Body",
@@ -86,12 +76,6 @@ const terminologyMap: Record<string, string> = {
   "Mental Cultivation": "Mental Training",
   "Energy Circulation": "Warmup/Cooldown",
   "Combat Reflexes": "Reaction Training",
-
-  // ── Difficulty Levels (display) ──
-  "Mortal Realm": "Beginner Level",
-  "Foundation Realm": "Novice Level",
-  "Core Realm": "Intermediate Level",
-  "Nascent Realm": "Advanced Level",
 
   // ── Misc UI Text ──
   "Cultivator": "Member",

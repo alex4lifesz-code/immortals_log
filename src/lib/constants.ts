@@ -12,56 +12,19 @@ export const defaultNavItems: NavItem[] = [
   { id: "dashboard", label: "Dao Hall", icon: "⛩️", path: "/dashboard", pinned: false, visible: true },
   { id: "workout", label: "Training Grounds", icon: "⚔️", path: "/dashboard/workout", pinned: false, visible: true },
   { id: "checkin", label: "Sect Register", icon: "📋", path: "/dashboard/checkin", pinned: false, visible: true },
-  { id: "exercise-library", label: "Exercise Library", icon: "📚", path: "/dashboard/exercise-library", pinned: false, visible: true },
+  { id: "exercise-db", label: "Exercise DB", icon: "📚", path: "/dashboard/exercise-db", pinned: false, visible: true },
   { id: "settings", label: "Inner Chamber", icon: "⚙️", path: "/dashboard/settings", pinned: false, visible: true },
   { id: "admin", label: "Administrative Palace", icon: "👑", path: "/dashboard/admin", pinned: false, visible: true },
 ];
 
-function normalizeDifficultyKey(difficulty: string): string {
-  const raw = (difficulty || "").trim();
-  const lower = raw.toLowerCase();
-
-  const aliases: Record<string, string> = {
-    beginner: "Mortal",
-    intermediate: "Core Formation",
-    advanced: "Nascent Soul",
-    expert: "Soul Splitting",
-    elite: "Heavenly Dao",
-    master: "Immortal",
-    grandmaster: "Heavenly Dao",
-  };
-
-  return aliases[lower] || raw;
-}
-
 export function getDifficultyColor(difficulty: string): string {
-  const key = normalizeDifficultyKey(difficulty);
-  const colors: Record<string, string> = {
-    "Mortal": "text-difficulty-green",
-    "Foundation Establishment": "text-difficulty-amber",
-    "Core Formation": "text-difficulty-red",
-    "Nascent Soul": "text-difficulty-violet",
-    "Soul Splitting": "text-difficulty-pink",
-    "Tribulation Transcendence": "text-gold",
-    "Immortal": "text-difficulty-light-pink",
-    "Heavenly Dao": "text-cyan-300",
-  };
-  return colors[key] || "text-mist-light";
+  void difficulty;
+  return "text-mist-light";
 }
 
 export function getDifficultyGlow(difficulty: string): string {
-  const key = normalizeDifficultyKey(difficulty);
-  const glows: Record<string, string> = {
-    "Mortal": "glow-difficulty-green",
-    "Foundation Establishment": "glow-difficulty-amber",
-    "Core Formation": "glow-difficulty-red",
-    "Nascent Soul": "glow-difficulty-violet",
-    "Soul Splitting": "glow-difficulty-pink",
-    "Tribulation Transcendence": "glow-gold",
-    "Immortal": "glow-difficulty-light-pink",
-    "Heavenly Dao": "glow-difficulty-cyan",
-  };
-  return glows[key] || "";
+  void difficulty;
+  return "";
 }
 
 export function getTypeColor(type: string): string {

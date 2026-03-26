@@ -9,14 +9,14 @@ import MobileSpeedDial from "@/components/mobile/actions/MobileSpeedDial";
 import MobileLoadingSkeleton from "@/components/mobile/feedback/MobileLoadingSkeleton";
 import { useAuth } from "@/context/AuthContext";
 
-function deriveRealm(score: number): string {
-  if (score >= 5000) return "Heavenly Dao";
-  if (score >= 2500) return "Immortal";
-  if (score >= 1200) return "Soul Splitting";
-  if (score >= 600) return "Nascent Soul";
-  if (score >= 250) return "Core Formation";
-  if (score >= 80) return "Foundation";
-  return "Mortal";
+function deriveStage(score: number): string {
+  if (score >= 5000) return "Stage 7";
+  if (score >= 2500) return "Stage 6";
+  if (score >= 1200) return "Stage 5";
+  if (score >= 600) return "Stage 4";
+  if (score >= 250) return "Stage 3";
+  if (score >= 80) return "Stage 2";
+  return "Stage 1";
 }
 
 export default function MobileDashboardPage() {
@@ -52,7 +52,7 @@ export default function MobileDashboardPage() {
   }, [user?.id]);
 
   const score = useMemo(() => checkinCount * 10 + exerciseCount * 25, [checkinCount, exerciseCount]);
-  const realm = deriveRealm(score);
+  const stage = deriveStage(score);
 
   return (
     <div>
@@ -65,10 +65,10 @@ export default function MobileDashboardPage() {
             <MobileCard>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.12em] text-mist-light">Current Realm</p>
-                  <h2 className="mt-1 text-xl font-bold text-cloud-white">{realm}</h2>
+                  <p className="text-xs uppercase tracking-[0.12em] text-mist-light">Current Stage</p>
+                  <h2 className="mt-1 text-xl font-bold text-cloud-white">{stage}</h2>
                   <div className="mt-2">
-                    <CultivationRealmBadge realm={realm} />
+                    <CultivationRealmBadge realm={stage} />
                   </div>
                 </div>
                 <MobileProgressRing progress={Math.min(100, (score % 500) / 5)} label="Progress" />

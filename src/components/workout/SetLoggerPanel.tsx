@@ -27,7 +27,7 @@ import { getDifficultyColorClass, getDifficultyGlowStyleScaled } from "@/lib/dif
 import { getExerciseDisplayName, getTypeDisplayName, getDifficultyDisplayName, getTypeColorKey } from "@/lib/exercise-name";
 import type { UserPhysiqueSettings } from "@/lib/user-physique";
 
-export function InlineLogForm({
+export function SetLoggerPanel({
   queueItemId,
   exercise,
   selectedLevel,

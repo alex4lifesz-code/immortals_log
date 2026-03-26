@@ -9,14 +9,13 @@ import {
   getWeightedDifficulty,
 } from "@/app/dashboard/workout/utils";
 import { EquipmentBadges } from "@/components/workout/EquipmentBadges";
-import { getTierGlowFromLogs } from "@/components/workout/TierProgressBar";
 import { useDisplaySettings, DISPLAY_DEFAULTS } from "@/context/DisplaySettingsContext";
 import { useAppContext } from "@/context/AppContext";
 import GlowButton from "@/components/ui/GlowButton";
 import { getTypeColor, DAY_ABBREVIATIONS, parseDayAssignments } from "@/lib/constants";
 import { getExerciseDisplayName, matchesLooseSearchInFields, getTypeDisplayName, getTypeColorKey } from "@/lib/exercise-name";
 
-export function ProgressionSidebar({
+export function TrainingGroundsSidebar({
   exercises,
   selectedIds,
   onToggleExercise,
@@ -107,7 +106,6 @@ export function ProgressionSidebar({
   );
 
   const showIllumination = displayMode !== "name-only";
-  const useThemeColor = DISPLAY_DEFAULTS.progressionSidebarUseThemeColor;
   const showRealm = displayMode === "name-illumination-realm" || displayMode === "name-illumination-realm-path";
   const showPath = displayMode === "name-illumination-realm-path";
   const isScrollStyle = cardStyle === "scroll-card";
@@ -276,14 +274,6 @@ export function ProgressionSidebar({
     }
     return map;
   }, [isSearchActive, searchQuery, sorted]);
-
-  const tierInfoByExerciseId = useMemo(() => {
-    const map = new Map<string, ReturnType<typeof getTierGlowFromLogs>>();
-    for (const exercise of sorted) {
-      map.set(exercise.id, getTierGlowFromLogs(exercise, userBodyweightKg));
-    }
-    return map;
-  }, [sorted, userBodyweightKg]);
 
   const sortOptions = [
     { key: "a-z", label: "A–Z", icon: "↕" },
@@ -532,7 +522,10 @@ export function ProgressionSidebar({
       )}
 
       {/* ── Divider with stats ── */}
-      <div className="px-2 py-2 border-y border-ink-light/20 bg-ink-dark/20 shrink-0">
+      <div
+        className="px-2 py-2 border-y border-ink-light/20 shrink-0"
+        style={{ background: "var(--surface-gradient-strong)" }}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-[10px] text-mist-light/90 font-medium">
@@ -621,7 +614,11 @@ export function ProgressionSidebar({
                     lastCategoryKey = primaryCategory;
                     const groupCount = searchGroupCountByCategory.get(primaryCategory) ?? 0;
                     elements.push(
-                      <div key={`cat-${primaryCategory}`} className="sticky top-0 z-10 px-1.5 py-1 mt-2 first:mt-0 mb-0.5 bg-ink-dark/90 backdrop-blur-sm border-b border-ink-light/20">
+                      <div
+                        key={`cat-${primaryCategory}`}
+                        className="sticky top-0 z-10 px-1.5 py-1 mt-2 first:mt-0 mb-0.5 backdrop-blur-sm border-b border-ink-light/20"
+                        style={{ background: "var(--surface-gradient-strong)" }}
+                      >
                         <span className="text-[10px] font-semibold text-mist-light/70 uppercase tracking-wider">{primaryCategory}</span>
                         <span className="ml-1.5 text-[9px] text-mist-dark/60">({groupCount})</span>
                       </div>
@@ -631,9 +628,9 @@ export function ProgressionSidebar({
 
               const isActive = selectedIds.has(exercise.id);
               const currentLevel = exercise.userProgress[0]?.currentLevel ?? 1;
+              const effectiveLevel = levelDefaults[exercise.id] || autoLevelByExerciseId[exercise.id] || currentLevel;
               const typeColor = getTypeColor(getTypeColorKey(exercise));
               const displayName = exerciseDerived.get(exercise.id)?.displayName ?? getExerciseDisplayName(exercise, settings.terminologyMode);
-              const sidebarTierInfo = tierInfoByExerciseId.get(exercise.id) ?? getTierGlowFromLogs(exercise, userBodyweightKg);
               const glowStyle = {};
               const logCount = exerciseDerived.get(exercise.id)?.logCount ?? 0;
               const isSearchMatch = isSearchActive && (searchNameMatchById.get(exercise.id) ?? false);
@@ -684,7 +681,7 @@ export function ProgressionSidebar({
                       onClick={handleRowClick}
                     >
                       <div className={`w-1 h-4 rounded-full shrink-0 transition-all duration-200 ${isActive ? 'bg-jade-glow' : 'bg-transparent group-hover:bg-jade-glow/40'}`} />
-                      <span className={`text-[12px] truncate flex-1 transition-colors duration-150 ${isActive ? 'text-cloud-white' : 'text-mist-light group-hover:text-cloud-white/90'}`} style={showIllumination && !useThemeColor ? { color: sidebarTierInfo.glowColor } : undefined} title={displayName}>
+                      <span className={`text-[12px] truncate flex-1 transition-colors duration-150 ${isActive ? 'text-cloud-white' : 'text-mist-light group-hover:text-cloud-white/90'}`} title={displayName}>
                         {displayName}
                       </span>
                       {logCount > 0 && (
@@ -717,7 +714,7 @@ export function ProgressionSidebar({
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5 min-w-0">
                             <div className={`w-1 h-4 rounded-full shrink-0 transition-all duration-200 ${isActive ? 'bg-jade-glow' : 'bg-transparent group-hover:bg-jade-glow/40'}`} />
-                            <h3 className={`text-[11px] font-semibold ${showIllumination && !useThemeColor ? '' : showIllumination && useThemeColor ? 'text-jade-glow' : 'text-cloud-white'} truncate flex-1`} style={showIllumination && !useThemeColor ? { color: sidebarTierInfo.glowColor } : undefined} title={displayName}>
+                            <h3 className={`text-[11px] font-semibold truncate flex-1 ${isActive ? 'text-cloud-white' : 'text-mist-light group-hover:text-cloud-white/90'}`} title={displayName}>
                               {displayName}
                             </h3>
                             {logCount > 0 && (
@@ -768,7 +765,7 @@ export function ProgressionSidebar({
                   >
                     <div className="flex items-center gap-1.5">
                       <div className={`w-1 h-4 rounded-full shrink-0 transition-all duration-200 ${isActive ? 'bg-jade-glow' : 'bg-transparent group-hover:bg-jade-glow/40'}`} />
-                      <div className={`text-[11px] font-semibold ${useThemeColor && showIllumination ? 'text-jade-glow' : isActive ? 'text-cloud-white' : 'text-mist-light group-hover:text-cloud-white/90'} transition-colors duration-150 truncate flex-1`} style={showIllumination && !useThemeColor ? { color: sidebarTierInfo.glowColor } : undefined} title={displayName}>
+                      <div className={`text-[11px] font-semibold ${isActive ? 'text-cloud-white' : 'text-mist-light group-hover:text-cloud-white/90'} transition-colors duration-150 truncate flex-1`} title={displayName}>
                         {displayName}
                       </div>
                       {logCount > 0 && (

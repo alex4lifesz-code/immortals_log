@@ -28,7 +28,7 @@ interface Exercise {
   story?: string;
 }
 
-interface TechniqueManagementDrawerProps {
+interface ExerciseManagementDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   exercises: Exercise[];
@@ -234,11 +234,11 @@ function LongPressReorderItem({
         boxShadow: "0 0 12px color-mix(in srgb, var(--accent) 30%, transparent), 0 0 4px color-mix(in srgb, var(--accent) 15%, transparent)",
       } : {
         scale: 1,
-        boxShadow: "0 0 0px rgba(0,0,0,0)",
+        boxShadow: "0 0 0 transparent",
       }}
       whileDrag={{
         scale: 1.04,
-        boxShadow: "0 8px 30px rgba(0,0,0,0.4), 0 0 15px color-mix(in srgb, var(--accent) 30%, transparent)",
+        boxShadow: "0 8px 30px color-mix(in srgb, black 40%, transparent), 0 0 15px color-mix(in srgb, var(--accent) 30%, transparent)",
         zIndex: 50,
       }}
       transition={{ duration: 0.2 }}
@@ -258,14 +258,14 @@ function LongPressReorderItem({
   );
 }
 
-export default function TechniqueManagementDrawer({
+export default function ExerciseManagementDrawer({
   isOpen,
   onClose,
   exercises,
   onUpdateDayAssignments,
   onReorderExercises,
   selectedDayFilter = null
-}: TechniqueManagementDrawerProps) {
+}: ExerciseManagementDrawerProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [dayFilter, setDayFilter] = useState<number | null>(selectedDayFilter);
   const [pathFilter, setPathFilter] = useState("");
@@ -396,9 +396,9 @@ export default function TechniqueManagementDrawer({
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
             className="fixed inset-y-0 right-0 z-50 flex flex-col max-w-full w-full md:w-[61.8%]"
             style={{
-              background: "linear-gradient(180deg, rgba(20,25,30,1) 0%, rgba(15,18,22,1) 100%)",
+              background: "linear-gradient(180deg, color-mix(in srgb, var(--ink-deep) 95%, black) 0%, color-mix(in srgb, var(--ink-dark) 95%, black) 100%)",
               borderLeft: "1px solid color-mix(in srgb, var(--accent) 15%, transparent)",
-              boxShadow: "-4px 0 30px rgba(0,0,0,0.5), -2px 0 10px color-mix(in srgb, var(--accent) 8%, transparent)",
+              boxShadow: "-4px 0 30px color-mix(in srgb, black 50%, transparent), -2px 0 10px color-mix(in srgb, var(--accent) 8%, transparent)",
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -406,7 +406,7 @@ export default function TechniqueManagementDrawer({
             <div
               className="p-5 space-y-4 shrink-0"
               style={{
-                background: "linear-gradient(180deg, rgba(30,38,42,0.9) 0%, rgba(20,25,30,0) 100%)",
+                background: "linear-gradient(180deg, color-mix(in srgb, var(--ink-mid) 90%, transparent) 0%, color-mix(in srgb, var(--ink-deep) 0%, transparent) 100%)",
                 borderBottom: "1px solid color-mix(in srgb, var(--accent) 12%, transparent)",
               }}
             >
@@ -558,7 +558,7 @@ export default function TechniqueManagementDrawer({
             <div className="flex-1 overflow-y-auto" style={{ scrollBehavior: "smooth" }}>
               <div className="relative">
                 {/* Top scroll shadow */}
-                <div className="sticky top-0 z-10 h-3 bg-gradient-to-b from-[rgba(20,25,30,0.8)] to-transparent pointer-events-none" />
+                <div className="sticky top-0 z-10 h-3 bg-gradient-to-b from-ink-deep/80 to-transparent pointer-events-none" />
                 
                 <div className="px-5 pb-5 space-y-3">
                   {/* Info bar */}
@@ -629,7 +629,7 @@ export default function TechniqueManagementDrawer({
             <div
               className="px-5 py-3 shrink-0"
               style={{
-                background: "linear-gradient(0deg, rgba(20,25,30,1) 0%, rgba(20,25,30,0.8) 100%)",
+                background: "linear-gradient(0deg, color-mix(in srgb, var(--ink-deep) 95%, black) 0%, color-mix(in srgb, var(--ink-deep) 80%, transparent) 100%)",
                 borderTop: "1px solid color-mix(in srgb, var(--accent) 10%, transparent)",
               }}
             >

@@ -108,12 +108,12 @@ export function LineChartCard({ title, points }: { title: string; points: NumPoi
   return (
     <ChartFrame title={title} onSvg={downloadSvg} onPng={downloadPng}>
       <svg ref={ref} viewBox="0 0 640 280" className="h-44 w-full">
-        <rect x="0" y="0" width="640" height="280" fill="rgba(16, 18, 22, 0.45)" rx="8" />
-        <path d={path} stroke="#64f0c8" strokeWidth="3" fill="none" />
+        <rect x="0" y="0" width="640" height="280" style={{ fill: "var(--chart-bg)" }} rx="8" />
+        <path d={path} style={{ stroke: "var(--chart-primary)" }} strokeWidth="3" fill="none" />
         {points.map((p, i) => {
           const x = points.length > 1 ? (i / (points.length - 1)) * 620 + 10 : 320;
           const y = 250 - ((p.value - min) / range) * 220;
-          return <circle key={`${p.label}-${i}`} cx={x} cy={y} r="3" fill="#f4c76a" />;
+            return <circle key={`${p.label}-${i}`} cx={x} cy={y} r="3" style={{ fill: "var(--chart-secondary)" }} />;
         })}
       </svg>
     </ChartFrame>
@@ -126,13 +126,13 @@ export function BarChartCard({ title, points }: { title: string; points: NumPoin
   return (
     <ChartFrame title={title} onSvg={downloadSvg} onPng={downloadPng}>
       <svg ref={ref} viewBox="0 0 640 280" className="h-44 w-full">
-        <rect x="0" y="0" width="640" height="280" fill="rgba(16, 18, 22, 0.45)" rx="8" />
+        <rect x="0" y="0" width="640" height="280" style={{ fill: "var(--chart-bg)" }} rx="8" />
         {points.map((p, i) => {
           const barWidth = 620 / Math.max(points.length, 1);
           const x = 10 + i * barWidth + 2;
           const h = (p.value / max) * 220;
           const y = 250 - h;
-          return <rect key={`${p.label}-${i}`} x={x} y={y} width={Math.max(4, barWidth - 4)} height={h} fill="#4ac0ff" rx="3" />;
+            return <rect key={`${p.label}-${i}`} x={x} y={y} width={Math.max(4, barWidth - 4)} height={h} style={{ fill: "var(--chart-bar)" }} rx="3" />;
         })}
       </svg>
     </ChartFrame>
@@ -158,13 +158,13 @@ export function AreaChartCard({ title, points }: { title: string; points: NumPoi
       <svg ref={ref} viewBox="0 0 640 280" className="h-44 w-full">
         <defs>
           <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#64f0c8" stopOpacity="0.65" />
-            <stop offset="100%" stopColor="#64f0c8" stopOpacity="0.1" />
+            <stop offset="0%" stopColor="var(--chart-primary)" stopOpacity="0.65" />
+            <stop offset="100%" stopColor="var(--chart-primary)" stopOpacity="0.1" />
           </linearGradient>
         </defs>
-        <rect x="0" y="0" width="640" height="280" fill="rgba(16, 18, 22, 0.45)" rx="8" />
+        <rect x="0" y="0" width="640" height="280" style={{ fill: "var(--chart-bg)" }} rx="8" />
         <path d={areaPath} fill="url(#areaFill)" stroke="none" />
-        <path d={path} stroke="#64f0c8" strokeWidth="2" fill="none" />
+        <path d={path} style={{ stroke: "var(--chart-primary)" }} strokeWidth="2" fill="none" />
       </svg>
     </ChartFrame>
   );
@@ -178,11 +178,11 @@ export function ScatterChartCard({ title, points }: { title: string; points: XYP
   return (
     <ChartFrame title={title} onSvg={downloadSvg} onPng={downloadPng}>
       <svg ref={ref} viewBox="0 0 640 280" className="h-44 w-full">
-        <rect x="0" y="0" width="640" height="280" fill="rgba(16, 18, 22, 0.45)" rx="8" />
+        <rect x="0" y="0" width="640" height="280" style={{ fill: "var(--chart-bg)" }} rx="8" />
         {points.map((p, i) => {
           const x = ((p.x - xn.min) / xn.range) * 600 + 20;
           const y = 250 - ((p.y - yn.min) / yn.range) * 220;
-          return <circle key={p.label || i} cx={x} cy={y} r={5} fill="#f4c76a" opacity="0.8" />;
+          return <circle key={p.label || i} cx={x} cy={y} r={5} style={{ fill: "var(--chart-secondary)" }} opacity="0.8" />;
         })}
       </svg>
     </ChartFrame>
@@ -204,11 +204,11 @@ export function RadarChartCard({ title, values }: { title: string; values: NumPo
   return (
     <ChartFrame title={title} onSvg={downloadSvg} onPng={downloadPng}>
       <svg ref={ref} viewBox="0 0 640 280" className="h-44 w-full">
-        <rect x="0" y="0" width="640" height="280" fill="rgba(16, 18, 22, 0.45)" rx="8" />
+        <rect x="0" y="0" width="640" height="280" style={{ fill: "var(--chart-bg)" }} rx="8" />
         {[0.25, 0.5, 0.75, 1].map((ratio) => (
-          <circle key={ratio} cx={center.x} cy={center.y} r={radius * ratio} fill="none" stroke="rgba(255,255,255,0.12)" />
+          <circle key={ratio} cx={center.x} cy={center.y} r={radius * ratio} fill="none" style={{ stroke: "var(--chart-grid)" }} />
         ))}
-        <polygon points={points} fill="rgba(100, 240, 200, 0.35)" stroke="#64f0c8" strokeWidth="2" />
+        <polygon points={points} style={{ fill: "rgb(var(--chart-primary-rgb) / 0.35)", stroke: "var(--chart-primary)" }} strokeWidth="2" />
       </svg>
     </ChartFrame>
   );
@@ -221,7 +221,7 @@ export function HeatMapCard({ title, points }: { title: string; points: NumPoint
       <div className="grid grid-cols-10 gap-1">
         {points.slice(-120).map((p, i) => {
           const alpha = clamp(p.value / max, 0.12, 1);
-          return <div key={`${p.label}-${i}`} className="h-4 rounded" style={{ background: `rgba(100, 240, 200, ${alpha})` }} title={`${p.label}: ${p.value}`} />;
+          return <div key={`${p.label}-${i}`} className="h-4 rounded" style={{ background: `rgb(var(--chart-primary-rgb) / ${alpha})` }} title={`${p.label}: ${p.value}`} />;
         })}
       </div>
     </ChartFrame>
@@ -238,12 +238,12 @@ export function GaugeCard({ title, value }: { title: string; value: number }) {
     <ChartFrame title={title}>
       <div className="flex items-center justify-center py-2">
         <svg viewBox="0 0 180 180" className="h-40 w-40">
-          <circle cx="90" cy="90" r={r} stroke="rgba(255,255,255,0.15)" strokeWidth="14" fill="none" />
+          <circle cx="90" cy="90" r={r} style={{ stroke: "var(--chart-grid)" }} strokeWidth="14" fill="none" />
           <circle
             cx="90"
             cy="90"
             r={r}
-            stroke="#64f0c8"
+            style={{ stroke: "var(--chart-primary)" }}
             strokeWidth="14"
             fill="none"
             strokeDasharray={`${dash} ${c}`}
@@ -263,9 +263,9 @@ export function BoxPlotCard({ title, stats }: { title: string; stats: { min: num
   return (
     <ChartFrame title={title}>
       <svg viewBox="0 0 640 160" className="h-24 w-full">
-        <line x1={x(stats.min)} y1="80" x2={x(stats.max)} y2="80" stroke="#9bb0bb" strokeWidth="2" />
-        <rect x={x(stats.q1)} y={58} width={x(stats.q3) - x(stats.q1)} height={44} fill="rgba(100,240,200,0.35)" stroke="#64f0c8" />
-        <line x1={x(stats.median)} y1="56" x2={x(stats.median)} y2="104" stroke="#f4c76a" strokeWidth="3" />
+        <line x1={x(stats.min)} y1="80" x2={x(stats.max)} y2="80" style={{ stroke: "var(--chart-whisker)" }} strokeWidth="2" />
+        <rect x={x(stats.q1)} y={58} width={x(stats.q3) - x(stats.q1)} height={44} style={{ fill: "rgb(var(--chart-primary-rgb) / 0.35)", stroke: "var(--chart-primary)" }} />
+        <line x1={x(stats.median)} y1="56" x2={x(stats.median)} y2="104" style={{ stroke: "var(--chart-secondary)" }} strokeWidth="3" />
       </svg>
     </ChartFrame>
   );
@@ -302,7 +302,7 @@ export function StackedBarCard({ title, rows }: { title: string; rows: Array<{ l
 
 export function PieChartCard({ title, points }: { title: string; points: NumPoint[] }) {
   const total = Math.max(1, points.reduce((sum, p) => sum + p.value, 0));
-  const palette = ["#64f0c8", "#f4c76a", "#6cc6ff", "#c397ff", "#ff9f8a", "#9bf381"];
+  const palette = ["var(--chart-primary)", "var(--chart-secondary)", "var(--chart-bar)", "var(--difficulty-violet)", "var(--chart-down)", "var(--difficulty-green)"];
 
   const arcs = points.reduce<Array<{ d: string; color: string; label: string; value: number }>>((acc, p, i) => {
     const start = acc.length === 0
@@ -350,12 +350,12 @@ export function CandlestickCard({ title, candles }: { title: string; candles: Ar
   return (
     <ChartFrame title={title}>
       <svg viewBox="0 0 640 280" className="h-44 w-full">
-        <rect x="0" y="0" width="640" height="280" fill="rgba(16, 18, 22, 0.45)" rx="8" />
+        <rect x="0" y="0" width="640" height="280" style={{ fill: "var(--chart-bg)" }} rx="8" />
         {candles.map((c, i) => {
           const x = 10 + i * w + w / 2;
           const bodyTop = y(Math.max(c.open, c.close));
           const bodyBottom = y(Math.min(c.open, c.close));
-          const color = c.close >= c.open ? "#64f0c8" : "#ff8f8f";
+          const color = c.close >= c.open ? "var(--chart-primary)" : "var(--chart-down)";
           return (
             <g key={i}>
               <line x1={x} y1={y(c.high)} x2={x} y2={y(c.low)} stroke={color} strokeWidth="1.5" />

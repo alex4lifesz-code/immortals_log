@@ -10,7 +10,7 @@ import { NavItem } from "@/lib/constants";
 import { t } from "@/lib/terminology";
 import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
 
-function LeftSidebar() {
+function DesktopSidebar() {
   const { getSortedNavItems, isMobile, reorderNavItems } = useAppContext();
   const { logout, user } = useAuth();
   const { settings } = useDisplaySettings();
@@ -110,4 +110,4 @@ function LeftSidebar() {
   );
 }
 
-export default memo(LeftSidebar);
+export default memo(DesktopSidebar);

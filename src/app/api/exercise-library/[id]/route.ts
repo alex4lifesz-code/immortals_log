@@ -116,17 +116,8 @@ export const PATCH = withAuth(async (req, { auth, params }) => {
           { status: 400 }
         );
       }
-      const wuxiaDiffMap: Record<string, string> = {
-        Beginner: "Mortal",
-        Intermediate: "Core Formation",
-        Advanced: "Nascent Soul",
-      };
-      updateData.difficulty = difficulty
-        ? wuxiaDiffMap[difficulty] || difficulty
-        : "";
-      updateData.wuxiaDifficulty = difficulty
-        ? wuxiaDiffMap[difficulty] || ""
-        : "";
+      updateData.difficulty = difficulty ? String(difficulty).trim() : "";
+      updateData.wuxiaDifficulty = difficulty ? String(difficulty).trim() : "";
     }
 
     if (description !== undefined) {

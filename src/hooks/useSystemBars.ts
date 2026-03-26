@@ -11,8 +11,10 @@ export function useSystemBars() {
 
   useEffect(() => {
     const apply = async () => {
-      const status = resolveCssVarColor("--void-black") || "#0d0f14";
-      await setStatusBarColor(status);
+      const status = resolveCssVarColor("--void-black") || resolveCssVarColor("--system-bar-fallback");
+      if (status) {
+        await setStatusBarColor(status);
+      }
       await applyNavigationBarFromCssVar("--ink-deep");
     };
 

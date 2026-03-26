@@ -549,116 +549,131 @@ export default function CheckInPage() {
       {loading ? (
         <PageSkeleton statCards={2} wideBlock rows={5} />
       ) : (
-        <>
-          {/* Cultivation Journal — personal day notes */}
-          {dayNotes.length > 0 && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                transition={{ duration: 0.25 }}
-                className="mb-4"
-              >
-                <div className="bg-ink-dark/60 border border-ink-light rounded-lg p-4">
-                  <h3 className="text-xs text-gold-glow uppercase tracking-wider mb-3 flex items-center gap-2">
-                    📝 Cultivation Journal
-                  </h3>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {dayNotes.map((dn) => (
-                      <motion.div
-                        key={dn.date}
-                        initial={{ x: -10, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        className="flex items-start gap-2 text-xs group"
-                      >
-                        {dn.pinned && (
-                          <span className="text-gold-glow shrink-0" title="Pinned">📌</span>
-                        )}
-                        <button
-                          onClick={() => setEditingNote({ date: dn.date, note: dn.note })}
-                          className="text-jade-glow font-mono shrink-0 hover:underline text-[10px]"
+        <div className="flex flex-col gap-4">
+          {(dayNotes.length > 0 || communityNotes.length > 0) && (
+            <div className="flex flex-wrap items-start gap-4">
+              {/* Cultivation Journal — personal day notes */}
+              {dayNotes.length > 0 && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  transition={{ duration: 0.25 }}
+                  className="min-w-[280px] flex-1"
+                >
+                  <div
+                    className="h-full border border-ink-light rounded-lg p-4"
+                    style={{ background: "var(--surface-gradient-strong)" }}
+                  >
+                    <h3 className="text-xs text-gold-glow uppercase tracking-wider mb-3 flex items-center gap-2">
+                      📝 Cultivation Journal
+                    </h3>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {dayNotes.map((dn) => (
+                        <motion.div
+                          key={dn.date}
+                          initial={{ x: -10, opacity: 0 }}
+                          animate={{ x: 0, opacity: 1 }}
+                          className="flex items-start gap-2 text-xs group"
                         >
-                          {dn.date}
-                        </button>
-                        {dn.userName && (
-                          <span className="text-gold shrink-0 font-medium">{dn.userName}:</span>
-                        )}
-                        <span className="text-mist-light flex-1">{dn.note}</span>
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                          {dn.pinned && (
+                            <span className="text-gold-glow shrink-0" title="Pinned">📌</span>
+                          )}
                           <button
-                            onClick={() => toggleDayNotePin(dn.date)}
-                            className={`hover:text-gold-glow transition-colors ${dn.pinned ? 'text-gold-glow' : 'text-mist-dark'}`}
-                            title={dn.pinned ? "Unpin" : "Pin note"}
+                            onClick={() => setEditingNote({ date: dn.date, note: dn.note })}
+                            className="text-jade-glow font-mono shrink-0 hover:underline text-[10px]"
                           >
-                            📌
+                            {dn.date}
                           </button>
-                          <button
-                            onClick={() => saveDayNote(dn.date, "")}
-                            className="text-mist-dark hover:text-crimson-light transition-colors"
-                            title="Delete note"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      </motion.div>
-                    ))}
+                          {dn.userName && (
+                            <span className="text-gold shrink-0 font-medium">{dn.userName}:</span>
+                          )}
+                          <span className="text-mist-light flex-1">{dn.note}</span>
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                            <button
+                              onClick={() => toggleDayNotePin(dn.date)}
+                              className={`hover:text-gold-glow transition-colors ${dn.pinned ? 'text-gold-glow' : 'text-mist-dark'}`}
+                              title={dn.pinned ? "Unpin" : "Pin note"}
+                            >
+                              📌
+                            </button>
+                            <button
+                              onClick={() => saveDayNote(dn.date, "")}
+                              className="text-mist-dark hover:text-crimson-light transition-colors"
+                              title="Delete note"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              </motion.div>
+                </motion.div>
+              )}
+
+              {/* Community Notes — attributed notes from sect members */}
+              {communityNotes.length > 0 && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  transition={{ duration: 0.25 }}
+                  className="min-w-[280px] flex-1"
+                >
+                  <div
+                    className="h-full border border-ink-light rounded-lg p-4"
+                    style={{ background: "var(--surface-gradient-strong)" }}
+                  >
+                    <h3 className="text-xs text-mountain-blue-glow uppercase tracking-wider mb-3 flex items-center gap-2">
+                      🏯 Sect Member Notes
+                    </h3>
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {communityNotes.map((cn) => (
+                        <motion.div
+                          key={cn.id}
+                          initial={{ x: -10, opacity: 0 }}
+                          animate={{ x: 0, opacity: 1 }}
+                          className="flex items-start gap-2 text-xs group"
+                        >
+                          {cn.pinned && (
+                            <span className="text-gold-glow shrink-0" title="Pinned">📌</span>
+                          )}
+                          <span className="text-jade-glow font-mono shrink-0 text-[10px]">{cn.date}</span>
+                          <span className="text-gold shrink-0 font-medium">{cn.user.name}:</span>
+                          <span className="text-mist-light flex-1">{cn.content}</span>
+                          {user && cn.user.id === user.id && (
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                              <button
+                                onClick={() => handleTogglePinNote(cn.id, !cn.pinned)}
+                                className={`hover:text-gold-glow transition-colors ${cn.pinned ? 'text-gold-glow' : 'text-mist-dark'}`}
+                                title={cn.pinned ? "Unpin" : "Pin note"}
+                              >
+                                📌
+                              </button>
+                              <button
+                                onClick={() => handleDeleteCommunityNote(cn.id)}
+                                className="text-mist-dark hover:text-crimson-light transition-colors"
+                                title="Delete note"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          )}
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </div>
           )}
-          {/* Community Notes — attributed notes from sect members */}
-          {communityNotes.length > 0 && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              transition={{ duration: 0.25 }}
-              className="mb-4"
-            >
-              <div className="bg-ink-dark/60 border border-ink-light rounded-lg p-4">
-                <h3 className="text-xs text-mountain-blue-glow uppercase tracking-wider mb-3 flex items-center gap-2">
-                  🏯 Sect Member Notes
-                </h3>
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {communityNotes.map((cn) => (
-                    <motion.div
-                      key={cn.id}
-                      initial={{ x: -10, opacity: 0 }}
-                      animate={{ x: 0, opacity: 1 }}
-                      className="flex items-start gap-2 text-xs group"
-                    >
-                      {cn.pinned && (
-                        <span className="text-gold-glow shrink-0" title="Pinned">📌</span>
-                      )}
-                      <span className="text-jade-glow font-mono shrink-0 text-[10px]">{cn.date}</span>
-                      <span className="text-gold shrink-0 font-medium">{cn.user.name}:</span>
-                      <span className="text-mist-light flex-1">{cn.content}</span>
-                      {user && cn.user.id === user.id && (
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                          <button
-                            onClick={() => handleTogglePinNote(cn.id, !cn.pinned)}
-                            className={`hover:text-gold-glow transition-colors ${cn.pinned ? 'text-gold-glow' : 'text-mist-dark'}`}
-                            title={cn.pinned ? "Unpin" : "Pin note"}
-                          >
-                            📌
-                          </button>
-                          <button
-                            onClick={() => handleDeleteCommunityNote(cn.id)}
-                            className="text-mist-dark hover:text-crimson-light transition-colors"
-                            title="Delete note"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      )}
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          )}
-          <div className="flex justify-center">
+
+          <div
+            className="flex w-full flex-col gap-4 rounded-xl border border-ink-light/40 p-4"
+            style={{ background: "var(--surface-gradient-strong)" }}
+          >
             <div className="overflow-x-auto w-full">
               {/* Toolbar */}
-              <div className="flex flex-wrap items-center gap-2 mb-3">
+              <div className="mb-3 flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => {
                     const next = sortOrder === "newest" ? "oldest" : "newest";
@@ -685,7 +700,7 @@ export default function CheckInPage() {
 
               {/* Save/Cancel at top when newest-first */}
               {isEditMode && sortOrder === "newest" && rows.length > 0 && (
-                <div className="flex gap-3 pb-3 mb-2 border-b border-ink-light">
+                <div className="mb-2 flex flex-wrap gap-3 border-b border-ink-light pb-3">
                   <GlowButton variant="jade" size="sm" className="flex-1" onClick={handleEditToggle}>✓ Save Changes</GlowButton>
                   <GlowButton variant="ghost" size="sm" className="flex-1" onClick={handleEditCancel}>✕ Cancel</GlowButton>
                 </div>
@@ -700,7 +715,10 @@ export default function CheckInPage() {
 
               {/* Total Check-In Counts */}
               {users.length > 0 && (
-                <div className="flex flex-wrap gap-3 mb-3 p-2 bg-ink-dark/40 rounded-lg border border-ink-light/30">
+                <div
+                  className="mb-3 flex flex-wrap gap-3 rounded-lg border border-ink-light/30 p-2"
+                  style={{ background: "var(--surface-gradient-strong)" }}
+                >
                   <span className="text-[10px] text-mist-dark uppercase tracking-wider self-center">Totals:</span>
                   {users.map((u) => (
                     <div key={u.id} className="flex items-center gap-1.5 text-[10px]">
@@ -803,7 +821,7 @@ export default function CheckInPage() {
                               title="Click to add/edit day note"
                             >
                               <span className="text-[11px]">{formatDateWithPreference(row.date, dateFormat)}</span>
-                              <span className={`text-[9px] ml-1 ${isWeekend ? "text-amber-400/60" : "text-mist-dark"}`}>{dayName}</span>
+                              <span className={`text-[9px] ml-1 ${isWeekend ? "text-gold/70" : "text-mist-dark"}`}>{dayName}</span>
                             </button>
                             {noteText && (
                               <span className="text-[10px] text-gold-glow shrink-0" title={noteText}>📝</span>
@@ -822,7 +840,7 @@ export default function CheckInPage() {
                                     onClick={() => handleCheckInToggle(row.date, u.id, !isPresent)}
                                     className={`w-5 h-5 rounded text-[10px] font-bold transition-all duration-150 ${
                                       isPresent
-                                        ? "bg-jade-glow/20 text-jade-glow border border-jade-glow/40 shadow-[0_0_6px_rgba(58,143,143,0.3)]"
+                                        ? "bg-jade-glow/20 text-jade-glow border border-jade-glow/40 shadow-[var(--glow-subtle)]"
                                         : "text-mist-dark border border-ink-light/40 hover:border-mist-dark/60"
                                     }`}
                                   >
@@ -928,7 +946,7 @@ export default function CheckInPage() {
 
               {/* Save/Cancel at bottom when oldest-first */}
               {isEditMode && sortOrder === "oldest" && rows.length > 0 && (
-                <div className="flex gap-3 pt-4 mt-2 border-t border-ink-light">
+                <div className="mt-2 flex flex-wrap gap-3 border-t border-ink-light pt-4">
                   <GlowButton variant="jade" size="sm" className="flex-1" onClick={handleEditToggle}>✓ Save Changes</GlowButton>
                   <GlowButton variant="ghost" size="sm" className="flex-1" onClick={handleEditCancel}>✕ Cancel</GlowButton>
                 </div>
@@ -944,7 +962,7 @@ export default function CheckInPage() {
               )}
             </div>
           </div>
-        </>
+        </div>
       )}
       
       {/* Day Note Modal */}

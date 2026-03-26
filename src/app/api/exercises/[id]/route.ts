@@ -80,17 +80,6 @@ export const PATCH = withAuth(async (req, { auth, params }) => {
       );
     }
 
-    const validDifficulties = [
-      "mortal",
-      "foundation establishment",
-      "core formation",
-      "nascent soul",
-      "soul splitting",
-      "tribulation transcendence",
-      "immortal",
-      "heavenly dao",
-    ];
-
     const data: Record<string, unknown> = {};
 
     if (body.name !== undefined) {
@@ -121,10 +110,10 @@ export const PATCH = withAuth(async (req, { auth, params }) => {
     }
 
     if (body.difficulty !== undefined) {
-      const difficulty = String(body.difficulty).trim();
-      if (!validDifficulties.includes(difficulty.toLowerCase())) {
+      const difficulty = String(body.difficulty).trim().slice(0, 100);
+      if (!difficulty) {
         return NextResponse.json(
-          { error: `Invalid difficulty: ${difficulty}` },
+          { error: "Difficulty cannot be empty" },
           { status: 400 }
         );
       }

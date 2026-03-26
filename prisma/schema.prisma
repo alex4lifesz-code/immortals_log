@@ -21,33 +21,6 @@ model User {
   checkIns     CheckIn[]
   settings     UserSettings?
   checkInNotes CheckInNote[]
-  weightStandardsUpdated WeightStandard[]
-}
-
-model WeightStandard {
-  id            String   @id @default(cuid())
-  exerciseId    String
-  exercise      ProgressionExercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
-  gender        String               // "MALE" or "FEMALE"
-  tier1Min      Float    @default(0)
-  tier1Max      Float
-  tier2Min      Float
-  tier2Max      Float
-  tier3Min      Float
-  tier3Max      Float
-  tier4Min      Float
-  tier4Max      Float
-  tier5Min      Float
-  tier5Max      Float
-  tier6Min      Float
-  tier6Max      Float    @default(999)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  updatedBy     String?
-  updatedByUser User?    @relation(fields: [updatedBy], references: [id])
-
-  @@unique([exerciseId, gender])
-  @@index([exerciseId])
 }
 
 model UserSettings {
@@ -134,7 +107,6 @@ model ProgressionExercise {
   variations ProgressionVariation[]
   modifiers  ProgressionModifier[]
   userProgress UserProgressionLevel[]
-  weightStandards WeightStandard[]
 
   @@index([userId])
 }

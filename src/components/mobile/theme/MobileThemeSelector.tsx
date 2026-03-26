@@ -9,11 +9,57 @@ import type { Theme } from "@/lib/config";
 type ThemeStyle = Theme;
 
 const themePreviews: { id: ThemeStyle; title: string; colors: string[]; favorite?: boolean }[] = [
-  { id: "midnight-ink", title: "Midnight Ink", colors: ["#0d0f14", "#151823", "#2d6b6b", "#c4a84a"] },
-  { id: "mountain-mist", title: "Mountain Mist", colors: ["#f5f0eb", "#ede7e1", "#4a9e9e", "#a04040"] },
-  { id: "calligraphy", title: "Calligraphy", colors: ["#050505", "#1a1a1a", "#d4a860", "#888888"], favorite: true },
-  { id: "sakura", title: "Sakura", colors: ["#faf7f6", "#f5f1f0", "#e8507a", "#d8a878"] },
-  { id: "sakura-dark", title: "Sakura Dark", colors: ["#0c080e", "#130e16", "#d4508a", "#8870a8"] },
+  {
+    id: "midnight-ink",
+    title: "Midnight Ink",
+    colors: [
+      "var(--theme-preview-midnight-1)",
+      "var(--theme-preview-midnight-2)",
+      "var(--theme-preview-midnight-3)",
+      "var(--theme-preview-midnight-4)",
+    ],
+  },
+  {
+    id: "mountain-mist",
+    title: "Mountain Mist",
+    colors: [
+      "var(--theme-preview-mountain-1)",
+      "var(--theme-preview-mountain-2)",
+      "var(--theme-preview-mountain-3)",
+      "var(--theme-preview-mountain-4)",
+    ],
+  },
+  {
+    id: "calligraphy",
+    title: "Calligraphy",
+    colors: [
+      "var(--theme-preview-calligraphy-1)",
+      "var(--theme-preview-calligraphy-2)",
+      "var(--theme-preview-calligraphy-3)",
+      "var(--theme-preview-calligraphy-4)",
+    ],
+    favorite: true,
+  },
+  {
+    id: "sakura",
+    title: "Sakura",
+    colors: [
+      "var(--theme-preview-sakura-1)",
+      "var(--theme-preview-sakura-2)",
+      "var(--theme-preview-sakura-3)",
+      "var(--theme-preview-sakura-4)",
+    ],
+  },
+  {
+    id: "sakura-dark",
+    title: "Sakura Dark",
+    colors: [
+      "var(--theme-preview-sakura-dark-1)",
+      "var(--theme-preview-sakura-dark-2)",
+      "var(--theme-preview-sakura-dark-3)",
+      "var(--theme-preview-sakura-dark-4)",
+    ],
+  },
 ];
 
 export default function MobileThemeSelector() {

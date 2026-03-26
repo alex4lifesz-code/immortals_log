@@ -136,9 +136,9 @@ function parseMuscleGroups(primary: string, secondary?: string): MuscleGroup[] {
 function inferDifficulty(diff?: string): Difficulty | undefined {
   if (!diff) return undefined;
   const lower = diff.toLowerCase();
-  if (lower === 'beginner' || lower === 'mortal' || lower === 'foundation establishment') return 'Beginner';
-  if (lower === 'intermediate' || lower === 'core formation' || lower === 'nascent soul') return 'Intermediate';
-  if (lower === 'advanced' || lower === 'soul splitting' || lower === 'tribulation transcendence' || lower === 'immortal' || lower === 'heavenly dao') return 'Advanced';
+  if (lower === 'beginner') return 'Beginner';
+  if (lower === 'intermediate') return 'Intermediate';
+  if (lower === 'advanced') return 'Advanced';
   return undefined;
 }
 

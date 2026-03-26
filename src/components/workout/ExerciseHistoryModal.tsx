@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { GlowModal } from "@/components/ui/GlowCard";
 import { useAuth } from "@/context/AuthContext";
-import { useDisplaySettings } from "@/context/DisplaySettingsContext";
+import { useDisplaySettings, DISPLAY_DEFAULTS } from "@/context/DisplaySettingsContext";
 import { formatDateWithPreference } from "@/lib/constants";
 
 interface ExerciseHistoryModalProps {
@@ -68,29 +68,29 @@ export default function ExerciseHistoryModal({ exerciseId, exerciseName, isOpen,
             <thead className="sticky top-0 bg-ink-deep">
               <tr className="border-b border-ink-light/40 text-mist-dark">
                 <th className="text-left py-1.5 px-1.5 font-semibold">Date</th>
-                {(settings.columnOrderGrouped ? ["W1","W2","W3","R1","R2","R3"] : ["W1","R1","W2","R2","W3","R3"]).map(h => (
+                {(DISPLAY_DEFAULTS.columnOrderGrouped ? ["W1","W2","W3","R1","R2","R3"] : ["W1","R1","W2","R2","W3","R3"]).map(h => (
                   <th
                     key={h}
                     className="text-center py-1.5 px-1 font-semibold"
                     style={
-                      (settings.columnColorsEnabled ?? true) && h.startsWith('W')
+                      DISPLAY_DEFAULTS.columnColorsEnabled && h.startsWith('W')
                         ? { color: 'var(--col-weight)' }
-                        : (settings.columnColorsEnabled ?? true) && h.startsWith('R')
+                        : DISPLAY_DEFAULTS.columnColorsEnabled && h.startsWith('R')
                           ? { color: 'var(--col-reps)' }
                           : undefined
                     }
                   >{h}</th>
                 ))}
-                <th className="text-center py-1.5 px-1 font-semibold" style={{ color: 'var(--mountain-blue-glow, #5b9bd5)' }}>Hold</th>
+                <th className="text-center py-1.5 px-1 font-semibold" style={{ color: 'var(--mountain-blue-glow)' }}>Hold</th>
                 <th className="text-left py-1.5 px-1.5 font-semibold">Notes</th>
               </tr>
             </thead>
             <tbody>
               {historyData.map((entry) => {
-                const colTypes = settings.columnOrderGrouped
+                const colTypes = DISPLAY_DEFAULTS.columnOrderGrouped
                   ? ['weight','weight','weight','reps','reps','reps'] as const
                   : ['weight','reps','weight','reps','weight','reps'] as const;
-                const fields = settings.columnOrderGrouped
+                const fields = DISPLAY_DEFAULTS.columnOrderGrouped
                   ? [entry.weight1, entry.weight2, entry.weight3, entry.reps1, entry.reps2, entry.reps3]
                   : [entry.weight1, entry.reps1, entry.weight2, entry.reps2, entry.weight3, entry.reps3];
                 return (
@@ -103,9 +103,9 @@ export default function ExerciseHistoryModal({ exerciseId, exerciseName, isOpen,
                       key={i}
                       className="py-1.5 px-1 text-center text-cloud-white"
                       style={
-                        (settings.columnColorsEnabled ?? true) && colTypes[i] === 'weight'
+                        DISPLAY_DEFAULTS.columnColorsEnabled && colTypes[i] === 'weight'
                           ? { backgroundColor: 'var(--col-weight-bg)' }
-                          : (settings.columnColorsEnabled ?? true) && colTypes[i] === 'reps'
+                          : DISPLAY_DEFAULTS.columnColorsEnabled && colTypes[i] === 'reps'
                             ? { backgroundColor: 'var(--col-reps-bg)' }
                             : undefined
                       }

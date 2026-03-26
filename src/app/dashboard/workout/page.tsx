@@ -10,23 +10,21 @@ import { useAppContext } from "@/context/AppContext";
 import { getExerciseDisplayName } from "@/lib/exercise-name";
 import { DEFAULT_USER_PHYSIQUE, loadUserPhysique } from "@/lib/user-physique";
 import type { UserPhysiqueSettings } from "@/lib/user-physique";
-import TechniqueManagementDrawer from "@/components/workout/TechniqueManagementDrawer";
-import { MemoUnifiedTrainingLogTable } from "@/components/workout/UnifiedTrainingLogTable";
-import { ExerciseDetailModal } from "@/components/workout/ExerciseDetailModal";
-import { InlineLogForm } from "@/components/workout/InlineLogForm";
-import { ProgressionSidebar } from "@/components/workout/ProgressionSidebar";
-import { CultivationColorGuide, EmptyState } from "@/components/workout/CultivationColorGuide";
+import ExerciseManagementDrawer from "@/components/workout/ExerciseManagementDrawer";
+import { MemoTrainingLogTable } from "@/components/workout/TrainingLogTable";
+import { ExerciseInfoModal } from "@/components/workout/ExerciseInfoModal";
+import { SetLoggerPanel } from "@/components/workout/SetLoggerPanel";
+import { TrainingGroundsSidebar } from "@/components/workout/TrainingGroundsSidebar";
+import { EmptyState } from "@/components/workout/TierColorLegend";
 import { getTierGlowFromLogs } from "@/components/workout/TierProgressBar";
 import { api } from "@/lib/api-client";
 
-import type { ProgressionExercise, ReadyToLogQueueItem, LogTableFilter, WeightStandardsMap } from "./types";
-import type { WeightStandardRecord } from "@/lib/weight-standards";
+import type { ProgressionExercise, ProgressionLog, ReadyToLogQueueItem, LogTableFilter } from "./types";
 import {
   stripBwPercentHint,
   createReadyToLogQueueItemId,
   formatResistanceBandLabel,
   getSelectedLevel,
-  getWeightedDifficulty,
   getAutoGymLevel,
   getAutoGymLevelFromSet,
   isGymCategoryExercise,
@@ -51,11 +49,15 @@ export default function ProgressionPage() {
   const [readyToLogQueueHydrated, setReadyToLogQueueHydrated] = useState(false);
   const [activeQueueItemId, setActiveQueueItemId] = useState<string | null>(null);
   const [selectedLogFilter, setSelectedLogFilter] = useState<LogTableFilter | null>(null);
-  const [showColorGuide, setShowColorGuide] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedDayFilter, setSelectedDayFilter] = useState<number | null>(null);
+  const [showMobileRailSearch, setShowMobileRailSearch] = useState(false);
+  const [showMobileRailFilters, setShowMobileRailFilters] = useState(false);
+  const [mobileRailSort, setMobileRailSort] = useState<"most-recent" | "most-performed" | "a-z" | "z-a">("most-recent");
+  const [mobileRailPerformedOnly, setMobileRailPerformedOnly] = useState(false);
   const [_exerciseOrder, setExerciseOrder] = useState<string[]>([]);
   const [physique, setPhysique] = useState<UserPhysiqueSettings>(DEFAULT_USER_PHYSIQUE);
+  const mobileRailScrollRef = useRef<HTMLDivElement | null>(null);
   const filterHistoryArmedRef = useRef(false);
   const loggerHistoryArmedRef = useRef(false);
 
@@ -156,25 +158,6 @@ export default function ProgressionPage() {
     window.addEventListener("user-physique-updated", handlePhysiqueUpdate as EventListener);
     return () => window.removeEventListener("user-physique-updated", handlePhysiqueUpdate as EventListener);
   }, [userId]);
-
-  const [weightStandards, setWeightStandards] = useState<WeightStandardsMap>({});
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const data = await api.get<{ standards: WeightStandardRecord[] }>("/api/weight-standards");
-        if (cancelled) return;
-        const map: WeightStandardsMap = {};
-        for (const item of data.standards ?? []) {
-          if (!map[item.exerciseId]) map[item.exerciseId] = { male: null, female: null };
-          if (item.gender === "MALE") map[item.exerciseId].male = item;
-          else if (item.gender === "FEMALE") map[item.exerciseId].female = item;
-        }
-        setWeightStandards(map);
-      } catch { /* fall back to hardcoded */ }
-    })();
-    return () => { cancelled = true; };
-  }, []);
 
   useEffect(() => {
     if (!userId) return;
@@ -303,7 +286,7 @@ export default function ProgressionPage() {
     if (!userId) return;
     const exercise = exercises.find((e) => e.id === exerciseId);
     const autoLevel = exercise
-      ? getAutoGymLevelFromSet(exercise, physique, { weight1: data.weight1, weight2: data.weight2, weight3: data.weight3 }, data.modifier, weightStandards)
+      ? getAutoGymLevelFromSet(exercise, physique, { weight1: data.weight1, weight2: data.weight2, weight3: data.weight3 }, data.modifier)
       : null;
     const effectiveLevel = exercise && isGymCategoryExercise(exercise) ? (autoLevel ?? level) : level;
     const { resistanceBandKg: _ignoredResistanceBand, ...logData } = data;
@@ -320,11 +303,11 @@ export default function ProgressionPage() {
   const autoLevelByExerciseId = useMemo(() => {
     const map: Record<string, number> = {};
     for (const ex of exercises) {
-      const level = getAutoGymLevel(ex, physique, weightStandards);
+      const level = getAutoGymLevel(ex, physique);
       if (level != null) map[ex.id] = level;
     }
     return map;
-  }, [exercises, physique, weightStandards]);
+  }, [exercises, physique]);
 
   const exerciseLookup = useMemo(
     () => new Map(exercises.map((exercise) => [exercise.id, exercise])),
@@ -356,6 +339,103 @@ export default function ProgressionPage() {
       .filter((item): item is { queueItemId: string; exercise: ProgressionExercise } => Boolean(item)),
     [exerciseLookup, readyToLogQueueItems]
   );
+
+  type HorizontalRailExercise = {
+    exercise: ProgressionExercise;
+    logs: ProgressionLog[];
+    logCount: number;
+    latestTs: number;
+    displayName: string;
+  };
+
+  const horizontalSidebarExercises = useMemo(() => {
+    const filtered = exercises.map((exercise) => {
+      if (selectedDayFilter !== null) {
+        if (!exercise.assignedDays || exercise.assignedDays.trim() === "") return false;
+        const assignedDays = exercise.assignedDays
+          .split(",")
+          .map((d) => Number.parseInt(d.trim(), 10))
+          .filter((d) => !Number.isNaN(d));
+        if (!assignedDays.includes(selectedDayFilter)) return false;
+      }
+
+      const categoryTags = parseCategoryTags(exercise.category);
+      const equipmentTags = getEquipmentTags(exercise);
+      if (filterCategory && !categoryTags.includes(filterCategory)) return false;
+      if (filterType && exercise.type !== filterType) return false;
+      if (filterEquipment && !equipmentTags.includes(filterEquipment)) return false;
+
+      if (searchTerm) {
+        const normalized = searchTerm.trim().toLowerCase();
+        if (normalized) {
+          const fields = [exercise.name, exercise.wuxiaName, exercise.primaryMuscles, exercise.secondaryMuscles, exercise.category]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+          if (!fields.includes(normalized)) return false;
+        }
+      }
+
+      const logs = exercise.userProgress?.[0]?.logs ?? [];
+      const latestTs = logs.reduce((max, log) => {
+          const ts = new Date(log.createdAt).getTime();
+          return ts > max ? ts : max;
+      }, 0);
+
+      return {
+        exercise,
+        logs,
+        logCount: logs.length,
+        latestTs,
+        displayName: stripBwPercentHint(getExerciseDisplayName(exercise, settings.terminologyMode)),
+      };
+    }).filter((item): item is HorizontalRailExercise => item !== false);
+
+    const performedFiltered = mobileRailPerformedOnly
+      ? filtered.filter((item) => item.logCount > 0)
+      : filtered;
+
+    return [...performedFiltered]
+      .sort((a, b) => {
+        if (mobileRailSort === "most-performed") {
+          if (a.logCount !== b.logCount) return b.logCount - a.logCount;
+          return b.latestTs - a.latestTs;
+        }
+        if (mobileRailSort === "a-z") return a.displayName.localeCompare(b.displayName);
+        if (mobileRailSort === "z-a") return b.displayName.localeCompare(a.displayName);
+        if (a.latestTs !== b.latestTs) return b.latestTs - a.latestTs;
+        return b.logCount - a.logCount;
+      })
+      .slice(0, 30);
+  }, [
+    exercises,
+    filterCategory,
+    filterEquipment,
+    filterType,
+    mobileRailPerformedOnly,
+    mobileRailSort,
+    searchTerm,
+    selectedDayFilter,
+    settings.terminologyMode,
+  ]);
+
+  const handleMobileRailWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
+    const rail = mobileRailScrollRef.current;
+    if (!rail) return;
+    if (rail.scrollWidth <= rail.clientWidth) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
+    const useHorizontalDelta = Math.abs(event.deltaX) > Math.abs(event.deltaY);
+    const delta = useHorizontalDelta ? event.deltaX : event.deltaY;
+    if (delta === 0) return;
+
+    rail.scrollLeft += delta;
+    event.preventDefault();
+    event.stopPropagation();
+  }, []);
 
   const loggerTargetQueueItemId = activeQueueItemId;
   const activeLoggerQueueItem = loggerTargetQueueItemId
@@ -421,7 +501,7 @@ export default function ProgressionPage() {
   // ── Render ──
 
   const sidebar = (
-    <ProgressionSidebar
+    <TrainingGroundsSidebar
       exercises={exercises}
       selectedIds={selectedExerciseIds}
       onToggleExercise={toggleExercise}
@@ -468,9 +548,193 @@ export default function ProgressionPage() {
         <EmptyState />
       ) : (
         <div className="px-0 py-2 sm:py-3 space-y-3 sm:space-y-4">
+          {isMobile && (
+            <section className="sticky top-0 z-30 -mx-1 px-1">
+              <div
+                className="rounded-xl border border-jade-glow/25 backdrop-blur-sm px-2 py-1.5 shadow-[var(--shadow-elev-1)]"
+                style={{ background: "var(--surface-gradient-strong)" }}
+              >
+                <div className="mb-1.5 flex items-center justify-between gap-2">
+                  <h3 className="text-[10px] uppercase tracking-[0.08em] text-mist-dark">Training Grounds</h3>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setShowMobileRailSearch((prev) => !prev)}
+                      className={`text-[10px] px-2 py-1 rounded border transition-colors ${
+                        showMobileRailSearch
+                          ? "border-jade-glow/55 text-jade-light bg-jade-deep/15"
+                          : "border-ink-light/35 text-mist-dark"
+                      }`}
+                    >
+                      Search
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowMobileRailFilters((prev) => !prev)}
+                      className={`text-[10px] px-2 py-1 rounded border transition-colors ${
+                        showMobileRailFilters
+                          ? "border-jade-glow/55 text-jade-light bg-jade-deep/15"
+                          : "border-ink-light/35 text-mist-dark"
+                      }`}
+                    >
+                      Filters
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        for (const id of [...selectedExerciseIds]) toggleExercise(id);
+                      }}
+                      disabled={selectedExerciseIds.size === 0}
+                      className={`text-[10px] px-2 py-1 rounded border transition-colors ${
+                        selectedExerciseIds.size > 0
+                          ? "border-crimson/45 text-crimson-light hover:bg-crimson-deep/20"
+                          : "border-ink-light/35 text-mist-dark"
+                      }`}
+                    >
+                      Clear Added
+                    </button>
+                  </div>
+                </div>
+
+                {showMobileRailSearch && (
+                  <div className="mb-1.5">
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(event) => setSearchTerm(event.target.value)}
+                      placeholder="Search exercises..."
+                      className="w-full h-7 rounded-md border border-ink-light/40 bg-ink-dark/65 px-2 text-[10px] text-cloud-white placeholder:text-mist-dark outline-none focus:border-jade-glow/50"
+                    />
+                  </div>
+                )}
+
+                {showMobileRailFilters && (
+                  <div className="mb-1.5 grid grid-cols-2 gap-1.5">
+                    <select
+                      value={filterCategory}
+                      onChange={(event) => setFilterCategory(event.target.value)}
+                      className="h-7 rounded-md border border-ink-light/40 bg-ink-dark/65 px-2 text-[10px] text-cloud-white outline-none"
+                    >
+                      <option value="">All Categories</option>
+                      {categories.map((category) => (
+                        <option key={category} value={category}>{category}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={filterType}
+                      onChange={(event) => setFilterType(event.target.value)}
+                      className="h-7 rounded-md border border-ink-light/40 bg-ink-dark/65 px-2 text-[10px] text-cloud-white outline-none"
+                    >
+                      <option value="">All Types</option>
+                      {types.map((type) => (
+                        <option key={type} value={type}>{type}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={filterEquipment}
+                      onChange={(event) => setFilterEquipment(event.target.value)}
+                      className="h-7 rounded-md border border-ink-light/40 bg-ink-dark/65 px-2 text-[10px] text-cloud-white outline-none"
+                    >
+                      <option value="">All Equipment</option>
+                      {equipmentTypes.map((equipment) => (
+                        <option key={equipment} value={equipment}>{equipment}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={mobileRailSort}
+                      onChange={(event) => setMobileRailSort(event.target.value as "most-recent" | "most-performed" | "a-z" | "z-a")}
+                      className="h-7 rounded-md border border-ink-light/40 bg-ink-dark/65 px-2 text-[10px] text-cloud-white outline-none"
+                    >
+                      <option value="most-recent">Most Recent</option>
+                      <option value="most-performed">Most Performed</option>
+                      <option value="a-z">A-Z</option>
+                      <option value="z-a">Z-A</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => setMobileRailPerformedOnly((prev) => !prev)}
+                      className={`h-7 rounded-md border px-2 text-[10px] font-medium transition-colors ${
+                        mobileRailPerformedOnly
+                          ? "border-jade-glow/60 text-jade-light bg-jade-deep/20"
+                          : "border-ink-light/40 text-mist-light"
+                      }`}
+                    >
+                      Performed Only
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFilterCategory("");
+                        setFilterType("");
+                        setFilterEquipment("");
+                        setMobileRailSort("most-recent");
+                        setMobileRailPerformedOnly(false);
+                      }}
+                      className="h-7 rounded-md border border-ink-light/40 px-2 text-[10px] text-mist-light transition-colors hover:text-cloud-white"
+                    >
+                      Reset Filters
+                    </button>
+                  </div>
+                )}
+
+                <p className="mb-1.5 text-[10px] text-mist-dark/90">Swipe horizontally to browse exercises</p>
+
+                <div
+                  ref={mobileRailScrollRef}
+                  onWheelCapture={handleMobileRailWheel}
+                  onWheel={handleMobileRailWheel}
+                  className="overflow-x-auto scrollbar-hide pb-1 cursor-ew-resize"
+                  style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: "contain", touchAction: "pan-x" }}
+                >
+                  <div className="flex min-w-max gap-2 pr-1 snap-x snap-mandatory">
+                    {horizontalSidebarExercises.map((item) => {
+                      const { exercise, logs, logCount, latestTs, displayName } = item;
+                      const isAdded = selectedExerciseIds.has(exercise.id);
+                      const latestLabel = latestTs ? `${Math.max(1, Math.floor((Date.now() - latestTs) / 86400000))}d ago` : "No logs";
+
+                      return (
+                        <button
+                          key={exercise.id}
+                          type="button"
+                          onClick={() => {
+                            if (isAdded) {
+                              toggleExercise(exercise.id);
+                              return;
+                            }
+                            addExercise(exercise.id);
+                          }}
+                          className={`snap-start min-w-[148px] max-w-[148px] rounded-lg border px-2 py-1.5 text-left transition-all duration-150 ${
+                            isAdded
+                              ? "border-jade-glow/70 bg-jade-deep/20 shadow-[var(--glow-subtle)]"
+                              : "border-ink-light/35 bg-ink-dark/55 hover:border-jade-glow/45"
+                          }`}
+                        >
+                          <div className="mb-1.5 h-14 rounded-md border border-ink-light/25 bg-gradient-to-r from-ink-mid/50 via-ink-light/10 to-ink-mid/50" />
+                          <div className="truncate text-[11px] font-semibold text-cloud-white">
+                            {displayName}
+                          </div>
+                          <div className="mt-0.5 flex items-center justify-between gap-2 text-[10px] text-mist-dark">
+                            <span>{logCount} logs</span>
+                            <span>{latestLabel}</span>
+                          </div>
+                          <div className={`mt-1 text-[10px] font-semibold ${isAdded ? "text-jade-light" : "text-mist-light"}`}>
+                            {isAdded ? "Added" : "Add Workout"}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
           {selectedExercises.length > 0 && (
-            <section className="space-y-2">
-              <div className="flex items-center justify-between gap-2 px-1 sm:px-0">
+            <section
+              className="space-y-2 rounded-xl border border-jade-glow/25 backdrop-blur-sm px-2 py-1.5 shadow-[var(--shadow-elev-1)]"
+              style={{ background: "var(--surface-gradient-strong)" }}
+            >
+              <div className="flex items-center justify-between gap-2 px-0">
                 <div className="min-w-0">
                   <h3 className="text-xs text-mist-light uppercase tracking-wider">Ready To Log</h3>
                   <p className="mt-0.5 text-[10px] text-mist-dark">Tap a banner to open the logger popup.</p>
@@ -519,7 +783,7 @@ export default function ProgressionPage() {
                         boxShadow: isActiveLogger
                           ? `${difficultyStyle.glowShadow}, 0 0 14px ${difficultyStyle.glowColor}, inset 0 0 0 1px ${difficultyStyle.glowColor}`
                           : `${difficultyStyle.glowShadow}, inset 0 0 0 1px ${difficultyStyle.glowColor}`,
-                        backgroundImage: "linear-gradient(104deg, rgba(8,16,24,0.96) 0%, rgba(14,24,36,0.94) 100%)",
+                        backgroundImage: "var(--surface-gradient-strong)",
                       }}
                     >
                       <span
@@ -601,46 +865,27 @@ export default function ProgressionPage() {
             </section>
           )}
 
-          <section className={`space-y-3 rounded-lg border py-2 px-0 transition-colors ${selectedLogFilter ? "border-jade-glow/25 bg-ink-mid/20" : "border-transparent bg-transparent"}`}>
-            <div className="flex items-center justify-between gap-2 px-1 sm:px-0">
-              <h3 className="text-xs text-mist-light uppercase tracking-wider">Training Log</h3>
-              <button
-                onClick={() => setSelectedLogFilter(null)}
-                disabled={!selectedLogFilter}
-                className={`text-[10px] px-2 py-1 rounded border transition-colors ${
-                  selectedLogFilter
-                    ? "border-jade/40 text-jade-light hover:bg-jade-deep/20"
-                    : "border-jade/20 text-jade-light/0 pointer-events-none"
-                }`}
-                aria-hidden={!selectedLogFilter}
-              >
-                Clear Exercise Filter
-              </button>
-            </div>
+          <section className="space-y-3 -mx-1 px-1 sm:mx-0 sm:px-0">
             <div className="mx-0">
-              <MemoUnifiedTrainingLogTable
+              <MemoTrainingLogTable
                 exercises={exercises}
                 physique={physique}
                 selectedLogFilter={selectedLogFilter}
                 onSelectExercise={setSelectedLogFilter}
                 onRefresh={fetchExercises}
                 userId={userId || ''}
-                weightStandards={weightStandards}
               />
             </div>
           </section>
         </div>
       )}
 
-      <ExerciseDetailModal
+      <ExerciseInfoModal
         exercise={detailExercise}
         isOpen={detailExercise !== null}
         onClose={() => setDetailExercise(null)}
       />
-
-      <CultivationColorGuide isOpen={showColorGuide} onClose={() => setShowColorGuide(false)} />
-
-      <TechniqueManagementDrawer
+      <ExerciseManagementDrawer
         isOpen={isDrawerOpen}
         onClose={handleDrawerClose}
         exercises={exercises.map(e => ({
@@ -686,7 +931,7 @@ export default function ProgressionPage() {
                   className="mx-auto w-full max-w-4xl pb-[calc(env(safe-area-inset-bottom)+7rem)]"
                   onClick={(event) => event.stopPropagation()}
                 >
-                  <InlineLogForm
+                  <SetLoggerPanel
                     key={activeLoggerQueueItem.id}
                     queueItemId={activeLoggerQueueItem.id}
                     exercise={activeLoggerExercise}

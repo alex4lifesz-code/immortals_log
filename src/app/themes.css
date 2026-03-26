@@ -519,6 +519,11 @@ html.calligraphy {
   --foreground: #d0d0d0;
   --surface: #0f0f0f;
   --surface-hover: #1a1a1a;
+  --surface-gradient-strong: linear-gradient(
+    104deg,
+    color-mix(in srgb, var(--ink-mid) 82%, black) 0%,
+    color-mix(in srgb, var(--ink-light) 78%, black) 100%
+  );
   --border: #333333;
   --border-glow: #d4a860;
   --text-primary: #d0d0d0;

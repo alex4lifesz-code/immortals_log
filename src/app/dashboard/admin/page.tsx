@@ -209,22 +209,7 @@ export default function AdminPanelPage() {
           {/* Admin Tools */}
           <div>
             <h3 className="text-sm text-jade-glow uppercase mb-3">Admin Tools</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <GlowCard glow="gold" hoverable>
-                <button
-                  onClick={() => router.push("/dashboard/admin/weight-standards")}
-                  className="w-full text-left"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">⚖️</span>
-                    <div>
-                      <p className="text-sm font-semibold text-cloud-white">Weight Standards</p>
-                      <p className="text-xs text-mist-dark mt-0.5">Configure gender-specific weight tier thresholds per exercise</p>
-                    </div>
-                  </div>
-                </button>
-              </GlowCard>
-            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" />
           </div>
 
           {/* User Management */}
@@ -349,7 +334,7 @@ export default function AdminPanelPage() {
               </div>
               <div>
                 <p className="text-xs text-mist-dark uppercase">Sessions</p>
-                <p className="text-sm text-blue-glow mt-1">{selectedUser.sessionCount ?? selectedUser.progressionLogCount ?? 0}</p>
+                <p className="text-sm text-mountain-blue-glow mt-1">{selectedUser.sessionCount ?? selectedUser.progressionLogCount ?? 0}</p>
               </div>
               <div>
                 <p className="text-xs text-mist-dark uppercase">Check-Ins</p>

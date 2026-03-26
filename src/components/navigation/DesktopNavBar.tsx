@@ -9,7 +9,7 @@ import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
 import { t } from "@/lib/terminology";
 
-function TopBar() {
+function DesktopNavBar() {
   const { getSortedNavItems, collapsed, isMobile, topPanelExpanded, setTopPanelExpanded } = useAppContext();
   const { user } = useAuth();
   const { settings } = useDisplaySettings();
@@ -124,4 +124,4 @@ function TopBar() {
   );
 }
 
-export default memo(TopBar);
+export default memo(DesktopNavBar);

@@ -40,7 +40,9 @@ export const POST = withAuth(async (req, { auth }) => {
     const wuxiaName = String(body.wuxiaName || body.name || "")
       .trim()
       .slice(0, 200);
-    const difficulty = String(body.difficulty || "").trim();
+    const difficulty = String(body.difficulty || "")
+      .trim()
+      .slice(0, 100);
     const type = String(body.type || "").trim();
     const story = body.story
       ? String(body.story).trim().slice(0, 2000)
@@ -52,25 +54,6 @@ export const POST = withAuth(async (req, { auth }) => {
     if (!name || !difficulty || !type) {
       return NextResponse.json(
         { error: "Name, difficulty, and type are required" },
-        { status: 400 }
-      );
-    }
-
-    const validDifficulties = [
-      "mortal",
-      "foundation establishment",
-      "core formation",
-      "nascent soul",
-      "soul splitting",
-      "tribulation transcendence",
-      "immortal",
-      "heavenly dao",
-    ];
-    if (!validDifficulties.includes(difficulty.toLowerCase())) {
-      return NextResponse.json(
-        {
-          error: `Difficulty must be one of: ${validDifficulties.join(", ")}`,
-        },
         { status: 400 }
       );
     }

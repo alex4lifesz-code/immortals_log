@@ -1,6 +1,5 @@
-import type { ProgressionExercise, ProgressionTier, ProgressionLog, WeightStandardsMap } from "./types";
+import type { ProgressionExercise, ProgressionTier, ProgressionLog } from "./types";
 import type { UserPhysiqueSettings } from "@/lib/user-physique";
-import { recordToTiers } from "@/lib/weight-standards";
 
 export function parseTips(tips: string): string[] {
   if (!tips) return [];
@@ -176,34 +175,6 @@ export function getEffectiveWeight(avg: number, bandKg?: number | null, modifier
   return Math.max(0, avg - bandOffset + modifierOffset);
 }
 
-function scaleTargets(seed: number[], count: number): number[] {
-  if (count <= 1) return [seed[0]];
-  if (count === seed.length) return [...seed];
-
-  const out: number[] = [];
-  for (let i = 0; i < count; i++) {
-    const pos = (i * (seed.length - 1)) / (count - 1);
-    const lo = Math.floor(pos);
-    const hi = Math.ceil(pos);
-    if (lo === hi) {
-      out.push(seed[lo]);
-      continue;
-    }
-    const t = pos - lo;
-    out.push(seed[lo] + (seed[hi] - seed[lo]) * t);
-  }
-  return out;
-}
-
-function getGymTierTargets(gender: UserPhysiqueSettings["gender"], tierCount: number): number[] {
-  const seeds: Record<UserPhysiqueSettings["gender"], number[]> = {
-    male: [20, 35, 50, 65, 80, 95, 110, 125, 140, 160],
-    female: [15, 25, 35, 45, 55, 65, 75, 85, 95, 110],
-  };
-
-  return scaleTargets(seeds[gender], tierCount);
-}
-
 export function isGymWeightTrackedExercise(exercise: ProgressionExercise): boolean {
   const equipment = (exercise.equipmentType || "").toLowerCase();
   const gymEquipmentHints = ["dumbbell", "barbell", "machine", "cable", "weights", "plate", "smith"];
@@ -250,57 +221,6 @@ export function getExerciseCategoryLabel(exercise: ProgressionExercise | undefin
   if (tags.some((t) => t.includes("yoga") || t.includes("stretching"))) return "Yoga";
   if (tags.some((t) => t.includes("cardio"))) return "Cardio";
   return "Cali";
-}
-
-function parseTierWeightStandardKg(text: string, bodyWeightKg: number): number | null {
-  if (!text) return null;
-
-  const percentRange = text.match(/(\d+(?:\.\d+)?)\s*[-to]+\s*(\d+(?:\.\d+)?)\s*%\s*bw/i);
-  if (percentRange) {
-    const lowerPercent = Number(percentRange[1]);
-    if (Number.isFinite(lowerPercent) && lowerPercent > 0) return (lowerPercent / 100) * bodyWeightKg;
-  }
-
-  const percentSingle = text.match(/(\d+(?:\.\d+)?)\s*%\s*bw/i);
-  if (percentSingle) {
-    const p = Number(percentSingle[1]);
-    if (Number.isFinite(p) && p > 0) return (p / 100) * bodyWeightKg;
-  }
-
-  const kgRange = text.match(/(\d+(?:\.\d+)?)\s*[-to]+\s*(\d+(?:\.\d+)?)\s*kg/i);
-  if (kgRange) {
-    const lower = Number(kgRange[1]);
-    if (Number.isFinite(lower) && lower > 0) return lower;
-  }
-
-  const kgSingle = text.match(/(\d+(?:\.\d+)?)\s*kg/i);
-  if (kgSingle) {
-    const kg = Number(kgSingle[1]);
-    if (Number.isFinite(kg) && kg > 0) return kg;
-  }
-
-  const lbRange = text.match(/(\d+(?:\.\d+)?)\s*[-to]+\s*(\d+(?:\.\d+)?)\s*lb/i);
-  if (lbRange) {
-    const lowerLb = Number(lbRange[1]);
-    if (Number.isFinite(lowerLb) && lowerLb > 0) return lowerLb * 0.453592;
-  }
-
-  const lbSingle = text.match(/(\d+(?:\.\d+)?)\s*lb/i);
-  if (lbSingle) {
-    const lb = Number(lbSingle[1]);
-    if (Number.isFinite(lb) && lb > 0) return lb * 0.453592;
-  }
-
-  return null;
-}
-
-export function getGymTierStandardKg(tier: ProgressionTier, bodyWeightKg: number): number | null {
-  const candidates = [tier.targetRepsText || "", tier.description || "", tier.name || ""];
-  for (const candidate of candidates) {
-    const parsed = parseTierWeightStandardKg(candidate, bodyWeightKg);
-    if (parsed != null) return parsed;
-  }
-  return null;
 }
 
 export function supportsResistanceBandAssistance(exercise: ProgressionExercise): boolean {
@@ -360,52 +280,11 @@ export function getAutoGymLevelFromAverage(
   exercise: ProgressionExercise,
   physique: UserPhysiqueSettings,
   avgWeight: number | null,
-  weightStandards?: WeightStandardsMap
 ): number | null {
-  if (!isGymCategoryExercise(exercise)) return null;
-  if (!isGymWeightTrackedExercise(exercise)) return null;
-  if (!physique.bodyWeightKg || physique.bodyWeightKg <= 0) return null;
-  if (!exercise.tiers || exercise.tiers.length === 0) return null;
-  if (!avgWeight || avgWeight <= 0) return null;
-
-  const sortedTiers = [...exercise.tiers].sort((a, b) => a.level - b.level);
-
-  const dbStandards = weightStandards?.[exercise.id];
-  if (dbStandards) {
-    const genderKey = physique.gender === "female" ? "female" : "male";
-    const record = genderKey === "female" ? dbStandards.female : dbStandards.male;
-    if (record) {
-      const tiers = recordToTiers(record);
-      const bwPercent = (avgWeight / physique.bodyWeightKg) * 100;
-      let picked = sortedTiers[0].level;
-      for (let i = 0; i < sortedTiers.length && i < tiers.length; i++) {
-        if (bwPercent >= tiers[i].minPercentage) picked = sortedTiers[i].level;
-      }
-      return picked;
-    }
-  }
-
-  const explicitStandards = sortedTiers.map((tier) => getGymTierStandardKg(tier, physique.bodyWeightKg as number));
-  const hasExplicitStandards = explicitStandards.some((v) => v != null);
-
-  if (hasExplicitStandards) {
-    let picked = sortedTiers[0].level;
-    for (let i = 0; i < sortedTiers.length; i++) {
-      const standardKg = explicitStandards[i];
-      if (standardKg == null) continue;
-      if (avgWeight >= standardKg) picked = sortedTiers[i].level;
-    }
-    return picked;
-  }
-
-  const bwPercent = (avgWeight / physique.bodyWeightKg) * 100;
-  const targets = getGymTierTargets(physique.gender, sortedTiers.length);
-
-  let picked = sortedTiers[0].level;
-  for (let i = 0; i < sortedTiers.length; i++) {
-    if (bwPercent >= targets[i]) picked = sortedTiers[i].level;
-  }
-  return picked;
+  void exercise;
+  void physique;
+  void avgWeight;
+  return null;
 }
 
 export function getAutoGymLevelFromSet(
@@ -417,14 +296,12 @@ export function getAutoGymLevelFromSet(
     weight3?: number | null;
   },
   modifier?: string | null,
-  weightStandards?: WeightStandardsMap
 ): number | null {
-  const { resistanceBandKg, modifierWeightKg } = parseModifierWithBand(modifier);
-  const vals = [setData.weight1, setData.weight2, setData.weight3]
-    .filter((v): v is number => typeof v === "number" && Number.isFinite(v) && v > 0)
-    .map((v) => getEffectiveWeight(v, resistanceBandKg, modifierWeightKg));
-  const avg = vals.length > 0 ? vals.reduce((sum, v) => sum + v, 0) / vals.length : null;
-  return getAutoGymLevelFromAverage(exercise, physique, avg, weightStandards);
+  void exercise;
+  void physique;
+  void setData;
+  void modifier;
+  return null;
 }
 
 export function recentAverageWeightBandAdjusted(logs: ProgressionLog[], limit = 3): number | null {
@@ -443,10 +320,10 @@ export function recentAverageWeightBandAdjusted(logs: ProgressionLog[], limit = 
   return vals.reduce((sum, v) => sum + v, 0) / vals.length;
 }
 
-export function getAutoGymLevel(exercise: ProgressionExercise, physique: UserPhysiqueSettings, weightStandards?: WeightStandardsMap): number | null {
-  const logs = exercise.userProgress[0]?.logs ?? [];
-  const avgWeight = recentAverageWeightBandAdjusted(logs, 3);
-  return getAutoGymLevelFromAverage(exercise, physique, avgWeight, weightStandards);
+export function getAutoGymLevel(exercise: ProgressionExercise, physique: UserPhysiqueSettings): number | null {
+  void exercise;
+  void physique;
+  return null;
 }
 
 export function getTierName(exercise: ProgressionExercise, level: number): string {
@@ -480,50 +357,16 @@ export function getTierInputMode(exercise: ProgressionExercise, level: number): 
   return hasHoldBasedTiers(exercise) ? "hold" : "weight";
 }
 
-export const DIFFICULTY_SCALE = [
-  "Mortal",
-  "Foundation Establishment",
-  "Core Formation",
-  "Nascent Soul",
-  "Soul Splitting",
-  "Tribulation Transcendence",
-  "Immortal",
-  "Heavenly Dao",
-] as const;
-
 export function getWeightedDifficulty(
   exercise: ProgressionExercise,
   level: number,
   variantName?: string | null,
   modifierType?: string | null,
 ): string {
-  const sorted = [...exercise.tiers].sort((a, b) => a.level - b.level);
-  const idx = sorted.findIndex((t) => t.level === level);
-  const maxIdx = Math.max(sorted.length - 1, 1);
-
-  let score = idx === -1 ? 0 : idx / maxIdx;
-
-  if (variantName && exercise.variations) {
-    const variation = exercise.variations.find(v => v.name === variantName);
-    if (variation?.difficulty) {
-      const varDiffKey = variation.wuxiaDifficulty || variation.difficulty;
-      const diffIdx = DIFFICULTY_SCALE.indexOf(varDiffKey as typeof DIFFICULTY_SCALE[number]);
-      if (diffIdx !== -1) {
-        score += ((diffIdx / (DIFFICULTY_SCALE.length - 1)) - 0.5) * 0.30;
-      }
-    }
-  }
-
-  if (modifierType && exercise.modifiers) {
-    const modifier = exercise.modifiers.find(m => m.type === modifierType);
-    if (modifier) {
-      score += Math.max(-1, Math.min(1, modifier.difficultyMod / 3)) * 0.15;
-    }
-  }
-
-  score = Math.max(0, Math.min(1, score));
-  const scaleIdx = Math.round(score * (DIFFICULTY_SCALE.length - 1));
-  return DIFFICULTY_SCALE[scaleIdx];
+  void variantName;
+  void modifierType;
+  const tier = exercise.tiers.find((item) => item.level === level);
+  return tier?.wuxiaDifficulty?.trim() || tier?.difficulty?.trim() || "";
 }
 
 export function getEquipmentTags(exercise: ProgressionExercise): string[] {

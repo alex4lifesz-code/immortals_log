@@ -19,6 +19,8 @@ import {
   Calendar,
   DEFAULT_CULTIVATOR_COLORS,
   CULTIVATOR_COLOR_OPTIONS,
+  getCultivatorGlowColor,
+  normalizeCultivatorColor,
   formatDateLocal,
   type DashboardUser,
 } from "@/components/dashboard/DashboardCalendar";
@@ -94,13 +96,19 @@ export default function DaoHallPage() {
   useEffect(() => {
     try {
       const saved = localStorage.getItem("cultivator-colors");
-      if (saved) setUserColors(JSON.parse(saved));
+      if (saved) {
+        const parsed = JSON.parse(saved) as Record<string, string>;
+        const normalized = Object.fromEntries(
+          Object.entries(parsed).map(([userId, color]) => [userId, normalizeCultivatorColor(color)]),
+        );
+        setUserColors(normalized);
+      }
     } catch { /* ignore */ }
   }, []);
 
   const handleColorChange = (userId: string, color: string) => {
     setUserColors(prev => {
-      const updated = { ...prev, [userId]: color };
+      const updated = { ...prev, [userId]: normalizeCultivatorColor(color) };
       localStorage.setItem("cultivator-colors", JSON.stringify(updated));
       return updated;
     });
@@ -660,7 +668,7 @@ export default function DaoHallPage() {
               <div className="space-y-1">
                 {futureNotes.map((note) => {
                   const noteUserIdx = allUsers.findIndex(u => u.id === note.user.id);
-                  const noteColor = userColors[note.user.id] || DEFAULT_CULTIVATOR_COLORS[noteUserIdx >= 0 ? noteUserIdx % DEFAULT_CULTIVATOR_COLORS.length : 0];
+                  const noteColor = normalizeCultivatorColor(userColors[note.user.id] || DEFAULT_CULTIVATOR_COLORS[noteUserIdx >= 0 ? noteUserIdx % DEFAULT_CULTIVATOR_COLORS.length : 0]);
                   return (
                     <motion.div
                       key={note.id}
@@ -670,7 +678,7 @@ export default function DaoHallPage() {
                     >
                       <div
                         className="w-1.5 h-1.5 rounded-full shrink-0"
-                        style={{ backgroundColor: noteColor, boxShadow: `0 0 4px ${noteColor}80` }}
+                        style={{ backgroundColor: noteColor, boxShadow: `0 0 4px ${getCultivatorGlowColor(noteColor, 0.5)}` }}
                       />
                       <span className="text-[10px] font-medium shrink-0" style={{ color: noteColor }}>
                         {note.user.name}
@@ -824,7 +832,7 @@ export default function DaoHallPage() {
                                 title="Click to edit"
                               >
                                 <span className="text-[11px]">{formatDateWithPreference(row.date, dateFormat)}</span>
-                                <span className={`text-[9px] ml-1 ${isWeekend ? "text-amber-400/60" : "text-mist-dark"}`}>{dayName}</span>
+                                <span className={`text-[9px] ml-1 ${isWeekend ? "text-gold/70" : "text-mist-dark"}`}>{dayName}</span>
                               </button>
                             </div>
 
@@ -839,7 +847,7 @@ export default function DaoHallPage() {
                                       onClick={() => handleCheckInToggle(row.date, u.id, !isPresent)}
                                       className={`w-5 h-5 rounded text-[10px] font-bold transition-all duration-150 ${
                                         isPresent
-                                          ? "bg-jade-glow/20 text-jade-glow border border-jade-glow/40 shadow-[0_0_6px_rgba(58,143,143,0.3)]"
+                                          ? "bg-jade-glow/20 text-jade-glow border border-jade-glow/40 shadow-[var(--glow-subtle)]"
                                           : "text-mist-dark border border-ink-light/40 hover:border-mist-dark/60"
                                       }`}
                                     >
@@ -989,7 +997,7 @@ export default function DaoHallPage() {
               </p>
 
               {isFarFuture && (
-                <div className="px-3 py-2 rounded-lg border border-amber-500/30 bg-amber-500/5 text-[11px] text-amber-300/80">
+                <div className="px-3 py-2 rounded-lg border border-gold/35 bg-gold-dim/15 text-[11px] text-gold/90">
                   ⏳ Future date — only shared comments are available. Check-in is restricted to today and the next day.
                 </div>
               )}
@@ -1003,7 +1011,7 @@ export default function DaoHallPage() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {allUsers.map((u, idx) => {
                     const entry = checkInModal.entries[u.id] || { present: false, weight: "", comment: "" };
-                    const color = userColors[u.id] || DEFAULT_CULTIVATOR_COLORS[idx % DEFAULT_CULTIVATOR_COLORS.length];
+                    const color = normalizeCultivatorColor(userColors[u.id] || DEFAULT_CULTIVATOR_COLORS[idx % DEFAULT_CULTIVATOR_COLORS.length]);
                     return (
                       <motion.div
                         key={u.id}
@@ -1018,7 +1026,7 @@ export default function DaoHallPage() {
                             ? "hover:bg-ink-mid/40 hover:border-mist-dark"
                             : "opacity-60 cursor-default"
                         }`}
-                        style={entry.present ? { borderColor: color, boxShadow: `0 0 14px ${color}50` } : {}}
+                        style={entry.present ? { borderColor: color, boxShadow: `0 0 14px ${getCultivatorGlowColor(color, 0.31)}` } : {}}
                       >
                         <div
                           className={`p-3 text-center ${u.id === user.id ? 'cursor-pointer' : 'cursor-default'}`}
@@ -1027,7 +1035,7 @@ export default function DaoHallPage() {
                           <div className="flex flex-col items-center gap-1.5">
                             <span
                               className="text-xl font-bold transition-all drop-shadow-[0_0_4px_currentColor]"
-                              style={{ color: entry.present ? color : '#4b5563' }}
+                              style={{ color: entry.present ? color : 'var(--mist-dark)' }}
                             >
                               {entry.present ? '✓' : '○'}
                             </span>

@@ -1,7 +1,3 @@
-import type { WeightStandardRecord } from "@/lib/weight-standards";
-
-export type WeightStandardsMap = Record<string, { male: WeightStandardRecord | null; female: WeightStandardRecord | null }>;
-
 export interface ProgressionTier {
   id: string;
   level: number;

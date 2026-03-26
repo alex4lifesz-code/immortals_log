@@ -12,21 +12,56 @@ export interface DashboardUser {
   sessionCount?: number;
 }
 
+const CULTIVATOR_VAR_TO_RGB_VAR: Record<string, string> = {
+  "var(--cultivator-jade)": "--cultivator-jade-rgb",
+  "var(--cultivator-gold)": "--cultivator-gold-rgb",
+  "var(--cultivator-crimson)": "--cultivator-crimson-rgb",
+  "var(--cultivator-azure)": "--cultivator-azure-rgb",
+  "var(--cultivator-violet)": "--cultivator-violet-rgb",
+  "var(--cultivator-emerald)": "--cultivator-emerald-rgb",
+  "var(--cultivator-amber)": "--cultivator-amber-rgb",
+  "var(--cultivator-rose)": "--cultivator-rose-rgb",
+};
+
 export const DEFAULT_CULTIVATOR_COLORS = [
-  "#3a8f8f", "#d4a843", "#c9433e", "#4a9eff",
-  "#9b59b6", "#2ecc71", "#f39c12", "#e74c8c",
+  "var(--cultivator-jade)", "var(--cultivator-gold)", "var(--cultivator-crimson)", "var(--cultivator-azure)",
+  "var(--cultivator-violet)", "var(--cultivator-emerald)", "var(--cultivator-amber)", "var(--cultivator-rose)",
 ];
 
 export const CULTIVATOR_COLOR_OPTIONS = [
-  { name: "Jade", value: "#3a8f8f" },
-  { name: "Gold", value: "#d4a843" },
-  { name: "Crimson", value: "#c9433e" },
-  { name: "Azure", value: "#4a9eff" },
-  { name: "Violet", value: "#9b59b6" },
-  { name: "Emerald", value: "#2ecc71" },
-  { name: "Amber", value: "#f39c12" },
-  { name: "Rose", value: "#e74c8c" },
+  { name: "Jade", value: "var(--cultivator-jade)" },
+  { name: "Gold", value: "var(--cultivator-gold)" },
+  { name: "Crimson", value: "var(--cultivator-crimson)" },
+  { name: "Azure", value: "var(--cultivator-azure)" },
+  { name: "Violet", value: "var(--cultivator-violet)" },
+  { name: "Emerald", value: "var(--cultivator-emerald)" },
+  { name: "Amber", value: "var(--cultivator-amber)" },
+  { name: "Rose", value: "var(--cultivator-rose)" },
 ];
+
+export function normalizeCultivatorColor(colorValue: string | undefined): string {
+  if (!colorValue) return DEFAULT_CULTIVATOR_COLORS[0];
+  const normalized = colorValue.trim();
+  if (CULTIVATOR_VAR_TO_RGB_VAR[normalized]) return normalized;
+  if (normalized.startsWith("var(")) return normalized;
+  if (normalized.startsWith("#") && normalized.length === 7) return normalized.toLowerCase();
+  if (normalized.startsWith("cultivator-")) {
+    const cssVarRef = `var(--${normalized})`;
+    if (CULTIVATOR_VAR_TO_RGB_VAR[cssVarRef]) return cssVarRef;
+  }
+  return normalized;
+}
+
+export function getCultivatorGlowColor(colorValue: string | undefined, alpha = 0.5): string {
+  const normalized = normalizeCultivatorColor(colorValue);
+  const rgbVar = CULTIVATOR_VAR_TO_RGB_VAR[normalized];
+  if (rgbVar) return `rgb(var(${rgbVar}) / ${alpha})`;
+  if (normalized.startsWith("#") && normalized.length === 7) {
+    const alphaHex = Math.round(alpha * 255).toString(16).padStart(2, "0");
+    return `${normalized}${alphaHex}`;
+  }
+  return `rgb(255 255 255 / ${alpha})`;
+}
 
 export function formatDateLocal(date: Date): string {
   const year = date.getFullYear();
@@ -69,32 +104,35 @@ export function DashboardSidebar({ stats, allUsers, userColors, onColorChange }:
           <div className="dashboard-sidebar-card space-y-2">
             <h3 className="text-xs text-jade-glow uppercase">Cultivator Colours</h3>
             <div className="space-y-2">
-              {allUsers.map((u, idx) => (
-                <div key={u.id} className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span
-                      className="w-2 h-2 rounded-full shrink-0"
-                      style={{ backgroundColor: userColors[u.id] || DEFAULT_CULTIVATOR_COLORS[idx % DEFAULT_CULTIVATOR_COLORS.length] }}
-                    />
-                    <span className="text-xs text-mist-light truncate">{u.name}</span>
-                  </div>
-                  <div className="flex gap-0.5 shrink-0">
-                    {CULTIVATOR_COLOR_OPTIONS.map((c) => (
-                      <button
-                        key={c.value}
-                        onClick={() => onColorChange(u.id, c.value)}
-                        className={`w-3.5 h-3.5 rounded-full border-2 transition-all ${
-                          (userColors[u.id] || DEFAULT_CULTIVATOR_COLORS[idx % DEFAULT_CULTIVATOR_COLORS.length]) === c.value
-                            ? "border-cloud-white scale-125 shadow-[0_0_6px_currentColor]"
-                            : "border-transparent hover:border-mist-dark hover:scale-110"
-                        }`}
-                        style={{ backgroundColor: c.value }}
-                        title={c.name}
+              {allUsers.map((u, idx) => {
+                const selectedColor = normalizeCultivatorColor(userColors[u.id] || DEFAULT_CULTIVATOR_COLORS[idx % DEFAULT_CULTIVATOR_COLORS.length]);
+                return (
+                  <div key={u.id} className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ backgroundColor: selectedColor }}
                       />
-                    ))}
+                      <span className="text-xs text-mist-light truncate">{u.name}</span>
+                    </div>
+                    <div className="flex gap-0.5 shrink-0">
+                      {CULTIVATOR_COLOR_OPTIONS.map((c) => (
+                        <button
+                          key={c.value}
+                          onClick={() => onColorChange(u.id, c.value)}
+                          className={`w-3.5 h-3.5 rounded-full border-2 transition-all ${
+                            selectedColor === c.value
+                              ? "border-cloud-white scale-125 shadow-[0_0_6px_currentColor]"
+                              : "border-transparent hover:border-mist-dark hover:scale-110"
+                          }`}
+                          style={{ backgroundColor: c.value }}
+                          title={c.name}
+                        />
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -117,7 +155,7 @@ function CalendarDay({ date, checkedInUsers, isToday, isPast, hasNote, hasFuture
           : hasFutureNote
           ? "border border-jade/30 bg-jade-deep/15 hover:bg-jade-deep/25 shadow-[0_0_6px_rgba(29,72,72,0.3)]"
           : hasCheckIns
-          ? "border border-jade/40 bg-jade-dark/15 hover:bg-jade-dark/30"
+          ? "border border-jade/40 bg-jade-deep/15 hover:bg-jade-deep/30"
           : "border border-ink-light/60 bg-ink-dark/30 hover:bg-ink-mid/40"
       } ${isPast && !isToday ? 'opacity-50' : ''}`}
     >
@@ -218,7 +256,11 @@ export function Calendar({ checkInUsersByDate, currentMonth, setCurrentMonth, da
                   (checkInUsersByDate.get(formatDateLocal(date)) || []).map(uid => {
                     const u = allUsers.find(usr => usr.id === uid);
                     const idx = allUsers.findIndex(usr => usr.id === uid);
-                    return { id: uid, name: u?.name || "Unknown", color: userColors[uid] || DEFAULT_CULTIVATOR_COLORS[idx >= 0 ? idx % DEFAULT_CULTIVATOR_COLORS.length : 0] };
+                    return {
+                      id: uid,
+                      name: u?.name || "Unknown",
+                      color: normalizeCultivatorColor(userColors[uid] || DEFAULT_CULTIVATOR_COLORS[idx >= 0 ? idx % DEFAULT_CULTIVATOR_COLORS.length : 0]),
+                    };
                   })
                 }
                 isToday={formatDateLocal(date) === today}
@@ -249,7 +291,7 @@ export function Calendar({ checkInUsersByDate, currentMonth, setCurrentMonth, da
             <span
               key={u.id}
               className="text-[10px] font-bold"
-              style={{ color: userColors[u.id] || DEFAULT_CULTIVATOR_COLORS[idx % DEFAULT_CULTIVATOR_COLORS.length] }}
+              style={{ color: normalizeCultivatorColor(userColors[u.id] || DEFAULT_CULTIVATOR_COLORS[idx % DEFAULT_CULTIVATOR_COLORS.length]) }}
               title={u.name}
             >
               ✓

@@ -9,7 +9,7 @@ import { getDifficultyColorClass } from "@/lib/difficulty-styles";
 import { getExerciseDisplayName, getTypeDisplayName, getDifficultyDisplayName, getDifficultyColorKey, getTypeColorKey } from "@/lib/exercise-name";
 import { GlowModal } from "@/components/ui/GlowCard";
 
-export function ExerciseDetailModal({
+export function ExerciseInfoModal({
   exercise,
   isOpen,
   onClose,

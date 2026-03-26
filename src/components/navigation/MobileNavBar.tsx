@@ -22,7 +22,7 @@ const NAV_ICON_MAP: Record<string, ReactNode> = {
   ),
 };
 
-function BottomBar() {
+function MobileNavBar() {
   const { getSortedNavItems, isMobile, setMobileSidebarOpen } = useAppContext();
   const { logout, user } = useAuth();
   const { settings } = useDisplaySettings();
@@ -305,4 +305,4 @@ function BottomBar() {
   );
 }
 
-export default memo(BottomBar);
+export default memo(MobileNavBar);

@@ -80,9 +80,9 @@ function parseMuscleGroups(primary: string, secondary?: string): MuscleGroup[] {
 function inferDifficulty(diff?: string): Difficulty | undefined {
   if (!diff) return undefined;
   const lower = diff.toLowerCase();
-  if (lower === 'beginner' || lower === 'mortal' || lower === 'foundation establishment') return 'Beginner';
-  if (lower === 'intermediate' || lower === 'core formation' || lower === 'nascent soul') return 'Intermediate';
-  if (lower === 'advanced' || lower.includes('soul splitting') || lower.includes('tribulation') || lower === 'immortal' || lower.includes('heavenly')) return 'Advanced';
+  if (lower === 'beginner') return 'Beginner';
+  if (lower === 'intermediate') return 'Intermediate';
+  if (lower === 'advanced') return 'Advanced';
   return undefined;
 }
 
@@ -153,13 +153,6 @@ export const POST = withAuth(async (req, { auth }) => {
     const isBodyweight = exerciseType === 'bodyweight' || exerciseType === 'timed';
     const isWeighted = exerciseType === 'weighted';
 
-    // Map difficulty to wuxia difficulty for compatibility
-    const wuxiaDiffMap: Record<string, string> = {
-      'Beginner': 'Mortal',
-      'Intermediate': 'Core Formation',
-      'Advanced': 'Nascent Soul',
-    };
-
     const dbExercise = await prisma.progressionExercise.create({
       data: {
         name: trimmedName,
@@ -171,8 +164,8 @@ export const POST = withAuth(async (req, { auth }) => {
         rings: false,
         primaryMuscles: muscleGroups.join(', '),
         secondaryMuscles: '',
-        difficulty: difficulty ? wuxiaDiffMap[difficulty] || difficulty : '',
-        wuxiaDifficulty: difficulty ? wuxiaDiffMap[difficulty] || '' : '',
+        difficulty: difficulty ? String(difficulty).trim() : '',
+        wuxiaDifficulty: difficulty ? String(difficulty).trim() : '',
         story: description ? String(description).trim().slice(0, 2000) : '',
         tips: instructions ? JSON.stringify(instructions) : '[]',
         userId,
@@ -186,7 +179,7 @@ export const POST = withAuth(async (req, { auth }) => {
         level: 1,
         name: trimmedName,
         wuxiaName: trimmedName,
-        difficulty: difficulty ? wuxiaDiffMap[difficulty] || difficulty : '',
+        difficulty: difficulty ? String(difficulty).trim() : '',
       },
     });
 
