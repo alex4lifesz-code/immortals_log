@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
 import PageLayout from "@/components/layout/PageLayout";
 import { MemoTrainingLogTable } from "@/components/workout/TrainingLogTable";
 import { useAuth } from "@/context/AuthContext";
@@ -11,19 +10,17 @@ import { formatDateWithPreference } from "@/lib/constants";
 import { getExerciseDisplayName } from "@/lib/exercise-name";
 import { DEFAULT_USER_PHYSIQUE, loadUserPhysique } from "@/lib/user-physique";
 import type { UserPhysiqueSettings } from "@/lib/user-physique";
-import type { ProgressionExercise, LogTableFilter } from "../workout/types";
+import type { ProgressionExercise } from "../workout/types";
 import { stripBwPercentHint } from "../workout/utils";
 
 export default function HistoryPage() {
   const { user } = useAuth();
   const { settings } = useDisplaySettings();
-  const searchParams = useSearchParams();
   const dateFormat = settings.dateFormat || "dd-mmm-yyyy";
 
   const [exercises, setExercises] = useState<ProgressionExercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [physique, setPhysique] = useState<UserPhysiqueSettings>(DEFAULT_USER_PHYSIQUE);
-  const [selectedLogFilter, setSelectedLogFilter] = useState<LogTableFilter | null>(null);
 
   const userId = user?.id ?? "";
 
@@ -52,25 +49,7 @@ export default function HistoryPage() {
     void fetchExercises();
   }, [fetchExercises]);
 
-  useEffect(() => {
-    const exerciseId = searchParams.get("exerciseId");
-    if (!exerciseId) {
-      setSelectedLogFilter(null);
-      return;
-    }
-
-    const levelParam = searchParams.get("level");
-    const parsedLevel = levelParam ? Number.parseInt(levelParam, 10) : null;
-    setSelectedLogFilter({
-      exerciseId,
-      levelNameLevel: Number.isFinite(parsedLevel as number) ? parsedLevel : null,
-    });
-  }, [searchParams]);
-
-  const subtitle = useMemo(() => {
-    if (!selectedLogFilter) return "Review your training logs and cultivation entries";
-    return "Filtered to selected exercise history";
-  }, [selectedLogFilter]);
+  const subtitle = "Review your training logs and cultivation entries";
 
   const historyInsights = useMemo(() => {
     const flattened = exercises.flatMap((exercise) => {
@@ -85,15 +64,7 @@ export default function HistoryPage() {
       }));
     });
 
-    const filtered = selectedLogFilter
-      ? flattened.filter((entry) => {
-          if (entry.exerciseId !== selectedLogFilter.exerciseId) return false;
-          if (selectedLogFilter.levelNameLevel == null) return true;
-          return entry.level === selectedLogFilter.levelNameLevel;
-        })
-      : flattened;
-
-    const sorted = [...filtered].sort(
+    const sorted = [...flattened].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
@@ -117,7 +88,7 @@ export default function HistoryPage() {
       topExerciseCount: topExercise?.[1] ?? 0,
       recentEntries: sorted.slice(0, 5),
     };
-  }, [exercises, selectedLogFilter, settings.terminologyMode]);
+  }, [exercises, settings.terminologyMode]);
 
   return (
     <PageLayout
@@ -162,15 +133,6 @@ export default function HistoryPage() {
               >
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <p className="text-[10px] uppercase tracking-wider text-mist-dark">Recent History</p>
-                  {selectedLogFilter && (
-                    <button
-                      type="button"
-                      onClick={() => setSelectedLogFilter(null)}
-                      className="text-[10px] font-semibold text-jade-light hover:text-jade-glow transition-colors"
-                    >
-                      Clear Filter
-                    </button>
-                  )}
                 </div>
 
                 {historyInsights.recentEntries.length > 0 ? (
@@ -199,8 +161,6 @@ export default function HistoryPage() {
             <MemoTrainingLogTable
               exercises={exercises}
               physique={physique}
-              selectedLogFilter={selectedLogFilter}
-              onSelectExercise={setSelectedLogFilter}
               onRefresh={fetchExercises}
               userId={userId}
             />

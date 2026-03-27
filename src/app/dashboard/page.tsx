@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import PageSkeleton from "@/components/ui/PageSkeleton";
 import ExerciseStatsCarousel from "@/components/dashboard/ExerciseStatsCarousel";
+import ExerciseImageBox from "@/components/exercise/ExerciseImageBox";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { api } from "@/lib/api-client";
@@ -239,12 +240,13 @@ export default function DashboardNewsfeedPage() {
   const groupedByMemberDay = useMemo(() => {
     return allGroupedByMemberDay.slice(0, displayCount);
   }, [allGroupedByMemberDay, displayCount]);
+  const hasMore = displayCount < allGroupedByMemberDay.length;
 
   // Infinite scroll observer
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0]?.isIntersecting && !isLoadingMore && displayCount < allGroupedByMemberDay.length) {
+        if (entries[0]?.isIntersecting && !isLoadingMore && hasMore) {
           setIsLoadingMore(true);
           // Simulate loading delay for smooth UX
           setTimeout(() => {
@@ -261,7 +263,7 @@ export default function DashboardNewsfeedPage() {
     }
 
     return () => observer.disconnect();
-  }, [isLoadingMore, displayCount, allGroupedByMemberDay.length]);
+  }, [isLoadingMore, hasMore, allGroupedByMemberDay.length]);
 
   const timeAgo = (dateString: string): string => {
     const date = new Date(dateString);
@@ -289,37 +291,14 @@ export default function DashboardNewsfeedPage() {
         <PageSkeleton statCards={0} wideBlock rows={4} />
       ) : (
         <>
-          <div className="flex items-center justify-start">
-            <div className="inline-flex items-center rounded-lg border border-ink-light/60 bg-ink-dark/40 p-0.5">
-              <button
-                onClick={() => setScope("friends")}
-                className={`px-2.5 py-1 text-xs rounded transition-all ${
-                  scope === "friends"
-                    ? "bg-jade-deep/25 border border-jade-glow/35 text-jade-light"
-                    : "text-mist-light hover:text-jade-light"
-                }`}
-              >
-                Friends
-              </button>
-              <button
-                onClick={() => setScope("community")}
-                className={`px-2.5 py-1 text-xs rounded transition-all ${
-                  scope === "community"
-                    ? "bg-jade-deep/25 border border-jade-glow/35 text-jade-light"
-                    : "text-mist-light hover:text-jade-light"
-                }`}
-              >
-                Community
-              </button>
-            </div>
-          </div>
-
           {/* Carousel at the top */}
           {allExercises.length > 0 && (
             <ExerciseStatsCarousel 
               exercises={allExercises} 
               communityLogs={exerciseLogs}
               currentUserId={user?.id}
+              scope={scope}
+              onScopeChange={setScope}
               onFilterChange={handleFilterChange}
             />
           )}
@@ -374,11 +353,14 @@ export default function DashboardNewsfeedPage() {
                         transition={{ delay: memberIdx * 0.05 + (logIdx * 0.02) }}
                         className="rounded-lg border border-jade-glow/20 p-3 sm:p-4 bg-ink-deep/40 hover:border-jade-glow/30 hover:bg-ink-deep/50 transition-all duration-200"
                       >
-                        <div className="flex items-baseline justify-between gap-3 mb-2">
-                          <h4 className="font-semibold text-jade-light text-sm sm:text-base">
-                            {log.exerciseName}
-                          </h4>
-                          <span className="text-xs text-mist-dark whitespace-nowrap">
+                        <div className="mb-2 flex items-center justify-between gap-3">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <ExerciseImageBox className="h-9 w-9 sm:h-10 sm:w-10" compact />
+                            <h4 className="truncate font-semibold text-jade-light text-sm sm:text-base">
+                              {log.exerciseName}
+                            </h4>
+                          </div>
+                          <span className="shrink-0 text-xs text-mist-dark whitespace-nowrap">
                             {timeAgo(log.createdAt)}
                           </span>
                         </div>
@@ -450,8 +432,14 @@ export default function DashboardNewsfeedPage() {
                     <div className="h-2 w-2 rounded-full bg-jade-glow/60 animate-bounce" style={{ animationDelay: "0.2s" }} />
                     <span className="ml-2 text-xs text-mist-light">Loading more activity...</span>
                   </div>
-                ) : displayCount < allGroupedByMemberDay.length ? (
-                  <span className="text-xs text-mist-dark">Scroll for more</span>
+                ) : hasMore ? (
+                  <button
+                    type="button"
+                    onClick={() => setDisplayCount((prev) => Math.min(prev + ITEMS_PER_PAGE, allGroupedByMemberDay.length))}
+                    className="rounded-md border border-jade-glow/25 bg-jade-deep/10 px-3 py-1.5 text-xs text-jade-light hover:bg-jade-deep/20 transition-colors"
+                  >
+                    Load more activity
+                  </button>
                 ) : allGroupedByMemberDay.length > 0 ? (
                   <div className="text-center">
                     <p className="text-xs text-mist-dark mb-1">No more activity</p>

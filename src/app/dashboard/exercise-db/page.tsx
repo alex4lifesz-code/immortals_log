@@ -24,6 +24,7 @@ import {
   getCategoryIcon,
 } from "@/lib/exercise-types";
 import { GlowModal } from "@/components/ui/GlowCard";
+import ExerciseImageBox from "@/components/exercise/ExerciseImageBox";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -642,6 +643,7 @@ function ExercisesTab({
 
                       {/* Name + badges */}
                       <div className="flex items-center gap-2 min-w-0">
+                        <ExerciseImageBox className="h-9 w-9" compact />
                         <span className="text-sm text-cloud-white font-medium truncate">{ex.name}</span>
                         {ex.isCustom && <span className="text-[9px] text-gold/70 shrink-0" title="Custom">🔧</span>}
                         <DifficultyBadge difficulty={ex.difficulty} />

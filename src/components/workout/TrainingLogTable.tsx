@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useMemo, startTransition, memo, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import GlowButton from "@/components/ui/GlowButton";
 import { useDisplaySettings, DEFAULT_UNIFIED_VISIBLE_COLUMNS, DISPLAY_DEFAULTS } from "@/context/DisplaySettingsContext";
 import { useAppContext } from "@/context/AppContext";
@@ -27,7 +28,6 @@ import {
   parseModifierWithBand,
   buildModifierWithBand,
   stripBwPercentHint,
-  isGymCategoryExercise,
   getExerciseCategoryLabel,
   getBandSoftDimOpacity,
   getBandAdjustedGlowStyle,
@@ -187,42 +187,34 @@ function formatDate(dateString: string, dateFormat: "dd-mm-yyyy" | "dd-mmm-yyyy"
   return formatDateWithPreference(date, dateFormat);
 }
 
+function formatSimpleSet(entry: UnifiedFlatLogEntry, index: 0 | 1 | 2, weightUnit: "kg" | "lbs"): string {
+  const value = index === 0 ? entry.val1 : index === 1 ? entry.val2 : entry.val3;
+  const reps = index === 0 ? entry.reps1 : index === 1 ? entry.reps2 : entry.reps3;
+  if (value == null && reps == null) return "-";
+  const valueDisplay = formatSetValue(value, entry.exerciseType, weightUnit);
+  const repsDisplay = formatSetReps(reps, entry.exerciseType);
+  if (entry.exerciseType === "timed") return valueDisplay;
+  if (reps == null) return valueDisplay;
+  if (value == null) return `x ${repsDisplay}`;
+  return `${valueDisplay} x ${repsDisplay}`;
+}
+
 // ── The Unified Training Log Table ──
 
 function TrainingLogTable({
   exercises,
   physique,
-  selectedLogFilter,
-  onSelectExercise,
   onRefresh,
 }: {
   exercises: ProgressionExercise[];
   physique: UserPhysiqueSettings;
-  selectedLogFilter: LogTableFilter | null;
-  onSelectExercise: (filter: LogTableFilter | null) => void;
   onRefresh: () => void;
   userId: string;
 }) {
+  const router = useRouter();
   const allEntries = useMemo(() => flattenLogsUnified(exercises), [exercises]);
   const exerciseLookup = useMemo(() => new Map(exercises.map((exercise) => [exercise.id, exercise])), [exercises]);
-
-  const isSelectedGymExercise = selectedLogFilter
-    ? (() => {
-        const selectedExercise = exerciseLookup.get(selectedLogFilter.exerciseId);
-        return selectedExercise ? isGymCategoryExercise(selectedExercise) : false;
-      })()
-    : false;
-
-  const entries = useMemo(
-    () =>
-      allEntries.filter(
-        (entry) =>
-          !selectedLogFilter ||
-          (entry.exerciseId === selectedLogFilter.exerciseId &&
-            (isSelectedGymExercise || entry.levelNameLevel === selectedLogFilter.levelNameLevel))
-      ),
-    [allEntries, selectedLogFilter, isSelectedGymExercise]
-  );
+  const entries = allEntries;
   const { settings } = useDisplaySettings();
   const { isMobile } = useAppContext();
 
@@ -520,7 +512,7 @@ function TrainingLogTable({
                 )}
               </div>
               <div className="flex items-center gap-2">
-                {entries.length > 0 && isEditMode ? (
+                {!isMobile && entries.length > 0 && isEditMode ? (
                   <>
                     <GlowButton variant="jade" size="sm" onClick={handleSaveChanges} disabled={isSaving}>
                       {isSaving ? "Saving..." : "✓ Save"}
@@ -529,7 +521,7 @@ function TrainingLogTable({
                       ✕ Cancel
                     </GlowButton>
                   </>
-                ) : entries.length > 0 ? (
+                ) : !isMobile && entries.length > 0 ? (
                   <button
                     onClick={handleEditModeToggle}
                     className="text-xs px-3 py-1 rounded border border-jade-glow/40 text-jade-light hover:bg-jade-deep/10 hover:scale-105 active:scale-95 transition-all duration-100"
@@ -542,6 +534,88 @@ function TrainingLogTable({
               </div>
             </div>
 
+          {isMobile ? (
+            <div className="max-h-[70vh] overflow-y-auto px-2 py-2 space-y-2 scrollbar-hide" style={{ WebkitOverflowScrolling: "touch" }}>
+              {entries.length === 0 ? (
+                <div className="rounded-lg border border-ink-light/45 bg-ink-dark/35 px-3 py-4 text-center text-xs text-mist-mid">
+                  No training data logged yet.
+                </div>
+              ) : (
+                entries.map((entry) => {
+                  const ex = exerciseLookup.get(entry.exerciseId);
+                  const entryDisplayName = ex
+                    ? stripBwPercentHint(getExerciseDisplayName(ex, settings.terminologyMode))
+                    : stripBwPercentHint(entry.exerciseName);
+                  const typeLabel = getExerciseCategoryLabel(ex);
+
+                  return (
+                    <button
+                      key={entry.logId}
+                      type="button"
+                      onClick={() => router.push(`/dashboard/workout-history/${entry.exerciseId}`)}
+                      className="w-full rounded-xl border border-ink-light/50 bg-ink-dark/30 px-3 py-2.5 text-left shadow-[var(--shadow-elev-1)] transition-colors hover:bg-ink-dark/45"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-semibold text-cloud-white">{entryDisplayName}</p>
+                          <p className="mt-0.5 text-[10px] text-mist-dark">{formatDate(entry.date, dateFormat)}</p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1">
+                          <span className="rounded-md border border-jade-glow/30 bg-jade-deep/15 px-1.5 py-0.5 text-[10px] text-jade-light">
+                            Lv {entry.levelNameLevel}
+                          </span>
+                          <span className="rounded-md border border-ink-light/40 bg-ink-mid/35 px-1.5 py-0.5 text-[10px] text-mist-light">
+                            {typeLabel}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="mt-2 grid grid-cols-3 gap-1">
+                        <div className="rounded-md border border-ink-light/30 bg-ink-mid/30 px-2 py-1 text-center">
+                          <p className="text-[9px] uppercase tracking-wide text-mist-dark">Set 1</p>
+                          <p className="text-[10px] text-cloud-white">{formatSimpleSet(entry, 0, weightUnit)}</p>
+                        </div>
+                        <div className="rounded-md border border-ink-light/30 bg-ink-mid/30 px-2 py-1 text-center">
+                          <p className="text-[9px] uppercase tracking-wide text-mist-dark">Set 2</p>
+                          <p className="text-[10px] text-cloud-white">{formatSimpleSet(entry, 1, weightUnit)}</p>
+                        </div>
+                        <div className="rounded-md border border-ink-light/30 bg-ink-mid/30 px-2 py-1 text-center">
+                          <p className="text-[9px] uppercase tracking-wide text-mist-dark">Set 3</p>
+                          <p className="text-[10px] text-cloud-white">{formatSimpleSet(entry, 2, weightUnit)}</p>
+                        </div>
+                      </div>
+
+                      {(entry.modifier || entry.resistanceBandKg != null || entry.variant || entry.notes) && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {entry.modifier && (
+                            <span className="rounded border border-gold/30 bg-gold/10 px-1.5 py-0.5 text-[10px] text-gold-glow">
+                              {entry.modifier}
+                            </span>
+                          )}
+                          {entry.resistanceBandKg != null && (
+                            <span className="rounded border border-mountain-blue-glow/30 bg-mountain-blue-deep/20 px-1.5 py-0.5 text-[10px] text-mountain-blue-glow">
+                              {formatResistanceBandLabel(entry.resistanceBandKg)}
+                            </span>
+                          )}
+                          {entry.variant && (
+                            <span className="rounded border border-ink-light/40 bg-ink-mid/35 px-1.5 py-0.5 text-[10px] text-mist-light">
+                              {variationDisplay === "full" ? entry.variant : abbreviateVariantText(entry.variant)}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {entry.notes && (
+                        <p className="mt-2 line-clamp-2 text-[10px] text-mist-light">
+                          {entry.notes}
+                        </p>
+                      )}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          ) : (
           <div
             ref={tableScrollRef}
             onScroll={(event) => setTableScrollTop((event.currentTarget as HTMLDivElement).scrollTop)}
@@ -700,14 +774,7 @@ function TrainingLogTable({
                               setLevelPicker({ logId: entry.logId, exerciseId: entry.exerciseId });
                               return;
                             }
-                            const nextFilter: LogTableFilter = {
-                              exerciseId: entry.exerciseId,
-                              levelNameLevel: ex && isGymCategoryExercise(ex) ? null : entry.levelNameLevel,
-                            };
-                            const isSameFilter =
-                              selectedLogFilter?.exerciseId === nextFilter.exerciseId &&
-                              selectedLogFilter?.levelNameLevel === nextFilter.levelNameLevel;
-                            onSelectExercise(isSameFilter ? null : nextFilter);
+                            router.push(`/dashboard/workout-history/${entry.exerciseId}`);
                           }}
                         >
                           {!showIllumination ? (
@@ -957,6 +1024,7 @@ function TrainingLogTable({
             </tbody>
           </table>
           </div>
+          )}
           </div>
         </div>
       </div>

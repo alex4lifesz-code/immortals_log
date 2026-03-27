@@ -94,14 +94,14 @@ function FloatingMobileSidebar() {
               }
             }}
             transition={{ type: "spring", damping: 28, stiffness: 300, mass: 0.8 }}
-            className="fixed left-0 top-0 z-40 h-screen flex flex-col bg-ink-deep/98 border-r border-jade-glow/15 shadow-2xl overflow-hidden touch-pan-y"
+            className="fixed left-0 top-0 z-40 h-screen flex flex-col bg-ink-deep/98 border-r border-jade-glow/15 shadow-2xl overflow-hidden touch-pan-y pt-[max(env(safe-area-inset-top,0px),12px)]"
             style={{ width: "min(92vw, 420px)" }}
             onTouchStart={onSidebarTouchStart}
             onTouchMove={onSidebarTouchMove}
             onTouchEnd={onSidebarTouchEnd}
           >
             {/* Header */}
-            <div className="px-5 pt-5 pb-4 border-b border-ink-light/50 flex items-center justify-between shrink-0">
+            <div className="px-5 pb-4 border-b border-ink-light/50 flex items-center justify-between shrink-0">
               <div>
                 <h2 className="text-base text-jade-glow font-bold tracking-[0.12em] uppercase">
                   ⚔ Navigation

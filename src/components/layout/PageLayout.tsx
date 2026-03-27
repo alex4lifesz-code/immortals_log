@@ -125,7 +125,7 @@ function PageLayout({
   const desktopSidebar = sidebar && !isMobile && effectivePosition !== "top" ? (
     <motion.div
       layout
-      className="sticky top-0 self-start h-full border-r border-l-0 border-ink-light/50 bg-ink-deep/50 shrink-0 overflow-hidden flex flex-col"
+      className="sticky top-0 self-start h-full border-r border-l-0 border-ink-light/50 surface-panel surface-panel-strong shrink-0 overflow-hidden flex flex-col"
       style={{
         width: `${sidebarWidth}px`,
         minWidth: `${MIN_SIDEBAR_WIDTH}px`,
@@ -142,7 +142,7 @@ function PageLayout({
   ) : sidebar && !isMobile && effectivePosition === "top" ? (
     <motion.div
       layout
-      className="w-full border-b border-ink-light bg-ink-deep/50 shrink-0 overflow-hidden flex flex-col max-h-[40vh]"
+      className="w-full border-b border-ink-light surface-panel surface-panel-strong shrink-0 overflow-hidden flex flex-col max-h-[40vh]"
     >
       <div className="px-5 pt-4 pb-2.5 shrink-0 flex items-center justify-between">
         <h2 className="text-xs text-jade-glow uppercase tracking-widest font-semibold">{title}</h2>
@@ -156,9 +156,9 @@ function PageLayout({
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
       className={`flex ${effectivePosition === "top" || isMobile ? "flex-col" : "flex-row"} relative ${isMobile ? "min-h-full" : "h-full overflow-hidden"}`}
     >
       {/* Desktop sidebar */}
@@ -170,11 +170,12 @@ function PageLayout({
         className={`flex-1 min-w-0 overflow-y-auto overflow-x-auto ${isMobile ? `${mobileContentPaddingClass} scrollbar-hide` : "h-full overscroll-contain [scrollbar-gutter:stable] p-2"}`}
       >
         <motion.div
-          initial={{ y: 10, opacity: 0 }}
+          initial={{ y: 12, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.1 }}
+          transition={{ delay: 0.04, duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+          className="page-rise"
         >
-          <div className={contentContainerClass}>
+          <div className={`${contentContainerClass} ${isMobile ? "" : "rounded-2xl"}`}>
             {subtitle && (
               <p className="text-xs text-mist-dark mb-4 italic">{subtitle}</p>
             )}
@@ -212,13 +213,13 @@ function PageLayout({
                 }
               }}
               transition={{ type: "spring", damping: 31, stiffness: 360, mass: 0.72 }}
-              className="fixed inset-y-0 left-0 z-50 bg-ink-deep/98 border-r border-jade-glow/15 flex flex-col shadow-2xl touch-pan-y"
+              className="fixed inset-y-0 left-0 z-50 surface-panel surface-panel-strong border-r border-jade-glow/15 flex flex-col shadow-2xl touch-pan-y pt-[max(env(safe-area-inset-top,0px),12px)]"
               style={{ width: "min(88vw, 380px)" }}
               onTouchStart={onSidebarTouchStart}
               onTouchMove={onSidebarTouchMove}
               onTouchEnd={onSidebarTouchEnd}
             >
-              <div className="flex items-center justify-between px-5 py-4 border-b border-ink-light/50 shrink-0">
+              <div className="flex items-center justify-between px-5 pb-4 border-b border-ink-light/50 shrink-0">
                 <h2 className="text-base text-jade-glow font-semibold uppercase tracking-[0.1em]">
                   {sidebarLabel || title}
                 </h2>

@@ -17,6 +17,7 @@ import { SetLoggerPanel } from "@/components/workout/SetLoggerPanel";
 import { TrainingGroundsSidebar } from "@/components/workout/TrainingGroundsSidebar";
 import { EmptyState } from "@/components/workout/TierColorLegend";
 import { getTierGlowFromLogs } from "@/components/workout/TierProgressBar";
+import ExerciseImageBox from "@/components/exercise/ExerciseImageBox";
 import { api } from "@/lib/api-client";
 
 import type { ProgressionExercise, ProgressionLog, ReadyToLogQueueItem, LogTableFilter } from "./types";
@@ -55,7 +56,6 @@ export default function ProgressionPage() {
   const [hoveredQueueItemId, setHoveredQueueItemId] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedDayFilter, setSelectedDayFilter] = useState<number | null>(null);
-  const [mobileRailOpenMenu, setMobileRailOpenMenu] = useState<"category" | "muscle" | "equipment" | null>(null);
   const [_exerciseOrder, setExerciseOrder] = useState<string[]>([]);
   const [physique, setPhysique] = useState<UserPhysiqueSettings>(DEFAULT_USER_PHYSIQUE);
   const mobileRailScrollRef = useRef<HTMLDivElement | null>(null);
@@ -584,7 +584,7 @@ export default function ProgressionPage() {
 
   if (loading) {
     return (
-      <PageLayout sidebar={sidebar} title="Training Grounds" subtitle="Record your cultivation sessions" mobileContentPaddingClass="p-2 pb-24">
+      <PageLayout sidebar={sidebar} title="Training Grounds" mobileContentPaddingClass="px-2 pt-0 pb-24">
         <div className="flex items-center justify-center py-20">
           <p className="text-mist-mid text-sm animate-pulse">Loading exercises…</p>
         </div>
@@ -593,24 +593,16 @@ export default function ProgressionPage() {
   }
 
   return (
-    <PageLayout sidebar={sidebar} title="Training Grounds" subtitle="Record your cultivation sessions" mobileContentPaddingClass="p-2 pb-24">
+    <PageLayout sidebar={sidebar} title="Training Grounds" mobileContentPaddingClass="px-2 pt-0 pb-24">
       {exercises.length === 0 ? (
         <EmptyState />
       ) : (
-        <div className="px-0 py-2 sm:py-3 space-y-3 sm:space-y-4">
+        <div className={`px-0 ${isMobile ? "pt-0 pb-2" : "py-2 sm:py-3"} space-y-3 sm:space-y-4`}>
           {isMobile && (
-            <section className="-mx-1 px-1">
+            <section className="-mx-3 -mt-3 md:-mx-2 md:-mt-2 sticky top-0 z-20">
               <div
-                className="rounded-2xl border border-jade-glow/35 backdrop-blur-sm px-2.5 py-2 shadow-[var(--shadow-elev-1)]"
-                style={{ background: "var(--surface-gradient-strong)" }}
+                className="flex flex-col bg-ink-deep border-b border-jade-glow/10 px-3 py-2"
               >
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <h3 className="text-[11px] font-semibold uppercase tracking-[0.09em] text-gold">Training Grounds</h3>
-                    <p className="mt-0.5 text-[10px] text-mist-dark">Quick add lane for mobile logging</p>
-                  </div>
-                </div>
-
                 <div className="mb-2 flex items-center gap-2">
                   <div className="relative flex-1">
                     <input
@@ -643,64 +635,49 @@ export default function ProgressionPage() {
                   className="mb-2 grid grid-cols-3 gap-2"
                 >
                     <div className="relative min-w-0">
-                      <button
-                        type="button"
-                        onClick={() => setMobileRailOpenMenu((prev) => (prev === "category" ? null : "category"))}
-                        className="flex h-9 w-full items-center justify-between rounded-lg border border-ink-light/45 bg-ink-dark/70 px-3 text-left text-[12px] font-medium text-cloud-white"
+                      <select
+                        value={filterCategory}
+                        onChange={(event) => setFilterCategory(event.target.value)}
+                        className="h-9 w-full rounded-lg border border-ink-light/60 bg-ink-dark/40 pl-3 pr-7 text-left text-[12px] font-medium text-cloud-white outline-none transition-colors focus:border-jade-glow/55 appearance-none"
                       >
-                        <span className="truncate">{filterCategory || "All Categories"}</span>
-                        <span className="ml-2 text-mist-dark">▾</span>
-                      </button>
-                      {mobileRailOpenMenu === "category" && (
-                        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 max-h-44 overflow-y-auto rounded-lg border border-jade-glow/35 bg-ink-deep/95 p-1 shadow-[var(--shadow-elev-2)]">
-                          <button type="button" onClick={() => { setFilterCategory(""); setMobileRailOpenMenu(null); }} className="mb-1 block w-full rounded-md px-2 py-2 text-left text-[12px] text-cloud-white hover:bg-ink-mid/60">All Categories</button>
-                          {categories.map((category) => (
-                            <button key={category} type="button" onClick={() => { setFilterCategory(category); setMobileRailOpenMenu(null); }} className="mb-1 block w-full rounded-md px-2 py-2 text-left text-[12px] text-cloud-white hover:bg-ink-mid/60">{category}</button>
-                          ))}
-                        </div>
-                      )}
+                        <option value="">All Categories</option>
+                        {categories.map((category) => (
+                          <option key={category} value={category}>{category}</option>
+                        ))}
+                      </select>
+                      <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-mist-dark">▾</span>
                     </div>
                     <div className="relative min-w-0">
-                      <button
-                        type="button"
-                        onClick={() => setMobileRailOpenMenu((prev) => (prev === "muscle" ? null : "muscle"))}
-                        className="flex h-9 w-full items-center justify-between rounded-lg border border-ink-light/45 bg-ink-dark/70 px-3 text-left text-[12px] font-medium text-cloud-white"
+                      <select
+                        value={filterMuscleGroup}
+                        onChange={(event) => setFilterMuscleGroup(event.target.value)}
+                        className="h-9 w-full rounded-lg border border-ink-light/60 bg-ink-dark/40 pl-3 pr-7 text-left text-[12px] font-medium text-cloud-white outline-none transition-colors focus:border-jade-glow/55 appearance-none"
                       >
-                        <span className="truncate">{filterMuscleGroup || "Muscle Group"}</span>
-                        <span className="ml-2 text-mist-dark">▾</span>
-                      </button>
-                      {mobileRailOpenMenu === "muscle" && (
-                        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 max-h-44 overflow-y-auto rounded-lg border border-jade-glow/35 bg-ink-deep/95 p-1 shadow-[var(--shadow-elev-2)]">
-                          <button type="button" onClick={() => { setFilterMuscleGroup(""); setMobileRailOpenMenu(null); }} className="mb-1 block w-full rounded-md px-2 py-2 text-left text-[12px] text-cloud-white hover:bg-ink-mid/60">All Muscle Groups</button>
-                          {muscleGroups.map((muscle) => (
-                            <button key={muscle} type="button" onClick={() => { setFilterMuscleGroup(muscle); setMobileRailOpenMenu(null); }} className="mb-1 block w-full rounded-md px-2 py-2 text-left text-[12px] text-cloud-white hover:bg-ink-mid/60">{muscle}</button>
-                          ))}
-                        </div>
-                      )}
+                        <option value="">Muscle Group</option>
+                        {muscleGroups.map((muscle) => (
+                          <option key={muscle} value={muscle}>{muscle}</option>
+                        ))}
+                      </select>
+                      <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-mist-dark">▾</span>
                     </div>
                     <div className="relative min-w-0">
-                      <button
-                        type="button"
-                        onClick={() => setMobileRailOpenMenu((prev) => (prev === "equipment" ? null : "equipment"))}
-                        className="flex h-9 w-full items-center justify-between rounded-lg border border-ink-light/45 bg-ink-dark/70 px-3 text-left text-[12px] font-medium text-cloud-white"
+                      <select
+                        value={filterEquipment}
+                        onChange={(event) => setFilterEquipment(event.target.value)}
+                        className="h-9 w-full rounded-lg border border-ink-light/60 bg-ink-dark/40 pl-3 pr-7 text-left text-[12px] font-medium text-cloud-white outline-none transition-colors focus:border-jade-glow/55 appearance-none"
                       >
-                        <span className="truncate">{filterEquipment || "All Equipment"}</span>
-                        <span className="ml-2 text-mist-dark">▾</span>
-                      </button>
-                      {mobileRailOpenMenu === "equipment" && (
-                        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 max-h-44 overflow-y-auto rounded-lg border border-jade-glow/35 bg-ink-deep/95 p-1 shadow-[var(--shadow-elev-2)]">
-                          <button type="button" onClick={() => { setFilterEquipment(""); setMobileRailOpenMenu(null); }} className="mb-1 block w-full rounded-md px-2 py-2 text-left text-[12px] text-cloud-white hover:bg-ink-mid/60">All Equipment</button>
-                          {equipmentTypes.map((equipment) => (
-                            <button key={equipment} type="button" onClick={() => { setFilterEquipment(equipment); setMobileRailOpenMenu(null); }} className="mb-1 block w-full rounded-md px-2 py-2 text-left text-[12px] text-cloud-white hover:bg-ink-mid/60">{equipment}</button>
-                          ))}
-                        </div>
-                      )}
+                        <option value="">All Equipment</option>
+                        {equipmentTypes.map((equipment) => (
+                          <option key={equipment} value={equipment}>{equipment}</option>
+                        ))}
+                      </select>
+                      <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-mist-dark">▾</span>
                     </div>
                 </div>
 
                 <div className="relative">
-                  <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-ink-deep/95 to-transparent" />
-                  <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-20 bg-gradient-to-l from-ink-deep/95 via-ink-deep/60 to-transparent" />
+                  <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-ink-deep to-transparent" />
+                  <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-ink-deep to-transparent" />
                   {railCanScroll && (
                     <button
                       type="button"
@@ -731,7 +708,12 @@ export default function ProgressionPage() {
                     style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: "contain", touchAction: "pan-x" }}
                   >
                     <div className="flex min-w-max gap-2 px-1.5 snap-x snap-mandatory [scroll-padding-inline:.5rem]">
-                    {horizontalSidebarExercises.map((item) => {
+                    {horizontalSidebarExercises.length === 0 ? (
+                      <div className="snap-start flex h-[122px] min-w-[148px] max-w-[148px] flex-col items-center justify-center rounded-lg border border-jade-glow/20 bg-ink-deep/40 px-3 py-3 text-center shadow-[var(--shadow-elev-1)]">
+                        <p className="text-[11px] font-semibold text-cloud-white">No matches found</p>
+                        <p className="mt-1 text-[10px] text-mist-dark">Try a different search term</p>
+                      </div>
+                    ) : horizontalSidebarExercises.map((item) => {
                       const { exercise, logs, logCount, latestTs, displayName } = item;
                       const latestLabel = latestTs ? `${Math.max(1, Math.floor((Date.now() - latestTs) / 86400000))}d ago` : "No logs";
 
@@ -740,9 +722,9 @@ export default function ProgressionPage() {
                           key={exercise.id}
                           type="button"
                           onClick={() => addExercise(exercise.id)}
-                          className="snap-start min-w-[148px] max-w-[148px] rounded-xl border border-ink-light/40 bg-gradient-to-br from-ink-mid/88 via-ink-dark/94 to-ink-deep px-2 py-2 text-left transition-all duration-200 active:scale-[0.985] hover:border-jade-glow/40"
+                          className="snap-start min-w-[148px] max-w-[148px] rounded-lg border border-jade-glow/20 bg-ink-deep/40 px-3 py-3 text-left shadow-[var(--shadow-elev-1)] transition-all duration-200 active:scale-[0.985] hover:border-jade-glow/30 hover:bg-ink-deep/50"
                         >
-                          <div className="mb-2 h-14 rounded-lg border border-jade-glow/25 bg-gradient-to-r from-ink-mid/60 via-jade-deep/20 to-ink-mid/60" />
+                          <ExerciseImageBox className="mb-2 h-14 w-full rounded-lg" />
                           <div className="truncate text-[12px] font-semibold text-cloud-white">
                             {displayName}
                           </div>
@@ -802,7 +784,7 @@ export default function ProgressionPage() {
                   const draftSummary = draftSummaries[exercise.id];
                   const openLogger = () => setActiveQueueItemId(queueItemId);
                   return (
-                    <div key={queueItemId} className="relative mb-1 overflow-hidden rounded-md">
+                    <div key={queueItemId} className="relative mb-1 overflow-hidden rounded-lg">
                       <div className="pointer-events-none absolute inset-y-0 right-0 flex w-28 items-center justify-center border-l border-crimson/40 bg-crimson-deep/35 text-[10px] font-semibold tracking-wide text-crimson-light">
                         Swipe left to remove
                       </div>
@@ -826,7 +808,7 @@ export default function ProgressionPage() {
                             }, 150);
                           }
                         }}
-                        className="relative flex items-center gap-2 rounded-md border px-2.5 py-2 cursor-pointer transform-gpu transition-[filter] duration-100 ease-out"
+                        className="relative flex items-center gap-2 rounded-lg border border-jade-glow/20 bg-ink-deep/40 px-3 py-3 cursor-pointer shadow-[var(--shadow-elev-1)] transform-gpu transition-all duration-200 ease-out hover:border-jade-glow/30 hover:bg-ink-deep/50"
                         onMouseEnter={() => setHoveredQueueItemId(queueItemId)}
                         onMouseLeave={() => setHoveredQueueItemId((current) => (current === queueItemId ? null : current))}
                         onPointerDown={(event) => {
@@ -866,8 +848,8 @@ export default function ProgressionPage() {
                             ? `${difficultyStyle.glowShadow}, 0 0 14px ${difficultyStyle.glowColor}, inset 0 0 0 1px ${difficultyStyle.glowColor}`
                             : `${difficultyStyle.glowShadow}, inset 0 0 0 1px ${difficultyStyle.glowColor}`,
                           background: isRowHighlighted
-                            ? `linear-gradient(120deg, color-mix(in srgb, ${difficultyStyle.glowColor} 18%, var(--ink-mid)) 0%, color-mix(in srgb, ${difficultyStyle.glowColor} 8%, var(--ink-dark)) 100%)`
-                            : `linear-gradient(120deg, color-mix(in srgb, ${difficultyStyle.glowColor} 10%, var(--ink-dark)) 0%, color-mix(in srgb, ${difficultyStyle.glowColor} 4%, var(--ink-deep)) 100%)`,
+                            ? `linear-gradient(120deg, color-mix(in srgb, ${difficultyStyle.glowColor} 14%, var(--ink-deep)) 0%, color-mix(in srgb, ${difficultyStyle.glowColor} 5%, var(--ink-deep)) 100%)`
+                            : "color-mix(in srgb, var(--ink-deep) 82%, transparent)",
                           touchAction: "pan-y",
                         }}
                       >
@@ -875,6 +857,7 @@ export default function ProgressionPage() {
                         className="absolute left-0 top-0 h-full w-1 rounded-l-md"
                         style={{ backgroundColor: difficultyStyle.glowColor, boxShadow: `0 0 10px ${difficultyStyle.glowColor}` }}
                       />
+                      <ExerciseImageBox className="h-10 w-10" compact />
                       <div className="min-w-0 flex-1 pl-1 text-left">
                         <div className="truncate text-[11px] font-semibold" style={{ color: difficultyStyle.glowColor }}>
                           {displayName}
@@ -920,11 +903,7 @@ export default function ProgressionPage() {
                           type="button"
                           onClick={(event) => {
                             event.stopPropagation();
-                            const params = new URLSearchParams({ exerciseId: exercise.id });
-                            if (typeof queueFilterLevel === "number") {
-                              params.set("level", String(queueFilterLevel));
-                            }
-                            router.push(`/dashboard/workout-history?${params.toString()}`);
+                            router.push(`/dashboard/workout-history/${exercise.id}`);
                           }}
                           className={`inline-flex h-6 items-center justify-center rounded-md border px-2 text-[10px] font-semibold leading-none transition-all duration-150 ${
                             isFilterActiveForRow
@@ -988,7 +967,7 @@ export default function ProgressionPage() {
               >
                 <div
                   className={isMobile
-                    ? "h-[100dvh] w-full overflow-y-auto overscroll-contain bg-[var(--background)]"
+                    ? "h-[100dvh] w-full overflow-hidden overscroll-none bg-[var(--background)]"
                     : "h-full w-full overflow-y-auto overscroll-contain bg-[radial-gradient(circle_at_top,_color-mix(in_srgb,_var(--jade-glow)_16%,_transparent),_transparent_44%),_#0009] backdrop-blur-[4px] p-3 sm:p-8"
                   }
                 >

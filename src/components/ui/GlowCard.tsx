@@ -28,18 +28,30 @@ export default function GlowCard({
   hoverable = true,
   onClick,
 }: GlowCardProps) {
+  const glowBase = {
+    jade: "rgba(58,143,143,0.22)",
+    crimson: "rgba(196,48,48,0.22)",
+    gold: "rgba(232,200,74,0.2)",
+    blue: "rgba(74,143,184,0.22)",
+    none: "transparent",
+  };
+
   return (
     <motion.div
-      whileHover={hoverable ? { y: -2 } : undefined}
-      whileTap={onClick ? { scale: 0.98 } : undefined}
+      whileHover={hoverable ? { y: -3, scale: 1.005 } : undefined}
+      whileTap={onClick ? { scale: 0.985 } : undefined}
+      transition={{ type: "spring", stiffness: 300, damping: 26, mass: 0.7 }}
       onClick={onClick}
       className={`
-        bg-ink-dark border border-ink-light rounded-xl p-4
-        transition-all duration-300
+        surface-panel interactive-panel p-4
+        transition-all duration-300 ease-[var(--ease-polish)]
         ${hoverable ? glowHover[glow] : ""}
         ${onClick ? "cursor-pointer" : ""}
         ${className}
       `}
+      style={{
+        boxShadow: `var(--shadow-elev-1), 0 0 0 1px ${glowBase[glow]} inset`,
+      }}
     >
       {children}
     </motion.div>

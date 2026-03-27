@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { motion, AnimatePresence, Reorder, useDragControls } from "framer-motion";
+import ExerciseImageBox from "@/components/exercise/ExerciseImageBox";
 import { getDifficultyColorClass, getDifficultyGlowStyle } from "@/lib/difficulty-styles";
 import { getTypeColor } from "@/lib/constants";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
@@ -111,9 +112,11 @@ function TechniqueRow({ exercise, onUpdateDayAssignments, focusedDay, isCompact 
       )}
 
       {/* Main Content */}
-      <div className={`${isCompact ? 'space-y-1.5' : 'space-y-3'} pl-4`}>
-        <div className="flex items-start justify-between pr-8">
-          <div className={`flex-1 ${isCompact ? 'space-y-0.5' : 'space-y-1.5'}`}>
+      <div className={`flex gap-2 ${isCompact ? 'space-y-1.5' : 'space-y-3'} pl-4`}>
+        <ExerciseImageBox className={isCompact ? "h-9 w-9 mt-0.5" : "h-11 w-11 mt-0.5"} compact={isCompact} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between pr-8">
+            <div className={`flex-1 ${isCompact ? 'space-y-0.5' : 'space-y-1.5'}`}>
             <h4 className={`${isCompact ? 'text-xs' : 'text-sm'} font-semibold ${difficultyColorClass} group-hover:brightness-110 transition-all duration-200`}>
               {displayName}
             </h4>
@@ -134,55 +137,55 @@ function TechniqueRow({ exercise, onUpdateDayAssignments, focusedDay, isCompact 
             </div>
           </div>
           
-          {isUpdating && (
-            <div className="text-xs text-jade-glow flex items-center gap-1.5">
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                className="w-3 h-3 border-2 border-jade-glow border-t-transparent rounded-full"
-              />
-            </div>
-          )}
-        </div>
+            {isUpdating && (
+              <div className="text-xs text-jade-glow flex items-center gap-1.5">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  className="w-3 h-3 border-2 border-jade-glow border-t-transparent rounded-full"
+                />
+              </div>
+            )}
+          </div>
 
-        {/* Day Assignment Controls */}
-        <div className={`${isCompact ? 'space-y-1' : 'space-y-2'}`}>
-          {!isCompact && (
-            <p className="text-[10px] font-semibold text-mist-dark uppercase tracking-wider">
-              Training Days
-            </p>
-          )}
-          <div className="flex gap-1.5">
-            {DAYS_OF_WEEK.map((day, index) => {
-              const isAssigned = isDayAssigned(exercise.assignedDays || "", index);
-              const isFocused = focusedDay === index;
-              
-              return (
-                <button
-                  key={day}
-                  onClick={(e) => { e.stopPropagation(); handleDayToggle(index); }}
-                  disabled={isUpdating}
-                  className={`
+          {/* Day Assignment Controls */}
+          <div className={`${isCompact ? 'space-y-1' : 'space-y-2'}`}>
+            {!isCompact && (
+              <p className="text-[10px] font-semibold text-mist-dark uppercase tracking-wider">
+                Training Days
+              </p>
+            )}
+            <div className="flex gap-1.5">
+              {DAYS_OF_WEEK.map((day, index) => {
+                const isAssigned = isDayAssigned(exercise.assignedDays || "", index);
+                const isFocused = focusedDay === index;
+
+                return (
+                  <button
+                    key={day}
+                    onClick={(e) => { e.stopPropagation(); handleDayToggle(index); }}
+                    disabled={isUpdating}
+                    className={`
                     ${isCompact ? 'text-[10px] px-1.5 py-1' : 'text-xs px-2 py-1.5'} rounded transition-all duration-200 font-medium
                     border disabled:opacity-50 disabled:cursor-not-allowed
-                    ${isAssigned 
-                      ? 'bg-jade-deep/60 text-jade-glow border-jade-glow/40 shadow-[0_0_6px_color-mix(in_srgb,var(--accent)_20%,transparent)]' 
-                      : 'bg-ink-deep text-mist-dark border-ink-light hover:border-jade/30 hover:text-mist-light'
-                    }
+                    ${isAssigned
+                        ? 'bg-jade-deep/60 text-jade-glow border-jade-glow/40 shadow-[0_0_6px_color-mix(in_srgb,var(--accent)_20%,transparent)]'
+                        : 'bg-ink-deep text-mist-dark border-ink-light hover:border-jade/30 hover:text-mist-light'
+                      }
                     ${isFocused ? 'ring-1 ring-jade-glow/50' : ''}
                   `}
-                >
-                  {DAY_LETTERS[index]}
-                </button>
-              );
-            })}
-          </div>
-          
-          {assignedDayNumbers.length > 0 && !isCompact && (
-            <div className="text-[11px] text-jade-light/70">
-              {assignedDayNumbers.map(d => DAY_ABBREVIATIONS[d]).join(", ")}
+                  >
+                    {DAY_LETTERS[index]}
+                  </button>
+                );
+              })}
             </div>
-          )}
+            {assignedDayNumbers.length > 0 && !isCompact && (
+              <div className="text-[11px] text-jade-light/70">
+                {assignedDayNumbers.map(d => DAY_ABBREVIATIONS[d]).join(", ")}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -394,7 +397,7 @@ export default function ExerciseManagementDrawer({
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 right-0 z-50 flex flex-col max-w-full w-full md:w-[61.8%]"
+            className="fixed inset-y-0 right-0 z-50 flex flex-col max-w-full w-full md:w-[61.8%] pt-[max(env(safe-area-inset-top,0px),12px)]"
             style={{
               background: "linear-gradient(180deg, color-mix(in srgb, var(--ink-deep) 95%, black) 0%, color-mix(in srgb, var(--ink-dark) 95%, black) 100%)",
               borderLeft: "1px solid color-mix(in srgb, var(--accent) 15%, transparent)",

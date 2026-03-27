@@ -5,6 +5,7 @@ import MobileHeader from "@/components/mobile/navigation/MobileHeader";
 import MobileCard from "@/components/mobile/layout/MobileCard";
 import MobileListItem from "@/components/mobile/lists/MobileListItem";
 import MobileFAB from "@/components/mobile/actions/MobileFAB";
+import ExerciseImageBox from "@/components/exercise/ExerciseImageBox";
 import { useAuth } from "@/context/AuthContext";
 
 interface ProgressionExercise {
@@ -40,6 +41,7 @@ export default function MobileTrainingPage() {
         {items.map((item) => (
           <MobileListItem
             key={item.id}
+            left={<ExerciseImageBox className="h-9 w-9" compact />}
             title={item.wuxiaName || item.name}
             subtitle={item.difficulty || "Technique"}
             onSwipeRight={() => {}}

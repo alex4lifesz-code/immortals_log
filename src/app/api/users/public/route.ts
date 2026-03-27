@@ -18,7 +18,7 @@ export const GET = withAuth(async (request, { auth }) => {
       scope,
     });
 
-    const users = await prisma.user.findMany({
+    const usersRaw = await prisma.user.findMany({
       where: {
         id: {
           in: visibleUserIds,
@@ -29,8 +29,33 @@ export const GET = withAuth(async (request, { auth }) => {
         username: true,
         name: true,
         createdAt: true,
+        settings: {
+          select: {
+            pinnedNavItems: true,
+          },
+        },
       },
       orderBy: { createdAt: "asc" },
+    });
+
+    const users = usersRaw.map((u) => {
+      let cultivatorColor: string | undefined;
+      try {
+        const parsed = u.settings?.pinnedNavItems ? JSON.parse(u.settings.pinnedNavItems) : null;
+        if (parsed && typeof parsed === "object" && typeof (parsed as { cultivatorColor?: unknown }).cultivatorColor === "string") {
+          cultivatorColor = (parsed as { cultivatorColor: string }).cultivatorColor;
+        }
+      } catch {
+        // Ignore malformed preference payloads
+      }
+
+      return {
+        id: u.id,
+        username: u.username,
+        name: u.name,
+        createdAt: u.createdAt,
+        cultivatorColor,
+      };
     });
 
     return NextResponse.json({ users });

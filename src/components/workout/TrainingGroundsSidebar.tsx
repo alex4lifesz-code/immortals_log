@@ -12,6 +12,7 @@ import { EquipmentBadges } from "@/components/workout/EquipmentBadges";
 import { useDisplaySettings, DISPLAY_DEFAULTS } from "@/context/DisplaySettingsContext";
 import { useAppContext } from "@/context/AppContext";
 import GlowButton from "@/components/ui/GlowButton";
+import ExerciseImageBox from "@/components/exercise/ExerciseImageBox";
 import { getTypeColor, DAY_ABBREVIATIONS, parseDayAssignments } from "@/lib/constants";
 import { getExerciseDisplayName, matchesLooseSearchInFields, getTypeDisplayName, getTypeColorKey } from "@/lib/exercise-name";
 
@@ -682,6 +683,7 @@ export function TrainingGroundsSidebar({
                       onClick={handleRowClick}
                     >
                       <div className={`w-1 h-4 rounded-full shrink-0 transition-all duration-200 ${isActive ? 'bg-jade-glow' : 'bg-transparent group-hover:bg-jade-glow/40'}`} />
+                      <ExerciseImageBox className="h-8 w-8" compact />
                       <span className={`text-[12px] truncate flex-1 transition-colors duration-150 ${isActive ? 'text-cloud-white' : 'text-mist-light group-hover:text-cloud-white/90'}`} title={displayName}>
                         {displayName}
                       </span>
@@ -712,6 +714,7 @@ export function TrainingGroundsSidebar({
                       onClick={handleRowClick}
                     >
                       <div className="flex items-start gap-2">
+                        <ExerciseImageBox className="h-10 w-10 mt-0.5" compact />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5 min-w-0">
                             <div className={`w-1 h-4 rounded-full shrink-0 transition-all duration-200 ${isActive ? 'bg-jade-glow' : 'bg-transparent group-hover:bg-jade-glow/40'}`} />
@@ -766,6 +769,7 @@ export function TrainingGroundsSidebar({
                   >
                     <div className="flex items-center gap-1.5">
                       <div className={`w-1 h-4 rounded-full shrink-0 transition-all duration-200 ${isActive ? 'bg-jade-glow' : 'bg-transparent group-hover:bg-jade-glow/40'}`} />
+                      <ExerciseImageBox className="h-9 w-9" compact />
                       <div className={`text-[11px] font-semibold ${isActive ? 'text-cloud-white' : 'text-mist-light group-hover:text-cloud-white/90'} transition-colors duration-150 truncate flex-1`} title={displayName}>
                         {displayName}
                       </div>

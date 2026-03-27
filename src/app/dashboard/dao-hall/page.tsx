@@ -18,15 +18,15 @@ import { api } from "@/lib/api-client";
 import {
   DashboardSidebar,
   Calendar,
-  DEFAULT_CULTIVATOR_COLORS,
-  CULTIVATOR_COLOR_OPTIONS,
+  getDeterministicCultivatorColor,
+  getUserCultivatorColor,
   getCultivatorGlowColor,
   normalizeCultivatorColor,
   formatDateLocal,
   type DashboardUser,
 } from "@/components/dashboard/DashboardCalendar";
 
-type User = DashboardUser;
+type User = DashboardUser & { cultivatorColor?: string };
 
 interface CheckInRow {
   date: string;
@@ -41,6 +41,8 @@ interface CommunityNote {
   createdAt: string;
   user: { id: string; name: string; username: string };
 }
+
+const ITEMS_PER_PAGE = 7;
 
 export default function DaoHallPage() {
   const { user } = useAuth();
@@ -59,7 +61,10 @@ export default function DaoHallPage() {
   const [futureNotes, setFutureNotes] = useState<CommunityNote[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [checkInRows, setCheckInRows] = useState<CheckInRow[]>([]);
+  const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE);
+  const [isLoadingMoreRows, setIsLoadingMoreRows] = useState(false);
   const sectRegisterRef = useRef<HTMLDivElement>(null);
+  const rowsObserverTargetRef = useRef<HTMLDivElement | null>(null);
   // Check-in modal state
   const [checkInModal, setCheckInModal] = useState<{
     date: string;
@@ -98,27 +103,25 @@ export default function DaoHallPage() {
     localStorage.setItem("dao-hall-calendar-scope", calendarScope);
   }, [calendarScope]);
 
-  // Load user colors from localStorage
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("cultivator-colors");
-      if (saved) {
-        const parsed = JSON.parse(saved) as Record<string, string>;
-        const normalized = Object.fromEntries(
-          Object.entries(parsed).map(([userId, color]) => [userId, normalizeCultivatorColor(color)]),
-        );
-        setUserColors(normalized);
-      }
-    } catch { /* ignore */ }
-  }, []);
+  const handleColorChange = useCallback(async (userId: string, color: string) => {
+    if (!user) return;
+    const canEdit = userId === user.id || user.role === "admin";
+    if (!canEdit) return;
 
-  const handleColorChange = (userId: string, color: string) => {
-    setUserColors(prev => {
-      const updated = { ...prev, [userId]: normalizeCultivatorColor(color) };
-      localStorage.setItem("cultivator-colors", JSON.stringify(updated));
-      return updated;
-    });
-  };
+    const normalized = normalizeCultivatorColor(color);
+    setUserColors((prev) => ({ ...prev, [userId]: normalized }));
+
+    try {
+      await api.put("/api/users/preferences", {
+        userId,
+        appPrefs: { cultivatorColor: normalized },
+      });
+      await queryClient.invalidateQueries({ queryKey: ["dao-hall-data", user.id] });
+    } catch (error) {
+      console.error("Failed to save cultivator color:", error);
+      await queryClient.invalidateQueries({ queryKey: ["dao-hall-data", user.id] });
+    }
+  }, [queryClient, user]);
 
   // Load day notes from per-user localStorage
   useEffect(() => {
@@ -566,6 +569,35 @@ export default function DaoHallPage() {
     });
   }, [filteredCheckInRows, user, userNameById]);
 
+  const visibleRenderedCheckInRows = useMemo(
+    () => renderedCheckInRows.slice(0, displayCount),
+    [displayCount, renderedCheckInRows],
+  );
+
+  const hasMoreRows = displayCount < renderedCheckInRows.length;
+
+  useEffect(() => {
+    setDisplayCount(ITEMS_PER_PAGE);
+  }, [calendarScope]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0]?.isIntersecting || isLoadingMoreRows || !hasMoreRows) return;
+        setIsLoadingMoreRows(true);
+        window.setTimeout(() => {
+          setDisplayCount((prev) => Math.min(prev + ITEMS_PER_PAGE, renderedCheckInRows.length));
+          setIsLoadingMoreRows(false);
+        }, 250);
+      },
+      { threshold: 0.1 }
+    );
+
+    const target = rowsObserverTargetRef.current;
+    if (target) observer.observe(target);
+    return () => observer.disconnect();
+  }, [hasMoreRows, isLoadingMoreRows, renderedCheckInRows.length]);
+
   const scopedCheckInUsersByDate = useMemo(() => {
     const scoped = new Map<string, string[]>();
     for (const [date, users] of checkInUsersByDate.entries()) {
@@ -686,6 +718,14 @@ export default function DaoHallPage() {
 
     setFutureNotes(futureNotesData.notes || []);
     setAllUsers(usersData.users || []);
+    setUserColors(
+      Object.fromEntries(
+        (usersData.users || []).map((u) => [
+          u.id,
+          normalizeCultivatorColor(u.cultivatorColor || getDeterministicCultivatorColor(u.id)),
+        ]),
+      ),
+    );
 
     const usersByDate = new Map<string, string[]>();
     const userCheckInDates = new Set<string>();
@@ -773,8 +813,9 @@ export default function DaoHallPage() {
     <PageLayout
       title="Dao Hall"
       subtitle="The spiritual center of your cultivation journey"
-      sidebar={<DashboardSidebar stats={stats} allUsers={allUsers} userColors={userColors} onColorChange={handleColorChange} />}
+      sidebar={<DashboardSidebar stats={stats} allUsers={allUsers} userColors={userColors} onColorChange={handleColorChange} currentUserId={user.id} isAdmin={isAdmin} />}
       sidebarLabel="Cultivation Stats"
+      mobileContentPaddingClass="p-3 pb-24"
     >
       {loading ? (
         <PageSkeleton statCards={4} wideBlock rows={3} />
@@ -790,11 +831,7 @@ export default function DaoHallPage() {
                 </div>
                 <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
                   {scopedFutureNotes.map((note) => {
-                    const noteUserIdx = allUsers.findIndex((u) => u.id === note.user.id);
-                    const noteColor = normalizeCultivatorColor(
-                      userColors[note.user.id] ||
-                        DEFAULT_CULTIVATOR_COLORS[noteUserIdx >= 0 ? noteUserIdx % DEFAULT_CULTIVATOR_COLORS.length : 0],
-                    );
+                    const noteColor = getUserCultivatorColor(note.user.id, userColors);
                     return (
                       <button
                         key={note.id}
@@ -891,7 +928,7 @@ export default function DaoHallPage() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {renderedCheckInRows.map(({ date, mine, mineWeight, presentCount, everyoneDetails }) => {
+                  {visibleRenderedCheckInRows.map(({ date, mine, mineWeight, presentCount, everyoneDetails }) => {
                     return (
                       <div
                         key={date}
@@ -934,13 +971,22 @@ export default function DaoHallPage() {
                         ) : (
                           <div className="pt-0.5">
                             <div className="rounded-lg border border-ink-light/30 bg-ink-dark/40 overflow-hidden divide-y divide-ink-light/20">
-                              {everyoneDetails.map((detail) => (
-                                <div key={detail.id} className="px-3 py-2.5">
+                              {everyoneDetails.map((detail) => {
+                                const detailColor = getUserCultivatorColor(detail.id, userColors);
+
+                                return <div key={detail.id} className="px-3 py-2.5">
                                   <div className="flex items-start justify-between gap-2 text-xs">
                                     <div className="min-w-0 flex-1 grid grid-cols-[minmax(108px,160px)_minmax(0,1fr)] items-start gap-x-1">
                                       <div className="flex items-center gap-2 min-w-0">
-                                        <div className="w-8 h-8 rounded-full bg-jade-glow/18 border border-jade-glow/35 grid place-items-center shrink-0 shadow-[0_0_0_1px_rgba(255,255,255,0.05)]">
-                                          <span className="text-sm font-bold text-jade-light leading-none">
+                                        <div
+                                          className="w-8 h-8 rounded-full grid place-items-center shrink-0 shadow-[0_0_0_1px_rgba(255,255,255,0.05)]"
+                                          style={{
+                                            backgroundColor: detailColor,
+                                            border: `1px solid ${getCultivatorGlowColor(detailColor, 0.7)}`,
+                                            boxShadow: `0 0 8px ${getCultivatorGlowColor(detailColor, 0.25)}`,
+                                          }}
+                                        >
+                                          <span className="text-sm font-bold text-pure-white leading-none">
                                             {(detail.name || "?").charAt(0).toUpperCase()}
                                           </span>
                                         </div>
@@ -959,24 +1005,37 @@ export default function DaoHallPage() {
                                       </div>
                                     </div>
 
-                                    <span
-                                      className={`px-2 py-0.5 rounded-full border text-[10px] shrink-0 ${
-                                        detail.present
-                                          ? "border-jade-glow/40 text-jade-glow bg-jade-deep/20"
-                                          : "border-ink-light/45 text-mist-dark"
-                                      }`}
-                                    >
-                                      {detail.present ? "Checked In" : "Not Checked In"}
-                                    </span>
+                                    {detail.present ? (
+                                      <span
+                                        className="mt-1 inline-flex h-2.5 w-2.5 shrink-0 rounded-full bg-jade-glow shadow-[0_0_0_1px_rgba(245,56,107,0.25)]"
+                                        title="Checked in"
+                                        aria-label="Checked in"
+                                      />
+                                    ) : (
+                                      <span className="px-2 py-0.5 rounded-full border border-ink-light/45 text-[10px] text-mist-dark shrink-0">
+                                        Not in
+                                      </span>
+                                    )}
                                   </div>
-                                </div>
-                              ))}
+                                </div>;
+                              })}
                             </div>
                           </div>
                         )}
                       </div>
                     );
                   })}
+
+                  {(hasMoreRows || isLoadingMoreRows) && (
+                    <div
+                      ref={rowsObserverTargetRef}
+                      className="flex justify-center py-2"
+                    >
+                      <span className="text-[11px] text-mist-dark">
+                        {isLoadingMoreRows ? "Loading more rows..." : "Scroll to load more"}
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1017,9 +1076,9 @@ export default function DaoHallPage() {
                   📋 Cultivator Check-In
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {allUsers.map((u, idx) => {
+                  {allUsers.map((u) => {
                     const entry = checkInModal.entries[u.id] || { present: false, weight: "", comment: "" };
-                    const color = normalizeCultivatorColor(userColors[u.id] || DEFAULT_CULTIVATOR_COLORS[idx % DEFAULT_CULTIVATOR_COLORS.length]);
+                    const color = getUserCultivatorColor(u.id, userColors);
                     return (
                       <motion.div
                         key={u.id}

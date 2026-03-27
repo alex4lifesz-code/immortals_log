@@ -49,8 +49,13 @@ export const GET = withAuth(async (_req, { auth }) => {
 
 export const PUT = withAuth(async (req, { auth }) => {
   try {
-    const userId = auth.userId;
     const body = await req.json();
+    const requestedUserId =
+      typeof body.userId === "string" && body.userId.trim().length > 0
+        ? body.userId.trim()
+        : auth.userId;
+
+    const userId = auth.role === "admin" ? requestedUserId : auth.userId;
 
     const existing = await prisma.userSettings.findUnique({
       where: { userId },
@@ -59,12 +64,13 @@ export const PUT = withAuth(async (req, { auth }) => {
     const appPrefsInput = body.appPrefs;
     const displaySettingsInput = body.displaySettings;
 
+    const existingAppPrefs = parseJsonObject(existing?.pinnedNavItems) ?? null;
     const appPrefs =
       appPrefsInput &&
       typeof appPrefsInput === "object" &&
       !Array.isArray(appPrefsInput)
-        ? (appPrefsInput as StoredAppPreferences)
-        : (parseJsonObject(existing?.pinnedNavItems) ?? null);
+        ? ({ ...(existingAppPrefs ?? {}), ...(appPrefsInput as StoredAppPreferences) } as StoredAppPreferences)
+        : (existingAppPrefs as StoredAppPreferences | null);
 
     const displaySettings =
       displaySettingsInput &&

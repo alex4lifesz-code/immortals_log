@@ -147,6 +147,24 @@
     --cultivator-rose-rgb: 231 76 140;
     --system-bar-fallback: #0d0f14;
 
+    /* Motion + surface system */
+    --motion-fast: 180ms;
+    --motion-normal: 320ms;
+    --motion-slow: 520ms;
+    --ease-polish: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-float: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --ring-accent: color-mix(in srgb, var(--accent) 42%, transparent);
+    --surface-panel: linear-gradient(
+      160deg,
+      color-mix(in srgb, var(--ink-deep) 94%, transparent) 0%,
+      color-mix(in srgb, var(--ink-dark) 90%, transparent) 100%
+    );
+    --surface-panel-strong: linear-gradient(
+      165deg,
+      color-mix(in srgb, var(--ink-deep) 96%, transparent) 0%,
+      color-mix(in srgb, var(--ink-mid) 92%, transparent) 100%
+    );
+
   /* Difficulty glows */
   --glow-difficulty-green: 0 0 15px rgba(34, 197, 94, 0.3), 0 0 30px rgba(34, 197, 94, 0.1);
   --glow-difficulty-amber: 0 0 15px rgba(245, 158, 11, 0.3), 0 0 30px rgba(245, 158, 11, 0.1);
@@ -237,6 +255,36 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  transition: background-color var(--motion-normal) var(--ease-polish), color var(--motion-normal) var(--ease-polish);
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  transition:
+    color var(--motion-fast) var(--ease-polish),
+    background-color var(--motion-fast) var(--ease-polish),
+    border-color var(--motion-fast) var(--ease-polish),
+    box-shadow var(--motion-normal) var(--ease-polish),
+    transform var(--motion-fast) var(--ease-polish);
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--background) 75%, transparent),
+    0 0 0 4px var(--ring-accent);
+}
+
+#__next,
+main {
+  isolation: isolate;
 }
 
 /* ===== Glow Animations ===== */
@@ -259,6 +307,28 @@ body {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
+}
+
+@keyframes ambientShift {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translate3d(0, -10px, 0) scale(1.02);
+    opacity: 0.75;
+  }
+}
+
+@keyframes pageRise {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0) scale(0.99);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
 }
 
 @keyframes glowBreath {
@@ -392,6 +462,62 @@ body {
   background: linear-gradient(180deg, transparent, rgba(13, 15, 20, 0.8));
 }
 
+.app-atmosphere {
+  position: relative;
+  background:
+    radial-gradient(95rem 40rem at 8% -12%, color-mix(in srgb, var(--jade-glow) 12%, transparent), transparent 58%),
+    radial-gradient(80rem 32rem at 88% -16%, color-mix(in srgb, var(--mountain-blue-glow) 14%, transparent), transparent 62%),
+    radial-gradient(65rem 30rem at 52% 118%, color-mix(in srgb, var(--gold) 10%, transparent), transparent 70%),
+    var(--background);
+}
+
+.ambient-orb {
+  animation: ambientShift 12s var(--ease-float) infinite;
+  will-change: transform, opacity;
+}
+
+.page-rise {
+  animation: pageRise var(--motion-normal) var(--ease-polish) both;
+}
+
+.surface-panel {
+  background: var(--surface-panel);
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  border-radius: 1rem;
+  box-shadow: var(--shadow-elev-1), inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 8%, transparent);
+  transition:
+    transform var(--motion-fast) var(--ease-polish),
+    box-shadow var(--motion-normal) var(--ease-polish),
+    border-color var(--motion-normal) var(--ease-polish),
+    background var(--motion-normal) var(--ease-polish);
+}
+
+.surface-panel-strong {
+  background: var(--surface-panel-strong);
+}
+
+.interactive-panel {
+  position: relative;
+  transform: translateY(0);
+}
+
+.interactive-panel:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  box-shadow:
+    0 14px 26px color-mix(in srgb, var(--void-black) 26%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--ring-accent) 80%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 10%, transparent);
+}
+
+.polished-focus:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--background) 80%, transparent),
+    0 0 0 4px var(--ring-accent),
+    var(--shadow-elev-1);
+}
+
 /* Mobile aesthetics: hide scrollbars while preserving touch scroll. */
 @media (max-width: 767px) {
   * {
@@ -402,6 +528,15 @@ body {
     width: 0;
     height: 0;
     display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 

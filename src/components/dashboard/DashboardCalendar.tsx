@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useState } from "react";
 import GlowCard from "@/components/ui/GlowCard";
 import GlowButton from "@/components/ui/GlowButton";
 import { useAppContext } from "@/context/AppContext";
@@ -47,6 +48,82 @@ export const CULTIVATOR_COLOR_OPTIONS = [
   { name: "Rose", value: "var(--cultivator-rose)" },
 ];
 
+function hslToHex(h: number, s: number, l: number): string {
+  const sat = s / 100;
+  const light = l / 100;
+  const c = (1 - Math.abs(2 * light - 1)) * sat;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = light - c / 2;
+
+  let r = 0;
+  let g = 0;
+  let b = 0;
+
+  if (h < 60) {
+    r = c;
+    g = x;
+  } else if (h < 120) {
+    r = x;
+    g = c;
+  } else if (h < 180) {
+    g = c;
+    b = x;
+  } else if (h < 240) {
+    g = x;
+    b = c;
+  } else if (h < 300) {
+    r = x;
+    b = c;
+  } else {
+    r = c;
+    b = x;
+  }
+
+  const toHex = (value: number) => Math.round((value + m) * 255).toString(16).padStart(2, "0");
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+function hashString(input: string): number {
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    hash = (hash << 5) - hash + input.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+export function getDeterministicCultivatorColor(userId: string): string {
+  const hash = hashString(userId || "cultivator");
+  const hue = hash % 360;
+  const saturation = 62 + (hash % 18);
+  const lightness = 45 + ((hash >> 3) % 12);
+  return hslToHex(hue, saturation, lightness);
+}
+
+export function getUserCultivatorColor(userId: string, userColors: Record<string, string>): string {
+  return normalizeCultivatorColor(userColors[userId] || getDeterministicCultivatorColor(userId));
+}
+
+function cssColorToHex(colorValue: string, fallbackHex: string): string {
+  if (colorValue.startsWith("#") && colorValue.length === 7) return colorValue.toLowerCase();
+  if (typeof window === "undefined" || typeof document === "undefined") return fallbackHex;
+
+  const probe = document.createElement("span");
+  probe.style.color = colorValue;
+  document.body.appendChild(probe);
+  const resolved = window.getComputedStyle(probe).color;
+  document.body.removeChild(probe);
+
+  const numbers = resolved.match(/\d+(?:\.\d+)?/g);
+  if (!numbers || numbers.length < 3) return fallbackHex;
+
+  const [r, g, b] = numbers.slice(0, 3).map((v) => Number(v));
+  if ([r, g, b].some((v) => Number.isNaN(v))) return fallbackHex;
+
+  const toHex = (value: number) => Math.max(0, Math.min(255, Math.round(value))).toString(16).padStart(2, "0");
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
 export function normalizeCultivatorColor(colorValue: string | undefined): string {
   if (!colorValue) return DEFAULT_CULTIVATOR_COLORS[0];
   const normalized = colorValue.trim();
@@ -80,7 +157,23 @@ export function formatDateLocal(date: Date): string {
 
 // ── Dashboard Sidebar ──
 
-export function DashboardSidebar({ stats, allUsers, userColors, onColorChange }: { stats: { sessions: number; techniques: number; streak: number }; allUsers: DashboardUser[]; userColors: Record<string, string>; onColorChange: (userId: string, color: string) => void }) {
+export function DashboardSidebar({
+  stats,
+  allUsers,
+  userColors,
+  onColorChange,
+  currentUserId,
+  isAdmin,
+}: {
+  stats: { sessions: number; techniques: number; streak: number };
+  allUsers: DashboardUser[];
+  userColors: Record<string, string>;
+  onColorChange: (userId: string, color: string) => void | Promise<void>;
+  currentUserId?: string;
+  isAdmin?: boolean;
+}) {
+  const [adminColorEditEnabled, setAdminColorEditEnabled] = useState(false);
+
   return (
     <div className="dashboard-sidebar-shell">
       <div className="dashboard-sidebar-scroll sidebar-scroll space-y-3">
@@ -110,10 +203,29 @@ export function DashboardSidebar({ stats, allUsers, userColors, onColorChange }:
         </div>
         {allUsers.length > 0 && (
           <div className="dashboard-sidebar-card space-y-2">
-            <h3 className="text-xs text-jade-glow uppercase">Cultivator Colours</h3>
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-xs text-jade-glow uppercase">Cultivator Colours</h3>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setAdminColorEditEnabled((v) => !v)}
+                  className={`rounded-full border px-2 py-0.5 text-[10px] transition-colors ${
+                    adminColorEditEnabled
+                      ? "border-jade-glow/45 bg-jade-deep/20 text-jade-light"
+                      : "border-ink-light/55 text-mist-mid hover:text-mist-light"
+                  }`}
+                  title="Enable editing other users' cultivator colors"
+                >
+                  Admin Edit {adminColorEditEnabled ? "On" : "Off"}
+                </button>
+              )}
+            </div>
             <div className="space-y-2">
-              {allUsers.map((u, idx) => {
-                const selectedColor = normalizeCultivatorColor(userColors[u.id] || DEFAULT_CULTIVATOR_COLORS[idx % DEFAULT_CULTIVATOR_COLORS.length]);
+              {allUsers.map((u) => {
+                const selectedColor = getUserCultivatorColor(u.id, userColors);
+                const isSelf = currentUserId === u.id;
+                const canEdit = isSelf || (Boolean(isAdmin) && adminColorEditEnabled);
+                const pickerValue = cssColorToHex(selectedColor, getDeterministicCultivatorColor(u.id));
                 return (
                   <div key={u.id} className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5 min-w-0">
@@ -123,21 +235,24 @@ export function DashboardSidebar({ stats, allUsers, userColors, onColorChange }:
                       />
                       <span className="text-xs text-mist-light truncate">{u.name}</span>
                     </div>
-                    <div className="flex gap-0.5 shrink-0">
-                      {CULTIVATOR_COLOR_OPTIONS.map((c) => (
-                        <button
-                          key={c.value}
-                          onClick={() => onColorChange(u.id, c.value)}
-                          className={`w-3.5 h-3.5 rounded-full border-2 transition-all ${
-                            selectedColor === c.value
-                              ? "border-cloud-white scale-125 shadow-[0_0_6px_currentColor]"
-                              : "border-transparent hover:border-mist-dark hover:scale-110"
-                          }`}
-                          style={{ backgroundColor: c.value }}
-                          title={c.name}
+                    {canEdit ? (
+                      <div className="flex items-center gap-1 shrink-0">
+                        <input
+                          type="color"
+                          value={pickerValue}
+                          onChange={(e) => void onColorChange(u.id, e.target.value)}
+                          className="h-4 w-6 cursor-pointer rounded border border-ink-light/60 bg-transparent p-0"
+                          title={isSelf ? "Pick your cultivator color" : `Pick color for ${u.name}`}
+                          aria-label={isSelf ? "Pick your cultivator color" : `Pick color for ${u.name}`}
                         />
-                      ))}
-                    </div>
+                      </div>
+                    ) : (
+                      <span
+                        className="h-3.5 w-3.5 rounded-full shrink-0 border border-ink-light/50"
+                        style={{ backgroundColor: selectedColor }}
+                        title="Cultivator selected color"
+                      />
+                    )}
                   </div>
                 );
               })}
@@ -287,11 +402,10 @@ export function Calendar({
                 checkedInUsers={
                   (checkInUsersByDate.get(formatDateLocal(date)) || []).map(uid => {
                     const u = allUsers.find(usr => usr.id === uid);
-                    const idx = allUsers.findIndex(usr => usr.id === uid);
                     return {
                       id: uid,
                       name: u?.name || "Unknown",
-                      color: normalizeCultivatorColor(userColors[uid] || DEFAULT_CULTIVATOR_COLORS[idx >= 0 ? idx % DEFAULT_CULTIVATOR_COLORS.length : 0]),
+                      color: getUserCultivatorColor(uid, userColors),
                     };
                   })
                 }
@@ -329,11 +443,7 @@ export function Calendar({
 
           <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
             {upcomingNotes.map((note) => {
-              const noteUserIdx = allUsers.findIndex((u) => u.id === note.user.id);
-              const noteColor = normalizeCultivatorColor(
-                userColors[note.user.id] ||
-                  DEFAULT_CULTIVATOR_COLORS[noteUserIdx >= 0 ? noteUserIdx % DEFAULT_CULTIVATOR_COLORS.length : 0],
-              );
+              const noteColor = getUserCultivatorColor(note.user.id, userColors);
               return (
                 <button
                   key={note.id}
@@ -373,11 +483,11 @@ export function Calendar({
           <span className="text-mist-mid">Check-In</span>
         </div>
         <div className="flex items-center gap-1">
-          {allUsers.slice(0, compactMode ? 3 : 4).map((u, idx) => (
+          {allUsers.slice(0, compactMode ? 3 : 4).map((u) => (
             <span
               key={u.id}
               className="text-[10px] font-bold"
-              style={{ color: normalizeCultivatorColor(userColors[u.id] || DEFAULT_CULTIVATOR_COLORS[idx % DEFAULT_CULTIVATOR_COLORS.length]) }}
+              style={{ color: getUserCultivatorColor(u.id, userColors) }}
               title={u.name}
             >
               ✓

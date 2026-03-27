@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { ProgressionExercise } from "@/app/dashboard/workout/types";
 import {
@@ -84,6 +84,7 @@ export function InlineLogForm({
   const [timerTarget, setTimerTarget] = useState<"hold" | "hold2" | "hold3">("hold");
   const [timerReps, setTimerReps] = useState("");
   const [activeMobileSet, setActiveMobileSet] = useState<1 | 2 | 3>(1);
+  const [focusedPrimarySetId, setFocusedPrimarySetId] = useState<1 | 2 | 3 | null>(null);
   const [draftReady, setDraftReady] = useState(false);
   const [latestCheckInWeightKg, setLatestCheckInWeightKg] = useState<number | null>(null);
   const prevDraftKeyRef = useRef<string | null>(null);
@@ -191,6 +192,17 @@ export function InlineLogForm({
     const weightValue = setId === 1 ? w1 : setId === 2 ? w2 : w3;
     const repsValue = setId === 1 ? r1 : setId === 2 ? r2 : r3;
     return `${weightValue || "-"} ${weightUnit} • ${repsValue || "-"} reps`;
+  };
+
+  const isSetCompleted = (setId: 1 | 2 | 3) => {
+    if (showHold) {
+      const holdValue = setId === 1 ? hold : setId === 2 ? hold2 : hold3;
+      const repsValue = setId === 1 ? r1 : setId === 2 ? r2 : r3;
+      return Boolean(String(holdValue).trim() && String(repsValue).trim());
+    }
+    const weightValue = setId === 1 ? w1 : setId === 2 ? w2 : w3;
+    const repsValue = setId === 1 ? r1 : setId === 2 ? r2 : r3;
+    return Boolean(String(weightValue).trim() && String(repsValue).trim());
   };
 
   const mobilePanelBorder = `${getTierGlowFromLogs(exercise, physique.bodyWeightKg).glowColor}30`;
@@ -519,49 +531,11 @@ export function InlineLogForm({
           </div>
         </div>
 
-        {/* Lore text */}
-        {loreVisible && showPath && exercise.story && !isCompact && (
-          <p className="text-[10px] text-mist-mid/70 leading-relaxed line-clamp-2 mb-2.5 pl-2">
-            {exercise.story}
-          </p>
-        )}
-
         {useSetPanelLayout ? (
-          <div className={`pl-2 ${isMobile ? "space-y-3" : "space-y-2"}`}>
+          <div className={`pl-2 ${isMobile ? "flex min-h-[calc(100dvh-150px)] flex-col" : "space-y-2"}`}>
+            <div className={isMobile ? "flex-1 min-h-0 overflow-y-auto pr-1 space-y-3" : "space-y-2"}>
             <div className="grid gap-2">
-              {/* Category & Type info */}
-              <div className={`flex items-center gap-2 border border-ink-light/20 bg-ink-mid/15 ${isMobile ? "rounded-xl px-3 py-2" : "rounded-lg px-2.5 py-1.5"}`}>
-                <span className={`${isMobile ? "text-[11px]" : "text-[10px]"} text-mist-light`}>
-                  {parseCategoryTags(exercise.category)[0] || "Exercise"} • {exercise.weighted ? "Weighted" : exercise.bodyweight ? "Bodyweight" : "Timed"}
-                </span>
-              </div>
-
-              <div className={`grid gap-2 ${showHold ? "grid-cols-1" : "grid-cols-2"}`}>
-                {!showHold && (
-                  <div className={`flex overflow-hidden border border-ink-light/30 ${isMobile ? "rounded-xl" : "rounded-lg"}`}>
-                    <button
-                      onClick={() => setWeightUnit("kg")}
-                      className={`flex-1 font-semibold transition-all duration-200 border-r border-ink-light/30 ${isMobile ? "px-3 py-2.5 text-[11px]" : "px-2.5 py-2 text-[10px]"} ${
-                        weightUnit === "kg"
-                          ? "bg-jade-deep/70 text-cloud-white border-jade-glow/50 shadow-[var(--glow-subtle)]"
-                          : "bg-ink-mid/55 text-mist-light/85 hover:bg-ink-mid/80 hover:text-cloud-white"
-                      }`}
-                    >
-                      KG
-                    </button>
-                    <button
-                      onClick={() => setWeightUnit("lbs")}
-                      className={`flex-1 font-semibold transition-all duration-200 ${isMobile ? "px-3 py-2.5 text-[11px]" : "px-2.5 py-2 text-[10px]"} ${
-                        weightUnit === "lbs"
-                          ? "bg-jade-deep/70 text-cloud-white border-jade-glow/50 shadow-[var(--glow-subtle)]"
-                          : "bg-ink-mid/55 text-mist-light/85 hover:bg-ink-mid/80 hover:text-cloud-white"
-                      }`}
-                    >
-                      LBS
-                    </button>
-                  </div>
-                )}
-
+              <div className="grid gap-2 grid-cols-2">
                 <div className={`flex overflow-hidden border border-ink-light/30 ${isMobile ? "rounded-xl" : "rounded-lg"}`}>
                   <button
                     onClick={() => { setInputMode("weight"); resetEntryFields(); }}
@@ -577,11 +551,40 @@ export function InlineLogForm({
                     onClick={() => { setInputMode("hold"); resetEntryFields(); }}
                     className={`flex-1 font-semibold transition-all duration-200 ${isMobile ? "px-3 py-2.5 text-[11px]" : "px-2.5 py-2 text-[10px]"} ${
                       inputMode === "hold"
-                        ? "bg-mountain-blue/30 text-cloud-white shadow-[var(--glow-blue)]"
+                        ? "bg-jade-deep/65 text-cloud-white"
                         : "bg-ink-mid/60 text-mist-light hover:bg-ink-mid/80 hover:text-cloud-white"
                     }`}
                   >
                     Hold
+                  </button>
+                </div>
+
+                <div className={`flex overflow-hidden border border-ink-light/30 ${isMobile ? "rounded-xl" : "rounded-lg"}`}>
+                  <button
+                    onClick={() => setWeightUnit("kg")}
+                    disabled={showHold}
+                    className={`flex-1 font-semibold transition-all duration-200 border-r border-ink-light/30 ${isMobile ? "px-3 py-2.5 text-[11px]" : "px-2.5 py-2 text-[10px]"} ${
+                      showHold
+                        ? "bg-ink-mid/35 text-mist-dark/70 cursor-not-allowed"
+                        : weightUnit === "kg"
+                          ? "bg-jade-deep/70 text-cloud-white border-jade-glow/50 shadow-[var(--glow-subtle)]"
+                          : "bg-ink-mid/55 text-mist-light/85 hover:bg-ink-mid/80 hover:text-cloud-white"
+                    }`}
+                  >
+                    KG
+                  </button>
+                  <button
+                    onClick={() => setWeightUnit("lbs")}
+                    disabled={showHold}
+                    className={`flex-1 font-semibold transition-all duration-200 ${isMobile ? "px-3 py-2.5 text-[11px]" : "px-2.5 py-2 text-[10px]"} ${
+                      showHold
+                        ? "bg-ink-mid/35 text-mist-dark/70 cursor-not-allowed"
+                        : weightUnit === "lbs"
+                          ? "bg-jade-deep/70 text-cloud-white border-jade-glow/50 shadow-[var(--glow-subtle)]"
+                          : "bg-ink-mid/55 text-mist-light/85 hover:bg-ink-mid/80 hover:text-cloud-white"
+                    }`}
+                  >
+                    LBS
                   </button>
                 </div>
               </div>
@@ -590,47 +593,51 @@ export function InlineLogForm({
 
             {(showAddedWeight || showResistanceBand || availableVariationOptions.length > 0) && (
               <div className="grid gap-2">
-                {showAddedWeight && (
-                  <label className="block space-y-1">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-mist-dark">
-                      Added Weight{autoPopulated.modifierKg && <span className="text-gold/70 ml-0.5" title="Pre-filled from last session">*</span>}
-                    </span>
-                    <select
-                      value={selectedModifierKg}
-                      onChange={(e) => { setSelectedModifierKg(e.target.value); setAutoPopulated(prev => ({ ...prev, modifierKg: false })); }}
-                      className={`w-full border border-ink-light/20 bg-ink-dark text-gold outline-none focus:border-gold/40 transition-colors cursor-pointer ${isMobile ? "rounded-xl px-3 py-3 text-sm" : "rounded-lg px-2.5 py-2 text-xs"}`}
-                    >
-                      <option value="">No added weight</option>
-                      {MODIFIER_WEIGHT_OPTIONS.map((kg) => (
-                        <option key={kg} value={String(kg)}>
-                          {formatModifierWeightLabel(kg)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                )}
-                {showResistanceBand && (
-                  <label className="block space-y-1">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-mist-dark">
-                      Resistance band{autoPopulated.band && <span className="text-mountain-blue-glow/70 ml-0.5" title="Pre-filled from last session">*</span>}
-                    </span>
-                    <select
-                      value={selectedResistanceBand}
-                      onChange={(e) => { setSelectedResistanceBand(e.target.value); setAutoPopulated(prev => ({ ...prev, band: false })); }}
-                      className={`w-full border border-ink-light/20 bg-ink-dark text-mountain-blue-glow outline-none focus:border-mountain-blue-glow/40 transition-colors cursor-pointer ${isMobile ? "rounded-xl px-3 py-3 text-sm" : "rounded-lg px-2.5 py-2 text-xs"}`}
-                    >
-                      <option value="">No resistance band</option>
-                      {RESISTANCE_BAND_OPTIONS.map((kg) => (
-                        <option key={kg} value={String(kg)}>
-                          Resistance band {formatResistanceBandLabel(kg)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                {(showAddedWeight || showResistanceBand) && (
+                  <div className={`grid gap-2 ${showAddedWeight && showResistanceBand ? "grid-cols-2" : "grid-cols-1"}`}>
+                    {showAddedWeight && (
+                      <label className="block space-y-1">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-mist-mid">
+                          Added Weight{autoPopulated.modifierKg && <span className="text-gold/70 ml-0.5" title="Pre-filled from last session">*</span>}
+                        </span>
+                        <select
+                          value={selectedModifierKg}
+                          onChange={(e) => { setSelectedModifierKg(e.target.value); setAutoPopulated(prev => ({ ...prev, modifierKg: false })); }}
+                          className={`w-full border border-ink-light/20 bg-ink-dark text-gold outline-none focus:border-gold/40 transition-colors cursor-pointer ${isMobile ? "rounded-xl px-3 py-3 text-sm" : "rounded-lg px-2.5 py-2 text-xs"}`}
+                        >
+                          <option value="">No added weight</option>
+                          {MODIFIER_WEIGHT_OPTIONS.map((kg) => (
+                            <option key={kg} value={String(kg)}>
+                              {formatModifierWeightLabel(kg)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    )}
+                    {showResistanceBand && (
+                      <label className="block space-y-1">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-mist-mid">
+                          Resistance band{autoPopulated.band && <span className="text-mountain-blue-glow/70 ml-0.5" title="Pre-filled from last session">*</span>}
+                        </span>
+                        <select
+                          value={selectedResistanceBand}
+                          onChange={(e) => { setSelectedResistanceBand(e.target.value); setAutoPopulated(prev => ({ ...prev, band: false })); }}
+                          className={`w-full border border-ink-light/20 bg-ink-dark text-mountain-blue-glow outline-none focus:border-mountain-blue-glow/40 transition-colors cursor-pointer ${isMobile ? "rounded-xl px-3 py-3 text-sm" : "rounded-lg px-2.5 py-2 text-xs"}`}
+                        >
+                          <option value="">No resistance band</option>
+                          {RESISTANCE_BAND_OPTIONS.map((kg) => (
+                            <option key={kg} value={String(kg)}>
+                              Resistance band {formatResistanceBandLabel(kg)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    )}
+                  </div>
                 )}
                 {availableVariationOptions.length > 0 && (
                   <label className="block space-y-1">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-mist-dark">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-mist-mid">
                       Variation{autoPopulated.variation && <span className="text-crimson-light/70 ml-0.5" title="Pre-filled from last session">*</span>}
                     </span>
                     <select
@@ -651,7 +658,7 @@ export function InlineLogForm({
             )}
 
             <div
-              className={isMobile ? "space-y-2" : "grid gap-2"}
+              className={isMobile ? "flex flex-col gap-2" : "grid gap-2"}
               style={isMobile ? undefined : { gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}
             >
               {mobileSetConfigs.map((setConfig) => {
@@ -673,114 +680,146 @@ export function InlineLogForm({
                       className={`flex w-full items-center justify-between gap-3 text-left ${isMobile ? "px-3 py-3" : "px-2.5 py-2"}`}
                     >
                       <div className="min-w-0">
-                        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-mist-dark">{setConfig.title}</div>
-                        <div className={`mt-1 font-medium text-cloud-white ${isMobile ? "text-sm" : "text-xs"}`}>{getMobileSetSummary(setConfig.id)}</div>
-                      </div>
-                      {isMobile && (
-                        <span className="text-lg leading-none" style={{ color: diffStyle.glowColor }}>
-                          {isOpen ? "−" : "+"}
-                        </span>
-                      )}
-                    </button>
-
-                    {isOpen && (
-                      <div className={`border-t ${isMobile ? "space-y-3 px-3 py-3" : "space-y-2 px-2.5 py-2"}`} style={{ borderColor: `${diffStyle.glowColor}22` }}>
-                        {showHold && "timerKey" in setConfig && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setShowTimerModal(true);
-                              setTimerTarget(setConfig.timerKey as "hold" | "hold2" | "hold3");
-                              setTimerReps("");
-                              resetTimer();
-                            }}
-                            className={`w-full border font-bold text-cloud-white transition-all ${isMobile ? "rounded-xl px-3 py-2.5 text-[11px]" : "rounded-lg px-2.5 py-2 text-[10px]"}`}
-                            style={{
-                              background: "var(--timed-accent-soft)",
-                              borderColor: "var(--timed-accent-border)",
-                              boxShadow: `0 0 10px ${diffStyle.glowColor}33`,
-                            }}
-                          >
-                            Use Timer for {setConfig.title.replace("Set", "T")}
-                          </button>
-                        )}
-
-                        <div className={`grid grid-cols-2 ${isMobile ? "gap-2" : "gap-1.5"}`}>
-                          <label className="block space-y-1">
-                            <div className="flex items-center justify-between min-h-[18px]">
-                              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-mist-dark">{setConfig.primaryLabel}</span>
-                              {canUseBwQuickFill && latestCheckInWeightKg != null && (
-                                <button
-                                  type="button"
-                                  onClick={() => setConfig.setPrimary(String(latestCheckInWeightKg))}
-                                  className="text-[9px] font-bold px-2 py-1 rounded-md border border-jade-glow/55 bg-jade-deep/35 text-jade-light hover:bg-jade-deep/60 hover:-translate-y-[1px] hover:shadow-[var(--glow-jade)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-jade-glow/70 transition-all duration-150"
-                                  title={`Apply last check-in weight (${latestCheckInWeightKg}kg)`}
-                                >
-                                  BW
-                                </button>
-                              )}
-                            </div>
-                            <input
-                              type="number"
-                              min="0"
-                              step={showHold ? undefined : "0.5"}
-                              max={showHold ? undefined : undefined}
-                              value={setConfig.primaryValue}
-                              onChange={(e) => {
-                                setConfig.setPrimary(e.target.value);
-                                if (shakeError && setConfig.id === 1) setShakeError(false);
-                              }}
-                              placeholder={showHold ? "sec" : "0.0"}
-                              className={`${setInputClass}${shakeError && setConfig.id === 1 ? ' animate-shake' : ''}`}
-                              style={{
-                                borderColor: shakeError && setConfig.id === 1
-                                  ? "var(--state-error-border)"
-                                  : showHold
-                                    ? "color-mix(in srgb, var(--mountain-blue-glow) 45%, transparent)"
-                                    : `${diffStyle.glowColor}55`,
-                              }}
-                            />
-                          </label>
-
-                          <label className="block space-y-1">
-                            <div className="flex items-center justify-between min-h-[18px]">
-                              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-mist-dark">{setConfig.secondaryLabel}</span>
-                              <span className="invisible text-[9px] font-bold px-2 py-1">BW</span>
-                            </div>
-                            <input
-                              type="number"
-                              min="0"
-                              max="500"
-                              value={setConfig.secondaryValue}
-                              onChange={(e) => {
-                                setConfig.setSecondary(e.target.value);
-                                if (shakeError && setConfig.id === 1) setShakeError(false);
-                              }}
-                              placeholder="reps"
-                              className={`${setInputClass}${shakeError && setConfig.id === 1 ? ' animate-shake' : ''}`}
-                              style={{ borderColor: shakeError && setConfig.id === 1 ? "var(--state-error-border)" : "color-mix(in srgb, var(--gold) 35%, transparent)" }}
-                            />
-                          </label>
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-mist-mid">{setConfig.title}</div>
+                        <div className={`mt-1 font-semibold text-cloud-white flex items-center gap-2 ${isMobile ? "text-sm" : "text-xs"}`}>
+                          <span>{getMobileSetSummary(setConfig.id)}</span>
+                          {!isOpen && isSetCompleted(setConfig.id) && (
+                            <span className="inline-flex items-center justify-center rounded-full" style={{ color: diffStyle.glowColor }}>✓</span>
+                          )}
                         </div>
                       </div>
-                    )}
+
+                    </button>
+
+                    <AnimatePresence initial={false}>
+                      {isOpen && (
+                        <motion.div
+                          key={`set-open-${setConfig.id}`}
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+                          className="overflow-hidden"
+                        >
+                          <div className={`border-t ${isMobile ? "space-y-3 px-3 py-3" : "space-y-2 px-2.5 py-2"}`} style={{ borderColor: `${diffStyle.glowColor}22` }}>
+                            {showHold && "timerKey" in setConfig && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setShowTimerModal(true);
+                                  setTimerTarget(setConfig.timerKey as "hold" | "hold2" | "hold3");
+                                  setTimerReps("");
+                                  resetTimer();
+                                }}
+                                className={`w-full border font-bold text-cloud-white transition-all ${isMobile ? "rounded-xl px-3 py-2.5 text-[11px]" : "rounded-lg px-2.5 py-2 text-[10px]"}`}
+                                style={{
+                                  background: "var(--timed-accent-soft)",
+                                  borderColor: "var(--timed-accent-border)",
+                                  boxShadow: `0 0 10px ${diffStyle.glowColor}33`,
+                                }}
+                              >
+                                Use Timer for {setConfig.title.replace("Set", "T")}
+                              </button>
+                            )}
+
+                            <div className={`grid grid-cols-2 ${isMobile ? "gap-2" : "gap-1.5"}`}>
+                              <label className="block space-y-1">
+                                <div className={`grid items-center min-h-[18px] ${canUseBwQuickFill && latestCheckInWeightKg != null ? "grid-cols-[36px_minmax(0,1fr)] gap-2" : "grid-cols-1"}`}>
+                                  {canUseBwQuickFill && latestCheckInWeightKg != null && (
+                                    <span aria-hidden className="block" />
+                                  )}
+                                  <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-mist-mid">{setConfig.primaryLabel}</span>
+                                </div>
+                                <div className={`grid items-stretch ${canUseBwQuickFill && latestCheckInWeightKg != null ? "grid-cols-[36px_minmax(0,1fr)] gap-2" : "grid-cols-1"}`}>
+                                  {canUseBwQuickFill && latestCheckInWeightKg != null && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const hasPrimaryValue = String(setConfig.primaryValue || "").trim() !== "";
+                                        const isClearState = hasPrimaryValue && focusedPrimarySetId !== setConfig.id;
+                                        if (isClearState) {
+                                          setConfig.setPrimary("");
+                                          return;
+                                        }
+                                        setConfig.setPrimary(String(latestCheckInWeightKg));
+                                      }}
+                                      className={`h-full min-h-[42px] w-9 text-[9px] font-bold rounded-md border transition-all duration-150 focus-visible:outline-none focus-visible:ring-1 ${String(setConfig.primaryValue || "").trim() !== "" && focusedPrimarySetId !== setConfig.id
+                                        ? "border-crimson/55 bg-crimson-deep/28 text-crimson-light hover:bg-crimson-deep/45 focus-visible:ring-crimson/65"
+                                        : "border-jade-glow/55 bg-jade-deep/35 text-jade-light hover:bg-jade-deep/60 hover:-translate-y-[1px] hover:shadow-[var(--glow-jade)] focus-visible:ring-jade-glow/70"
+                                      }`}
+                                      title={String(setConfig.primaryValue || "").trim() !== "" && focusedPrimarySetId !== setConfig.id
+                                        ? "Clear applied bodyweight"
+                                        : `Apply last check-in weight (${latestCheckInWeightKg}kg)`}
+                                    >
+                                      {String(setConfig.primaryValue || "").trim() !== "" && focusedPrimarySetId !== setConfig.id ? "-BW" : "+BW"}
+                                    </button>
+                                  )}
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step={showHold ? undefined : "0.5"}
+                                    max={showHold ? undefined : undefined}
+                                    value={setConfig.primaryValue}
+                                    onChange={(e) => {
+                                      setConfig.setPrimary(e.target.value);
+                                      if (shakeError && setConfig.id === 1) setShakeError(false);
+                                    }}
+                                    onFocus={() => setFocusedPrimarySetId(setConfig.id)}
+                                    onBlur={() => setFocusedPrimarySetId((prev) => (prev === setConfig.id ? null : prev))}
+                                    placeholder={showHold ? "sec" : "0.0"}
+                                    className={`${setInputClass}${shakeError && setConfig.id === 1 ? ' animate-shake' : ''}`}
+                                    style={{
+                                      borderColor: shakeError && setConfig.id === 1
+                                        ? "var(--state-error-border)"
+                                        : showHold
+                                          ? "color-mix(in srgb, var(--mountain-blue-glow) 45%, transparent)"
+                                          : `${diffStyle.glowColor}55`,
+                                    }}
+                                  />
+                                </div>
+                              </label>
+
+                              <label className="block space-y-1">
+                                <div className="flex items-center justify-between min-h-[18px]">
+                                  <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-mist-mid">{setConfig.secondaryLabel}</span>
+                                </div>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="500"
+                                  value={setConfig.secondaryValue}
+                                  onChange={(e) => {
+                                    setConfig.setSecondary(e.target.value);
+                                    if (shakeError && setConfig.id === 1) setShakeError(false);
+                                  }}
+                                  placeholder="0"
+                                  className={`${setInputClass}${shakeError && setConfig.id === 1 ? ' animate-shake' : ''}`}
+                                  style={{ borderColor: shakeError && setConfig.id === 1 ? "var(--state-error-border)" : "color-mix(in srgb, var(--gold) 35%, transparent)" }}
+                                />
+                              </label>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 );
               })}
             </div>
+            </div>
 
-            <label className="block space-y-1">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-mist-dark">Notes</span>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Session notes, cues, or pain markers..."
-                rows={isMobile ? 3 : 2}
-                className={`w-full border border-ink-light/20 bg-ink-dark text-cloud-white outline-none transition-all duration-200 placeholder:text-mist-dark/40 focus:border-mist-mid/30 focus:bg-ink-mid/30 ${isMobile ? "rounded-xl px-3 py-3 text-sm" : "rounded-lg px-2.5 py-2 text-xs"}`}
-              />
-            </label>
+            <div className={isMobile ? "mt-2 rounded-xl border border-ink-light/25 bg-[color-mix(in_srgb,var(--ink-deep)_94%,transparent)] px-2.5 pt-2.5 pb-[calc(env(safe-area-inset-bottom,0px)+10px)]" : "flex flex-col gap-2 pt-1"}>
+              <label className="block space-y-1">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-mist-mid">Notes</span>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Session notes, cues, or pain markers..."
+                  rows={isMobile ? 3 : 2}
+                  className={`w-full border border-ink-light/20 bg-ink-dark text-cloud-white outline-none transition-all duration-200 placeholder:text-mist-dark/40 focus:border-mist-mid/30 focus:bg-ink-mid/30 ${isMobile ? "rounded-xl px-3 py-3 text-sm" : "rounded-lg px-2.5 py-2 text-xs"}`}
+                />
+              </label>
 
-            <div className="flex flex-col gap-2 pt-1">
               {saved && (
                 <motion.span
                   initial={{ opacity: 0, x: 10 }}
@@ -838,12 +877,22 @@ export function InlineLogForm({
             </div>
 
             <div className="flex gap-2">
-              {!showHold && (
-                <div className="flex rounded-lg overflow-hidden border border-ink-light/30 flex-1">
-                  <button onClick={() => setWeightUnit("kg")} className={`flex-1 py-1.5 text-[10px] font-semibold transition-all ${weightUnit === "kg" ? "bg-jade-deep/70 text-cloud-white" : "bg-ink-mid/55 text-mist-light"}`}>KG</button>
-                  <button onClick={() => setWeightUnit("lbs")} className={`flex-1 py-1.5 text-[10px] font-semibold transition-all border-l border-ink-light/30 ${weightUnit === "lbs" ? "bg-jade-deep/70 text-cloud-white" : "bg-ink-mid/55 text-mist-light"}`}>LBS</button>
-                </div>
-              )}
+              <div className="flex rounded-lg overflow-hidden border border-ink-light/30 flex-1">
+                <button
+                  onClick={() => setWeightUnit("kg")}
+                  disabled={showHold}
+                  className={`flex-1 py-1.5 text-[10px] font-semibold transition-all ${showHold ? "bg-ink-mid/35 text-mist-dark/70 cursor-not-allowed" : weightUnit === "kg" ? "bg-jade-deep/70 text-cloud-white" : "bg-ink-mid/55 text-mist-light"}`}
+                >
+                  KG
+                </button>
+                <button
+                  onClick={() => setWeightUnit("lbs")}
+                  disabled={showHold}
+                  className={`flex-1 py-1.5 text-[10px] font-semibold transition-all border-l border-ink-light/30 ${showHold ? "bg-ink-mid/35 text-mist-dark/70 cursor-not-allowed" : weightUnit === "lbs" ? "bg-jade-deep/70 text-cloud-white" : "bg-ink-mid/55 text-mist-light"}`}
+                >
+                  LBS
+                </button>
+              </div>
               <div className="flex rounded-lg overflow-hidden border border-ink-light/30 flex-1">
                 <button onClick={() => { setInputMode("weight"); resetEntryFields(); }} className={`flex-1 py-1.5 text-[10px] font-semibold transition-all ${inputMode === "weight" ? "bg-jade-deep/55 text-cloud-white" : "bg-ink-mid/60 text-mist-light"}`}>Weight</button>
                 <button onClick={() => { setInputMode("hold"); resetEntryFields(); }} className={`flex-1 py-1.5 text-[10px] font-semibold transition-all border-l border-ink-light/30 ${inputMode === "hold" ? "bg-mountain-blue/30 text-cloud-white" : "bg-ink-mid/60 text-mist-light"}`}>Hold</button>
@@ -938,31 +987,6 @@ export function InlineLogForm({
               </div>
               <div className="flex-1" />
 
-              {!showHold && (
-                <div className="flex rounded-md overflow-hidden border border-ink-light/30">
-                  <button
-                    onClick={() => setWeightUnit("kg")}
-                    className={`px-2 py-1 text-[10px] font-semibold transition-all duration-200 border-r border-ink-light/30 ${
-                      weightUnit === "kg"
-                        ? "bg-jade-deep/70 text-cloud-white border-jade-glow/50 shadow-[var(--glow-subtle)]"
-                        : "bg-ink-mid/55 text-mist-light/85 hover:bg-ink-mid/80 hover:text-cloud-white"
-                    }`}
-                  >
-                    kg
-                  </button>
-                  <button
-                    onClick={() => setWeightUnit("lbs")}
-                    className={`px-2 py-1 text-[10px] font-semibold transition-all duration-200 ${
-                      weightUnit === "lbs"
-                        ? "bg-jade-deep/70 text-cloud-white border-jade-glow/50 shadow-[var(--glow-subtle)]"
-                        : "bg-ink-mid/55 text-mist-light/85 hover:bg-ink-mid/80 hover:text-cloud-white"
-                    }`}
-                  >
-                    lbs
-                  </button>
-                </div>
-              )}
-
               <div className="flex rounded-md overflow-hidden border border-ink-light/30">
                 <button
                   onClick={() => { setInputMode("weight"); resetEntryFields(); }}
@@ -983,6 +1007,35 @@ export function InlineLogForm({
                   }`}
                 >
                   Hold
+                </button>
+              </div>
+
+              <div className="flex rounded-md overflow-hidden border border-ink-light/30">
+                <button
+                  onClick={() => setWeightUnit("kg")}
+                  disabled={showHold}
+                  className={`px-2 py-1 text-[10px] font-semibold transition-all duration-200 border-r border-ink-light/30 ${
+                    showHold
+                      ? "bg-ink-mid/35 text-mist-dark/70 cursor-not-allowed"
+                      : weightUnit === "kg"
+                        ? "bg-jade-deep/70 text-cloud-white border-jade-glow/50 shadow-[var(--glow-subtle)]"
+                        : "bg-ink-mid/55 text-mist-light/85 hover:bg-ink-mid/80 hover:text-cloud-white"
+                  }`}
+                >
+                  kg
+                </button>
+                <button
+                  onClick={() => setWeightUnit("lbs")}
+                  disabled={showHold}
+                  className={`px-2 py-1 text-[10px] font-semibold transition-all duration-200 ${
+                    showHold
+                      ? "bg-ink-mid/35 text-mist-dark/70 cursor-not-allowed"
+                      : weightUnit === "lbs"
+                        ? "bg-jade-deep/70 text-cloud-white border-jade-glow/50 shadow-[var(--glow-subtle)]"
+                        : "bg-ink-mid/55 text-mist-light/85 hover:bg-ink-mid/80 hover:text-cloud-white"
+                  }`}
+                >
+                  lbs
                 </button>
               </div>
 

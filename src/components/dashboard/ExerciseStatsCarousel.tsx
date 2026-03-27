@@ -34,6 +34,8 @@ interface ExerciseStatsCarouselProps {
   exercises: ExerciseData[];
   communityLogs: CommunityLog[];
   currentUserId?: string;
+  scope: "friends" | "community";
+  onScopeChange: (scope: "friends" | "community") => void;
   onFilterChange: (mode: FilterMode, selectedFilter: string) => void;
 }
 
@@ -41,15 +43,16 @@ export default function ExerciseStatsCarousel({
   exercises,
   communityLogs,
   currentUserId,
+  scope,
+  onScopeChange,
   onFilterChange,
 }: ExerciseStatsCarouselProps) {
   const [filterMode, setFilterMode] = useState<FilterMode>("category");
   const [selectedFilter, setSelectedFilter] = useState<string>("");
-  const [railHasScrolled, setRailHasScrolled] = useState(false);
   const [railCanScroll, setRailCanScroll] = useState(false);
-  const [railHintDirection, setRailHintDirection] = useState<"left" | "right">("right");
+  const [railCanScrollLeft, setRailCanScrollLeft] = useState(false);
+  const [railCanScrollRight, setRailCanScrollRight] = useState(false);
   const railScrollRef = useRef<HTMLDivElement | null>(null);
-  const railLastScrollLeftRef = useRef(0);
 
   // Filter out current user's logs from community
   const communityLogsWithoutUser = useMemo(() => {
@@ -104,24 +107,9 @@ export default function ExerciseStatsCarousel({
 
   const handleRailScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
-    const previous = railLastScrollLeftRef.current;
-
-    if (el.scrollLeft === 0) {
-      setRailHasScrolled(false);
-      setRailHintDirection("right");
-    } else {
-      setRailHasScrolled(true);
-      if (el.scrollLeft > previous + 0.5) setRailHintDirection("right");
-      if (el.scrollLeft < previous - 0.5) setRailHintDirection("left");
-    }
-
-    railLastScrollLeftRef.current = el.scrollLeft;
-  };
-
-  const handleRailWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    if (!railScrollRef.current) return;
-    e.preventDefault();
-    railScrollRef.current.scrollLeft += e.deltaY;
+    const maxScrollLeft = Math.max(0, el.scrollWidth - el.clientWidth);
+    setRailCanScrollLeft(el.scrollLeft > 8);
+    setRailCanScrollRight(el.scrollLeft < maxScrollLeft - 8);
   };
 
   useEffect(() => {
@@ -129,7 +117,11 @@ export default function ExerciseStatsCarousel({
     if (!el) return;
 
     const updateCanScroll = () => {
-      setRailCanScroll(el.scrollWidth > el.clientWidth);
+      const canScroll = el.scrollWidth > el.clientWidth;
+      const maxScrollLeft = Math.max(0, el.scrollWidth - el.clientWidth);
+      setRailCanScroll(canScroll);
+      setRailCanScrollLeft(el.scrollLeft > 8);
+      setRailCanScrollRight(el.scrollLeft < maxScrollLeft - 8);
     };
 
     updateCanScroll();
@@ -137,25 +129,48 @@ export default function ExerciseStatsCarousel({
     return () => window.removeEventListener("resize", updateCanScroll);
   }, [filterOptions]);
 
-  const handleRailHintClick = () => {
+  const handleRailHintClick = (direction: "left" | "right") => {
     if (!railScrollRef.current) return;
-    const delta = railHintDirection === "right" ? 168 : -168;
+    const delta = direction === "right" ? 168 : -168;
     railScrollRef.current.scrollBy({ left: delta, behavior: "smooth" });
   };
 
   return (
-    <div className="sticky top-0 z-40 -mx-3 -mt-3 flex flex-col bg-ink-deep/50 border-b border-jade-glow/10">
+    <div className="-mx-3 -mt-3 md:-mx-2 md:-mt-2 flex flex-col bg-ink-deep border-b border-jade-glow/10">
       {/* Filter toggle */}
-      <div className="flex items-center justify-end px-3 py-2">
-        <div className="flex gap-2 rounded-lg border border-jade-glow/20 bg-ink-dark/30 p-1.5">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 sm:flex-nowrap">
+        <div className="inline-flex items-center rounded-lg border border-ink-light/60 bg-ink-dark/40 p-0.5">
+          <button
+            onClick={() => onScopeChange("friends")}
+            className={`px-2.5 py-1 text-xs rounded transition-all ${
+              scope === "friends"
+                ? "bg-jade-deep/25 border border-jade-glow/35 text-jade-light"
+                : "text-mist-light hover:text-jade-light"
+            }`}
+          >
+            Friends
+          </button>
+          <button
+            onClick={() => onScopeChange("community")}
+            className={`px-2.5 py-1 text-xs rounded transition-all ${
+              scope === "community"
+                ? "bg-jade-deep/25 border border-jade-glow/35 text-jade-light"
+                : "text-mist-light hover:text-jade-light"
+            }`}
+          >
+            Community
+          </button>
+        </div>
+
+        <div className="inline-flex items-center rounded-lg border border-ink-light/60 bg-ink-dark/40 p-0.5">
           {["category", "muscle-group"].map((mode) => (
             <button
               key={mode}
               onClick={() => handleFilterModeChange(mode as FilterMode)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
+              className={`px-2.5 py-1 text-xs rounded transition-all ${
                 filterMode === mode
-                  ? "bg-jade-glow/20 text-jade-light border border-jade-glow/40"
-                  : "text-mist-light/70 hover:text-mist-light border border-transparent hover:border-jade-glow/20"
+                  ? "bg-jade-deep/25 border border-jade-glow/35 text-jade-light"
+                  : "text-mist-light hover:text-jade-light"
               }`}
             >
               {mode === "category" ? "Category" : "Muscle"}
@@ -167,20 +182,37 @@ export default function ExerciseStatsCarousel({
       {/* Carousel - no rounded corners on container */}
       <div className="relative px-3">
         {/* Left gradient overlay */}
-        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-ink-deep/50 to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-ink-deep to-transparent" />
         
         {/* Right gradient overlay */}
-        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-ink-deep/50 to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-ink-deep to-transparent" />
 
-        {/* Scroll hint button */}
-        {railCanScroll && (
+        {/* Scroll hint buttons */}
+        {railCanScroll && railCanScrollLeft && (
           <button
             type="button"
-            onClick={handleRailHintClick}
-            aria-label={railHintDirection === "right" ? "Scroll carousel right" : "Scroll carousel left"}
-            className={`absolute inset-y-0 z-20 flex items-center px-1.5 transition-opacity duration-150 ${
-              railHintDirection === "right" ? "right-1" : "left-1"
-            } ${railHasScrolled ? "opacity-70" : "opacity-100"}`}
+            onClick={() => handleRailHintClick("left")}
+            aria-label="Scroll carousel left"
+            className="absolute inset-y-0 left-1 z-20 flex items-center px-1.5 transition-opacity duration-150 opacity-90"
+          >
+            <svg
+              className="h-5 w-5 text-mist-light/70"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 5l-7 7 7 7" />
+            </svg>
+          </button>
+        )}
+
+        {railCanScroll && railCanScrollRight && (
+          <button
+            type="button"
+            onClick={() => handleRailHintClick("right")}
+            aria-label="Scroll carousel right"
+            className="absolute inset-y-0 right-1 z-20 flex items-center px-1.5 transition-opacity duration-150 opacity-90"
           >
             <svg
               className="h-5 w-5 text-mist-light/70 animate-[swipe-hint_1.2s_ease-in-out_infinite]"
@@ -189,10 +221,7 @@ export default function ExerciseStatsCarousel({
               viewBox="0 0 24 24"
               strokeWidth={2}
             >
-              {railHintDirection === "right"
-                ? <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                : <path strokeLinecap="round" strokeLinejoin="round" d="M15 5l-7 7 7 7" />
-              }
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>
           </button>
         )}
@@ -201,8 +230,6 @@ export default function ExerciseStatsCarousel({
         <div
           ref={railScrollRef}
           onScroll={handleRailScroll}
-          onWheelCapture={handleRailWheel}
-          onWheel={handleRailWheel}
           className="overflow-x-auto scrollbar-hide pb-1.5 scroll-smooth"
           style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: "contain", touchAction: "pan-x" }}
         >
