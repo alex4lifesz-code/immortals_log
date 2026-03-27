@@ -528,12 +528,22 @@ function ExercisesTab({
             placeholder=""
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-ink-dark/80 border border-ink-light/40 rounded-lg pl-4 pr-10 py-2 text-sm text-cloud-white placeholder:text-mist-dark/60 outline-none focus:border-jade-glow/60"
+            className="w-full bg-ink-dark/80 border border-ink-light/40 rounded-lg pl-10 pr-8 py-2 text-sm text-cloud-white placeholder:text-mist-dark/60 outline-none focus:border-jade-glow/60"
           />
-          <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-mist-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+          <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-mist-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
             <circle cx="11" cy="11" r="7" />
             <path strokeLinecap="round" d="M16.5 16.5l4 4" />
           </svg>
+          {search ? (
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[13px] font-semibold leading-none text-mist-dark transition-colors hover:text-cloud-white"
+              aria-label="Clear search"
+            >
+              x
+            </button>
+          ) : null}
         </div>
         <div className="flex gap-2 shrink-0">
           <button

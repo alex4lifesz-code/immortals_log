@@ -1,11 +1,29 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
+import { getVisibleSocialUserIds, normalizeScope } from "@/lib/friends";
 
 // GET /api/feed — fetch recent activity from all users except current user
 // Returns all users' recent progression logs for community newsfeed
 export const GET = withAuth(async (_request, { auth }) => {
   try {
+    const requestUrl = new URL(_request.url);
+    const scope = normalizeScope(requestUrl.searchParams.get("scope"));
+    let visibleUserIds = [auth.userId];
+    try {
+      visibleUserIds = await getVisibleSocialUserIds({
+        viewerId: auth.userId,
+        viewerRole: auth.role,
+        scope,
+      });
+    } catch (visibilityError) {
+      console.error("Feed visibility resolution error:", visibilityError);
+      if (auth.role === "admin") {
+        const allUsers = await prisma.user.findMany({ select: { id: true } });
+        visibleUserIds = allUsers.map((user) => user.id);
+      }
+    }
+
     // Fetch all exercises with ALL users' progress (not just current user)
     const exercises = await prisma.progressionExercise.findMany({
       include: {
@@ -13,7 +31,11 @@ export const GET = withAuth(async (_request, { auth }) => {
         variations: true,
         modifiers: true,
         userProgress: {
-          // Get progress from all users
+          where: {
+            userId: {
+              in: visibleUserIds,
+            },
+          },
           include: {
             logs: {
               orderBy: { createdAt: "desc" },
@@ -27,6 +49,11 @@ export const GET = withAuth(async (_request, { auth }) => {
 
     // Fetch all users for name mapping
     const users = await prisma.user.findMany({
+      where: {
+        id: {
+          in: visibleUserIds,
+        },
+      },
       select: {
         id: true,
         name: true,

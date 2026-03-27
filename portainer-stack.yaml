@@ -9,7 +9,7 @@
 #
 # Required environment variables (set in Portainer):
 #   APP_PORT       — Host port for the application (default: 3000)
-#   APP_VERSION    — Image tag / version label (default: 1.0.2)
+#   APP_VERSION    — Image tag / version label (default: 1.0.4)
 #   JWT_SECRET     — Secret key for JWT token signing (generate: openssl rand -base64 32)
 #
 # Optional environment variables:
@@ -20,7 +20,7 @@
 services:
   # ── Application ──────────────────────────────
   app:
-    image: ghcr.io/alex4lifesz-code/immortals_log:${APP_VERSION:-1.0.2}
+    image: ghcr.io/alex4lifesz-code/immortals_log:${APP_VERSION:-1.0.4}
     container_name: wuxia-cultivation-tracker
     restart: always
     ports:
@@ -68,7 +68,7 @@ services:
         tag: "immortals-log-{{.Name}}"
     labels:
       com.centurylabs.description: "Immortals Log"
-      com.centurylabs.version: "${APP_VERSION:-1.0.2}"
+      com.centurylabs.version: "${APP_VERSION:-1.0.4}"
       com.centurylabs.maintainer: "Century Labs"
       com.centurylabs.environment: "production"
       # Portainer metadata

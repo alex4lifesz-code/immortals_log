@@ -15,6 +15,7 @@ export const defaultNavItems: NavItem[] = [
   { id: "history", label: "Ancient Records", icon: "📜", path: "/dashboard/workout-history", pinned: false, visible: true },
   { id: "checkin", label: "Sect Register", icon: "📋", path: "/dashboard/attendance", pinned: false, visible: true },
   { id: "exercise-db", label: "Technique Scroll", icon: "📚", path: "/dashboard/exercises", pinned: false, visible: true },
+  { id: "friends", label: "Friends", icon: "🤝", path: "/dashboard/friends", pinned: false, visible: true },
   { id: "settings", label: "Inner Chamber", icon: "⚙️", path: "/dashboard/settings", pinned: false, visible: true },
   { id: "admin", label: "Administrative Palace", icon: "👑", path: "/dashboard/admin", pinned: false, visible: true },
 ];
@@ -121,7 +122,23 @@ const MONTH_NAMES_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug
  * Format a date string (YYYY-MM-DD) or Date object using the user's chosen format.
  */
 export function formatDateWithPreference(dateInput: string | Date, format: DateFormatOption): string {
-  const date = typeof dateInput === "string" ? new Date(dateInput + "T00:00:00") : dateInput;
+  const date = (() => {
+    if (typeof dateInput !== "string") {
+      return dateInput;
+    }
+
+    const trimmed = dateInput.trim();
+    const parsed = /^\d{4}-\d{2}-\d{2}$/.test(trimmed)
+      ? new Date(`${trimmed}T00:00:00`)
+      : new Date(trimmed);
+
+    return parsed;
+  })();
+
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
   const dd = String(date.getDate()).padStart(2, "0");
   const mm = String(date.getMonth() + 1).padStart(2, "0");
   const mmm = MONTH_NAMES_SHORT[date.getMonth()];

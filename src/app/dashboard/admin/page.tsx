@@ -30,6 +30,14 @@ interface SystemStats {
   totalCheckIns: number;
 }
 
+interface AdminFriendRequest {
+  id: string;
+  status: string;
+  createdAt: string;
+  requester: { id: string; name: string; username: string };
+  receiver: { id: string; name: string; username: string };
+}
+
 function AdminSidebar() {
   return (
     <div className="dashboard-sidebar-shell">
@@ -64,16 +72,19 @@ export default function AdminPanelPage() {
   const [editingName, setEditingName] = useState("");
   const [isSavingName, setIsSavingName] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [pendingFriendRequests, setPendingFriendRequests] = useState<AdminFriendRequest[]>([]);
+  const [moderatingRequestId, setModeratingRequestId] = useState<string | null>(null);
 
   // Check if user is admin based on role
   const isAdmin = user?.role === "admin";
 
   const fetchData = useCallback(async () => {
     try {
-      const [usersData, exercisesData, checkinsData] = await Promise.all([
+      const [usersData, exercisesData, checkinsData, friendRequestsData] = await Promise.all([
         api.get<{ users: AdminUser[] }>("/api/users"),
         api.get<{ exercises: unknown[] }>("/api/exercises"),
         api.get<{ checkins: unknown[] }>("/api/checkins"),
+        api.get<{ requests: AdminFriendRequest[] }>("/api/admin/friend-requests?status=pending"),
       ]);
 
       const usersList = usersData.users || [];
@@ -85,12 +96,25 @@ export default function AdminPanelPage() {
         totalExercises: (exercisesData.exercises || []).length,
         totalCheckIns: (checkinsData.checkins || []).length,
       });
+      setPendingFriendRequests(friendRequestsData.requests || []);
     } catch (err) {
       console.error("Failed to fetch admin data:", err);
     } finally {
       setLoading(false);
     }
   }, []);
+
+  const moderateFriendRequest = async (requestId: string, status: "accepted" | "rejected") => {
+    setModeratingRequestId(requestId);
+    try {
+      await api.patch("/api/admin/friend-requests", { requestId, status });
+      fetchData();
+    } catch (err) {
+      console.error("Failed to moderate friend request:", err);
+    } finally {
+      setModeratingRequestId(null);
+    }
+  };
 
   useEffect(() => {
     fetchData();
@@ -274,6 +298,47 @@ export default function AdminPanelPage() {
               Upload, export, and purge operations for the shared Exercise Library are now managed here.
             </p>
           </div>
+
+          <GlowCard glow="gold" hoverable={false}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm text-gold uppercase tracking-wider">Pending Friend Requests</h3>
+              <span className="text-xs text-mist-dark">{pendingFriendRequests.length} pending</span>
+            </div>
+
+            {pendingFriendRequests.length === 0 ? (
+              <p className="text-xs text-mist-dark">No pending friend requests right now.</p>
+            ) : (
+              <div className="space-y-2">
+                {pendingFriendRequests.map((request) => (
+                  <div key={request.id} className="rounded-lg border border-ink-light/50 bg-ink-mid/20 p-3 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm text-cloud-white">{request.requester.name} (@{request.requester.username})</p>
+                      <p className="text-xs text-mist-dark">Requested {new Date(request.createdAt).toLocaleDateString()} to connect with {request.receiver.name}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <GlowButton
+                        variant="jade"
+                        size="sm"
+                        disabled={moderatingRequestId === request.id}
+                        onClick={() => moderateFriendRequest(request.id, "accepted")}
+                      >
+                        Approve
+                      </GlowButton>
+                      <GlowButton
+                        variant="crimson"
+                        size="sm"
+                        disabled={moderatingRequestId === request.id}
+                        onClick={() => moderateFriendRequest(request.id, "rejected")}
+                      >
+                        Reject
+                      </GlowButton>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </GlowCard>
+
           <DataManagement />
         </div>
       )}

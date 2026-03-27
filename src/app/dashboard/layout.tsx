@@ -10,12 +10,11 @@ import DesktopSidebar from "@/components/navigation/DesktopSidebar";
 import MobileNavBar from "@/components/navigation/MobileNavBar";
 import SwipeNavigation from "@/components/navigation/SwipeNavigation";
 import ConnectivityBanner from "@/components/system/ConnectivityBanner";
-import { useAppContext } from "@/context/AppContext";
-import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
+import { useIncomingFriendRequestsCount } from "@/hooks/useIncomingFriendRequestsCount";
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
-  const { isMobile } = useAppContext();
   const { user } = useAuth();
+  const { count: incomingFriendRequestCount } = useIncomingFriendRequestsCount(user?.id);
 
   return (
     <>
@@ -23,12 +22,12 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         <DesktopNavBar />
         <ConnectivityBanner />
         <div className="flex-1 flex min-w-0 overflow-y-hidden overflow-x-auto">
-          <DesktopSidebar />
+          <DesktopSidebar incomingFriendRequestCount={incomingFriendRequestCount} />
           <SwipeNavigation>
             <div className="h-full min-w-0">{children}</div>
           </SwipeNavigation>
         </div>
-        <MobileNavBar />
+        <MobileNavBar incomingFriendRequestCount={incomingFriendRequestCount} />
       </div>
     </>
   );

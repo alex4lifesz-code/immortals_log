@@ -11,6 +11,7 @@ datasource db {
 
 model User {
   id        String   @id @default(cuid())
+  friendCode String  @unique @default(cuid())
   username  String   @unique
   password  String
   name      String
@@ -21,6 +22,25 @@ model User {
   checkIns     CheckIn[]
   settings     UserSettings?
   checkInNotes CheckInNote[]
+  sentFriendRequests     FriendRequest[] @relation("FriendRequestSender")
+  receivedFriendRequests FriendRequest[] @relation("FriendRequestReceiver")
+}
+
+model FriendRequest {
+  id          String   @id @default(cuid())
+  requesterId String
+  receiverId  String
+  status      String   @default("pending") // pending | accepted | rejected | cancelled
+  createdAt   DateTime @default(now())
+  respondedAt DateTime?
+
+  requester User @relation("FriendRequestSender", fields: [requesterId], references: [id], onDelete: Cascade)
+  receiver  User @relation("FriendRequestReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, receiverId])
+  @@index([requesterId])
+  @@index([receiverId])
+  @@index([status])
 }
 
 model UserSettings {

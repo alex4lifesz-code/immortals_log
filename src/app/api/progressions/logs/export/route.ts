@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
+import { canViewUserData } from "@/lib/friends";
 
 // GET /api/progressions/logs/export?targetUserId=<id>  (admin only)
 // GET /api/progressions/logs/export                     (own data)
@@ -8,8 +9,19 @@ export const GET = withAuth(async (request, { auth }) => {
   try {
     const { searchParams } = new URL(request.url);
     const targetUserId = searchParams.get("targetUserId");
-    // Admins can export another user's data
-    const userId = targetUserId && auth.role === "admin" ? targetUserId : auth.userId;
+    let userId = auth.userId;
+
+    if (targetUserId) {
+      const canViewTarget = await canViewUserData({
+        viewerId: auth.userId,
+        viewerRole: auth.role,
+        targetUserId,
+      });
+      if (!canViewTarget) {
+        return NextResponse.json({ error: "Not allowed to export this user" }, { status: 403 });
+      }
+      userId = targetUserId;
+    }
 
     const logs = await prisma.progressionLog.findMany({
       where: {

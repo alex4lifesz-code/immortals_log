@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import GlowCard from "@/components/ui/GlowCard";
 import GlowButton from "@/components/ui/GlowButton";
 import PageSkeleton from "@/components/ui/PageSkeleton";
@@ -43,6 +44,7 @@ interface CommunityNote {
 
 export default function DaoHallPage() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { settings } = useDisplaySettings();
   const { isMobile } = useAppContext();
   const isAdmin = user?.role === "admin";
@@ -79,10 +81,13 @@ export default function DaoHallPage() {
   }, []);
 
   // Sect Register filter and inline edit state
-  const [calendarScope, setCalendarScope] = useState<"mine" | "everyone">(() => {
+  const [calendarScope, setCalendarScope] = useState<"all" | "mine" | "friends">(() => {
     if (typeof window === "undefined") return "mine";
     const saved = localStorage.getItem("dao-hall-calendar-scope");
-    return saved === "everyone" ? "everyone" : "mine";
+    if (saved === "all") return "all";
+    if (saved === "community") return "all";
+    if (saved === "friends") return "friends";
+    return "mine";
   });
   const [isSectEditMode, setIsSectEditMode] = useState(false);
   const [sectEditData, setSectEditData] = useState<Record<string, Record<string, { weight: string; comment: string }>>>({});
@@ -133,7 +138,8 @@ export default function DaoHallPage() {
   const refreshFutureNotes = useCallback(async () => {
     try {
       const todayStr = formatDateLocal(new Date());
-      const data = await api.get<{ notes: CommunityNote[] }>(`/api/checkins/notes?future=true&today=${todayStr}`);
+      const apiScope = "friends";
+      const data = await api.get<{ notes: CommunityNote[] }>(`/api/checkins/notes?future=true&scope=${apiScope}&today=${todayStr}`);
       setFutureNotes(data.notes || []);
     } catch (err) {
       console.error("Failed to fetch future notes:", err);
@@ -482,21 +488,94 @@ export default function DaoHallPage() {
     setSectEditData({});
   };
 
-  const filteredCheckInRows = useMemo(() => checkInRows, [checkInRows]);
+  const visibleUserIds = useMemo(() => {
+    if (!user) return new Set<string>();
 
-  const scopedCheckInUsersByDate = useMemo(() => {
-    if (calendarScope === "everyone" || !user) {
-      return checkInUsersByDate;
+    const friendIds = allUsers
+      .map((u) => u.id)
+      .filter((id) => id !== user.id);
+
+    if (calendarScope === "mine") {
+      return new Set([user.id]);
     }
 
+    if (calendarScope === "friends") {
+      return new Set(friendIds);
+    }
+
+    return new Set([user.id, ...friendIds]);
+  }, [allUsers, calendarScope, user]);
+
+  const filteredCheckInRows = useMemo(() => {
+    if (!user) return checkInRows;
+
+    return checkInRows
+      .map((row) => {
+        const scopedEntries = Object.fromEntries(
+          Object.entries(row.entries).filter(([userId]) => visibleUserIds.has(userId))
+        );
+
+        return { date: row.date, entries: scopedEntries };
+      })
+      .filter((row) =>
+        Object.values(row.entries).some((entry) => entry.present || entry.weight || entry.comment?.trim())
+      );
+  }, [checkInRows, user, visibleUserIds]);
+
+  const userNameById = useMemo(() => {
+    const names = new Map<string, string>();
+    for (const u of allUsers) {
+      names.set(u.id, u.name);
+    }
+    if (user && !names.has(user.id)) {
+      names.set(user.id, user.name || user.username || "You");
+    }
+    return names;
+  }, [allUsers, user]);
+
+  const renderedCheckInRows = useMemo(() => {
+    if (!user) return [];
+
+    return filteredCheckInRows.map(({ date, entries }) => {
+      const mine = entries[user.id] || { present: false, weight: "", comment: "" };
+      const presentCount = Object.values(entries).reduce(
+        (count, entry) => count + (entry.present ? 1 : 0),
+        0,
+      );
+
+      const everyoneDetails = Object.entries(entries)
+        .map(([userId, entry]) => ({
+          id: userId,
+          name: userNameById.get(userId) || "Unknown",
+          present: entry.present,
+          weight: entry.weight,
+          comment: entry.comment?.trim() || "",
+        }))
+        .sort((a, b) => {
+          if (a.present !== b.present) return a.present ? -1 : 1;
+          return a.name.localeCompare(b.name);
+        });
+
+      return {
+        date,
+        mine,
+        mineWeight: mine.weight ? `${mine.weight} kg` : "-",
+        presentCount,
+        everyoneDetails,
+      };
+    });
+  }, [filteredCheckInRows, user, userNameById]);
+
+  const scopedCheckInUsersByDate = useMemo(() => {
     const scoped = new Map<string, string[]>();
     for (const [date, users] of checkInUsersByDate.entries()) {
-      if (users.includes(user.id)) {
-        scoped.set(date, [user.id]);
+      const visibleUsers = users.filter((userId) => visibleUserIds.has(userId));
+      if (visibleUsers.length > 0) {
+        scoped.set(date, visibleUsers);
       }
     }
     return scoped;
-  }, [calendarScope, checkInUsersByDate, user]);
+  }, [checkInUsersByDate, visibleUserIds]);
 
   const scopedDayNotes = useMemo(() => {
     if (calendarScope === "mine") {
@@ -516,7 +595,7 @@ export default function DaoHallPage() {
 
   const scopedFutureNotes = useMemo(() => {
     if (calendarScope === "mine") {
-      return futureNotes;
+      return futureNotes.filter((note) => note.user.id === user?.id);
     }
 
     const today = formatDateLocal(new Date());
@@ -543,7 +622,7 @@ export default function DaoHallPage() {
     });
 
     return allCommentNotes.sort((a, b) => a.date.localeCompare(b.date));
-  }, [allUsers, calendarScope, checkInRows, futureNotes]);
+  }, [allUsers, calendarScope, checkInRows, futureNotes, user?.id]);
 
   const useMobileTableStyling = isMobile;
   const compactSectRegister = useMobileTableStyling && !isSectEditMode && !isAdmin;
@@ -579,85 +658,90 @@ export default function DaoHallPage() {
     return `${dateCol + checkCols + weightCols + commentsCol}px`;
   }, [allUsers.length, compactSectRegister, isSectEditMode]);
 
+  const daoHallDataQuery = useQuery({
+    queryKey: ["dao-hall-data", user?.id],
+    enabled: Boolean(user?.id),
+    staleTime: 30_000,
+    queryFn: async () => {
+      const apiScope = "friends";
+      const [checkinsData, usersData, exerciseData, futureNotesData] = await Promise.all([
+        api.get<{ checkins: Array<{ date: string; userId: string; present: boolean; weight?: number; comment?: string }> }>(`/api/checkins?scope=${apiScope}`),
+        api.get<{ users: User[] }>(`/api/users/public?scope=${apiScope}`),
+        api.get<{ exercises: unknown[] }>("/api/exercises"),
+        api.get<{ notes: CommunityNote[] }>(`/api/checkins/notes?future=true&scope=${apiScope}&today=${formatDateLocal(new Date())}`),
+      ]);
+
+      return { checkinsData, usersData, exerciseData, futureNotesData };
+    },
+  });
+
   useEffect(() => {
-    const fetchData = async () => {
-      if (!user) return;
+    setLoading(daoHallDataQuery.isLoading);
+  }, [daoHallDataQuery.isLoading]);
 
-      try {
-        // Fetch check-ins, users, and future notes in parallel
-        const [checkinsData, usersData, exerciseData, futureNotesData] = await Promise.all([
-          api.get<{ checkins: Array<{ date: string; userId: string; present: boolean; weight?: number; comment?: string }> }>("/api/checkins"),
-          api.get<{ users: User[] }>("/api/users/public"),
-          api.get<{ exercises: unknown[] }>("/api/exercises"),
-          api.get<{ notes: CommunityNote[] }>(`/api/checkins/notes?future=true&today=${formatDateLocal(new Date())}`),
-        ]);
+  useEffect(() => {
+    if (!user || !daoHallDataQuery.data) return;
 
-        // Set future notes
-        setFutureNotes(futureNotesData.notes || []);
+    const { checkinsData, usersData, exerciseData, futureNotesData } = daoHallDataQuery.data;
 
-        // Set all users
-        setAllUsers(usersData.users || []);
+    setFutureNotes(futureNotesData.notes || []);
+    setAllUsers(usersData.users || []);
 
-        // Build check-in users by date and rows
-        const usersByDate = new Map<string, string[]>();
-        const userCheckInDates = new Set<string>();
-        const grouped: Record<string, CheckInRow["entries"]> = {};
+    const usersByDate = new Map<string, string[]>();
+    const userCheckInDates = new Set<string>();
+    const grouped: Record<string, CheckInRow["entries"]> = {};
 
-        for (const checkin of checkinsData.checkins || []) {
-          const date = checkin.date.split("T")[0];
-          if (checkin.present) {
-            const current = usersByDate.get(date) || [];
-            if (!current.includes(checkin.userId)) {
-              usersByDate.set(date, [...current, checkin.userId]);
-            }
-            if (checkin.userId === user.id) {
-              userCheckInDates.add(date);
-            }
-          }
-          if (!grouped[date]) grouped[date] = {};
-          grouped[date][checkin.userId] = {
-            present: checkin.present,
-            weight: checkin.weight?.toString() || "",
-            comment: checkin.comment || "",
-          };
+    for (const checkin of checkinsData.checkins || []) {
+      const date = checkin.date.split("T")[0];
+      if (checkin.present) {
+        const current = usersByDate.get(date) || [];
+        if (!current.includes(checkin.userId)) {
+          usersByDate.set(date, [...current, checkin.userId]);
         }
-
-        setCheckInUsersByDate(usersByDate);
-        const sortedRows = Object.entries(grouped)
-          .sort(([a], [b]) => b.localeCompare(a))
-          .map(([date, entries]) => ({ date, entries }));
-        setCheckInRows(sortedRows);
-
-        const currentUser = (usersData.users || []).find((candidate: { id: string; sessionCount?: number }) => candidate.id === user.id);
-
-        // Calculate streak using current user's dates
-        const today = new Date();
-        let streak = 0;
-        for (let i = 0; i < 365; i++) {
-          const checkDate = new Date(today);
-          checkDate.setDate(checkDate.getDate() - i);
-          const dateStr = formatDateLocal(checkDate);
-          if (userCheckInDates.has(dateStr)) {
-            streak++;
-          } else if (i > 0) {
-            break;
-          }
+        if (checkin.userId === user.id) {
+          userCheckInDates.add(date);
         }
-
-        setStats({
-          sessions: currentUser?.sessionCount ?? 0,
-          techniques: exerciseData.exercises?.length || 0,
-          streak,
-        });
-      } catch (err) {
-        console.error("Failed to fetch dashboard data:", err);
-      } finally {
-        setLoading(false);
       }
-    };
+      if (!grouped[date]) grouped[date] = {};
+      grouped[date][checkin.userId] = {
+        present: checkin.present,
+        weight: checkin.weight?.toString() || "",
+        comment: checkin.comment || "",
+      };
+    }
 
-    fetchData();
-  }, [user]);
+    setCheckInUsersByDate(usersByDate);
+    const sortedRows = Object.entries(grouped)
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([date, entries]) => ({ date, entries }));
+    setCheckInRows(sortedRows);
+
+    const currentUser = (usersData.users || []).find((candidate: { id: string; sessionCount?: number }) => candidate.id === user.id);
+
+    const today = new Date();
+    let streak = 0;
+    for (let i = 0; i < 365; i++) {
+      const checkDate = new Date(today);
+      checkDate.setDate(checkDate.getDate() - i);
+      const dateStr = formatDateLocal(checkDate);
+      if (userCheckInDates.has(dateStr)) {
+        streak++;
+      } else if (i > 0) {
+        break;
+      }
+    }
+
+    setStats({
+      sessions: currentUser?.sessionCount ?? 0,
+      techniques: exerciseData.exercises?.length || 0,
+      streak,
+    });
+  }, [daoHallDataQuery.data, user]);
+
+  useEffect(() => {
+    if (!daoHallDataQuery.error) return;
+    console.error("Failed to fetch dashboard data:", daoHallDataQuery.error);
+  }, [daoHallDataQuery.error]);
 
   useEffect(() => {
     const handleNotesUpdated = () => {
@@ -677,6 +761,11 @@ export default function DaoHallPage() {
       window.removeEventListener("storage", handleStorage);
     };
   }, [refreshFutureNotes]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    void queryClient.invalidateQueries({ queryKey: ["dao-hall-data", user.id] });
+  }, [calendarScope, queryClient, user?.id]);
 
   if (!user) return null;
 
@@ -761,6 +850,16 @@ export default function DaoHallPage() {
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-1 rounded-lg border border-ink-light/50 p-0.5">
                     <button
+                      onClick={() => setCalendarScope("all")}
+                      className={`text-xs px-2 py-1 rounded transition-all ${
+                        calendarScope === "all"
+                          ? "bg-jade-deep/20 border border-jade/40 text-jade-light"
+                          : "text-mist-light hover:text-jade-light"
+                      }`}
+                    >
+                      All
+                    </button>
+                    <button
                       onClick={() => setCalendarScope("mine")}
                       className={`text-xs px-2 py-1 rounded transition-all ${
                         calendarScope === "mine"
@@ -771,61 +870,29 @@ export default function DaoHallPage() {
                       Mine
                     </button>
                     <button
-                      onClick={() => setCalendarScope("everyone")}
+                      onClick={() => setCalendarScope("friends")}
                       className={`text-xs px-2 py-1 rounded transition-all ${
-                        calendarScope === "everyone"
+                        calendarScope === "friends"
                           ? "bg-jade-deep/20 border border-jade/40 text-jade-light"
                           : "text-mist-light hover:text-jade-light"
                       }`}
                     >
-                      Everyone
+                      Friends
                     </button>
                   </div>
                 </div>
               </div>
 
-              {(() => {
-                const rowsToRender = calendarScope === "mine"
-                  ? filteredCheckInRows
-                      .map((row) => ({
-                        date: row.date,
-                        entries: { [user.id]: row.entries[user.id] || { present: false, weight: "", comment: "" } },
-                      }))
-                      .filter((row) => {
-                        const mine = row.entries[user.id];
-                        return mine.present || mine.weight || mine.comment?.trim();
-                      })
-                  : filteredCheckInRows.filter((row) =>
-                      Object.values(row.entries).some((entry) => entry.present || entry.weight || entry.comment?.trim())
-                    );
-
-                if (rowsToRender.length === 0) {
-                  return (
-                    <div className="flex flex-col items-center py-10 text-center border border-ink-light/40 rounded-lg bg-ink-mid/10">
-                      <div className="text-2xl opacity-30 mb-2">🧭</div>
-                      <p className="text-xs text-mist-dark">No entries for this view</p>
-                      <p className="text-[10px] text-mist-dark/60 mt-1">Use the calendar above to check in and add notes</p>
-                    </div>
-                  );
-                }
-
-                return (
-                  <div className="space-y-2">
-                    {rowsToRender.map(({ date, entries }) => {
-                      const mine = entries[user.id] || { present: false, weight: "", comment: "" };
-                      const presentCount = Object.values(entries).filter((entry) => entry.present).length;
-                      const everyoneDetails = allUsers.map((u) => {
-                        const entry = entries[u.id] || { present: false, weight: "", comment: "" };
-                        return {
-                          id: u.id,
-                          name: u.name,
-                          present: entry.present,
-                          weight: entry.weight,
-                          comment: entry.comment?.trim() || "",
-                        };
-                      });
-
-                      return (
+              {renderedCheckInRows.length === 0 ? (
+                <div className="flex flex-col items-center py-10 text-center border border-ink-light/40 rounded-lg bg-ink-mid/10">
+                  <div className="text-2xl opacity-30 mb-2">🧭</div>
+                  <p className="text-xs text-mist-dark">No entries for this view</p>
+                  <p className="text-[10px] text-mist-dark/60 mt-1">Use the calendar above to check in and add notes</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {renderedCheckInRows.map(({ date, mine, mineWeight, presentCount, everyoneDetails }) => {
+                    return (
                       <div
                         key={date}
                         className="rounded-xl border border-ink-light/45 bg-gradient-to-b from-ink-mid/15 to-ink-mid/5 p-3.5 sm:p-4 flex flex-col gap-2.5"
@@ -855,7 +922,7 @@ export default function DaoHallPage() {
                           <>
                             <div className="flex items-center gap-4 text-xs text-mist-light">
                               <span>
-                                Weight: <span className="text-cloud-white">{mine.weight || "-"}</span>
+                                Weight: <span className="text-cloud-white">{mineWeight}</span>
                               </span>
                             </div>
 
@@ -865,46 +932,53 @@ export default function DaoHallPage() {
                             </div>
                           </>
                         ) : (
-                          <div className="space-y-2 pt-0.5">
-                            {everyoneDetails.map((detail) => (
-                              <div key={detail.id} className="rounded-lg border border-ink-light/30 bg-ink-dark/40 px-3 py-2.5">
-                                <div className="flex items-center justify-between gap-2 text-xs mb-1.5">
-                                  <div className="flex items-center gap-2 min-w-0">
-                                    <div className="w-8 h-8 rounded-full bg-jade-glow/18 border border-jade-glow/35 grid place-items-center shrink-0 shadow-[0_0_0_1px_rgba(255,255,255,0.05)]">
-                                      <span className="text-sm font-bold text-jade-light leading-none">
-                                        {(detail.name || "?").charAt(0).toUpperCase()}
-                                      </span>
+                          <div className="pt-0.5">
+                            <div className="rounded-lg border border-ink-light/30 bg-ink-dark/40 overflow-hidden divide-y divide-ink-light/20">
+                              {everyoneDetails.map((detail) => (
+                                <div key={detail.id} className="px-3 py-2.5">
+                                  <div className="flex items-start justify-between gap-2 text-xs">
+                                    <div className="min-w-0 flex-1 grid grid-cols-[minmax(108px,160px)_minmax(0,1fr)] items-start gap-x-1">
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <div className="w-8 h-8 rounded-full bg-jade-glow/18 border border-jade-glow/35 grid place-items-center shrink-0 shadow-[0_0_0_1px_rgba(255,255,255,0.05)]">
+                                          <span className="text-sm font-bold text-jade-light leading-none">
+                                            {(detail.name || "?").charAt(0).toUpperCase()}
+                                          </span>
+                                        </div>
+                                        <span className="text-cloud-white font-semibold truncate tracking-wide">{detail.name}</span>
+                                      </div>
+
+                                      <div className="text-[11px] text-mist-light">
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-mist-dark uppercase tracking-wide">Weight</span>
+                                          <span className="text-cloud-white font-medium">{detail.weight ? `${detail.weight} kg` : "-"}</span>
+                                        </div>
+                                        <div className="mt-1 text-mist-light/90 break-words leading-relaxed">
+                                          <span className="text-mist-dark uppercase tracking-wide mr-1">Note</span>
+                                          <span className="text-cloud-white/90">{detail.comment || "-"}</span>
+                                        </div>
+                                      </div>
                                     </div>
-                                    <span className="text-cloud-white font-semibold truncate tracking-wide">{detail.name}</span>
+
+                                    <span
+                                      className={`px-2 py-0.5 rounded-full border text-[10px] shrink-0 ${
+                                        detail.present
+                                          ? "border-jade-glow/40 text-jade-glow bg-jade-deep/20"
+                                          : "border-ink-light/45 text-mist-dark"
+                                      }`}
+                                    >
+                                      {detail.present ? "Checked In" : "Not Checked In"}
+                                    </span>
                                   </div>
-                                  <span
-                                    className={`px-2 py-0.5 rounded-full border text-[10px] shrink-0 ${
-                                      detail.present
-                                        ? "border-jade-glow/40 text-jade-glow bg-jade-deep/20"
-                                        : "border-ink-light/45 text-mist-dark"
-                                    }`}
-                                  >
-                                    {detail.present ? "Checked In" : "Not Checked In"}
-                                  </span>
                                 </div>
-                                <div className="text-[11px] text-mist-light flex items-center gap-1.5">
-                                  <span className="text-mist-dark uppercase tracking-wide">Weight</span>
-                                  <span className="text-cloud-white font-medium">{detail.weight || "-"}</span>
-                                </div>
-                                <div className="mt-1 text-[11px] text-mist-light/90 break-words leading-relaxed">
-                                  <span className="text-mist-dark uppercase tracking-wide mr-1">Note</span>
-                                  <span className="text-cloud-white/90">{detail.comment || "-"}</span>
-                                </div>
-                              </div>
-                            ))}
+                              ))}
+                            </div>
                           </div>
                         )}
                       </div>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </GlowCard>
         </div>

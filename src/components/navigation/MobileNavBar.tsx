@@ -46,6 +46,12 @@ const NAV_ICON_MAP: Record<string, ReactNode> = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
     </svg>
   ),
+  "/dashboard/friends": (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16 11a4 4 0 100-8 4 4 0 000 8zM8 12a4 4 0 100-8 4 4 0 000 8z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2 20a6 6 0 0112 0M14 20a6 6 0 018 0" />
+    </svg>
+  ),
   "/dashboard/settings": (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -65,7 +71,7 @@ const LOGOUT_ICON = (
   </svg>
 );
 
-function MobileNavBar() {
+function MobileNavBar({ incomingFriendRequestCount = 0 }: { incomingFriendRequestCount?: number }) {
   const { getSortedNavItems, isMobile, setMobileSidebarOpen } = useAppContext();
   const { logout, user } = useAuth();
   const { settings } = useDisplaySettings();
@@ -248,6 +254,11 @@ function MobileNavBar() {
                       {NAV_ICON_MAP[item.path] ?? <span className="text-base">{item.icon}</span>}
                     </span>
                     <span className="truncate text-[13px] font-medium">{t(item.label, terminologyMode)}</span>
+                    {item.id === "friends" && incomingFriendRequestCount > 0 && (
+                      <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-crimson-light text-void-black text-[10px] font-bold flex items-center justify-center">
+                        {incomingFriendRequestCount > 99 ? "99+" : incomingFriendRequestCount}
+                      </span>
+                    )}
                   </motion.button>
                 ))}
 
@@ -326,6 +337,11 @@ function MobileNavBar() {
                 <span className={`text-[10px] font-medium tracking-wide ${isActive ? "text-[var(--accent)]" : ""}`}>
                   {t(item.label, terminologyMode).split(" ")[0]}
                 </span>
+                {item.id === "friends" && incomingFriendRequestCount > 0 && (
+                  <span className="absolute top-1 right-2 min-w-[16px] h-[16px] px-1 rounded-full bg-crimson-light text-void-black text-[9px] font-bold flex items-center justify-center">
+                    {incomingFriendRequestCount > 99 ? "99+" : incomingFriendRequestCount}
+                  </span>
+                )}
                 {isActive && (
                   <motion.div
                     layoutId="bottomBarActiveTab"

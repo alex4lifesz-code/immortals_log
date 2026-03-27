@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
+import { getVisibleSocialUserIds, normalizeScope } from "@/lib/friends";
 
 // GET /api/checkins/notes?date=YYYY-MM-DD  — fetch current user's notes for a date (or all if no date)
 // GET /api/checkins/notes?future=true — fetch notes for dates beyond today
@@ -9,9 +10,23 @@ export const GET = withAuth(async (request, { auth }) => {
     const { searchParams } = new URL(request.url);
     const date = searchParams.get("date");
     const future = searchParams.get("future");
+    const scope = normalizeScope(
+      searchParams.get("scope"),
+      auth.role === "admin" ? "community" : "friends"
+    );
     const clientToday = searchParams.get("today");
 
-    let where: Record<string, unknown> = { userId: auth.userId };
+    const visibleUserIds = await getVisibleSocialUserIds({
+      viewerId: auth.userId,
+      viewerRole: auth.role,
+      scope,
+    });
+
+    let where: Record<string, unknown> = {
+      userId: {
+        in: visibleUserIds,
+      },
+    };
     if (future === "true") {
       const todayStr = clientToday && /^\d{4}-\d{2}-\d{2}$/.test(clientToday)
         ? clientToday

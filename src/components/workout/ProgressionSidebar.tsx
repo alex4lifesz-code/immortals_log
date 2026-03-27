@@ -335,23 +335,22 @@ export function ProgressionSidebar({
             placeholder=""
             value={searchTerm}
             onChange={(e) => onSearch(e.target.value)}
-            className={`w-full bg-ink-dark/70 border border-ink-light/45 rounded-md pl-3 pr-8 ${isMobile ? "py-2.5 text-sm" : "py-1.5 text-[11px]"} text-cloud-white placeholder:text-mist-dark/70 outline-none transition-colors duration-150 focus:border-ink-light/70`}
+            className={`w-full bg-ink-dark/70 border border-ink-light/45 rounded-md pl-8 pr-7 ${isMobile ? "py-2.5 text-sm" : "py-1.5 text-[11px]"} text-cloud-white placeholder:text-mist-dark/70 outline-none transition-colors duration-150 focus:border-ink-light/70`}
           />
+          <svg className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-mist-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            <circle cx="11" cy="11" r="7" />
+            <path strokeLinecap="round" d="M16.5 16.5l4 4" />
+          </svg>
           {searchTerm ? (
             <button
+              type="button"
               onClick={() => onSearch("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-mist-dark hover:text-cloud-white transition-colors"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[12px] font-semibold leading-none text-mist-dark hover:text-cloud-white transition-colors"
+              aria-label="Clear search"
             >
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              x
             </button>
-          ) : (
-            <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-mist-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-              <circle cx="11" cy="11" r="7" />
-              <path strokeLinecap="round" d="M16.5 16.5l4 4" />
-            </svg>
-          )}
+          ) : null}
         </div>
 
         <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-1">

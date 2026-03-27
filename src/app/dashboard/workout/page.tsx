@@ -618,12 +618,22 @@ export default function ProgressionPage() {
                       value={searchTerm}
                       onChange={(event) => setSearchTerm(event.target.value)}
                       placeholder=""
-                      className="h-9 w-full rounded-lg border border-jade-glow/30 bg-ink-dark/70 pl-3 pr-8 text-[12px] text-cloud-white placeholder:text-mist-dark outline-none transition-colors focus:border-jade-glow/60"
+                      className="h-9 w-full rounded-lg border border-jade-glow/30 bg-ink-dark/70 pl-8 pr-7 text-[12px] text-cloud-white placeholder:text-mist-dark outline-none transition-colors focus:border-jade-glow/60"
                     />
-                    <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-mist-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <svg className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-mist-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                       <circle cx="11" cy="11" r="7" />
                       <path strokeLinecap="round" d="M16.5 16.5l4 4" />
                     </svg>
+                    {searchTerm && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchTerm("")}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[12px] font-semibold leading-none text-mist-dark transition-colors hover:text-cloud-white"
+                        aria-label="Clear search"
+                      >
+                        x
+                      </button>
+                    )}
                   </div>
                 </div>
 

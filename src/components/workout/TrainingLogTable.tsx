@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useMemo, startTransition, memo } from "react";
+import { useState, useMemo, startTransition, memo, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import GlowButton from "@/components/ui/GlowButton";
 import { useDisplaySettings, DEFAULT_UNIFIED_VISIBLE_COLUMNS, DISPLAY_DEFAULTS } from "@/context/DisplaySettingsContext";
@@ -240,6 +240,9 @@ function TrainingLogTable({
   const [deleteConfirm, setDeleteConfirm] = useState<{ logId: string; exerciseName: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [levelPicker, setLevelPicker] = useState<{ logId: string; exerciseId: string } | null>(null);
+  const tableScrollRef = useRef<HTMLDivElement | null>(null);
+  const [tableScrollTop, setTableScrollTop] = useState(0);
+  const [tableViewportHeight, setTableViewportHeight] = useState(560);
 
   const logMode = DISPLAY_DEFAULTS.progressionLogMode;
   const compactSetting = DISPLAY_DEFAULTS.progressionLogCompact;
@@ -278,6 +281,36 @@ function TrainingLogTable({
   const showNotesResponsive = showNotes && !reduceColumnsForSmallScreens;
   const showStandardWeightResponsive = showStandardWeight && !reduceColumnsForSmallScreens;
   const showAvgWeightResponsive = showAvgWeight && !reduceColumnsForSmallScreens;
+
+  const VIRTUAL_ROW_HEIGHT = effectiveCompact ? 36 : 44;
+  const VIRTUAL_OVERSCAN = 10;
+
+  useEffect(() => {
+    const el = tableScrollRef.current;
+    if (!el) return;
+
+    const syncViewportHeight = () => {
+      setTableViewportHeight(el.clientHeight || 560);
+    };
+
+    syncViewportHeight();
+    window.addEventListener("resize", syncViewportHeight);
+    return () => window.removeEventListener("resize", syncViewportHeight);
+  }, []);
+
+  const virtualWindow = useMemo(() => {
+    const total = entries.length;
+    const visibleCount = Math.ceil(tableViewportHeight / VIRTUAL_ROW_HEIGHT) + VIRTUAL_OVERSCAN * 2;
+    const start = Math.max(0, Math.floor(tableScrollTop / VIRTUAL_ROW_HEIGHT) - VIRTUAL_OVERSCAN);
+    const end = Math.min(total, start + visibleCount);
+    return {
+      start,
+      end,
+      topPad: start * VIRTUAL_ROW_HEIGHT,
+      bottomPad: Math.max(0, (total - end) * VIRTUAL_ROW_HEIGHT),
+      visibleEntries: entries.slice(start, end),
+    };
+  }, [entries, tableScrollTop, tableViewportHeight, VIRTUAL_ROW_HEIGHT]);
 
   // Determine column headers based on exercise types visible in the entries
   const entryExerciseTypes = useMemo(() => entries.map((e) => e.exerciseType), [entries]);
@@ -510,7 +543,9 @@ function TrainingLogTable({
             </div>
 
           <div
-            className={`overflow-x-auto w-full ${useMobileTableStyling ? "scrollbar-hide" : ""}`}
+            ref={tableScrollRef}
+            onScroll={(event) => setTableScrollTop((event.currentTarget as HTMLDivElement).scrollTop)}
+            className={`overflow-auto w-full max-h-[70vh] ${useMobileTableStyling ? "scrollbar-hide" : ""}`}
             style={{ WebkitOverflowScrolling: "touch" }}
           >
           <table
@@ -588,7 +623,12 @@ function TrainingLogTable({
                 </tr>
               ) : (
                 <>
-                  {entries.map((entry) => {
+                  {virtualWindow.topPad > 0 && (
+                    <tr aria-hidden="true">
+                      <td colSpan={emptyRowColSpan} style={{ height: `${virtualWindow.topPad}px` }} />
+                    </tr>
+                  )}
+                  {virtualWindow.visibleEntries.map((entry) => {
                     const ex = exerciseLookup.get(entry.exerciseId);
                     const editData = editingData[entry.logId];
                     const activeBand = isEditMode && editData ? editData.resistanceBandKg : entry.resistanceBandKg;
@@ -907,6 +947,11 @@ function TrainingLogTable({
                       </tr>
                     );
                   })}
+                  {virtualWindow.bottomPad > 0 && (
+                    <tr aria-hidden="true">
+                      <td colSpan={emptyRowColSpan} style={{ height: `${virtualWindow.bottomPad}px` }} />
+                    </tr>
+                  )}
                 </>
               )}
             </tbody>

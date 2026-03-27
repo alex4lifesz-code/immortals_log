@@ -81,13 +81,25 @@ export default function DashboardNewsfeedPage() {
   const [allExercises, setAllExercises] = useState<any[]>([]);
   const [filterMode, setFilterMode] = useState<"category" | "muscle-group">("category");
   const [selectedFilter, setSelectedFilter] = useState<string>("");
+  const [scope, setScope] = useState<"friends" | "community">(() => {
+    if (typeof window === "undefined") return "friends";
+    const saved = localStorage.getItem("community-feed-scope");
+    return saved === "community" ? "community" : "friends";
+  });
   const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const observerTarget = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem("community-feed-scope", scope);
+  }, [scope]);
+
+  useEffect(() => {
     const fetchNewsfeed = async () => {
       if (!user) return;
+
+      setLoading(true);
 
       try {
         // Fetch community feed with all users' progress
@@ -115,7 +127,7 @@ export default function DashboardNewsfeedPage() {
               }>;
             }>;
           }>;
-        }>("/api/feed");
+        }>(`/api/feed?scope=${scope}`);
 
         // Store all exercises for the carousel
         setAllExercises(feedData.exercises || []);
@@ -167,7 +179,7 @@ export default function DashboardNewsfeedPage() {
     };
 
     fetchNewsfeed();
-  }, [user]);
+  }, [scope, user]);
 
   const formatDayHeader = (dateKey: string): string => {
     const parsed = new Date(`${dateKey}T00:00:00`);
@@ -277,6 +289,31 @@ export default function DashboardNewsfeedPage() {
         <PageSkeleton statCards={0} wideBlock rows={4} />
       ) : (
         <>
+          <div className="flex items-center justify-start">
+            <div className="inline-flex items-center rounded-lg border border-ink-light/60 bg-ink-dark/40 p-0.5">
+              <button
+                onClick={() => setScope("friends")}
+                className={`px-2.5 py-1 text-xs rounded transition-all ${
+                  scope === "friends"
+                    ? "bg-jade-deep/25 border border-jade-glow/35 text-jade-light"
+                    : "text-mist-light hover:text-jade-light"
+                }`}
+              >
+                Friends
+              </button>
+              <button
+                onClick={() => setScope("community")}
+                className={`px-2.5 py-1 text-xs rounded transition-all ${
+                  scope === "community"
+                    ? "bg-jade-deep/25 border border-jade-glow/35 text-jade-light"
+                    : "text-mist-light hover:text-jade-light"
+                }`}
+              >
+                Community
+              </button>
+            </div>
+          </div>
+
           {/* Carousel at the top */}
           {allExercises.length > 0 && (
             <ExerciseStatsCarousel 
@@ -328,7 +365,7 @@ export default function DashboardNewsfeedPage() {
                   </div>
 
                   {/* Exercise logs for this member */}
-                  <div className="ml-2 flex flex-col gap-2 border-l border-jade-glow/25 pl-3 sm:pl-4">
+                  <div className="flex flex-col gap-2">
                     {member.logs.map((log, logIdx) => (
                       <motion.div
                         key={log.id}
@@ -349,32 +386,32 @@ export default function DashboardNewsfeedPage() {
                         {/* Sets display */}
                         <div className="space-y-1.5 mb-2">
                           {log.weight1 != null && log.reps1 != null && (
-                            <div className="flex items-center gap-2 text-xs sm:text-sm">
+                            <div className="flex items-center gap-2 text-[10px] sm:text-[11px]">
                               <span className="inline-block px-1.5 py-0.5 rounded bg-jade-deep/20 text-jade-light font-medium text-[10px] sm:text-[11px]">
                                 Set 1
                               </span>
                               <span className="text-cloud-white">
-                                {formatSetValue(log.weight1, log.weight1 > 0 ? "weighted" : "bodyweight", weightUnit)} × {log.reps1}
+                                {formatSetValue(log.weight1, log.weight1 > 0 ? "weighted" : "bodyweight", weightUnit)} {log.weight1 > 0 ? (weightUnit === "kg" ? "Kg" : "Lbs") : "seconds"} × {log.reps1} Reps
                               </span>
                             </div>
                           )}
                           {log.weight2 != null && log.reps2 != null && (
-                            <div className="flex items-center gap-2 text-xs sm:text-sm">
+                            <div className="flex items-center gap-2 text-[10px] sm:text-[11px]">
                               <span className="inline-block px-1.5 py-0.5 rounded bg-jade-deep/20 text-jade-light font-medium text-[10px] sm:text-[11px]">
                                 Set 2
                               </span>
                               <span className="text-cloud-white">
-                                {formatSetValue(log.weight2, log.weight2 > 0 ? "weighted" : "bodyweight", weightUnit)} × {log.reps2}
+                                {formatSetValue(log.weight2, log.weight2 > 0 ? "weighted" : "bodyweight", weightUnit)} {log.weight2 > 0 ? (weightUnit === "kg" ? "Kg" : "Lbs") : "seconds"} × {log.reps2} Reps
                               </span>
                             </div>
                           )}
                           {log.weight3 != null && log.reps3 != null && (
-                            <div className="flex items-center gap-2 text-xs sm:text-sm">
+                            <div className="flex items-center gap-2 text-[10px] sm:text-[11px]">
                               <span className="inline-block px-1.5 py-0.5 rounded bg-jade-deep/20 text-jade-light font-medium text-[10px] sm:text-[11px]">
                                 Set 3
                               </span>
                               <span className="text-cloud-white">
-                                {formatSetValue(log.weight3, log.weight3 > 0 ? "weighted" : "bodyweight", weightUnit)} × {log.reps3}
+                                {formatSetValue(log.weight3, log.weight3 > 0 ? "weighted" : "bodyweight", weightUnit)} {log.weight3 > 0 ? (weightUnit === "kg" ? "Kg" : "Lbs") : "seconds"} × {log.reps3} Reps
                               </span>
                             </div>
                           )}

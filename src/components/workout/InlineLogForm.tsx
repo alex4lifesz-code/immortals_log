@@ -320,10 +320,10 @@ export function InlineLogForm({
   ]);
 
   useEffect(() => {
-    if (!timerRunning) return;
-    const id = window.setInterval(() => setTimerTick(Date.now()), 200);
+    if (!timerRunning || !showTimerModal) return;
+    const id = window.setInterval(() => setTimerTick(Date.now()), 500);
     return () => window.clearInterval(id);
-  }, [timerRunning]);
+  }, [showTimerModal, timerRunning]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {

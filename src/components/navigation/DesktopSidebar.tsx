@@ -12,7 +12,7 @@ import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
 
 const ADMIN_NAV_IDS = new Set(["admin", "checkin"]);
 
-function DesktopSidebar() {
+function DesktopSidebar({ incomingFriendRequestCount = 0 }: { incomingFriendRequestCount?: number }) {
   const { getSortedNavItems, isMobile, reorderNavItems } = useAppContext();
   const { logout, user } = useAuth();
   const { settings } = useDisplaySettings();
@@ -76,6 +76,11 @@ function DesktopSidebar() {
             >
               <span className="text-base select-none">{item.icon}</span>
               <span className="flex-1 text-left select-none">{t(item.label, terminologyMode)}</span>
+              {item.id === "friends" && incomingFriendRequestCount > 0 && (
+                <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-crimson-light text-void-black text-[10px] font-bold flex items-center justify-center">
+                  {incomingFriendRequestCount > 99 ? "99+" : incomingFriendRequestCount}
+                </span>
+              )}
               {item.pinned && (
                 <span className="text-[10px] text-gold-dim">📌</span>
               )}

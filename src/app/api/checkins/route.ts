@@ -1,21 +1,58 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth, withAdmin } from "@/lib/auth/middleware";
+import { getAcceptedFriendIds, getVisibleSocialUserIds, normalizeScope } from "@/lib/friends";
 
-export const GET = withAuth(async (_request, { auth }) => {
+export const GET = withAuth(async (request, { auth }) => {
   try {
+    const requestUrl = new URL(request.url);
+    const scope = normalizeScope(
+      requestUrl.searchParams.get("scope"),
+      auth.role === "admin" ? "community" : "friends"
+    );
+    let visibleUserIds = [auth.userId];
+    try {
+      visibleUserIds = await getVisibleSocialUserIds({
+        viewerId: auth.userId,
+        viewerRole: auth.role,
+        scope,
+      });
+    } catch (visibilityError) {
+      console.error("CheckIn visibility resolution error:", visibilityError);
+      if (auth.role === "admin") {
+        const users = await prisma.user.findMany({ select: { id: true } });
+        visibleUserIds = users.map((user) => user.id);
+      }
+    }
+
     const checkins = await prisma.checkIn.findMany({
+      where: {
+        userId: {
+          in: visibleUserIds,
+        },
+      },
       include: { user: { select: { id: true, name: true } } },
       orderBy: { date: "desc" },
     });
 
-    const safeCheckins = auth.role === "admin"
-      ? checkins
-      : checkins.map((checkin) =>
-          checkin.userId === auth.userId
-            ? checkin
-            : { ...checkin, comment: null }
-        );
+    if (auth.role === "admin") {
+      return NextResponse.json({ checkins });
+    }
+
+    let friendIds: string[] = [];
+    try {
+      friendIds = await getAcceptedFriendIds(auth.userId);
+    } catch (friendError) {
+      console.error("CheckIn friend lookup error:", friendError);
+    }
+    const friendSet = new Set(friendIds);
+
+    const safeCheckins = checkins.map((checkin) => {
+      if (checkin.userId === auth.userId || friendSet.has(checkin.userId)) {
+        return checkin;
+      }
+      return { ...checkin, comment: null };
+    });
 
     return NextResponse.json({ checkins: safeCheckins });
   } catch (error) {

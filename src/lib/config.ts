@@ -2,16 +2,16 @@
 
 export const CONFIG = {
   auth: {
-    minPasswordLength: 8,
+    minPasswordLength: 4,
     maxPasswordLength: 100,
     bcryptRounds: 10,
     sessionDurationDefault: "24h",
     sessionDurationRememberMe: "7d",
     passwordRequirements: {
-      minLength: 8,
-      requireUppercase: true,
-      requireLowercase: true,
-      requireNumber: true,
+      minLength: 4,
+      requireUppercase: false,
+      requireLowercase: false,
+      requireNumber: false,
       requireSpecial: false,
     },
   },

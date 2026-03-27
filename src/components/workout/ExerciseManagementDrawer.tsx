@@ -459,12 +459,22 @@ export default function ExerciseManagementDrawer({
                   placeholder=""
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-ink-deep border border-ink-light rounded-lg pl-4 pr-10 py-2.5 text-sm text-cloud-white placeholder:text-mist-dark outline-none transition-all duration-200 focus:border-jade-glow/50 focus:shadow-[0_0_12px_color-mix(in_srgb,var(--accent)_15%,transparent)]"
+                  className="w-full bg-ink-deep border border-ink-light rounded-lg pl-10 pr-8 py-2.5 text-sm text-cloud-white placeholder:text-mist-dark outline-none transition-all duration-200 focus:border-jade-glow/50 focus:shadow-[0_0_12px_color-mix(in_srgb,var(--accent)_15%,transparent)]"
                 />
-                <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-mist-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-mist-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                   <circle cx="11" cy="11" r="7" />
                   <path strokeLinecap="round" d="M16.5 16.5l4 4" />
                 </svg>
+                {searchTerm ? (
+                  <button
+                    type="button"
+                    onClick={() => setSearchTerm("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[13px] font-semibold leading-none text-mist-dark transition-colors hover:text-cloud-white"
+                    aria-label="Clear search"
+                  >
+                    x
+                  </button>
+                ) : null}
               </div>
 
               {/* Filter Controls — dynamic selects derived from actual exercise data */}
