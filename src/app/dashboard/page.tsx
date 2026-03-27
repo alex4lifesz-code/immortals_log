@@ -1,1184 +1,431 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import GlowCard from "@/components/ui/GlowCard";
-import GlowButton from "@/components/ui/GlowButton";
-import PageSkeleton from "@/components/ui/PageSkeleton";
-import { GlowModal } from "@/components/ui/GlowCard";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import PageLayout from "@/components/layout/PageLayout";
-import { useRouter } from "next/navigation";
+import PageSkeleton from "@/components/ui/PageSkeleton";
+import ExerciseStatsCarousel from "@/components/dashboard/ExerciseStatsCarousel";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
-import { useAppContext } from "@/context/AppContext";
-import { formatDateWithPreference } from "@/lib/constants";
-import { syncWeightFromLatestCheckin } from "@/lib/user-physique";
 import { api } from "@/lib/api-client";
-import {
-  DashboardSidebar,
-  Calendar,
-  DEFAULT_CULTIVATOR_COLORS,
-  CULTIVATOR_COLOR_OPTIONS,
-  getCultivatorGlowColor,
-  normalizeCultivatorColor,
-  formatDateLocal,
-  type DashboardUser,
-} from "@/components/dashboard/DashboardCalendar";
+import { formatDateWithPreference } from "@/lib/constants";
+import { formatSetValue } from "@/lib/unit-conversion";
 
-type User = DashboardUser;
-
-interface CheckInRow {
-  date: string;
-  entries: Record<string, { present: boolean; weight: string; comment: string }>;
-}
-
-interface CommunityNote {
+interface UserProfile {
   id: string;
-  date: string;
-  content: string;
-  pinned: boolean;
+  name: string;
+  username?: string;
+}
+
+interface ExerciseLog {
+  id: string;
+  userId: string;
+  userName: string;
+  exerciseName: string;
+  level: number;
+  weight1?: number;
+  weight2?: number;
+  weight3?: number;
+  reps1?: number;
+  reps2?: number;
+  reps3?: number;
+  notes?: string;
   createdAt: string;
-  user: { id: string; name: string; username: string };
+  completed: boolean;
 }
 
-function getDayDiffFromToday(dateString: string): number {
-  const rowDate = new Date(dateString + "T00:00:00");
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  return Math.floor((now.getTime() - rowDate.getTime()) / 86400000);
+interface MemberStats {
+  lastActiveAt: string;
 }
 
-export default function DaoHallPage() {
+interface MemberFeed {
+  userId: string;
+  userName: string;
+  dateKey: string;
+  logs: ExerciseLog[];
+  stats: MemberStats;
+}
+
+function countLogSets(log: ExerciseLog): number {
+  const setPairs: Array<[number | undefined, number | undefined]> = [
+    [log.weight1, log.reps1],
+    [log.weight2, log.reps2],
+    [log.weight3, log.reps3],
+  ];
+
+  return setPairs.filter(([, reps]) => reps != null && reps > 0).length;
+}
+
+function calculateLogVolume(log: ExerciseLog): number {
+  const setPairs: Array<[number | undefined, number | undefined]> = [
+    [log.weight1, log.reps1],
+    [log.weight2, log.reps2],
+    [log.weight3, log.reps3],
+  ];
+
+  return setPairs.reduce((total, [weight, reps]) => {
+    if (weight == null || reps == null || weight <= 0 || reps <= 0) return total;
+    return total + weight * reps;
+  }, 0);
+}
+
+const ITEMS_PER_PAGE = 7;
+
+export default function DashboardNewsfeedPage() {
   const { user } = useAuth();
   const { settings } = useDisplaySettings();
-  const { isMobile } = useAppContext();
   const dateFormat = settings.dateFormat || "dd-mmm-yyyy";
-  const router = useRouter();
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [checkInUsersByDate, setCheckInUsersByDate] = useState<Map<string, string[]>>(new Map());
-  const [userColors, setUserColors] = useState<Record<string, string>>({});
-  const [stats, setStats] = useState({ sessions: 0, techniques: 0, streak: 0 });
+  const weightUnit = settings.defaultWeightUnit ?? "kg";
   const [loading, setLoading] = useState(true);
-  const [dayNotes, setDayNotes] = useState<Map<string, string>>(new Map());
-  const [futureNotes, setFutureNotes] = useState<CommunityNote[]>([]);
-  const [allUsers, setAllUsers] = useState<User[]>([]);
-  const [checkInRows, setCheckInRows] = useState<CheckInRow[]>([]);
-  const sectRegisterRef = useRef<HTMLDivElement>(null);
-  // Check-in modal state
-  const [checkInModal, setCheckInModal] = useState<{
-    date: string;
-    entries: Record<string, { present: boolean; weight: string; comment: string }>;
-  } | null>(null);
-
-  // Weight prompt modal state
-  const [showWeightPrompt, setShowWeightPrompt] = useState(false);
-  const [weightPromptValue, setWeightPromptValue] = useState("");
-
-  const broadcastNotesUpdated = useCallback(() => {
-    if (typeof window === "undefined") return;
-    window.dispatchEvent(new Event("checkin-notes-updated"));
-    localStorage.setItem("checkin-notes-updated-at", String(Date.now()));
-  }, []);
-
-  // Sect Register filter and inline edit state
-  const [sectFilterDays, setSectFilterDays] = useState<7 | 14 | 30>(14);
-  const [isSectEditMode, setIsSectEditMode] = useState(false);
-  const [sectEditData, setSectEditData] = useState<Record<string, Record<string, { weight: string; comment: string }>>>({});
-  const [deletingRowDate, setDeletingRowDate] = useState<string | null>(null);
-
-  // Load user colors from localStorage
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("cultivator-colors");
-      if (saved) {
-        const parsed = JSON.parse(saved) as Record<string, string>;
-        const normalized = Object.fromEntries(
-          Object.entries(parsed).map(([userId, color]) => [userId, normalizeCultivatorColor(color)]),
-        );
-        setUserColors(normalized);
-      }
-    } catch { /* ignore */ }
-  }, []);
-
-  const handleColorChange = (userId: string, color: string) => {
-    setUserColors(prev => {
-      const updated = { ...prev, [userId]: normalizeCultivatorColor(color) };
-      localStorage.setItem("cultivator-colors", JSON.stringify(updated));
-      return updated;
-    });
-  };
-
-  // Load day notes from localStorage
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("cultivation-day-notes");
-      if (saved) {
-        const parsed: { date: string; note: string }[] = JSON.parse(saved);
-        const map = new Map<string, string>();
-        for (const n of parsed) {
-          if (n.note.trim()) map.set(n.date, n.note);
-        }
-        setDayNotes(map);
-      }
-    } catch { /* ignore */ }
-  }, []);
-
-  const refreshFutureNotes = useCallback(async () => {
-    try {
-      const todayStr = formatDateLocal(new Date());
-      const data = await api.get<{ notes: CommunityNote[] }>(`/api/checkins/notes?future=true&today=${todayStr}`);
-      setFutureNotes(data.notes || []);
-    } catch (err) {
-      console.error("Failed to fetch future notes:", err);
-    }
-  }, []);
-
-  const handleDeleteRow = useCallback(async (date: string) => {
-    try {
-      await api.delete("/api/checkins", { date });
-      setCheckInRows(prev => prev.filter(r => r.date !== date));
-      setCheckInUsersByDate(prev => {
-        const updated = new Map(prev);
-        updated.delete(date);
-        return updated;
-      });
-      setDeletingRowDate(null);
-      broadcastNotesUpdated();
-    } catch (err) {
-      console.error("Failed to delete row:", err);
-    }
-  }, [broadcastNotesUpdated]);
-
-  const handleDayClick = (dateStr: string) => {
-    // Open check-in modal for the selected day
-    const existingRow = checkInRows.find(r => r.date === dateStr);
-    const entries: Record<string, { present: boolean; weight: string; comment: string }> = {};
-    for (const u of allUsers) {
-      entries[u.id] = existingRow?.entries[u.id] || { present: false, weight: "", comment: "" };
-    }
-    setCheckInModal({ date: dateStr, entries });
-  };
-
-  const updateCheckInModalEntry = (userId: string, field: "present" | "weight" | "comment", value: string | boolean) => {
-    if (!checkInModal) return;
-    setCheckInModal(prev => {
-      if (!prev) return prev;
-      const entry = prev.entries[userId] || { present: false, weight: "", comment: "" };
-      return {
-        ...prev,
-        entries: { ...prev.entries, [userId]: { ...entry, [field]: value } },
-      };
-    });
-  };
-
-  const isWeightDismissedToday = useCallback(() => {
-    try {
-      const dismissed = localStorage.getItem("weight-prompt-dismissed");
-      if (dismissed) {
-        const today = formatDateLocal(new Date());
-        if (dismissed === today) return true;
-      }
-      const hiddenUntil = localStorage.getItem("weight-prompt-hidden-until");
-      if (hiddenUntil && Date.now() < Number(hiddenUntil)) return true;
-      return false;
-    } catch { return false; }
-  }, []);
-
-  const dismissWeightToday = () => {
-    const today = formatDateLocal(new Date());
-    localStorage.setItem("weight-prompt-dismissed", today);
-  };
-
-  const dismissWeightForOneHour = () => {
-    localStorage.setItem("weight-prompt-hidden-until", String(Date.now() + 60 * 60 * 1000));
-  };
-
-  const proceedWithSaveCheckIn = async () => {
-    if (!checkInModal || !user) return;
-    try {
-      // Determine if this is a far-future date (2+ days ahead)
-      const modalDate = new Date(checkInModal.date + 'T00:00:00');
-      const todayDate = new Date();
-      todayDate.setHours(0, 0, 0, 0);
-      const diffDays = Math.floor((modalDate.getTime() - todayDate.getTime()) / 86400000);
-      const isFarFuture = diffDays >= 2;
-
-      // Only send the current user's entry to enforce ownership
-      const ownEntry = checkInModal.entries[user.id];
-      const ownEntries = ownEntry ? { [user.id]: ownEntry } : {};
-
-      // For far-future dates, save the comment as a community note so it appears in Upcoming Notes
-      // The shared comment is stored under the first user's entry in the modal
-      const sharedComment = (allUsers[0] && checkInModal.entries[allUsers[0].id]?.comment?.trim()) || "";
-      if (isFarFuture) {
-        if (sharedComment) {
-          await api.post("/api/checkins/notes", { date: checkInModal.date, content: sharedComment });
-        } else {
-          // Note was cleared — delete the existing CheckInNote if one exists
-          const existingNote = futureNotes.find(n => n.date === checkInModal.date && n.user.id === user.id);
-          if (existingNote) {
-            await api.delete("/api/checkins/notes", { noteId: existingNote.id });
-          }
-        }
-        refreshFutureNotes();
-        broadcastNotesUpdated();
-      }
-
-      await api.post("/api/checkins", { date: checkInModal.date, entries: ownEntries });
-
-      // Auto-sync weight if sync toggle is enabled
-      if (ownEntries[user.id]?.weight) {
-        syncWeightFromLatestCheckin(user.id);
-      }
-
-      // Update local rows
-      setCheckInRows(prev => {
-        const filtered = prev.filter(r => r.date !== checkInModal.date);
-        const newRow = { date: checkInModal.date, entries: checkInModal.entries };
-        return [newRow, ...filtered].sort((a, b) => b.date.localeCompare(a.date));
-      });
-
-      // Update calendar user check-ins
-      setCheckInUsersByDate(prev => {
-        const updated = new Map(prev);
-        const presentUserIds = Object.entries(checkInModal.entries)
-          .filter(([, e]) => e.present)
-          .map(([uid]) => uid);
-        if (presentUserIds.length > 0) {
-          updated.set(checkInModal.date, presentUserIds);
-        } else {
-          updated.delete(checkInModal.date);
-        }
-        return updated;
-      });
-
-      setCheckInModal(null);
-      setShowWeightPrompt(false);
-      setWeightPromptValue("");
-
-      // Scroll to Sect Register to show the saved entry
-      setTimeout(() => {
-        sectRegisterRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 100);
-    } catch (err) {
-      console.error("Failed to save check-in:", err);
-    }
-  };
-
-  const handleSaveCheckIn = async () => {
-    if (!checkInModal || !user) return;
-
-    // Check if the current user is checked in but hasn't entered weight
-    const currentUserEntry = checkInModal.entries[user.id];
-    if (currentUserEntry?.present && !currentUserEntry.weight && !isWeightDismissedToday()) {
-      setShowWeightPrompt(true);
-      return;
-    }
-
-    await proceedWithSaveCheckIn();
-  };
-
-  const handleWeightPromptSubmit = async () => {
-    if (!checkInModal || !user || !weightPromptValue) return;
-    updateCheckInModalEntry(user.id, "weight", weightPromptValue);
-    // Need to wait for state update, so we save directly with the weight
-    const updatedEntries = {
-      ...checkInModal.entries,
-      [user.id]: { ...checkInModal.entries[user.id], weight: weightPromptValue },
-    };
-    setCheckInModal(prev => prev ? { ...prev, entries: updatedEntries } : prev);
-    setShowWeightPrompt(false);
-    setWeightPromptValue("");
-    // Proceed with save using updated entries — only send own entry
-    try {
-      const ownEntry = updatedEntries[user.id];
-      await api.post("/api/checkins", { date: checkInModal.date, entries: { [user.id]: ownEntry } });
-
-      // Auto-sync weight if sync toggle is enabled
-      syncWeightFromLatestCheckin(user.id);
-
-      const currentEntry = updatedEntries[user.id];
-      if (currentEntry?.present) {
-        // Check-in saved
-      }
-
-      setCheckInRows(prev => {
-        const filtered = prev.filter(r => r.date !== checkInModal.date);
-        const newRow = { date: checkInModal.date, entries: updatedEntries };
-        return [newRow, ...filtered].sort((a, b) => b.date.localeCompare(a.date));
-      });
-
-      setCheckInUsersByDate(prev => {
-        const updated = new Map(prev);
-        const presentUserIds = Object.entries(updatedEntries)
-          .filter(([, e]) => e.present)
-          .map(([uid]) => uid);
-        if (presentUserIds.length > 0) {
-          updated.set(checkInModal.date, presentUserIds);
-        } else {
-          updated.delete(checkInModal.date);
-        }
-        return updated;
-      });
-
-      setCheckInModal(null);
-
-      setTimeout(() => {
-        sectRegisterRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 100);
-    } catch (err) {
-      console.error("Failed to save check-in:", err);
-    }
-  };
-
-  const handleWeightPromptSkip = async () => {
-    setShowWeightPrompt(false);
-    setWeightPromptValue("");
-    await proceedWithSaveCheckIn();
-  };
-
-  const handleWeightPromptDismissOneHour = async () => {
-    dismissWeightForOneHour();
-    setShowWeightPrompt(false);
-    setWeightPromptValue("");
-    await proceedWithSaveCheckIn();
-  };
-
-  const handleWeightPromptDismissToday = async () => {
-    dismissWeightToday();
-    setShowWeightPrompt(false);
-    setWeightPromptValue("");
-    await proceedWithSaveCheckIn();
-  };
-
-  const handleCheckInToggle = async (date: string, userId: string, present: boolean) => {
-    // Only allow toggling own check-in
-    if (!user || userId !== user.id) return;
-    // Update local row state
-    setCheckInRows(prev => prev.map(row => {
-      if (row.date !== date) return row;
-      const entry = row.entries[userId] || { present: false, weight: "", comment: "" };
-      return { ...row, entries: { ...row.entries, [userId]: { ...entry, present } } };
-    }));
-
-    // Auto-save
-    try {
-      const row = checkInRows.find(r => r.date === date);
-      await api.post("/api/checkins", {
-        date,
-        entries: { [userId]: { present, weight: row?.entries[userId]?.weight || "", comment: row?.entries[userId]?.comment || "" } },
-      });
-
-      // Update calendar user check-ins
-      setCheckInUsersByDate(prev => {
-        const updated = new Map(prev);
-        const current = updated.get(date) || [];
-        if (present) {
-          if (!current.includes(userId)) updated.set(date, [...current, userId]);
-        } else {
-          const filtered = current.filter(id => id !== userId);
-          if (filtered.length > 0) updated.set(date, filtered);
-          else updated.delete(date);
-        }
-        return updated;
-      });
-    } catch (err) {
-      console.error("Failed to auto-save check-in:", err);
-    }
-  };
-
-  // Sect Register edit mode handlers
-  const handleSectEditToggle = () => {
-    if (!isSectEditMode) {
-      const data: Record<string, Record<string, { weight: string; comment: string }>> = {};
-      for (const row of checkInRows) {
-        data[row.date] = {};
-        for (const u of allUsers) {
-          const entry = row.entries[u.id];
-          data[row.date][u.id] = {
-            weight: entry?.weight || "",
-            comment: entry?.comment || "",
-          };
-        }
-      }
-      setSectEditData(data);
-    }
-    setIsSectEditMode(!isSectEditMode);
-  };
-
-  const handleSectEditChange = (date: string, userId: string, field: "weight" | "comment", value: string) => {
-    setSectEditData(prev => ({
-      ...prev,
-      [date]: {
-        ...prev[date],
-        [userId]: {
-          ...prev[date]?.[userId],
-          [field]: value,
-        },
-      },
-    }));
-  };
-
-  const handleSectEditSave = async () => {
-    try {
-      const changedRows: Array<{ date: string; entries: Record<string, { present: boolean; weight: string; comment: string }> }> = [];
-      for (const row of filteredCheckInRows) {
-        const diffDays = getDayDiffFromToday(row.date);
-        if (diffDays < 0) continue;
-        const edited = sectEditData[row.date];
-        if (!edited) continue;
-        let changed = false;
-        const entries: Record<string, { present: boolean; weight: string; comment: string }> = {};
-        for (const u of allUsers) {
-          const original = row.entries[u.id] || { present: false, weight: "", comment: "" };
-          const editedEntry = edited[u.id];
-          const newWeight = editedEntry?.weight ?? original.weight;
-          const newComment = editedEntry?.comment ?? original.comment;
-          if (newWeight !== original.weight || newComment !== original.comment) changed = true;
-          entries[u.id] = { present: original.present, weight: newWeight, comment: newComment };
-        }
-        if (changed) changedRows.push({ date: row.date, entries });
-      }
-
-      if (changedRows.length > 0) {
-        const saveResults = await Promise.allSettled(
-          changedRows.map((row) => api.post("/api/checkins", { date: row.date, entries: row.entries }))
-        );
-        const failed = saveResults.find((result) => result.status === "rejected");
-        if (failed) throw new Error("Failed to save one or more sect register rows");
-      }
-
-      setCheckInRows(prev => prev.map(row => {
-        const edited = sectEditData[row.date];
-        if (!edited) return row;
-        const newEntries = { ...row.entries };
-        for (const userId of Object.keys(edited)) {
-          if (newEntries[userId]) {
-            newEntries[userId] = {
-              ...newEntries[userId],
-              weight: edited[userId]?.weight ?? newEntries[userId]?.weight ?? "",
-              comment: edited[userId]?.comment ?? newEntries[userId]?.comment ?? "",
-            };
-          }
-        }
-        return { ...row, entries: newEntries };
-      }));
-      setIsSectEditMode(false);
-      setSectEditData({});
-    } catch (err) {
-      console.error("Failed to save sect register edits:", err);
-    }
-  };
-
-  const handleSectEditCancel = () => {
-    setIsSectEditMode(false);
-    setSectEditData({});
-  };
-
-  // Filtered check-in rows for Sect Register
-  const filteredCheckInRows = useMemo(
-    () => checkInRows.filter((row) => {
-      const diffDays = getDayDiffFromToday(row.date);
-      return diffDays >= -1 && diffDays < sectFilterDays;
-    }),
-    [checkInRows, sectFilterDays]
-  );
-
-  const useMobileTableStyling = isMobile;
-  const compactSectRegister = useMobileTableStyling && !isSectEditMode;
-
-  const sectRegisterGridTemplateColumns = useMemo(
-    () => `${isSectEditMode ? '104px' : '80px'} repeat(${allUsers.length}, 44px) ${compactSectRegister ? '72px' : `repeat(${allUsers.length}, 48px)`} minmax(180px, 1fr)`,
-    [allUsers.length, compactSectRegister, isSectEditMode]
-  );
-
-  const sectRegisterMinWidth = useMemo(() => {
-    const dateCol = isSectEditMode ? 104 : 80;
-    const checkCols = allUsers.length * 44;
-    const weightCols = compactSectRegister ? 72 : allUsers.length * 48;
-    const commentsCol = 180;
-    return `${dateCol + checkCols + weightCols + commentsCol}px`;
-  }, [allUsers.length, compactSectRegister, isSectEditMode]);
+  const [exerciseLogs, setExerciseLogs] = useState<ExerciseLog[]>([]);
+  const [allExercises, setAllExercises] = useState<any[]>([]);
+  const [filterMode, setFilterMode] = useState<"category" | "muscle-group">("category");
+  const [selectedFilter, setSelectedFilter] = useState<string>("");
+  const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const observerTarget = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchNewsfeed = async () => {
       if (!user) return;
 
       try {
-        // Fetch check-ins, users, and future notes in parallel
-        const [checkinsData, usersData, exerciseData, futureNotesData] = await Promise.all([
-          api.get<{ checkins: Array<{ date: string; userId: string; present: boolean; weight?: number; comment?: string }> }>("/api/checkins"),
-          api.get<{ users: User[] }>("/api/users"),
-          api.get<{ exercises: unknown[] }>("/api/exercises"),
-          api.get<{ notes: CommunityNote[] }>(`/api/checkins/notes?future=true&today=${formatDateLocal(new Date())}`),
-        ]);
+        // Fetch community feed with all users' progress
+        const feedData = await api.get<{
+          exercises: Array<{
+            id: string;
+            name: string;
+            category: string;
+            primaryMuscles?: string;
+            userProgress?: Array<{
+              userId: string;
+              user?: UserProfile;
+              logs: Array<{
+                id: string;
+                createdAt: string;
+                weight1?: number;
+                weight2?: number;
+                weight3?: number;
+                reps1?: number;
+                reps2?: number;
+                reps3?: number;
+                level: number;
+                notes?: string;
+                completed?: boolean;
+              }>;
+            }>;
+          }>;
+        }>("/api/feed");
 
-        // Set future notes
-        setFutureNotes(futureNotesData.notes || []);
+        // Store all exercises for the carousel
+        setAllExercises(feedData.exercises || []);
 
-        // Set all users
-        setAllUsers(usersData.users || []);
-
-        // Build check-in users by date and rows
-        const usersByDate = new Map<string, string[]>();
-        const userCheckInDates = new Set<string>();
-        const grouped: Record<string, CheckInRow["entries"]> = {};
-
-        for (const checkin of checkinsData.checkins || []) {
-          const date = checkin.date.split("T")[0];
-          if (checkin.present) {
-            const current = usersByDate.get(date) || [];
-            if (!current.includes(checkin.userId)) {
-              usersByDate.set(date, [...current, checkin.userId]);
+        // Build users map and flatten all logs from all exercises
+        const usersMap: Record<string, UserProfile> = {};
+        const allLogs: ExerciseLog[] = [];
+        
+        for (const exercise of feedData.exercises || []) {
+          for (const progress of exercise.userProgress || []) {
+            // Store user info if available
+            if (progress.user) {
+              usersMap[progress.userId] = progress.user;
             }
-            if (checkin.userId === user.id) {
-              userCheckInDates.add(date);
+
+            for (const log of progress.logs || []) {
+              // Exclude current user's logs from newsfeed
+              if (progress.userId !== user.id) {
+                allLogs.push({
+                  id: log.id,
+                  userId: progress.userId,
+                  userName: progress.user?.name || usersMap[progress.userId]?.name || "Unknown",
+                  exerciseName: exercise.name,
+                  level: log.level,
+                  weight1: log.weight1,
+                  weight2: log.weight2,
+                  weight3: log.weight3,
+                  reps1: log.reps1,
+                  reps2: log.reps2,
+                  reps3: log.reps3,
+                  notes: log.notes,
+                  createdAt: log.createdAt,
+                  completed: log.completed || false,
+                });
+              }
             }
           }
-          if (!grouped[date]) grouped[date] = {};
-          grouped[date][checkin.userId] = {
-            present: checkin.present,
-            weight: checkin.weight?.toString() || "",
-            comment: checkin.comment || "",
-          };
         }
 
-        setCheckInUsersByDate(usersByDate);
-        const sortedRows = Object.entries(grouped)
-          .sort(([a], [b]) => b.localeCompare(a))
-          .map(([date, entries]) => ({ date, entries }));
-        setCheckInRows(sortedRows);
+        // Sort by most recent first
+        allLogs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-        const currentUser = (usersData.users || []).find((candidate: { id: string; sessionCount?: number }) => candidate.id === user.id);
-
-        // Calculate streak using current user's dates
-        const today = new Date();
-        let streak = 0;
-        for (let i = 0; i < 365; i++) {
-          const checkDate = new Date(today);
-          checkDate.setDate(checkDate.getDate() - i);
-          const dateStr = formatDateLocal(checkDate);
-          if (userCheckInDates.has(dateStr)) {
-            streak++;
-          } else if (i > 0) {
-            break;
-          }
-        }
-
-        setStats({
-          sessions: currentUser?.sessionCount ?? 0,
-          techniques: exerciseData.exercises?.length || 0,
-          streak,
-        });
+        setExerciseLogs(allLogs);
       } catch (err) {
-        console.error("Failed to fetch dashboard data:", err);
+        console.error("Failed to fetch newsfeed:", err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
+    fetchNewsfeed();
   }, [user]);
 
-  useEffect(() => {
-    const handleNotesUpdated = () => {
-      refreshFutureNotes();
-    };
+  const formatDayHeader = (dateKey: string): string => {
+    const parsed = new Date(`${dateKey}T00:00:00`);
+    return formatDateWithPreference(parsed, dateFormat);
+  };
 
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === "checkin-notes-updated-at") {
-        handleNotesUpdated();
+  const handleFilterChange = useCallback((mode: "category" | "muscle-group", filter: string) => {
+    setFilterMode(mode);
+    setSelectedFilter(filter);
+    setDisplayCount(ITEMS_PER_PAGE); // Reset to first page when filter changes
+  }, []);
+
+  const allGroupedByMemberDay = useMemo<MemberFeed[]>(() => {
+    // First filter the logs based on the selected category/muscle group
+    const filteredLogs = selectedFilter === ""
+      ? exerciseLogs
+      : exerciseLogs.filter((log) => {
+          const exercise = allExercises.find((e) => e.name === log.exerciseName);
+          if (!exercise) return false;
+          
+          if (filterMode === "category") {
+            return exercise.category === selectedFilter;
+          } else {
+            return exercise.primaryMuscles === selectedFilter;
+          }
+        });
+
+    const grouped: Record<string, ExerciseLog[]> = {};
+    for (const log of filteredLogs) {
+      const dateKey = log.createdAt.slice(0, 10);
+      const groupKey = `${log.userId}:${dateKey}`;
+      if (!grouped[groupKey]) {
+        grouped[groupKey] = [];
       }
-    };
+      grouped[groupKey].push(log);
+    }
 
-    window.addEventListener("checkin-notes-updated", handleNotesUpdated);
-    window.addEventListener("storage", handleStorage);
-    return () => {
-      window.removeEventListener("checkin-notes-updated", handleNotesUpdated);
-      window.removeEventListener("storage", handleStorage);
-    };
-  }, [refreshFutureNotes]);
+    return Object.entries(grouped)
+      .map(([groupKey, logs]) => {
+        const [userId, dateKey] = groupKey.split(":");
+        const lastActiveAt = logs[0]?.createdAt ?? "";
+
+        return {
+          userId,
+          userName: logs[0]?.userName ?? "Unknown",
+          dateKey,
+          logs,
+          stats: {
+            lastActiveAt,
+          },
+        };
+      })
+        .sort((a, b) => new Date(b.stats.lastActiveAt).getTime() - new Date(a.stats.lastActiveAt).getTime());
+  }, [exerciseLogs, allExercises, selectedFilter, filterMode]);
+
+  // Paginated feed data
+  const groupedByMemberDay = useMemo(() => {
+    return allGroupedByMemberDay.slice(0, displayCount);
+  }, [allGroupedByMemberDay, displayCount]);
+
+  // Infinite scroll observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && !isLoadingMore && displayCount < allGroupedByMemberDay.length) {
+          setIsLoadingMore(true);
+          // Simulate loading delay for smooth UX
+          setTimeout(() => {
+            setDisplayCount((prev) => Math.min(prev + ITEMS_PER_PAGE, allGroupedByMemberDay.length));
+            setIsLoadingMore(false);
+          }, 300);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => observer.disconnect();
+  }, [isLoadingMore, displayCount, allGroupedByMemberDay.length]);
+
+  const timeAgo = (dateString: string): string => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return "just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return formatDateWithPreference(date, dateFormat);
+  };
 
   if (!user) return null;
 
   return (
     <PageLayout
-      title="Dao Hall"
-      subtitle="The spiritual center of your cultivation journey"
-      sidebar={<DashboardSidebar stats={stats} allUsers={allUsers} userColors={userColors} onColorChange={handleColorChange} />}
-      sidebarLabel="Cultivation Stats"
+      title="Community Feed"
+      mobileContentPaddingClass="p-3 pb-24"
     >
       {loading ? (
-        <PageSkeleton statCards={4} wideBlock rows={3} />
+        <PageSkeleton statCards={0} wideBlock rows={4} />
       ) : (
-        <div className="space-y-6">
-          {/* Upcoming Notes and Calendar */}
-          <div className="flex flex-col lg:flex-row gap-6">
-            {/* Future Notes Log */}
-            <GlowCard glow="gold" className="p-4 space-y-3 flex-1">
-              <div className="flex items-center gap-2 pb-2 border-b border-gold-dim/20">
-                <h3 className="text-sm text-gold-glow uppercase tracking-wider font-semibold">Upcoming Notes</h3>
-                {futureNotes.length > 0 && (
-                  <span className="text-[9px] text-gold-glow bg-gold-dim/20 px-2 py-0.5 rounded-full font-medium">{futureNotes.length}</span>
-                )}
-                <button
-                  onClick={() => router.push("/dashboard/checkin")}
-                  className="ml-auto text-[9px] text-gold-light/70 hover:text-gold-glow transition-colors flex items-center gap-1 hover:underline"
-                  title="Manage notes in Sect Register"
-                >
-                  Manage →
-                </button>
-              </div>
-              {futureNotes.length > 0 ? (
-                <div className="space-y-2">
-                  {futureNotes.map((note) => {
-                    const noteUserIdx = allUsers.findIndex(u => u.id === note.user.id);
-                    const noteColor = normalizeCultivatorColor(userColors[note.user.id] || DEFAULT_CULTIVATOR_COLORS[noteUserIdx >= 0 ? noteUserIdx % DEFAULT_CULTIVATOR_COLORS.length : 0]);
-                    return (
-                      <motion.div
-                        key={note.id}
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        onClick={() => handleDayClick(note.date)}
-                        className="p-3 rounded-lg border border-ink-light/40 bg-gradient-to-r from-ink-dark/40 to-ink-mid/20 hover:from-gold-dim/15 hover:to-gold-dim/10 hover:border-gold-dim/50 transition-all duration-300 cursor-pointer group"
-                        title="Click to view in calendar"
-                      >
-                        <div className="flex items-start gap-3">
-                          <div
-                            className="w-2 h-2 rounded-full shrink-0 mt-1.5 shadow-lg"
-                            style={{ backgroundColor: noteColor, boxShadow: `0 0 6px ${getCultivatorGlowColor(noteColor, 0.6)}` }}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-[11px] font-semibold" style={{ color: noteColor }}>
-                                {note.user.name}
-                              </span>
-                              <span className="text-[9px] text-mist-mid bg-ink-mid/40 px-1.5 py-0.5 rounded">
-                                {formatDateWithPreference(note.date, dateFormat)}
-                              </span>
-                            </div>
-                            <p className="text-[10px] text-mist-light leading-relaxed">{note.content}</p>
-                          </div>
-                          <span className="text-mist-dark/40 group-hover:text-gold-glow shrink-0 transition-colors ml-2">↗</span>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="py-6 text-center">
-                  <p className="text-[10px] text-mist-mid">No upcoming notes</p>
-                  <p className="text-[9px] text-mist-dark/60 mt-1">Schedule notes on future dates to see them here</p>
-                </div>
-              )}
-            </GlowCard>
+        <>
+          {/* Carousel at the top */}
+          {allExercises.length > 0 && (
+            <ExerciseStatsCarousel 
+              exercises={allExercises} 
+              communityLogs={exerciseLogs}
+              currentUserId={user?.id}
+              onFilterChange={handleFilterChange}
+            />
+          )}
 
-            {/* Calendar */}
-            <div className="flex-1">
-              <Calendar checkInUsersByDate={checkInUsersByDate} currentMonth={currentMonth} setCurrentMonth={setCurrentMonth} dayNotes={dayNotes} futureNoteDates={new Set(futureNotes.map(n => n.date))} onDayClick={handleDayClick} allUsers={allUsers} userColors={userColors} />
+          {/* Community feed */}
+          {allGroupedByMemberDay.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center mt-8">
+              <div className="text-4xl mb-4 opacity-40">🏛️</div>
+              <h3 className="text-lg font-semibold text-cloud-white mb-2">The Hall is Silent</h3>
+              <p className="text-sm text-mist-light max-w-sm">
+                {selectedFilter !== ""
+                  ? `No activity found for the selected ${filterMode === "category" ? "category" : "muscle group"}.`
+                  : "Your fellow cultivators haven't logged any exercises yet. Once they do, their recent activity will appear here."}
+              </p>
             </div>
-          </div>
-
-          {/* Sect Register Table — Check-In Records */}
-          <GlowCard glow="jade" className="w-full">
-            <div ref={sectRegisterRef} className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold text-jade-glow">Sect Register</h3>
-                <div className="flex items-center gap-2">
-                  {!isSectEditMode && (
-                    <div className="flex items-center gap-1">
-                      {([7, 14, 30] as const).map((days) => (
-                        <motion.button
-                          key={days}
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => setSectFilterDays(days)}
-                          className={`text-xs px-2 py-0.5 rounded border transition-all ${
-                            sectFilterDays === days
-                              ? "bg-jade-deep/20 border-jade/40 text-jade-light"
-                              : "border-ink-light/40 text-mist-light hover:text-jade-light hover:border-jade/30"
-                          }`}
-                        >
-                          {days}d
-                        </motion.button>
-                      ))}
-                    </div>
-                  )}
-                  {checkInRows.length > 0 && (
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={handleSectEditToggle}
-                      className={`text-xs px-3 py-1 rounded border transition-all ${
-                        isSectEditMode
-                          ? "bg-crimson-deep/20 border-crimson/40 text-crimson-light"
-                          : "border-jade-glow/40 text-jade-light hover:bg-jade-deep/10"
-                      }`}
-                    >
-                      {isSectEditMode ? "✕ Cancel Edit" : "✎ Edit"}
-                    </motion.button>
-                  )}
-                </div>
-              </div>
-
-              {isSectEditMode && (
+          ) : (
+            <>
+              <div className="space-y-6 mt-8">
+                {groupedByMemberDay.map((member, memberIdx) => (
                 <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="p-3 rounded-lg border bg-jade-deep/10 border-jade/40 text-xs text-jade-light"
-                >
-                  Edit mode enabled. Modify weight and comment data below, then click Save or Cancel.
-                </motion.div>
-              )}
-
-              <div className="overflow-x-auto -mx-2 px-2 sm:mx-0 sm:px-0" style={{ WebkitOverflowScrolling: 'touch' }}>
-                <div style={{ minWidth: sectRegisterMinWidth }}>
-                  {/* Grid header */}
-                  <div
-                    className="grid gap-0 text-[10px] sm:text-[11px] normal-case sm:uppercase tracking-normal sm:tracking-wide font-semibold text-mist-dark border-b border-jade-glow/30 pb-2 mb-1"
-                    style={{ gridTemplateColumns: sectRegisterGridTemplateColumns }}
-                  >
-                    <div className="px-1">Date</div>
-                    {allUsers.map((u) => (
-                      <div key={`h-c-${u.id}`} className="text-center px-0.5">{u.name}</div>
-                    ))}
-                    {compactSectRegister ? (
-                      <div className="text-center px-0.5">Wt</div>
-                    ) : (
-                      allUsers.map((u) => (
-                        <div key={`h-w-${u.id}`} className="text-center px-0.5">{u.name.charAt(0)}.Wt</div>
-                      ))
-                    )}
-                    <div className="px-1">Comments</div>
-                  </div>
-
-                  {/* Rows */}
-                  {filteredCheckInRows.length === 0 ? (
-                    <div className="flex flex-col items-center py-10 text-center">
-                      <div className="text-2xl opacity-30 mb-2">📅</div>
-                      <p className="text-xs text-mist-dark">
-                        No records in the last {sectFilterDays} days
-                      </p>
-                      <p className="text-[10px] text-mist-dark/60 mt-1">
-                        Click a calendar day to begin
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-0">
-                      {filteredCheckInRows.map((row) => {
-                        const rowDateObj = new Date(row.date + 'T00:00:00');
-                        const dayName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][rowDateObj.getDay()];
-                        const isWeekend = rowDateObj.getDay() === 0 || rowDateObj.getDay() === 6;
-                        return (
-                          <div
-                            key={row.date}
-                            className={`grid gap-0 items-center py-1 border-b text-xs transition-colors duration-100 ${
-                              isSectEditMode
-                                ? "border-jade-glow/15 bg-jade-deep/5 hover:bg-jade-deep/10"
-                                : `border-ink-light/50 hover:bg-ink-mid/10 ${isWeekend ? "bg-ink-dark/20" : ""}`
-                            }`}
-                            style={{ gridTemplateColumns: sectRegisterGridTemplateColumns }}
-                          >
-                            {/* Date + Day */}
-                            <div className="px-1 flex items-center gap-1">
-                              {isSectEditMode && (
-                                deletingRowDate === row.date ? (
-                                  <div className="flex items-center gap-0.5 shrink-0">
-                                    <button
-                                      onClick={() => handleDeleteRow(row.date)}
-                                      className="text-[9px] text-crimson-light hover:text-crimson-glow transition-colors"
-                                      title="Confirm delete"
-                                    >
-                                      ✓
-                                    </button>
-                                    <button
-                                      onClick={() => setDeletingRowDate(null)}
-                                      className="text-[9px] text-mist-dark hover:text-mist-light transition-colors"
-                                      title="Cancel"
-                                    >
-                                      ✕
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <button
-                                    onClick={() => setDeletingRowDate(row.date)}
-                                    className="text-[9px] text-mist-dark hover:text-crimson-light transition-colors shrink-0"
-                                    title="Delete this row"
-                                  >
-                                    🗑
-                                  </button>
-                                )
-                              )}
-                              <button
-                                onClick={() => handleDayClick(row.date)}
-                                className="text-mist-light hover:text-jade-glow transition-colors text-left leading-tight"
-                                title="Click to edit"
-                              >
-                                <span className="text-[11px]">{formatDateWithPreference(row.date, dateFormat)}</span>
-                                <span className={`text-[9px] ml-1 ${isWeekend ? "text-gold/70" : "text-mist-dark"}`}>{dayName}</span>
-                              </button>
-                            </div>
-
-                            {/* Check-in toggles */}
-                            {allUsers.map((u) => {
-                              const isPresent = row.entries[u.id]?.present || false;
-                              const isOwn = u.id === user.id;
-                              return (
-                                <div key={`c-${row.date}-${u.id}`} className="flex justify-center">
-                                  {isOwn ? (
-                                    <button
-                                      onClick={() => handleCheckInToggle(row.date, u.id, !isPresent)}
-                                      className={`w-5 h-5 rounded text-[10px] font-bold transition-all duration-150 ${
-                                        isPresent
-                                          ? "bg-jade-glow/20 text-jade-glow border border-jade-glow/40 shadow-[var(--glow-subtle)]"
-                                          : "text-mist-dark border border-ink-light/40 hover:border-mist-dark/60"
-                                      }`}
-                                    >
-                                      {isPresent ? "✓" : ""}
-                                    </button>
-                                  ) : (
-                                    <span className={`w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold ${
-                                      isPresent
-                                        ? "bg-jade-glow/15 text-jade-glow/70 border border-jade-glow/20"
-                                        : "text-mist-dark/40"
-                                    }`}>
-                                      {isPresent ? "✓" : "·"}
-                                    </span>
-                                  )}
-                                </div>
-                              );
-                            })}
-
-                            {/* Weight columns */}
-                            {compactSectRegister ? (
-                              <div className="text-center px-0.5">
-                                {(() => {
-                                  const ownWeight = user ? row.entries[user.id]?.weight : "";
-                                  const numericWeights = allUsers
-                                    .map((u) => Number(row.entries[u.id]?.weight))
-                                    .filter((value) => Number.isFinite(value) && value > 0);
-                                  const avgWeight = numericWeights.length > 0
-                                    ? (numericWeights.reduce((sum, value) => sum + value, 0) / numericWeights.length).toFixed(1)
-                                    : "—";
-                                  return (
-                                    <span
-                                      className={`text-[11px] ${ownWeight ? "text-cloud-white" : "text-mist-dark/70"}`}
-                                      title={`You: ${ownWeight || "—"} • Avg: ${avgWeight}`}
-                                    >
-                                      {ownWeight || avgWeight}
-                                    </span>
-                                  );
-                                })()}
-                              </div>
-                            ) : (
-                              allUsers.map((u) => (
-                                <div key={`w-${row.date}-${u.id}`} className="text-center px-0.5">
-                                  {isSectEditMode && u.id === user.id ? (
-                                    <input
-                                      type="number"
-                                      step="0.1"
-                                      value={sectEditData[row.date]?.[u.id]?.weight ?? row.entries[u.id]?.weight ?? ""}
-                                      onChange={(e) => handleSectEditChange(row.date, u.id, "weight", e.target.value)}
-                                      placeholder="—"
-                                      className="w-full bg-ink-deep border border-jade-glow/30 rounded px-1 py-0.5 text-cloud-white
-                                                 text-center text-[11px] outline-none focus:border-jade-glow"
-                                    />
-                                  ) : (
-                                    <span className={`text-[11px] ${row.entries[u.id]?.weight ? "text-cloud-white" : "text-mist-dark/50"}`}>
-                                      {row.entries[u.id]?.weight || "—"}
-                                    </span>
-                                  )}
-                                </div>
-                              ))
-                            )}
-
-                            {/* Comments */}
-                            <div className="px-1 min-w-0">
-                              {isSectEditMode ? (
-                                <input
-                                  type="text"
-                                  value={sectEditData[row.date]?.[allUsers[0]?.id]?.comment ?? row.entries[allUsers[0]?.id]?.comment ?? ""}
-                                  onChange={(e) => {
-                                    if (allUsers[0]) handleSectEditChange(row.date, allUsers[0].id, "comment", e.target.value);
-                                  }}
-                                  placeholder="Add notes..."
-                                  className="w-full bg-ink-deep border border-jade-glow/30 rounded px-2 py-0.5 text-cloud-white text-[11px]
-                                             placeholder:text-mist-dark/40 outline-none focus:border-jade-glow"
-                                />
-                              ) : (
-                                <span
-                                  className="text-mist-light/80 text-[11px] truncate block cursor-help hover:text-mist-glow transition-colors"
-                                  title={row.entries[allUsers[0]?.id]?.comment || "No notes"}
-                                >
-                                  {row.entries[allUsers[0]?.id]?.comment || "—"}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {isSectEditMode && filteredCheckInRows.length > 0 && (
-                <motion.div
+                  key={`${member.userId}-${member.dateKey}`}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="flex gap-3 pt-4 border-t border-ink-light"
+                  transition={{ delay: memberIdx * 0.05 }}
+                  className="flex flex-col gap-3 rounded-lg border border-jade-glow/15 bg-ink-dark/40 p-3 sm:p-4"
                 >
-                  <GlowButton
-                    variant="jade"
-                    size="sm"
-                    className="flex-1"
-                    onClick={handleSectEditSave}
-                  >
-                    ✓ Save Changes
-                  </GlowButton>
-                  <GlowButton
-                    variant="ghost"
-                    size="sm"
-                    className="flex-1"
-                    onClick={handleSectEditCancel}
-                  >
-                    ✕ Cancel
-                  </GlowButton>
-                </motion.div>
-              )}
-
-              {filteredCheckInRows.length > 0 && !isSectEditMode && (
-                <div className="text-center pt-2 border-t border-ink-light">
-                  <p className="text-xs text-mist-dark">
-                    Showing {filteredCheckInRows.length} records from the last {sectFilterDays} days
-                  </p>
-                </div>
-              )}
-            </div>
-          </GlowCard>
-        </div>
-      )}
-
-      {/* Day Check-In Modal */}
-      <GlowModal
-        isOpen={!!checkInModal}
-        onClose={() => { setCheckInModal(null); }}
-        title={`Day Check-In — ${checkInModal ? formatDateWithPreference(checkInModal.date, dateFormat) : ""}`}
-      >
-        <div className="space-y-4">
-          {checkInModal && (() => {
-            const modalDate = new Date(checkInModal.date + 'T00:00:00');
-            const todayDate = new Date();
-            todayDate.setHours(0, 0, 0, 0);
-            const diffDays = Math.floor((modalDate.getTime() - todayDate.getTime()) / 86400000);
-            const isFarFuture = diffDays >= 2;
-
-            return (
-            <>
-              <p className="text-xs text-mist-dark">
-                {modalDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
-              </p>
-
-              {isFarFuture && (
-                <div className="px-3 py-2 rounded-lg border border-gold/35 bg-gold-dim/15 text-[11px] text-gold/90">
-                  ⏳ Future date — only shared comments are available. Check-in is restricted to today and the next day.
-                </div>
-              )}
-
-              {/* Check-In Section — Horizontal cultivator boxes (hidden for far-future dates) */}
-              {!isFarFuture && (
-              <div>
-                <label className="block text-xs text-jade-glow uppercase tracking-wider mb-3">
-                  📋 Cultivator Check-In
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {allUsers.map((u, idx) => {
-                    const entry = checkInModal.entries[u.id] || { present: false, weight: "", comment: "" };
-                    const color = normalizeCultivatorColor(userColors[u.id] || DEFAULT_CULTIVATOR_COLORS[idx % DEFAULT_CULTIVATOR_COLORS.length]);
-                    return (
-                      <motion.div
-                        key={u.id}
-                        whileHover={u.id === user.id ? { scale: 1.04 } : {}}
-                        whileTap={u.id === user.id ? { scale: 0.96 } : {}}
-                        className={`rounded-lg border-2 transition-all duration-200 select-none ${
-                          entry.present
-                            ? "bg-jade-deep/30"
-                            : "border-ink-light bg-ink-dark/60"
-                        } ${
-                          u.id === user.id
-                            ? "hover:bg-ink-mid/40 hover:border-mist-dark"
-                            : "opacity-60 cursor-default"
-                        }`}
-                        style={entry.present ? { borderColor: color, boxShadow: `0 0 14px ${getCultivatorGlowColor(color, 0.31)}` } : {}}
-                      >
-                        <div
-                          className={`p-3 text-center ${u.id === user.id ? 'cursor-pointer' : 'cursor-default'}`}
-                          onClick={() => { if (u.id === user.id) updateCheckInModalEntry(u.id, "present", !entry.present); }}
-                        >
-                          <div className="flex flex-col items-center gap-1.5">
-                            <span
-                              className="text-xl font-bold transition-all drop-shadow-[0_0_4px_currentColor]"
-                              style={{ color: entry.present ? color : 'var(--mist-dark)' }}
-                            >
-                              {entry.present ? '✓' : '○'}
-                            </span>
-                            <span className={`text-xs font-medium transition-colors ${entry.present ? 'text-cloud-white' : 'text-mist-mid'}`}>
-                              {u.name}
-                            </span>
-                          </div>
-                        </div>
-                        {entry.present && u.id === user.id && (
-                          <div className="px-2 pb-2">
-                            <input
-                              type="number"
-                              placeholder="Weight (kg)"
-                              value={entry.weight}
-                              onClick={(e) => e.stopPropagation()}
-                              onChange={(e) => updateCheckInModalEntry(u.id, "weight", e.target.value)}
-                              className="w-full bg-ink-deep/80 border border-ink-light rounded px-2 py-1 text-[10px] text-cloud-white placeholder-mist-dark outline-none focus:border-jade-glow transition-colors text-center"
-                              min="0"
-                              max="500"
-                              step="0.1"
-                            />
-                          </div>
-                        )}
-                        {entry.present && u.id !== user.id && entry.weight && (
-                          <div className="px-2 pb-2 text-center">
-                            <span className="text-[10px] text-mist-mid">{entry.weight} kg</span>
-                          </div>
-                        )}
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </div>
-              )}
-
-                {/* Shared Comment */}
-                <div className={isFarFuture ? "" : "mt-4"}>
-                  <label className="block text-[10px] text-mist-dark uppercase mb-1">Shared Comments</label>
-                  <input
-                    type="text"
-                    placeholder="Notes visible to all cultivators..."
-                    value={checkInModal.entries[allUsers[0]?.id]?.comment || ""}
-                    onChange={(e) => {
-                      if (allUsers[0]) {
-                        updateCheckInModalEntry(allUsers[0].id, "comment", e.target.value);
-                      }
-                    }}
-                    className="w-full bg-ink-deep border border-ink-light rounded px-3 py-2 text-xs text-cloud-white placeholder-mist-dark outline-none focus:border-jade-glow transition-colors"
-                  />
-                </div>
-
-                {isFarFuture ? (
-                  <div className="flex gap-2 mt-4">
-                    <GlowButton
-                      variant="jade"
-                      glow
-                      className="flex-1"
-                      onClick={handleSaveCheckIn}
-                      size="sm"
-                    >
-                      💾 Save Note
-                    </GlowButton>
-                    {futureNotes.some(n => n.date === checkInModal.date && n.user.id === user.id) && (
-                      <GlowButton
-                        variant="crimson"
-                        className="flex-1"
-                        onClick={async () => {
-                          const existingNote = futureNotes.find(n => n.date === checkInModal.date && n.user.id === user.id);
-                          if (existingNote) {
-                            await api.delete("/api/checkins/notes", { noteId: existingNote.id });
-                            refreshFutureNotes();
-                            broadcastNotesUpdated();
-                            if (allUsers[0]) updateCheckInModalEntry(allUsers[0].id, "comment", "");
-                          }
-                        }}
-                        size="sm"
-                      >
-                        🗑 Clear Note
-                      </GlowButton>
-                    )}
+                  {/* Member header */}
+                  <div className="grid grid-cols-[40px_1fr_auto] gap-2 mb-3 items-center">
+                    <div className="w-10 h-10 rounded-full bg-jade-glow/20 border border-jade-glow/40 grid place-items-center">
+                      <span className="text-lg font-bold text-jade-light">
+                        {member.userName.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-cloud-white">{member.userName}</h3>
+                      <p className="text-xs text-mist-dark">
+                        {member.logs.length} recent {member.logs.length === 1 ? "entry" : "entries"} • active {timeAgo(member.stats.lastActiveAt)}
+                      </p>
+                    </div>
+                    <div className="justify-self-end rounded-full border border-jade-glow/25 bg-jade-glow/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-mist-mid">
+                      {formatDayHeader(member.dateKey)}
+                    </div>
                   </div>
-                ) : (
-                  <GlowButton
-                    variant="jade"
-                    glow
-                    className="w-full mt-4"
-                    onClick={handleSaveCheckIn}
-                    size="sm"
-                  >
-                    ✓ Save Check-In
-                  </GlowButton>
-                )}
-            </>
-            );
-          })()}
-        </div>
-      </GlowModal>
 
-      {/* Weight Prompt Modal */}
-      <GlowModal
-        isOpen={showWeightPrompt}
-        onClose={() => { setShowWeightPrompt(false); setWeightPromptValue(""); }}
-        title="⚖️ Log Your Weight"
-      >
-        <div className="space-y-5">
-          <p className="text-xs text-mist-mid">
-            You haven&apos;t logged your weight for this check-in. Tracking your weight helps monitor your cultivation progress.
-          </p>
-          <div>
-            <label className="block text-[10px] text-jade-glow uppercase tracking-wider mb-2">Body Weight (kg)</label>
-            <input
-              type="number"
-              placeholder="Enter your weight..."
-              value={weightPromptValue}
-              onChange={(e) => setWeightPromptValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && weightPromptValue) handleWeightPromptSubmit();
-              }}
-              className="w-full bg-ink-deep border border-ink-light rounded-lg px-4 py-4 text-lg text-cloud-white placeholder-mist-dark outline-none focus:border-jade-glow transition-colors text-center font-medium"
-              min="0"
-              max="500"
-              step="0.1"
-              autoFocus
-            />
-          </div>
-          <GlowButton
-            variant="jade"
-            glow
-            className="w-full py-3 text-base"
-            onClick={handleWeightPromptSubmit}
-            disabled={!weightPromptValue}
-          >
-            ⚖️ Save with Weight
-          </GlowButton>
-          <div className="grid grid-cols-2 gap-2">
-            <GlowButton
-              variant="blue"
-              className="w-full"
-              onClick={handleWeightPromptSkip}
-              size="sm"
-            >
-              Skip for Now
-            </GlowButton>
-            <GlowButton
-              variant="ghost"
-              className="w-full"
-              onClick={handleWeightPromptDismissOneHour}
-              size="sm"
-            >
-              Hide 1 Hour
-            </GlowButton>
-          </div>
-          <button
-            onClick={handleWeightPromptDismissToday}
-            className="w-full text-[11px] text-mist-dark hover:text-mist-mid transition-colors py-2 text-center"
-          >
-            Don&apos;t remind me today
-          </button>
-        </div>
-      </GlowModal>
+                  {/* Exercise logs for this member */}
+                  <div className="ml-2 flex flex-col gap-2 border-l border-jade-glow/25 pl-3 sm:pl-4">
+                    {member.logs.map((log, logIdx) => (
+                      <motion.div
+                        key={log.id}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: memberIdx * 0.05 + (logIdx * 0.02) }}
+                        className="rounded-lg border border-jade-glow/20 p-3 sm:p-4 bg-ink-deep/40 hover:border-jade-glow/30 hover:bg-ink-deep/50 transition-all duration-200"
+                      >
+                        <div className="flex items-baseline justify-between gap-3 mb-2">
+                          <h4 className="font-semibold text-jade-light text-sm sm:text-base">
+                            {log.exerciseName}
+                          </h4>
+                          <span className="text-xs text-mist-dark whitespace-nowrap">
+                            {timeAgo(log.createdAt)}
+                          </span>
+                        </div>
+
+                        {/* Sets display */}
+                        <div className="space-y-1.5 mb-2">
+                          {log.weight1 != null && log.reps1 != null && (
+                            <div className="flex items-center gap-2 text-xs sm:text-sm">
+                              <span className="inline-block px-1.5 py-0.5 rounded bg-jade-deep/20 text-jade-light font-medium text-[10px] sm:text-[11px]">
+                                Set 1
+                              </span>
+                              <span className="text-cloud-white">
+                                {formatSetValue(log.weight1, log.weight1 > 0 ? "weighted" : "bodyweight", weightUnit)} × {log.reps1}
+                              </span>
+                            </div>
+                          )}
+                          {log.weight2 != null && log.reps2 != null && (
+                            <div className="flex items-center gap-2 text-xs sm:text-sm">
+                              <span className="inline-block px-1.5 py-0.5 rounded bg-jade-deep/20 text-jade-light font-medium text-[10px] sm:text-[11px]">
+                                Set 2
+                              </span>
+                              <span className="text-cloud-white">
+                                {formatSetValue(log.weight2, log.weight2 > 0 ? "weighted" : "bodyweight", weightUnit)} × {log.reps2}
+                              </span>
+                            </div>
+                          )}
+                          {log.weight3 != null && log.reps3 != null && (
+                            <div className="flex items-center gap-2 text-xs sm:text-sm">
+                              <span className="inline-block px-1.5 py-0.5 rounded bg-jade-deep/20 text-jade-light font-medium text-[10px] sm:text-[11px]">
+                                Set 3
+                              </span>
+                              <span className="text-cloud-white">
+                                {formatSetValue(log.weight3, log.weight3 > 0 ? "weighted" : "bodyweight", weightUnit)} × {log.reps3}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Notes */}
+                        {log.notes && (
+                          <div className="text-[10px] sm:text-xs text-mist-light italic pt-2 border-t border-jade-glow/15 mb-2">
+                            💭 "{log.notes}"
+                          </div>
+                        )}
+
+                        {/* Level badge */}
+                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-jade-glow/15">
+                          <span className="text-[10px] text-mist-dark">Level {log.level} • Volume {calculateLogVolume(log).toFixed(1)} {weightUnit}-reps</span>
+                          {log.completed && (
+                            <span className="text-jade-light font-semibold text-xs">✦ Completed</span>
+                          )}
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+              ))}
+              </div>
+
+              {/* Infinite scroll observer target */}
+              <div
+                ref={observerTarget}
+                className="flex items-center justify-center py-8"
+              >
+                {isLoadingMore ? (
+                  <div className="flex items-center gap-3">
+                    <div className="h-2 w-2 rounded-full bg-jade-glow/60 animate-bounce" />
+                    <div className="h-2 w-2 rounded-full bg-jade-glow/60 animate-bounce" style={{ animationDelay: "0.1s" }} />
+                    <div className="h-2 w-2 rounded-full bg-jade-glow/60 animate-bounce" style={{ animationDelay: "0.2s" }} />
+                    <span className="ml-2 text-xs text-mist-light">Loading more activity...</span>
+                  </div>
+                ) : displayCount < allGroupedByMemberDay.length ? (
+                  <span className="text-xs text-mist-dark">Scroll for more</span>
+                ) : allGroupedByMemberDay.length > 0 ? (
+                  <div className="text-center">
+                    <p className="text-xs text-mist-dark mb-1">No more activity</p>
+                    <span className="text-[10px] text-mist-dark/60">You have seen all {allGroupedByMemberDay.length} recent entries</span>
+                  </div>
+                ) : null}
+              </div>
+            </>
+          )}
+        </>
+      )}
     </PageLayout>
   );
 }

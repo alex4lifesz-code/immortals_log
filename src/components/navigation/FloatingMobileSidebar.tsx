@@ -9,6 +9,8 @@ import { memo, useCallback, useEffect, useRef } from "react";
 import { t } from "@/lib/terminology";
 import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
 
+const ADMIN_NAV_IDS = new Set(["admin", "checkin"]);
+
 function FloatingMobileSidebar() {
   const { getSortedNavItems, isMobile, mobileSidebarOpen, setMobileSidebarOpen } = useAppContext();
   const { user } = useAuth();
@@ -17,7 +19,9 @@ function FloatingMobileSidebar() {
   const router = useRouter();
   const pathname = usePathname();
   const isAdmin = user?.role === "admin";
-  const items = getSortedNavItems().filter(item => item.id !== "admin" || isAdmin);
+  const items = getSortedNavItems().filter((item) => (isAdmin ? true : !ADMIN_NAV_IDS.has(item.id)));
+  const mainItems = items.filter((item) => !ADMIN_NAV_IDS.has(item.id));
+  const adminItems = isAdmin ? items.filter((item) => ADMIN_NAV_IDS.has(item.id)) : [];
   const touchStartXRef = useRef<number | null>(null);
   const touchCurrentXRef = useRef<number | null>(null);
 
@@ -130,7 +134,7 @@ function FloatingMobileSidebar() {
 
             {/* Navigation Items — scrollable */}
             <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-1.5 overscroll-contain">
-              {items.map((item, index) => {
+              {mainItems.map((item, index) => {
                 const isActive = pathname === item.path;
                 return (
                   <motion.button
@@ -156,6 +160,37 @@ function FloatingMobileSidebar() {
                   </motion.button>
                 );
               })}
+
+              {adminItems.length > 0 && (
+                <div className="pt-3 mt-3 border-t border-ink-light/60">
+                  <p className="px-2 pb-2 text-[10px] uppercase tracking-[0.12em] text-gold-dim/85">Admin</p>
+                  <div className="space-y-1.5">
+                    {adminItems.map((item, index) => {
+                      const isActive = pathname === item.path || pathname.startsWith(`${item.path}/`);
+                      return (
+                        <motion.button
+                          key={item.id}
+                          initial={{ x: -20, opacity: 0 }}
+                          animate={{ x: 0, opacity: 1 }}
+                          transition={{ delay: (mainItems.length + index) * 0.03, type: "spring", stiffness: 400, damping: 30 }}
+                          whileTap={{ scale: 0.97 }}
+                          onClick={() => handleNavigate(item.path)}
+                          className={`w-full flex items-center gap-3 px-4 py-4 rounded-xl text-base transition-colors min-h-[56px] border ${
+                            isActive
+                              ? "bg-gold-dim/20 text-gold border-gold/45"
+                              : "text-gold-dim active:text-gold active:bg-gold-dim/15 border-gold/20"
+                          }`}
+                          style={{ WebkitTapHighlightColor: 'transparent' }}
+                        >
+                          <span className="text-xl flex-shrink-0 w-8 text-center">{item.icon}</span>
+                          <span className="flex-1 text-left font-medium">{t(item.label, terminologyMode)}</span>
+                          {isActive && <div className="w-1.5 h-1.5 bg-gold rounded-full flex-shrink-0" />}
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </nav>
 
             {/* Footer */}

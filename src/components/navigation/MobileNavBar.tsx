@@ -9,32 +9,39 @@ import { useRouter, usePathname } from "next/navigation";
 import { t } from "@/lib/terminology";
 import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
 
+const ADMIN_NAV_IDS = new Set(["admin", "checkin"]);
+
 const NAV_ICON_MAP: Record<string, ReactNode> = {
-  "/dashboard": (
+  "/dashboard/community": (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+    </svg>
+  ),
+  "/dashboard/overview": (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z" />
     </svg>
   ),
-  "/dashboard/workout": (
+  "/dashboard/workouts": (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
     </svg>
   ),
-  "/dashboard/history": (
+  "/dashboard/workout-history": (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 12a9 9 0 109-9" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 4v4h4" />
     </svg>
   ),
-  "/dashboard/checkin": (
+  "/dashboard/attendance": (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5a2 2 0 002 2h2a2 2 0 002-2 2 2 0 00-2-2h-2a2 2 0 00-2 2z" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4" />
     </svg>
   ),
-  "/dashboard/exercise-db": (
+  "/dashboard/exercises": (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
     </svg>
@@ -66,7 +73,7 @@ function MobileNavBar() {
   const router = useRouter();
   const pathname = usePathname();
   const isAdmin = user?.role === "admin";
-  const items = getSortedNavItems().filter(item => (item.id !== "admin" || isAdmin));
+  const items = getSortedNavItems().filter((item) => (isAdmin ? true : !ADMIN_NAV_IDS.has(item.id)));
   const [menuOpen, setMenuOpen] = useState(false);
   const [navVisible, setNavVisible] = useState(true);
   const lastScrollYRef = useRef(0);
@@ -74,14 +81,25 @@ function MobileNavBar() {
   const effectiveMobile = isMobile;
 
   const primaryItems = useMemo(() => [
-    items.find(i => i.path === "/dashboard"),
-    items.find(i => i.path === "/dashboard/workout"),
-    items.find(i => i.path === "/dashboard/history"),
+    items.find(i => i.path === "/dashboard/community"),
+    items.find(i => i.path === "/dashboard/overview"),
+    items.find(i => i.path === "/dashboard/workouts"),
+    items.find(i => i.path === "/dashboard/workout-history"),
   ].filter(Boolean) as typeof items, [items]);
 
   const moreItems = useMemo(
     () => items.filter(i => !primaryItems.find(p => p.id === i.id)),
     [items, primaryItems]
+  );
+
+  const regularMoreItems = useMemo(
+    () => moreItems.filter((item) => !ADMIN_NAV_IDS.has(item.id)),
+    [moreItems]
+  );
+
+  const adminMoreItems = useMemo(
+    () => (isAdmin ? moreItems.filter((item) => ADMIN_NAV_IDS.has(item.id)) : []),
+    [isAdmin, moreItems]
   );
 
   const handleNavigate = useCallback((path: string) => {
@@ -136,7 +154,7 @@ function MobileNavBar() {
   // Show the APK-style bottom nav whenever mobile viewport is active.
   if (!effectiveMobile) return null;
 
-  // Build nav button order: [item0, item1, FAB, item2, More]
+  // Build nav button order: [community, overview, workouts, workout-history, more]
   return (
     <>
       {/* Overlay for expanded menu */}
@@ -207,7 +225,7 @@ function MobileNavBar() {
                     </div>
                   </div>
                 )}
-                {moreItems.map((item, index) => (
+                {regularMoreItems.map((item, index) => (
                   <motion.button
                     key={item.id}
                     initial={{ y: 10, opacity: 0 }}
@@ -232,10 +250,42 @@ function MobileNavBar() {
                     <span className="truncate text-[13px] font-medium">{t(item.label, terminologyMode)}</span>
                   </motion.button>
                 ))}
+
+                {adminMoreItems.length > 0 && (
+                  <div className="col-span-2 mt-1 px-1">
+                    <p className="text-[10px] uppercase tracking-[0.14em] text-gold-dim/85">Admin</p>
+                  </div>
+                )}
+
+                {adminMoreItems.map((item, index) => (
+                  <motion.button
+                    key={item.id}
+                    initial={{ y: 10, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: (regularMoreItems.length + index) * 0.04 }}
+                    whileTap={{ scale: 0.97 }}
+                    role="menuitem"
+                    className={`group flex min-h-[50px] items-center gap-2.5 rounded-xl border px-3 py-3 transition-all duration-150 ${
+                      pathname === item.path
+                        ? "border-gold/45 bg-gold-dim/20 text-gold"
+                        : "border-gold/25 bg-gold-dim/10 text-gold-dim hover:border-gold/45 hover:text-gold"
+                    }`}
+                    onClick={() => handleNavigate(item.path)}
+                  >
+                    <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border ${
+                      pathname === item.path
+                        ? "border-gold/45 bg-gold-dim/20"
+                        : "border-gold/25 bg-gold-dim/10"
+                    }`}>
+                      {NAV_ICON_MAP[item.path] ?? <span className="text-base">{item.icon}</span>}
+                    </span>
+                    <span className="truncate text-[13px] font-medium">{t(item.label, terminologyMode)}</span>
+                  </motion.button>
+                ))}
                 <motion.button
                   initial={{ y: 10, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: moreItems.length * 0.04 }}
+                  transition={{ delay: (regularMoreItems.length + adminMoreItems.length) * 0.04 }}
                   whileTap={{ scale: 0.97 }}
                   role="menuitem"
                   className="col-span-2 mt-0.5 flex min-h-[50px] items-center gap-2.5 rounded-xl border border-crimson/25 bg-crimson-deep/8 px-3 py-3 text-crimson-light/85 transition-all duration-150 active:border-crimson/45 active:bg-crimson-deep/20 active:text-crimson-light"
@@ -252,48 +302,12 @@ function MobileNavBar() {
         {/* ── Main Bottom Navigation Bar ── */}
         <nav
           className="relative bg-ink-deep/95 backdrop-blur-lg border-t border-jade-glow/8 flex items-end justify-around px-1 pb-1 safe-area-bottom"
-          style={{
-            borderRadius: '20px 20px 0 0',
-            boxShadow: '0 -2px 20px rgba(0,0,0,0.4)',
-          }}
         >
           {/* Glow accent line */}
           <div className="absolute inset-x-0 top-0 h-px" style={{ background: `linear-gradient(to right, transparent, color-mix(in srgb, var(--accent) 15%, transparent), transparent)` }} />
 
-          {/* Left nav items */}
-          {primaryItems.slice(0, 2).map((item) => {
-            const isActive = pathname === item.path;
-            return (
-              <motion.button
-                key={item.id}
-                whileTap={{ scale: 0.9 }}
-                aria-current={isActive ? "page" : undefined}
-                onClick={() => { router.push(item.path); setMobileSidebarOpen(false); setMenuOpen(false); }}
-                className={`relative flex flex-col items-center justify-center gap-0.5 min-w-[64px] min-h-[56px] pt-2 pb-1 rounded-2xl transition-colors ${
-                  isActive ? "text-[var(--accent)]" : "text-mist-mid active:text-mist-light"
-                }`}
-                style={{ WebkitTapHighlightColor: 'transparent' }}
-              >
-                <div className={`transition-transform duration-200 ${isActive ? "scale-110" : ""}`}>
-                  {NAV_ICON_MAP[item.path] || <span className="text-lg">{item.icon}</span>}
-                </div>
-                <span className={`text-[10px] font-medium tracking-wide ${isActive ? "text-[var(--accent)]" : ""}`}>
-                  {t(item.label, terminologyMode).split(" ")[0]}
-                </span>
-                {isActive && (
-                  <motion.div
-                    layoutId="bottomBarActiveTab"
-                    className="absolute -bottom-0.5 w-6 h-[3px] rounded-full"
-                    style={{ backgroundColor: 'var(--accent)', boxShadow: '0 0 8px color-mix(in srgb, var(--accent) 60%, transparent)' }}
-                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                  />
-                )}
-              </motion.button>
-            );
-          })}
-
-          {/* Right nav item (3rd primary) */}
-          {primaryItems.slice(2, 3).map((item) => {
+          {/* Fixed primary nav items */}
+          {primaryItems.map((item) => {
             const isActive = pathname === item.path;
             return (
               <motion.button

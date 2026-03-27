@@ -12,7 +12,7 @@ function SwipeNavigation({
   const { isMobile, mobileSidebarOpen, setMobileSidebarOpen } = useAppContext();
   const pathname = usePathname();
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
-  const disableEdgeSidebarSwipe = pathname?.startsWith("/dashboard/workout");
+  const disableEdgeSidebarSwipe = pathname?.startsWith("/dashboard/workouts");
 
   const onTouchStart = useCallback((event: React.TouchEvent<HTMLDivElement>) => {
     if (!isMobile) return;

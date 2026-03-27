@@ -16,6 +16,7 @@ const PUBLIC_API_ROUTES = new Set([
 const API_PREFIX = "/api/";
 // Dashboard pages that need auth
 const DASHBOARD_PREFIX = "/dashboard";
+const ADMIN_ONLY_DASHBOARD_ROUTES = ["/dashboard/attendance", "/dashboard/checkin"];
 
 function parseBooleanEnv(value: string | undefined): boolean | null {
   if (!value) return null;
@@ -111,6 +112,16 @@ export async function middleware(request: NextRequest) {
 
     if (!payload.userId || !payload.role) {
       throw new Error("Invalid token payload");
+    }
+
+    // Route-level role guard for admin-only dashboard pages.
+    if (
+      isDashboardRoute &&
+      ADMIN_ONLY_DASHBOARD_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`)) &&
+      payload.role !== "admin"
+    ) {
+      const dashboardUrl = new URL("/dashboard/overview", request.url);
+      return NextResponse.redirect(dashboardUrl);
     }
 
     // Token is valid — check if it should be refreshed (sliding window)

@@ -9,6 +9,7 @@ import { GlowModal } from "@/components/ui/GlowCard";
 import { useAuth } from "@/context/AuthContext";
 import { useAppContext } from "@/context/AppContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
+import { useRouter } from "next/navigation";
 import { formatDateWithPreference } from "@/lib/constants";
 import { syncWeightFromLatestCheckin } from "@/lib/user-physique";
 import { api } from "@/lib/api-client";
@@ -79,6 +80,8 @@ export default function CheckInPage() {
   const { user } = useAuth();
   const { isMobile } = useAppContext();
   const { settings } = useDisplaySettings();
+  const router = useRouter();
+  const isAdmin = user?.role === "admin";
   const dateFormat = settings.dateFormat || "dd-mmm-yyyy";
   const [users, setUsers] = useState<User[]>([]);
   const [rows, setRows] = useState<CheckInRow[]>([]);
@@ -102,6 +105,16 @@ export default function CheckInPage() {
   const [weightPromptValue, setWeightPromptValue] = useState("");
   const weightPromptDismissedRef = useRef(false);
   const [deletingRowDate, setDeletingRowDate] = useState<string | null>(null);
+  const dayNotesStorageKey = useMemo(
+    () => (user?.id ? `cultivation-day-notes:${user.id}` : "cultivation-day-notes"),
+    [user?.id]
+  );
+
+  useEffect(() => {
+    if (user && !isAdmin) {
+      router.replace("/dashboard/overview");
+    }
+  }, [isAdmin, router, user]);
 
   const broadcastNotesUpdated = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -125,7 +138,7 @@ export default function CheckInPage() {
   const fetchData = useCallback(async () => {
     try {
       const [usersData, checkinsData] = await Promise.all([
-        api.get<{ users: User[] }>("/api/users"),
+        api.get<{ users: User[] }>("/api/users/public"),
         api.get<{ checkins: Array<{ date: string; userId: string; present: boolean; weight?: number; comment?: string }> }>("/api/checkins"),
       ]);
       setUsers(usersData.users || []);
@@ -197,13 +210,13 @@ export default function CheckInPage() {
     setWeightPromptValue("");
   };
 
-  // Load day notes from localStorage
+  // Load day notes from per-user localStorage
   useEffect(() => {
     try {
-      const saved = localStorage.getItem("cultivation-day-notes");
+      const saved = localStorage.getItem(dayNotesStorageKey);
       if (saved) setDayNotes(JSON.parse(saved));
     } catch { /* ignore */ }
-  }, []);
+  }, [dayNotesStorageKey]);
 
   const saveDayNote = (date: string, note: string) => {
     setDayNotes(prev => {
@@ -213,7 +226,7 @@ export default function CheckInPage() {
         if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
         return b.date.localeCompare(a.date);
       });
-      localStorage.setItem("cultivation-day-notes", JSON.stringify(updated));
+      localStorage.setItem(dayNotesStorageKey, JSON.stringify(updated));
       return updated;
     });
     setEditingNote(null);
@@ -226,7 +239,7 @@ export default function CheckInPage() {
         if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
         return b.date.localeCompare(a.date);
       });
-      localStorage.setItem("cultivation-day-notes", JSON.stringify(updated));
+      localStorage.setItem(dayNotesStorageKey, JSON.stringify(updated));
       return updated;
     });
   };
@@ -427,7 +440,25 @@ export default function CheckInPage() {
   );
 
   const useMobileTableStyling = isMobile;
-  const compactCheckinRegister = useMobileTableStyling && !isEditMode;
+  const compactCheckinRegister = useMobileTableStyling && !isEditMode && !isAdmin;
+
+  const getRowCommentSummary = useCallback(
+    (row: CheckInRow): string => {
+      if (!isAdmin) {
+        return (user?.id ? row.entries[user.id]?.comment : "") || "";
+      }
+
+      const comments = users
+        .map((u) => {
+          const text = row.entries[u.id]?.comment?.trim();
+          return text ? `${u.name}: ${text}` : null;
+        })
+        .filter((value): value is string => Boolean(value));
+
+      return comments.join(" | ");
+    },
+    [isAdmin, user?.id, users]
+  );
 
   const checkinGridTemplateColumns = useMemo(
     () => `${isEditMode ? '104px' : '80px'} repeat(${users.length}, 44px) ${compactCheckinRegister ? '72px' : `repeat(${users.length}, 48px)`} minmax(180px, 1fr)`,
@@ -442,14 +473,9 @@ export default function CheckInPage() {
     return `${dateCol + checkCols + weightCols + commentsCol}px`;
   }, [compactCheckinRegister, isEditMode, users.length]);
 
-  const getCommentOwnerId = useCallback(
-    (row: CheckInRow): string | null => {
-      if (user?.id && row.entries[user.id]?.comment?.trim()) return user.id;
-      const withComment = users.find((u) => row.entries[u.id]?.comment?.trim());
-      return withComment?.id ?? (user?.id || users[0]?.id || null);
-    },
-    [user?.id, users]
-  );
+  if (user && !isAdmin) {
+    return null;
+  }
 
   return (
     <PageLayout
@@ -629,45 +655,44 @@ export default function CheckInPage() {
           >
             <div className="overflow-x-auto w-full">
               {/* Toolbar */}
-              <div className="mb-3 flex flex-wrap items-center gap-2">
-                <button
-                  onClick={() => {
-                    const next = sortOrder === "newest" ? "oldest" : "newest";
-                    setSortOrder(next);
-                    localStorage.setItem("checkin-sort-order", next);
-                  }}
-                  className="px-2.5 py-0.5 text-[10px] rounded border border-ink-light/50 text-mist-dark hover:text-mist-light hover:border-ink-light transition-all"
-                  title={sortOrder === "newest" ? "Showing newest first — click for oldest first" : "Showing oldest first — click for newest first"}
-                >
-                  {sortOrder === "newest" ? "↓ Newest" : "↑ Oldest"}
-                </button>
-                <span className="text-[10px] text-mist-dark ml-auto">
-                  {rows.length} records
-                </span>
-                {rows.length > 0 && !isEditMode && (
+              <div className="mb-4 rounded-lg border border-ink-light/35 bg-ink-mid/15 p-2.5 sm:p-3 space-y-2.5">
+                <div className="flex flex-wrap items-center gap-2">
                   <button
-                    onClick={handleEditToggle}
-                    className="px-2.5 py-0.5 text-[10px] rounded border border-ink-light/50 text-mist-dark hover:text-mist-light hover:border-ink-light transition-all"
+                    onClick={() => {
+                      const next = sortOrder === "newest" ? "oldest" : "newest";
+                      setSortOrder(next);
+                      localStorage.setItem("checkin-sort-order", next);
+                    }}
+                    className="px-2.5 py-1 text-[10px] rounded border border-ink-light/50 text-mist-dark hover:text-mist-light hover:border-ink-light transition-all"
+                    title={sortOrder === "newest" ? "Showing newest first — click for oldest first" : "Showing oldest first — click for newest first"}
                   >
-                    ✎ Edit
+                    {sortOrder === "newest" ? "↓ Newest" : "↑ Oldest"}
                   </button>
+                  <span className="text-[10px] text-mist-dark sm:ml-auto">
+                    {rows.length} records
+                  </span>
+                  {rows.length > 0 && !isEditMode && (
+                    <button
+                      onClick={handleEditToggle}
+                      className="px-3 py-1 text-[10px] rounded border border-jade-glow/45 bg-jade-deep/20 text-jade-light hover:text-jade-glow hover:border-jade-glow transition-all"
+                    >
+                      ✎ Enter Edit Mode
+                    </button>
+                  )}
+                </div>
+
+                {isEditMode && rows.length > 0 && (
+                  <div className="rounded-md border border-jade-glow/35 bg-jade-deep/10 px-2.5 py-2">
+                    <div className="flex flex-wrap gap-2">
+                      <GlowButton variant="jade" size="sm" className="flex-1 min-w-[130px]" onClick={handleEditToggle}>✓ Save Changes</GlowButton>
+                      <GlowButton variant="ghost" size="sm" className="flex-1 min-w-[130px]" onClick={handleEditCancel}>✕ Cancel</GlowButton>
+                    </div>
+                    <p className="mt-2 text-[10px] text-jade-light/90">
+                      Edit mode active. Use the red Remove button at the left of each date to delete a row.
+                    </p>
+                  </div>
                 )}
               </div>
-
-              {/* Save/Cancel at top when newest-first */}
-              {isEditMode && sortOrder === "newest" && rows.length > 0 && (
-                <div className="mb-2 flex flex-wrap gap-3 border-b border-ink-light pb-3">
-                  <GlowButton variant="jade" size="sm" className="flex-1" onClick={handleEditToggle}>✓ Save Changes</GlowButton>
-                  <GlowButton variant="ghost" size="sm" className="flex-1" onClick={handleEditCancel}>✕ Cancel</GlowButton>
-                </div>
-              )}
-
-              {/* Edit mode banner */}
-              {isEditMode && (
-                <div className="p-2.5 mb-3 rounded-lg border bg-jade-deep/10 border-jade/40 text-[11px] text-jade-light">
-                  Edit mode enabled. Modify your weight and comment data below, then click Save or Cancel.
-                </div>
-              )}
 
               <div style={{ minWidth: checkinGridMinWidth }}>
                 {/* Grid header */}
@@ -693,7 +718,7 @@ export default function CheckInPage() {
                       <div key={`h-w-${u.id}`} className="text-center px-0.5">{u.name.charAt(0)}.Wt</div>
                     ))
                   )}
-                  <div className="px-1">Comments</div>
+                  <div className="px-1">{isAdmin ? "All Comments" : "My Comments"}</div>
                 </div>
 
                 {sortedRows.length === 0 ? (
@@ -723,32 +748,32 @@ export default function CheckInPage() {
                           style={{ gridTemplateColumns: checkinGridTemplateColumns }}
                         >
                           {/* Date + Day */}
-                          <div className="px-1 flex items-center gap-1">
+                          <div className="px-1 flex items-center gap-1.5">
                             {isEditMode && (
                               deletingRowDate === row.date ? (
-                                <div className="flex items-center gap-0.5 shrink-0">
+                                <div className="flex items-center gap-1 shrink-0">
                                   <button
                                     onClick={() => handleDeleteRow(row.date)}
-                                    className="text-[9px] text-crimson-light hover:text-crimson-glow transition-colors"
+                                    className="inline-flex items-center rounded-md border border-crimson/80 bg-crimson-deep/40 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-crimson-light hover:bg-crimson-deep/60 hover:text-crimson-glow transition-colors"
                                     title="Confirm delete"
                                   >
-                                    ✓
+                                    Delete
                                   </button>
                                   <button
                                     onClick={() => setDeletingRowDate(null)}
-                                    className="text-[9px] text-mist-dark hover:text-mist-light transition-colors"
+                                    className="inline-flex items-center rounded-md border border-ink-light/50 bg-ink-dark/60 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-mist-dark hover:text-mist-light hover:border-mist-dark/70 transition-colors"
                                     title="Cancel"
                                   >
-                                    ✕
+                                    Keep
                                   </button>
                                 </div>
                               ) : (
                                 <button
                                   onClick={() => setDeletingRowDate(row.date)}
-                                  className="text-[9px] text-mist-dark hover:text-crimson-light transition-colors shrink-0"
+                                  className="inline-flex items-center rounded-md border border-crimson/60 bg-crimson-deep/30 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-crimson-light hover:bg-crimson-deep/55 hover:text-crimson-glow transition-colors shrink-0"
                                   title="Delete this row"
                                 >
-                                  🗑
+                                  Remove
                                 </button>
                               )
                             )}
@@ -769,7 +794,7 @@ export default function CheckInPage() {
                           {users.map((u) => {
                             const isPresent = row.entries[u.id]?.present || false;
                             const isOwn = u.id === user?.id;
-                            const canEdit = isOwn && isEditMode;
+                            const canEdit = isEditMode && (isOwn || isAdmin);
                             return (
                               <div key={`c-${row.date}-${u.id}`} className="flex justify-center">
                                 {canEdit ? (
@@ -842,36 +867,41 @@ export default function CheckInPage() {
                           {/* Comments */}
                           <div className="px-1 min-w-0">
                             {isEditMode ? (
-                              (() => {
-                                const commentOwnerId = getCommentOwnerId(row);
-                                return (
-                                  <input
-                                    type="text"
-                                    value={commentOwnerId ? row.entries[commentOwnerId]?.comment || "" : ""}
-                                    onChange={(e) => {
-                                      if (commentOwnerId) {
-                                        updateCell(row.date, commentOwnerId, "comment", e.target.value);
-                                      }
-                                    }}
-                                    placeholder="Add notes..."
-                                    className="w-full bg-ink-deep border border-jade-glow/30 rounded px-2 py-0.5 text-cloud-white text-[11px]
-                                               placeholder:text-mist-dark/40 outline-none focus:border-jade-glow"
-                                  />
-                                );
-                              })()
+                              isAdmin ? (
+                                <div className="space-y-1">
+                                  {users.map((u) => (
+                                    <input
+                                      key={`comment-${row.date}-${u.id}`}
+                                      type="text"
+                                      value={row.entries[u.id]?.comment || ""}
+                                      onChange={(e) => updateCell(row.date, u.id, "comment", e.target.value)}
+                                      placeholder={`${u.name} note...`}
+                                      className="w-full bg-ink-deep border border-jade-glow/30 rounded px-2 py-0.5 text-cloud-white text-[11px]
+                                                 placeholder:text-mist-dark/40 outline-none focus:border-jade-glow"
+                                    />
+                                  ))}
+                                </div>
+                              ) : (
+                                <input
+                                  type="text"
+                                  value={user?.id ? row.entries[user.id]?.comment || "" : ""}
+                                  onChange={(e) => {
+                                    if (user?.id) {
+                                      updateCell(row.date, user.id, "comment", e.target.value);
+                                    }
+                                  }}
+                                  placeholder="Add your notes..."
+                                  className="w-full bg-ink-deep border border-jade-glow/30 rounded px-2 py-0.5 text-cloud-white text-[11px]
+                                             placeholder:text-mist-dark/40 outline-none focus:border-jade-glow"
+                                />
+                              )
                             ) : (
-                              (() => {
-                                const commentOwnerId = getCommentOwnerId(row);
-                                const commentText = commentOwnerId ? row.entries[commentOwnerId]?.comment || "" : "";
-                                return (
-                                  <span
-                                    className="text-mist-light/80 text-[11px] truncate block cursor-help hover:text-mist-glow transition-colors"
-                                    title={commentText || "No notes"}
-                                  >
-                                    {commentText || "—"}
-                                  </span>
-                                );
-                              })()
+                              <span
+                                className="text-mist-light/80 text-[11px] truncate block cursor-help hover:text-mist-glow transition-colors"
+                                title={getRowCommentSummary(row) || "No notes"}
+                              >
+                                {getRowCommentSummary(row) || "—"}
+                              </span>
                             )}
                           </div>
                         </div>
@@ -880,14 +910,6 @@ export default function CheckInPage() {
                   </div>
                 )}
               </div>
-
-              {/* Save/Cancel at bottom when oldest-first */}
-              {isEditMode && sortOrder === "oldest" && rows.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-3 border-t border-ink-light pt-4">
-                  <GlowButton variant="jade" size="sm" className="flex-1" onClick={handleEditToggle}>✓ Save Changes</GlowButton>
-                  <GlowButton variant="ghost" size="sm" className="flex-1" onClick={handleEditCancel}>✕ Cancel</GlowButton>
-                </div>
-              )}
 
               {/* Footer */}
               {rows.length > 0 && !isEditMode && (

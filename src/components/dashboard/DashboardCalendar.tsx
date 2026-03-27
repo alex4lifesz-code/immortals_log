@@ -4,12 +4,20 @@ import { motion } from "framer-motion";
 import GlowCard from "@/components/ui/GlowCard";
 import GlowButton from "@/components/ui/GlowButton";
 import { useAppContext } from "@/context/AppContext";
+import { formatDateWithPreference } from "@/lib/constants";
 
 export interface DashboardUser {
   id: string;
   name: string;
   username: string;
   sessionCount?: number;
+}
+
+export interface DashboardUpcomingNote {
+  id: string;
+  date: string;
+  content: string;
+  user: { id: string; name: string };
 }
 
 const CULTIVATOR_VAR_TO_RGB_VAR: Record<string, string> = {
@@ -189,7 +197,31 @@ function CalendarDay({ date, checkedInUsers, isToday, isPast, hasNote, hasFuture
 
 // ── Calendar Widget ──
 
-export function Calendar({ checkInUsersByDate, currentMonth, setCurrentMonth, dayNotes, futureNoteDates, onDayClick, allUsers, userColors }: { checkInUsersByDate: Map<string, string[]>; currentMonth: Date; setCurrentMonth: (d: Date) => void; dayNotes?: Map<string, string>; futureNoteDates?: Set<string>; onDayClick?: (date: string) => void; allUsers: DashboardUser[]; userColors: Record<string, string> }) {
+export function Calendar({
+  checkInUsersByDate,
+  currentMonth,
+  setCurrentMonth,
+  dayNotes,
+  futureNoteDates,
+  onDayClick,
+  allUsers,
+  userColors,
+  upcomingNotes,
+  dateFormat = "dd-mmm-yyyy",
+  onManageNotes,
+}: {
+  checkInUsersByDate: Map<string, string[]>;
+  currentMonth: Date;
+  setCurrentMonth: (d: Date) => void;
+  dayNotes?: Map<string, string>;
+  futureNoteDates?: Set<string>;
+  onDayClick?: (date: string) => void;
+  allUsers: DashboardUser[];
+  userColors: Record<string, string>;
+  upcomingNotes?: DashboardUpcomingNote[];
+  dateFormat?: "dd-mm-yyyy" | "dd-mmm-yyyy" | "dd-mm-yy" | "dd-mmm-yy";
+  onManageNotes?: () => void;
+}) {
   const { isMobile } = useAppContext();
   const compactMode = isMobile;
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
@@ -276,6 +308,60 @@ export function Calendar({ checkInUsersByDate, currentMonth, setCurrentMonth, da
           </div>
         ))}
       </div>
+
+      {upcomingNotes && upcomingNotes.length > 0 && (
+        <div className="pt-3 border-t border-ink-light/70 space-y-2.5">
+          <div className="flex items-center gap-2">
+            <h4 className={`${compactMode ? "text-[11px]" : "text-xs"} text-gold-glow uppercase tracking-wide font-semibold`}>Upcoming Notes</h4>
+            {!!upcomingNotes?.length && (
+              <span className="text-[9px] text-gold-glow bg-gold-dim/20 px-2 py-0.5 rounded-full font-medium">{upcomingNotes.length}</span>
+            )}
+            {onManageNotes && (
+              <button
+                onClick={onManageNotes}
+                className="ml-auto text-[10px] text-gold-light/70 hover:text-gold-glow transition-colors hover:underline"
+                title="Manage notes in Sect Register"
+              >
+                Manage &rarr;
+              </button>
+            )}
+          </div>
+
+          <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+            {upcomingNotes.map((note) => {
+              const noteUserIdx = allUsers.findIndex((u) => u.id === note.user.id);
+              const noteColor = normalizeCultivatorColor(
+                userColors[note.user.id] ||
+                  DEFAULT_CULTIVATOR_COLORS[noteUserIdx >= 0 ? noteUserIdx % DEFAULT_CULTIVATOR_COLORS.length : 0],
+              );
+              return (
+                <button
+                  key={note.id}
+                  onClick={() => onDayClick?.(note.date)}
+                  className="w-full text-left p-2 rounded-lg border border-ink-light/45 bg-gradient-to-r from-ink-dark/40 to-ink-mid/20 hover:from-gold-dim/12 hover:to-gold-dim/8 hover:border-gold-dim/45 transition-all duration-200"
+                  title="Jump to this date"
+                >
+                  <div className="flex items-start gap-2">
+                    <div
+                      className="w-2 h-2 rounded-full shrink-0 mt-1.5 shadow-lg"
+                      style={{ backgroundColor: noteColor, boxShadow: `0 0 6px ${getCultivatorGlowColor(noteColor, 0.6)}` }}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span className="text-[11px] font-semibold truncate" style={{ color: noteColor }}>{note.user.name}</span>
+                        <span className="text-[9px] text-mist-mid bg-ink-mid/40 px-1.5 py-0.5 rounded">
+                          {formatDateWithPreference(note.date, dateFormat)}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-mist-light leading-relaxed line-clamp-2">{note.content}</p>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className={`pt-3 border-t border-ink-light flex flex-wrap ${compactMode ? "gap-2 text-[10px]" : "gap-3 text-xs"}`}>
         <div className="flex items-center gap-2">

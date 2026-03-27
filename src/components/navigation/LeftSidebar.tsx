@@ -10,6 +10,8 @@ import { NavItem } from "@/lib/constants";
 import { t } from "@/lib/terminology";
 import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
 
+const ADMIN_NAV_IDS = new Set(["admin", "checkin"]);
+
 function LeftSidebar() {
   const { getSortedNavItems, isMobile, reorderNavItems } = useAppContext();
   const { logout, user } = useAuth();
@@ -18,7 +20,9 @@ function LeftSidebar() {
   const router = useRouter();
   const pathname = usePathname();
   const isAdmin = user?.role === "admin";
-  const items = getSortedNavItems().filter(item => (item.id !== "admin" || isAdmin));
+  const items = getSortedNavItems();
+  const mainItems = items.filter((item) => !ADMIN_NAV_IDS.has(item.id));
+  const adminItems = isAdmin ? items.filter((item) => ADMIN_NAV_IDS.has(item.id)) : [];
   const [isDragging, setIsDragging] = useState(false);
 
   // Hide only on mobile; keep desktop sidebar visible until mobile layout kicks in.
@@ -38,11 +42,14 @@ function LeftSidebar() {
 
       <Reorder.Group
         axis="y"
-        values={items}
-        onReorder={(newOrder: NavItem[]) => reorderNavItems(newOrder)}
+        values={mainItems}
+        onReorder={(newOrder: NavItem[]) => {
+          const adminTail = items.filter((item) => ADMIN_NAV_IDS.has(item.id));
+          reorderNavItems([...newOrder, ...adminTail]);
+        }}
         className="flex-1 px-2 space-y-1"
       >
-        {items.map((item, index) => {
+        {mainItems.map((item, index) => {
           const isActive = pathname === item.path;
           return (
             <Reorder.Item
@@ -82,6 +89,32 @@ function LeftSidebar() {
             </Reorder.Item>
           );
         })}
+
+        {adminItems.length > 0 && (
+          <div className="pt-3 mt-3 border-t border-ink-light/70">
+            <p className="px-2 pb-2 text-[10px] uppercase tracking-widest text-gold-dim/80">Admin</p>
+            <div className="space-y-1">
+              {adminItems.map((item) => {
+                const isActive = pathname === item.path || pathname.startsWith(`${item.path}/`);
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => router.push(item.path)}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 border ${
+                      isActive
+                        ? "bg-gold-dim/20 text-gold border-gold/40"
+                        : "text-gold-dim/90 hover:text-gold hover:bg-gold-dim/10 border-transparent"
+                    }`}
+                  >
+                    <span className="text-base select-none">{item.icon}</span>
+                    <span className="flex-1 text-left select-none">{t(item.label, terminologyMode)}</span>
+                    {isActive && <span className="w-1 h-4 rounded-full bg-gold/80" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </Reorder.Group>
 
       <div className="px-4 pt-4 border-t border-ink-light mt-4 space-y-2">

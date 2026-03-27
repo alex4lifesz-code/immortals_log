@@ -914,7 +914,7 @@ export default function ProgressionPage() {
                             if (typeof queueFilterLevel === "number") {
                               params.set("level", String(queueFilterLevel));
                             }
-                            router.push(`/dashboard/history?${params.toString()}`);
+                            router.push(`/dashboard/workout-history?${params.toString()}`);
                           }}
                           className={`inline-flex h-6 items-center justify-center rounded-md border px-2 text-[10px] font-semibold leading-none transition-all duration-150 ${
                             isFilterActiveForRow

@@ -47,7 +47,7 @@ export default function MobileTrainingPage() {
           />
         ))}
       </section>
-      <MobileFAB label="Start" icon="\u25b6" onClick={() => (window.location.href = "/dashboard/workout")} />
+      <MobileFAB label="Start" icon="\u25b6" onClick={() => (window.location.href = "/dashboard/workouts")} />
     </div>
   );
 }

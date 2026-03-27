@@ -68,7 +68,7 @@ export interface DisplaySettings {
 
 const DEFAULT_SETTINGS: DisplaySettings = {
   dateFormat: "dd-mmm-yyyy",
-  terminologyMode: "fantasy",
+  terminologyMode: "normal",
   progressionVariationDisplay: "abbreviation",
   defaultWeightUnit: "kg",
 };

@@ -9,11 +9,12 @@ export interface NavItem {
 }
 
 export const defaultNavItems: NavItem[] = [
-  { id: "dashboard", label: "Dao Hall", icon: "⛩️", path: "/dashboard", pinned: false, visible: true },
-  { id: "workout", label: "Training Grounds", icon: "⚔️", path: "/dashboard/workout", pinned: false, visible: true },
-  { id: "history", label: "Training History", icon: "📜", path: "/dashboard/history", pinned: false, visible: true },
-  { id: "checkin", label: "Sect Register", icon: "📋", path: "/dashboard/checkin", pinned: false, visible: true },
-  { id: "exercise-db", label: "Exercise DB", icon: "📚", path: "/dashboard/exercise-db", pinned: false, visible: true },
+  { id: "dashboard", label: "Dao Hall", icon: "⛩️", path: "/dashboard/overview", pinned: false, visible: true },
+  { id: "newsfeed", label: "Sect Hall", icon: "🌿", path: "/dashboard/community", pinned: false, visible: true },
+  { id: "workout", label: "Training Grounds", icon: "⚔️", path: "/dashboard/workouts", pinned: false, visible: true },
+  { id: "history", label: "Ancient Records", icon: "📜", path: "/dashboard/workout-history", pinned: false, visible: true },
+  { id: "checkin", label: "Sect Register", icon: "📋", path: "/dashboard/attendance", pinned: false, visible: true },
+  { id: "exercise-db", label: "Technique Scroll", icon: "📚", path: "/dashboard/exercises", pinned: false, visible: true },
   { id: "settings", label: "Inner Chamber", icon: "⚙️", path: "/dashboard/settings", pinned: false, visible: true },
   { id: "admin", label: "Administrative Palace", icon: "👑", path: "/dashboard/admin", pinned: false, visible: true },
 ];

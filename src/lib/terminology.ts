@@ -9,13 +9,16 @@ export type TerminologyMode = "fantasy" | "normal";
 // Keys are the fantasy terms (which are the defaults in the existing UI).
 const terminologyMap: Record<string, string> = {
   // ── Navigation Labels ──
-  "Dao Hall": "Dashboard",
-  "Training Grounds": "Workout",
+  "Dao Hall": "Overview",
+  "Training Grounds": "Workouts",
   "Technique Scroll": "Exercise Library",
-  "Sect Register": "Check-In Log",
+  "Sect Register": "Attendance",
   "Cultivation Path": "Progress",
-  "Ancient Records": "History",
-  "Sect Hall": "Community",
+  "Ancient Records": "Workout History",
+  "Sect Hall": "Community Feed",
+  "Community Feed": "Community Feed",
+  "Training History": "Workout History",
+  "Exercise DB": "Exercise Library",
   "Inner Chamber": "Settings",
   "Administrative Palace": "Admin Panel",
   "Ascension Codex": "Progressions",

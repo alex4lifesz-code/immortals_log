@@ -2,23 +2,23 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 
-// GET /api/checkins/notes?date=YYYY-MM-DD  — fetch all community notes for a date (or all if no date)
+// GET /api/checkins/notes?date=YYYY-MM-DD  — fetch current user's notes for a date (or all if no date)
 // GET /api/checkins/notes?future=true — fetch notes for dates beyond today
-export const GET = withAuth(async (request) => {
+export const GET = withAuth(async (request, { auth }) => {
   try {
     const { searchParams } = new URL(request.url);
     const date = searchParams.get("date");
     const future = searchParams.get("future");
     const clientToday = searchParams.get("today");
 
-    let where: Record<string, unknown> = {};
+    let where: Record<string, unknown> = { userId: auth.userId };
     if (future === "true") {
       const todayStr = clientToday && /^\d{4}-\d{2}-\d{2}$/.test(clientToday)
         ? clientToday
         : (() => { const today = new Date(); return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`; })();
-      where = { date: { gt: todayStr } };
+      where = { ...where, date: { gt: todayStr } };
     } else if (date) {
-      where = { date };
+      where = { ...where, date };
     }
 
     const notes = await prisma.checkInNote.findMany({

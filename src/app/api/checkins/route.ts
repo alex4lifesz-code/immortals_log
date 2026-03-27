@@ -2,13 +2,22 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth, withAdmin } from "@/lib/auth/middleware";
 
-export const GET = withAuth(async () => {
+export const GET = withAuth(async (_request, { auth }) => {
   try {
     const checkins = await prisma.checkIn.findMany({
       include: { user: { select: { id: true, name: true } } },
       orderBy: { date: "desc" },
     });
-    return NextResponse.json({ checkins });
+
+    const safeCheckins = auth.role === "admin"
+      ? checkins
+      : checkins.map((checkin) =>
+          checkin.userId === auth.userId
+            ? checkin
+            : { ...checkin, comment: null }
+        );
+
+    return NextResponse.json({ checkins: safeCheckins });
   } catch (error) {
     console.error("CheckIn fetch error:", error);
     return NextResponse.json({ error: "Failed to fetch check-ins" }, { status: 500 });
@@ -109,7 +118,7 @@ export const DELETE = withAdmin(async (request) => {
           { status: 400 }
         );
       }
-      // Also delete any community notes for this date
+      // Also delete notes for this date
       await prisma.checkInNote.deleteMany({ where: { date } });
       const result = await prisma.checkIn.deleteMany({ where: { date: dateObj } });
       return NextResponse.json({

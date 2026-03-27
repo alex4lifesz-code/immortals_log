@@ -1,38 +1,18 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useState, useEffect, memo } from "react";
+import { memo } from "react";
 import { useAppContext } from "@/context/AppContext";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
-import { t } from "@/lib/terminology";
 
 function DesktopNavBar() {
-  const { getSortedNavItems, collapsed, isMobile, topPanelExpanded, setTopPanelExpanded } = useAppContext();
+  const { collapsed, topPanelExpanded, setTopPanelExpanded } = useAppContext();
   const { user } = useAuth();
-  const { settings } = useDisplaySettings();
   const router = useRouter();
-  const pathname = usePathname();
   const isAdmin = user?.role === "admin";
-  const items = getSortedNavItems().filter(item => (item.id !== "admin" || isAdmin));
-  const [isCompactDesktop, setIsCompactDesktop] = useState(false);
-  const [elevated] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const updateCompactDesktop = () => {
-      setIsCompactDesktop(window.innerWidth <= 1280);
-    };
-
-    updateCompactDesktop();
-    window.addEventListener("resize", updateCompactDesktop);
-    return () => window.removeEventListener("resize", updateCompactDesktop);
-  }, []);
-
-  const visibleDesktopItems = isCompactDesktop ? items : items.slice(0, 4);
+  const elevated = false;
 
   // Mobile: no stats panel needed
   if (collapsed) {
@@ -76,38 +56,21 @@ function DesktopNavBar() {
             className="text-jade-glow text-xs font-bold whitespace-nowrap tracking-wider cursor-pointer"
             role="link"
             tabIndex={0}
-            onClick={() => router.push("/dashboard")}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); router.push("/dashboard"); } }}
+            onClick={() => router.push("/dashboard/overview")}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); router.push("/dashboard/overview"); } }}
             whileHover={{ scale: 1.05 }}
           >
             ⚔️ Immortal's Log
           </motion.span>
         </div>
 
-        {/* Navigation Items — desktop only */}
-        {!isMobile && (
-          <nav className="flex items-center gap-1" aria-label="Main navigation">
-            {visibleDesktopItems.map((item) => (
-              <motion.button
-                key={item.id}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => router.push(item.path)}
-                aria-current={pathname === item.path ? "page" : undefined}
-                className={`px-3 py-1 text-xs rounded-md transition-all duration-200 whitespace-nowrap ${
-                  pathname === item.path
-                    ? "bg-jade-deep text-jade-light glow-subtle"
-                    : "text-mist-light hover:text-cloud-white hover:bg-ink-mid"
-                }`}
-              >
-                {item.icon} {t(item.label, settings.terminologyMode ?? "fantasy")}
-              </motion.button>
-            ))}
-          </nav>
-        )}
-
         {/* Right section */}
         <div className="flex-1 flex items-center justify-end gap-3 border-l border-ink-light pl-3">
+          {isAdmin && (
+            <span className="px-2 py-0.5 rounded-full border border-gold/40 text-[10px] uppercase tracking-wide text-gold-dim">
+              Admin
+            </span>
+          )}
           {user && (
             <div className="flex items-center gap-1.5">
               <span className="text-xs text-mist-dark">🧑</span>
