@@ -3,14 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useHapticFeedback } from "@/hooks/useHapticFeedback";
-
-const tabs = [
-  { href: "/dashboard/mobile", label: "Home", icon: "\u2302" },
-  { href: "/dashboard/mobile/training", label: "Training", icon: "\u2694" },
-  { href: "/dashboard/mobile/check-in", label: "Check-In", icon: "\u270e" },
-  { href: "/dashboard/mobile/progress", label: "Progress", icon: "\u25c9" },
-  { href: "/dashboard/mobile/profile/settings/theme", label: "Theme", icon: "\u25e8" },
-] as const;
+import { MOBILE_BOTTOM_TABS } from "@/lib/navigation";
 
 export default function MobileBottomNav() {
   const pathname = usePathname();
@@ -19,7 +12,7 @@ export default function MobileBottomNav() {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-ink-deep/95 pb-[max(env(safe-area-inset-bottom,0px),8px)] pt-2 backdrop-blur-sm">
       <ul className="mx-auto grid max-w-xl grid-cols-5 gap-1 px-2">
-        {tabs.map((tab) => {
+        {MOBILE_BOTTOM_TABS.map((tab) => {
           const active = pathname === tab.href;
           return (
             <li key={tab.href}>

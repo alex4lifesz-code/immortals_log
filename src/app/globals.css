@@ -3,6 +3,12 @@
 /* ===== Cultivation Workout — Wuxia Ink Painting Theme ===== */
 
 :root {
+  /* Device safe area insets */
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-right: env(safe-area-inset-right, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-inset-left: env(safe-area-inset-left, 0px);
+
   /* Core palette extracted from the wuxia mountain painting */
   --void-black: #0d0f14;
   --ink-deep: #151823;
@@ -127,6 +133,30 @@
     --theme-preview-sakura-dark-2: #1a1420;
     --theme-preview-sakura-dark-3: #d4508a;
     --theme-preview-sakura-dark-4: #e898aa;
+
+    /* Eternal Theme preview colors */
+    --theme-preview-eternal-1: #fafbfc;
+    --theme-preview-eternal-2: #f1f3f5;
+    --theme-preview-eternal-3: #7ac943;
+    --theme-preview-eternal-4: #4b5563;
+
+    /* Discord Theme preview colors */
+    --theme-preview-discord-1: #1e1f22;
+    --theme-preview-discord-2: #2b2d31;
+    --theme-preview-discord-3: #5865f2;
+    --theme-preview-discord-4: #f2f3f5;
+
+    /* Document Theme preview colors */
+    --theme-preview-document-1: #f8f5f2;
+    --theme-preview-document-2: #d4cdc5;
+    --theme-preview-document-3: #3a58a0;
+    --theme-preview-document-4: #201c18;
+
+    /* Nyaa Theme preview colors */
+    --theme-preview-nyaa-1: #edf2f8;
+    --theme-preview-nyaa-2: #ffffff;
+    --theme-preview-nyaa-3: #2e51a2;
+    --theme-preview-nyaa-4: #6aa84f;
 
     /* Cultivator colors */
     --cultivator-jade: #3a8f8f;
@@ -565,8 +595,27 @@ input[type="number"] {
 
 /* ===== Mobile Safe Area & Responsive Utilities ===== */
 
+.safe-area-shell {
+  box-sizing: border-box;
+  padding-top: var(--safe-area-inset-top);
+  padding-right: var(--safe-area-inset-right);
+  padding-left: var(--safe-area-inset-left);
+}
+
+.safe-area-top {
+  padding-top: var(--safe-area-inset-top);
+}
+
+.safe-area-right {
+  padding-right: var(--safe-area-inset-right);
+}
+
 .safe-area-bottom {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-bottom: var(--safe-area-inset-bottom);
+}
+
+.safe-area-left {
+  padding-left: var(--safe-area-inset-left);
 }
 
 /* Ensure inputs on mobile don't zoom */
@@ -577,5 +626,291 @@ input[type="number"] {
   textarea {
     font-size: 16px;
   }
+}
+
+/* ===== ETERNAL THEME — Layout Adjustments ===== */
+html.eternal,
+html.discord {
+  /* Light theme optimizations */
+  --ring-accent: color-mix(in srgb, var(--jade-glow) 28%, transparent);
+}
+
+html.eternal body,
+html.discord body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+html.eternal [role="main"],
+html.eternal main,
+html.eternal .app-atmosphere,
+html.discord [role="main"],
+html.discord main,
+html.discord .app-atmosphere {
+  background: var(--background);
+}
+
+/* Eternal theme content padding */
+html.eternal nav,
+html.discord nav {
+  background: var(--surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+html.eternal a,
+html.discord a {
+  color: var(--accent);
+}
+
+html.eternal a:hover,
+html.discord a:hover {
+  color: var(--accent-hover);
+}
+
+html.eternal button:focus-visible,
+html.eternal a:focus-visible,
+html.eternal input:focus-visible,
+html.eternal select:focus-visible,
+html.eternal textarea:focus-visible,
+html.discord button:focus-visible,
+html.discord a:focus-visible,
+html.discord input:focus-visible,
+html.discord select:focus-visible,
+html.discord textarea:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--background) 85%, transparent),
+    0 0 0 4px var(--ring-accent);
+}
+
+/* ===== NYAA LAYOUT — Compact top-nav, no sidebar ===== */
+/* All colors reference theme CSS variables — no hardcoding. */
+
+.nyaa-layout .app-atmosphere {
+  background: var(--background);
+}
+
+/* Nav bar shell */
+.nyaa-nav-bar {
+  background: var(--nyaa-nav-bg, var(--surface));
+  border-bottom: 1px solid var(--nyaa-nav-border, var(--border));
+}
+
+.nyaa-nav-inner {
+  display: flex;
+  align-items: center;
+  max-width: var(--nyaa-content-max-width, 1220px);
+  margin-inline: auto;
+  padding-inline: 0 !important;
+}
+
+/* Logo */
+.nyaa-nav-logo {
+  color: var(--nyaa-nav-accent, var(--accent));
+  font-weight: 700;
+  font-size: 0.9375rem;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s;
+}
+
+.nyaa-nav-logo:hover {
+  color: var(--nyaa-nav-accent-hover, var(--accent-hover));
+}
+
+/* Vertical separator bar between nav items */
+.nyaa-nav-sep {
+  display: inline-block;
+  width: 1px;
+  height: 0.85em;
+  background: var(--nyaa-nav-sep, var(--border));
+  margin: 0 0.25rem;
+  opacity: 0.7;
+  vertical-align: middle;
+}
+
+/* Nav links */
+.nyaa-nav-link {
+  color: var(--nyaa-nav-text, var(--text-secondary));
+  text-decoration: none;
+  font-size: 0.875rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 2px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  line-height: 1.5;
+}
+
+.nyaa-nav-link-active {
+  color: var(--nyaa-nav-accent, var(--accent));
+  font-weight: 600;
+}
+
+.nyaa-nav-link-inactive:hover {
+  color: var(--nyaa-nav-text-hover, var(--text-primary));
+  background: color-mix(in srgb, var(--nyaa-nav-text-hover, var(--text-primary)) 10%, transparent);
+}
+
+/* Admin badge */
+.nyaa-badge {
+  background: color-mix(in srgb, var(--nyaa-nav-accent, var(--accent)) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--nyaa-nav-accent, var(--accent)) 40%, transparent);
+  color: var(--nyaa-nav-accent, var(--accent));
+  font-size: 0.625rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Dropdown panel */
+.nyaa-dropdown {
+  background: var(--nyaa-nav-bg, var(--surface));
+  border: 1px solid var(--nyaa-nav-border, var(--border));
+  border-radius: 4px;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--void-black) 35%, transparent);
+  padding: 0.25rem 0;
+  min-width: 10rem;
+}
+
+.nyaa-dropdown-item {
+  display: block;
+  color: var(--nyaa-nav-text, var(--text-secondary));
+  font-size: 0.75rem;
+  padding: 0.3rem 0.75rem;
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: background 0.1s, color 0.1s;
+}
+
+.nyaa-dropdown-item:hover {
+  background: color-mix(in srgb, var(--nyaa-nav-text-hover, var(--text-primary)) 10%, transparent);
+  color: var(--nyaa-nav-text-hover, var(--text-primary));
+}
+
+.nyaa-dropdown-item-active {
+  color: var(--nyaa-nav-accent, var(--accent));
+  font-weight: 600;
+}
+
+.nyaa-dropdown-item-danger {
+  color: var(--danger);
+}
+
+.nyaa-dropdown-item-danger:hover {
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  color: var(--danger-hover);
+}
+
+.nyaa-dropdown-divider {
+  height: 1px;
+  background: var(--nyaa-nav-border, var(--border));
+  margin: 0.2rem 0;
+}
+
+/* Content area for nyaa layout (no sidebar, full width) */
+.nyaa-layout .nyaa-content-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.nyaa-layout .app-atmosphere {
+  background: var(--background);
+  color: var(--text-primary);
+}
+
+/* Workout history page: compact, list-first, Nyaa-like table look */
+.nyaa-layout .nyaa-history-page {
+  max-width: 1220px;
+  margin: 0 auto;
+}
+
+.nyaa-layout .nyaa-history-page .nyaa-history-table-shell .rounded-2xl {
+  border-radius: 2px !important;
+  box-shadow: none !important;
+  border: 1px solid var(--nyaa-table-grid, var(--border)) !important;
+}
+
+.nyaa-layout .nyaa-history-page table {
+  border-collapse: collapse !important;
+  background: var(--surface) !important;
+  border: none !important;
+}
+
+.nyaa-layout .nyaa-history-page thead th {
+  background: var(--nyaa-table-head-bg, color-mix(in srgb, var(--surface) 84%, var(--border))) !important;
+  color: var(--nyaa-table-head-text, var(--text-primary)) !important;
+  border: 1px solid var(--nyaa-table-grid, var(--border)) !important;
+  border-top: none !important;
+  font-weight: 700 !important;
+}
+
+.nyaa-layout .nyaa-history-page thead th:first-child {
+  border-left: none !important;
+}
+
+.nyaa-layout .nyaa-history-page thead th:last-child {
+  border-right: none !important;
+}
+
+.nyaa-layout .nyaa-history-page tbody td {
+  border: 1px solid var(--nyaa-table-grid, var(--border)) !important;
+  color: var(--nyaa-table-row-text, var(--text-primary)) !important;
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
+  line-height: 1.15 !important;
+}
+
+.nyaa-layout .nyaa-history-page tbody td:first-child {
+  border-left: none !important;
+}
+
+.nyaa-layout .nyaa-history-page tbody td:last-child {
+  border-right: none !important;
+}
+
+.nyaa-layout .nyaa-history-page tbody tr:last-child td {
+  border-bottom: none !important;
+}
+
+.nyaa-layout .nyaa-history-page tbody tr:nth-child(even) {
+  background: var(--nyaa-table-row-even, color-mix(in srgb, var(--surface) 92%, var(--border))) !important;
+}
+
+.nyaa-layout .nyaa-history-page tbody tr:nth-child(odd) {
+  background: var(--nyaa-table-row-odd, var(--surface)) !important;
+}
+
+.nyaa-layout .nyaa-history-page tbody tr:hover {
+  background: var(--nyaa-table-row-hover, color-mix(in srgb, var(--surface) 84%, var(--mountain-blue-glow))) !important;
+}
+
+/* Training log exercise links */
+.training-log-exercise-link {
+  color: #348dd0;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.training-log-exercise-link:hover {
+  color: #23527c;
+  text-decoration: underline;
+}
+
+.training-log-exercise-link:visited {
+  color: #1d457b;
 }
 

@@ -60,6 +60,48 @@ const themePreviews: { id: ThemeStyle; title: string; colors: string[]; favorite
       "var(--theme-preview-sakura-dark-4)",
     ],
   },
+  {
+    id: "eternal",
+    title: "Eternal",
+    colors: [
+      "var(--theme-preview-eternal-1)",
+      "var(--theme-preview-eternal-2)",
+      "var(--theme-preview-eternal-3)",
+      "var(--theme-preview-eternal-4)",
+    ],
+    favorite: true,
+  },
+  {
+    id: "discord",
+    title: "Discord",
+    colors: [
+      "var(--theme-preview-discord-1)",
+      "var(--theme-preview-discord-2)",
+      "var(--theme-preview-discord-3)",
+      "var(--theme-preview-discord-4)",
+    ],
+  },
+  {
+    id: "document",
+    title: "Document",
+    colors: [
+      "var(--theme-preview-document-1)",
+      "var(--theme-preview-document-2)",
+      "var(--theme-preview-document-3)",
+      "var(--theme-preview-document-4)",
+    ],
+  },
+  {
+    id: "nyaa",
+    title: "Nyaa",
+    colors: [
+      "var(--theme-preview-nyaa-1)",
+      "var(--theme-preview-nyaa-2)",
+      "var(--theme-preview-nyaa-3)",
+      "var(--theme-preview-nyaa-4)",
+    ],
+    favorite: true,
+  },
 ];
 
 export default function MobileThemeSelector() {

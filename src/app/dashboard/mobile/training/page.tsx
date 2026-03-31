@@ -7,6 +7,8 @@ import MobileListItem from "@/components/mobile/lists/MobileListItem";
 import MobileFAB from "@/components/mobile/actions/MobileFAB";
 import ExerciseImageBox from "@/components/exercise/ExerciseImageBox";
 import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
+import { DASHBOARD_ROUTES } from "@/lib/navigation";
 
 interface ProgressionExercise {
   id: string;
@@ -17,6 +19,7 @@ interface ProgressionExercise {
 
 export default function MobileTrainingPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [items, setItems] = useState<ProgressionExercise[]>([]);
 
   useEffect(() => {
@@ -49,7 +52,7 @@ export default function MobileTrainingPage() {
           />
         ))}
       </section>
-      <MobileFAB label="Start" icon="\u25b6" onClick={() => (window.location.href = "/dashboard/workouts")} />
+      <MobileFAB label="Start" icon="\u25b6" onClick={() => router.push(DASHBOARD_ROUTES.main)} />
     </div>
   );
 }

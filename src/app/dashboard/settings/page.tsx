@@ -41,6 +41,10 @@ function SettingsSidebar({ onLogout }: { onLogout: () => void }) {
     "calligraphy": "Calligraphy",
     "sakura": "Sakura",
     "sakura-dark": "Sakura Dark",
+    "eternal": "Eternal",
+    "discord": "Discord",
+    "document": "Document",
+    "nyaa": "Nyaa",
   };
 
   const dateLabels: Record<string, string> = {
@@ -207,6 +211,94 @@ export default function SettingsPage() {
               </div>
               <p className="text-xs font-medium text-cloud-white">Sakura Dark</p>
               <p className="text-[10px] text-mist-dark">Deep sakura &amp; rose</p>
+            </motion.button>
+          </div>
+
+          <div className="mb-4">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setThemeStyle("eternal")}
+              className={`w-full p-3 rounded-lg border text-left transition-all duration-300 ${
+                themeStyle === "eternal"
+                  ? "border-jade/50 bg-jade-deep/20 glow-subtle"
+                  : "border-ink-light bg-ink-dark/50 hover:border-mist-mid"
+              }`}
+            >
+              <div className="flex gap-1 mb-2">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "var(--theme-preview-eternal-1)" }} />
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "var(--theme-preview-eternal-2)" }} />
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "var(--theme-preview-eternal-3)" }} />
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "var(--theme-preview-eternal-4)" }} />
+              </div>
+              <p className="text-xs font-medium text-cloud-white">Eternal</p>
+              <p className="text-[10px] text-mist-dark">Clean minimalist &amp; nature</p>
+            </motion.button>
+          </div>
+
+          <div className="mb-4">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setThemeStyle("discord")}
+              className={`w-full p-3 rounded-lg border text-left transition-all duration-300 ${
+                themeStyle === "discord"
+                  ? "border-jade/50 bg-jade-deep/20 glow-subtle"
+                  : "border-ink-light bg-ink-dark/50 hover:border-mist-mid"
+              }`}
+            >
+              <div className="flex gap-1 mb-2">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "var(--theme-preview-discord-1)" }} />
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "var(--theme-preview-discord-2)" }} />
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "var(--theme-preview-discord-3)" }} />
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "var(--theme-preview-discord-4)" }} />
+              </div>
+              <p className="text-xs font-medium text-cloud-white">Discord</p>
+              <p className="text-[10px] text-mist-dark">Discord-inspired dark palette</p>
+            </motion.button>
+          </div>
+
+          <div className="mb-4">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setThemeStyle("document")}
+              className={`w-full p-3 rounded-lg border text-left transition-all duration-300 ${
+                themeStyle === "document"
+                  ? "border-jade/50 bg-jade-deep/20 glow-subtle"
+                  : "border-ink-light bg-ink-dark/50 hover:border-mist-mid"
+              }`}
+            >
+              <div className="flex gap-1 mb-2">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "var(--theme-preview-document-1)" }} />
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "var(--theme-preview-document-2)" }} />
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "var(--theme-preview-document-3)" }} />
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "var(--theme-preview-document-4)" }} />
+              </div>
+              <p className="text-xs font-medium text-cloud-white">Document</p>
+              <p className="text-[10px] text-mist-dark">Warm parchment &amp; slate blue</p>
+            </motion.button>
+          </div>
+
+          <div className="mb-4">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setThemeStyle("nyaa")}
+              className={`w-full p-3 rounded-lg border text-left transition-all duration-300 ${
+                themeStyle === "nyaa"
+                  ? "border-jade/50 bg-jade-deep/20 glow-subtle"
+                  : "border-ink-light bg-ink-dark/50 hover:border-mist-mid"
+              }`}
+            >
+              <div className="flex gap-1 mb-2">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "var(--theme-preview-nyaa-1)" }} />
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "var(--theme-preview-nyaa-2)" }} />
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "var(--theme-preview-nyaa-3)" }} />
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "var(--theme-preview-nyaa-4)" }} />
+              </div>
+              <p className="text-xs font-medium text-cloud-white">Nyaa</p>
+              <p className="text-[10px] text-mist-dark">Nyaa.si-inspired blue/green palette</p>
             </motion.button>
           </div>
 

@@ -4,6 +4,7 @@ import { withAuth } from "@/lib/auth/middleware";
 
 interface LogUpdate {
   id: string;
+  exerciseId?: string | null;
   level?: number | null;
   weight1: number | null;
   reps1: number | null;
@@ -34,6 +35,10 @@ export const POST = withAuth(async (request, { auth }) => {
     for (const update of updates) {
       if (!update.id) {
         return NextResponse.json({ error: "Log ID is required for all updates" }, { status: 400 });
+      }
+
+      if (update.exerciseId != null && typeof update.exerciseId !== "string") {
+        return NextResponse.json({ error: "exerciseId must be a string when provided" }, { status: 400 });
       }
 
       // Validate weight ranges
@@ -67,6 +72,24 @@ export const POST = withAuth(async (request, { auth }) => {
       }
     }
 
+    const requestedExerciseIds = Array.from(
+      new Set(
+        updates
+          .map((update) => update.exerciseId)
+          .filter((value): value is string => typeof value === "string" && value.trim().length > 0),
+      ),
+    );
+
+    if (requestedExerciseIds.length > 0) {
+      const foundExercises = await prisma.progressionExercise.findMany({
+        where: { id: { in: requestedExerciseIds } },
+        select: { id: true },
+      });
+      if (foundExercises.length !== requestedExerciseIds.length) {
+        return NextResponse.json({ error: "One or more selected exercises were not found" }, { status: 400 });
+      }
+    }
+
     // Verify ownership: all logs must belong to the user
     const logIds = updates.map(u => u.id);
     const logs = await prisma.progressionLog.findMany({
@@ -85,10 +108,32 @@ export const POST = withAuth(async (request, { auth }) => {
     }
 
     // Batch update
-    const updatePromises = updates.map(update =>
-      prisma.progressionLog.update({
+    const updatePromises = updates.map(async (update) => {
+      let nextUserProgressionId: string | undefined;
+
+      if (update.exerciseId && update.exerciseId.trim().length > 0) {
+        const userProgression = await prisma.userProgressionLevel.upsert({
+          where: {
+            userId_exerciseId: {
+              userId,
+              exerciseId: update.exerciseId,
+            },
+          },
+          update: {},
+          create: {
+            userId,
+            exerciseId: update.exerciseId,
+            currentLevel: 1,
+          },
+          select: { id: true },
+        });
+        nextUserProgressionId = userProgression.id;
+      }
+
+      return prisma.progressionLog.update({
         where: { id: update.id },
         data: {
+          userProgressionId: nextUserProgressionId,
           level: update.level != null ? Math.floor(update.level) : undefined,
           weight1: update.weight1,
           reps1: update.reps1,
@@ -103,8 +148,8 @@ export const POST = withAuth(async (request, { auth }) => {
           variant: update.variant ? String(update.variant).trim().slice(0, 200) : null,
           notes: update.notes ? String(update.notes).trim().slice(0, 1000) : null,
         },
-      })
-    );
+      });
+    });
 
     await Promise.all(updatePromises);
 

@@ -1,4 +1,6 @@
 // Navigation items configuration
+import { DASHBOARD_ROUTES, NAV_LABELS } from "@/lib/navigation";
+
 export interface NavItem {
   id: string;
   label: string;
@@ -9,15 +11,15 @@ export interface NavItem {
 }
 
 export const defaultNavItems: NavItem[] = [
-  { id: "dashboard", label: "Dao Hall", icon: "⛩️", path: "/dashboard/overview", pinned: false, visible: true },
-  { id: "newsfeed", label: "Sect Hall", icon: "🌿", path: "/dashboard/community", pinned: false, visible: true },
-  { id: "workout", label: "Training Grounds", icon: "⚔️", path: "/dashboard/workouts", pinned: false, visible: true },
-  { id: "history", label: "Ancient Records", icon: "📜", path: "/dashboard/workout-history", pinned: false, visible: true },
-  { id: "checkin", label: "Sect Register", icon: "📋", path: "/dashboard/attendance", pinned: false, visible: true },
-  { id: "exercise-db", label: "Technique Scroll", icon: "📚", path: "/dashboard/exercises", pinned: false, visible: true },
-  { id: "friends", label: "Friends", icon: "🤝", path: "/dashboard/friends", pinned: false, visible: true },
-  { id: "settings", label: "Inner Chamber", icon: "⚙️", path: "/dashboard/settings", pinned: false, visible: true },
-  { id: "admin", label: "Administrative Palace", icon: "👑", path: "/dashboard/admin", pinned: false, visible: true },
+  { id: "main", label: NAV_LABELS.main, icon: "🧭", path: DASHBOARD_ROUTES.main, pinned: false, visible: true },
+  { id: "dashboard", label: NAV_LABELS.dashboard, icon: "⛩️", path: DASHBOARD_ROUTES.overview, pinned: false, visible: true },
+  { id: "newsfeed", label: NAV_LABELS.newsfeed, icon: "🌿", path: DASHBOARD_ROUTES.community, pinned: false, visible: true },
+  { id: "history", label: NAV_LABELS.history, icon: "📜", path: DASHBOARD_ROUTES.workoutHistory, pinned: false, visible: true },
+  { id: "checkin", label: NAV_LABELS.checkin, icon: "📋", path: DASHBOARD_ROUTES.attendance, pinned: false, visible: true },
+  { id: "exercise-db", label: NAV_LABELS["exercise-db"], icon: "📚", path: DASHBOARD_ROUTES.exercises, pinned: false, visible: true },
+  { id: "friends", label: NAV_LABELS.friends, icon: "🤝", path: DASHBOARD_ROUTES.friends, pinned: false, visible: true },
+  { id: "settings", label: NAV_LABELS.settings, icon: "⚙️", path: DASHBOARD_ROUTES.settings, pinned: false, visible: true },
+  { id: "admin", label: NAV_LABELS.admin, icon: "👑", path: DASHBOARD_ROUTES.admin, pinned: false, visible: true },
 ];
 
 export function getDifficultyColor(difficulty: string): string {

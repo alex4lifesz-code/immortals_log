@@ -10,7 +10,8 @@ import {
 } from "@/app/dashboard/workout/utils";
 import { EquipmentBadges } from "@/components/workout/EquipmentBadges";
 import { useDisplaySettings, DISPLAY_DEFAULTS } from "@/context/DisplaySettingsContext";
-import { useAppContext } from "@/context/AppContext";
+import { useIsMobile } from "@/context/AppContext";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import GlowButton from "@/components/ui/GlowButton";
 import ExerciseImageBox from "@/components/exercise/ExerciseImageBox";
 import { getTypeColor, DAY_ABBREVIATIONS, parseDayAssignments } from "@/lib/constants";
@@ -65,7 +66,7 @@ export function TrainingGroundsSidebar({
   onDrawerOpen: () => void;
   userBodyweightKg: number | null;
 }) {
-  const { isMobile } = useAppContext();
+  const isMobile = useIsMobile();
   const { settings } = useDisplaySettings();
   const [isCompact, setIsCompact] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -124,7 +125,8 @@ export function TrainingGroundsSidebar({
 
   const [disciplineFilter, setDisciplineFilter] = useState<"all" | "gym" | "calisthenics" | "recent">("all");
 
-  const searchQuery = searchTerm.trim();
+  const debouncedSearchTerm = useDebouncedValue(searchTerm, 150);
+  const searchQuery = debouncedSearchTerm.trim();
   const isSearchActive = searchQuery.length > 0;
 
   const exerciseDerived = useMemo(() => {
@@ -133,31 +135,46 @@ export function TrainingGroundsSidebar({
       {
         categoryTags: string[];
         equipmentTags: string[];
+        assignedDays: Set<number>;
         isGym: boolean;
         displayName: string;
         primaryCategory: string;
         logCount: number;
         latestLogTs: number;
+        searchFields: string[];
+        nameFields: string[];
       }
     >();
 
     for (const ex of exercises) {
       const categoryTags = parseCategoryTags(ex.category);
       const equipmentTags = getEquipmentTags(ex);
+      const assignedDays = new Set(parseDayAssignments(ex.assignedDays || ""));
       const logs = ex.userProgress[0]?.logs ?? [];
       const latestLogTs = logs.reduce((max, log) => {
         const ts = new Date(log.createdAt).getTime();
         return ts > max ? ts : max;
       }, 0);
+      const nameFields = [ex.name, ex.wuxiaName].filter(Boolean) as string[];
+      const searchFields = [
+        ex.name,
+        ex.wuxiaName,
+        ex.primaryMuscles,
+        ex.secondaryMuscles,
+        ex.category,
+      ].filter(Boolean) as string[];
 
       map.set(ex.id, {
         categoryTags,
         equipmentTags,
+        assignedDays,
         isGym: isGymCategoryExercise(ex),
         displayName: getExerciseDisplayName(ex, settings.terminologyMode),
         primaryCategory: categoryTags[0] || "Uncategorised",
         logCount: logs.length,
         latestLogTs,
+        searchFields,
+        nameFields,
       });
     }
 
@@ -179,21 +196,13 @@ export function TrainingGroundsSidebar({
         if (disciplineFilter === "recent" && derived.logCount === 0) return false;
 
         if (selectedDayFilter !== null) {
-          if (!e.assignedDays || e.assignedDays.trim() === "") return false;
-          const assignedDays = e.assignedDays.split(",").map((d) => parseInt(d.trim())).filter((d) => !isNaN(d));
-          if (!assignedDays.includes(selectedDayFilter)) return false;
+          if (!derived.assignedDays.has(selectedDayFilter)) return false;
         }
         if (filterCategory && !derived.categoryTags.includes(filterCategory)) return false;
         if (filterType && e.type !== filterType) return false;
         if (filterEquipment && !derived.equipmentTags.includes(filterEquipment)) return false;
-        if (searchTerm) {
-          return matchesLooseSearchInFields(searchTerm, [
-            e.name,
-            e.wuxiaName,
-            e.primaryMuscles,
-            e.secondaryMuscles,
-            e.category,
-          ]);
+        if (searchQuery) {
+          return matchesLooseSearchInFields(searchQuery, derived.searchFields);
         }
         return true;
       }),
@@ -205,7 +214,7 @@ export function TrainingGroundsSidebar({
       filterEquipment,
       filterType,
       hiddenSidebarExerciseNames,
-      searchTerm,
+      searchQuery,
       selectedDayFilter,
     ]
   );
@@ -268,13 +277,14 @@ export function TrainingGroundsSidebar({
     if (!isSearchActive) return new Map<string, boolean>();
     const map = new Map<string, boolean>();
     for (const exercise of sorted) {
+      const derived = exerciseDerived.get(exercise.id);
       map.set(
         exercise.id,
-        matchesLooseSearchInFields(searchQuery, [exercise.name, exercise.wuxiaName])
+        matchesLooseSearchInFields(searchQuery, derived?.nameFields ?? [exercise.name, exercise.wuxiaName].filter(Boolean) as string[])
       );
     }
     return map;
-  }, [isSearchActive, searchQuery, sorted]);
+  }, [exerciseDerived, isSearchActive, searchQuery, sorted]);
 
   const sortOptions = [
     { key: "a-z", label: "A–Z", icon: "↕" },

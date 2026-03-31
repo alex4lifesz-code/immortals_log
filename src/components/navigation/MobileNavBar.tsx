@@ -8,57 +8,58 @@ import { useState, memo, useCallback, useMemo, useEffect, useRef, type ReactNode
 import { useRouter, usePathname } from "next/navigation";
 import { t } from "@/lib/terminology";
 import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
+import { ADMIN_NAV_IDS_ORDER, DASHBOARD_ROUTES, MAIN_NAV_IDS_ORDER, MOBILE_PRIMARY_NAV_IDS, sortNavItemsByIdOrder } from "@/lib/navigation";
 
 const ADMIN_NAV_IDS = new Set(["admin", "checkin"]);
 
 const NAV_ICON_MAP: Record<string, ReactNode> = {
-  "/dashboard/community": (
+  [DASHBOARD_ROUTES.community]: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
     </svg>
   ),
-  "/dashboard/overview": (
+  [DASHBOARD_ROUTES.overview]: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z" />
     </svg>
   ),
-  "/dashboard/workouts": (
+  [DASHBOARD_ROUTES.main]: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
     </svg>
   ),
-  "/dashboard/workout-history": (
+  [DASHBOARD_ROUTES.workoutHistory]: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 12a9 9 0 109-9" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 4v4h4" />
     </svg>
   ),
-  "/dashboard/attendance": (
+  [DASHBOARD_ROUTES.attendance]: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5a2 2 0 002 2h2a2 2 0 002-2 2 2 0 00-2-2h-2a2 2 0 00-2 2z" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4" />
     </svg>
   ),
-  "/dashboard/exercises": (
+  [DASHBOARD_ROUTES.exercises]: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
     </svg>
   ),
-  "/dashboard/friends": (
+  [DASHBOARD_ROUTES.friends]: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M16 11a4 4 0 100-8 4 4 0 000 8zM8 12a4 4 0 100-8 4 4 0 000 8z" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M2 20a6 6 0 0112 0M14 20a6 6 0 018 0" />
     </svg>
   ),
-  "/dashboard/settings": (
+  [DASHBOARD_ROUTES.settings]: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
     </svg>
   ),
-  "/dashboard/admin": (
+  [DASHBOARD_ROUTES.admin]: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
     </svg>
@@ -79,19 +80,20 @@ function MobileNavBar({ incomingFriendRequestCount = 0 }: { incomingFriendReques
   const router = useRouter();
   const pathname = usePathname();
   const isAdmin = user?.role === "admin";
-  const items = getSortedNavItems().filter((item) => (isAdmin ? true : !ADMIN_NAV_IDS.has(item.id)));
+  const items = sortNavItemsByIdOrder(
+    getSortedNavItems().filter((item) => (isAdmin ? true : !ADMIN_NAV_IDS.has(item.id))),
+    [...MAIN_NAV_IDS_ORDER, ...ADMIN_NAV_IDS_ORDER]
+  );
   const [menuOpen, setMenuOpen] = useState(false);
   const [navVisible, setNavVisible] = useState(true);
   const lastScrollYRef = useRef(0);
 
   const effectiveMobile = isMobile;
 
-  const primaryItems = useMemo(() => [
-    items.find(i => i.path === "/dashboard/community"),
-    items.find(i => i.path === "/dashboard/overview"),
-    items.find(i => i.path === "/dashboard/workouts"),
-    items.find(i => i.path === "/dashboard/workout-history"),
-  ].filter(Boolean) as typeof items, [items]);
+  const primaryItems = useMemo(() => {
+    const itemMap = new Map(items.map((item) => [item.id, item]));
+    return MOBILE_PRIMARY_NAV_IDS.map((id) => itemMap.get(id)).filter(Boolean) as typeof items;
+  }, [items]);
 
   const moreItems = useMemo(
     () => items.filter(i => !primaryItems.find(p => p.id === i.id)),
@@ -160,7 +162,7 @@ function MobileNavBar({ incomingFriendRequestCount = 0 }: { incomingFriendReques
   // Show the APK-style bottom nav whenever mobile viewport is active.
   if (!effectiveMobile) return null;
 
-  // Build nav button order: [community, overview, workouts, workout-history, more]
+  // Build nav button order: [main, community, overview, workout-history, more]
   return (
     <>
       {/* Overlay for expanded menu */}

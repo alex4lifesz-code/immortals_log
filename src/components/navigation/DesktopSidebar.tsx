@@ -2,33 +2,29 @@
 
 import { motion } from "framer-motion";
 import { memo } from "react";
-import { useAppContext } from "@/context/AppContext";
+import { useIsMobile, useSortedNavItems } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { useRouter, usePathname } from "next/navigation";
 import { t } from "@/lib/terminology";
 import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
+import { ADMIN_NAV_IDS_ORDER, MAIN_NAV_IDS_ORDER, sortNavItemsByIdOrder } from "@/lib/navigation";
 
 const ADMIN_NAV_IDS = new Set(["admin", "checkin"]);
 
 function DesktopSidebar({ incomingFriendRequestCount = 0 }: { incomingFriendRequestCount?: number }) {
-  const { getSortedNavItems, isMobile } = useAppContext();
+  const isMobile = useIsMobile();
   const { logout, user } = useAuth();
   const { settings } = useDisplaySettings();
   const terminologyMode = settings.terminologyMode ?? "fantasy";
   const router = useRouter();
   const pathname = usePathname();
   const isAdmin = user?.role === "admin";
-  const items = getSortedNavItems();
-  const mainItems = items.filter((item) => !ADMIN_NAV_IDS.has(item.id));
-  const orderedMainItems = [...mainItems].sort((a, b) => {
-    const aPriority = a.id === "newsfeed" ? 0 : 1;
-    const bPriority = b.id === "newsfeed" ? 0 : 1;
-    return aPriority - bPriority;
-  });
-  const communityItem = orderedMainItems.find((item) => item.id === "newsfeed");
-  const remainingMainItems = orderedMainItems.filter((item) => item.id !== "newsfeed");
-  const adminItems = isAdmin ? items.filter((item) => ADMIN_NAV_IDS.has(item.id)) : [];
+  const items = useSortedNavItems();
+  const mainItems = sortNavItemsByIdOrder(items.filter((item) => !ADMIN_NAV_IDS.has(item.id)), MAIN_NAV_IDS_ORDER);
+  const adminItems = isAdmin
+    ? sortNavItemsByIdOrder(items.filter((item) => ADMIN_NAV_IDS.has(item.id)), ADMIN_NAV_IDS_ORDER)
+    : [];
 
   // Hide only on mobile; keep desktop sidebar visible until mobile layout kicks in.
   if (isMobile) return null;
@@ -41,25 +37,9 @@ function DesktopSidebar({ incomingFriendRequestCount = 0 }: { incomingFriendRequ
       className="w-[264px] shrink-0 overflow-hidden border-r border-jade-glow/20 bg-gradient-to-b from-ink-deep via-ink-dark to-ink-deep"
     >
       <div className="relative flex h-full min-h-0 flex-col px-3 py-3">
-      {communityItem && (
-        <div className="mb-3 rounded-xl border border-ink-light/45 bg-ink-mid/20 p-1.5">
-          <motion.button
-            type="button"
-            onClick={() => router.push(communityItem.path)}
-            whileTap={{ scale: 0.985 }}
-            className="group flex w-full items-center gap-2 rounded-lg border border-jade-glow/30 bg-ink-mid/20 px-2.5 py-2 text-left transition-all hover:border-jade-glow/45 hover:bg-jade-deep/20"
-          >
-            <span className="inline-flex h-6 w-6 items-center justify-center rounded-lg border border-jade-glow/35 bg-jade-deep/25 text-[11px]">
-              {communityItem.icon}
-            </span>
-            <span className="text-sm font-bold tracking-[0.04em] text-jade-glow">{t(communityItem.label, terminologyMode)}</span>
-          </motion.button>
-        </div>
-      )}
-
       <div className="min-h-0 flex-1 overflow-y-auto pr-1 scrollbar-hide">
         <div className="space-y-1.5 rounded-xl border border-ink-light/45 bg-ink-mid/20 p-1.5">
-        {remainingMainItems.map((item, index) => {
+        {mainItems.map((item, index) => {
           const isActive = pathname === item.path;
           return (
             <motion.button

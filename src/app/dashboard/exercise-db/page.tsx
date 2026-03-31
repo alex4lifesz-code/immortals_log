@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import PageLayout from "@/components/layout/PageLayout";
 import { useAuth } from "@/context/AuthContext";
-import { useAppContext } from "@/context/AppContext";
+import { useIsMobile } from "@/context/AppContext";
 import GlowButton from "@/components/ui/GlowButton";
 import { api } from "@/lib/api-client";
 import type {
@@ -28,8 +28,6 @@ import ExerciseImageBox from "@/components/exercise/ExerciseImageBox";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type Tab = "overview" | "exercises" | "variants";
-
 interface ExerciseFormData {
   name: string;
   category: TrainingCategory;
@@ -43,23 +41,23 @@ interface ExerciseFormData {
 
 const ITEMS_PER_PAGE = 25;
 
-const VARIANT_STORAGE_KEY = "exercise-db-variants";
+const EXERCISE_VARIANT_STORAGE_KEY = "exercise-db-row-variants";
 
 // ─── Variant helpers ──────────────────────────────────────────────────────────
 
-function loadVariants(): Record<string, string[]> {
+function loadExerciseVariants(): Record<string, string[]> {
   if (typeof window === "undefined") return {};
   try {
-    const raw = localStorage.getItem(VARIANT_STORAGE_KEY);
+    const raw = localStorage.getItem(EXERCISE_VARIANT_STORAGE_KEY);
     return raw ? JSON.parse(raw) : {};
   } catch {
     return {};
   }
 }
 
-function saveVariants(variants: Record<string, string[]>) {
+function saveExerciseVariants(variants: Record<string, string[]>) {
   try {
-    localStorage.setItem(VARIANT_STORAGE_KEY, JSON.stringify(variants));
+    localStorage.setItem(EXERCISE_VARIANT_STORAGE_KEY, JSON.stringify(variants));
   } catch {}
 }
 
@@ -122,14 +120,12 @@ function ExerciseModal({
   onSave,
   exercise,
   mode,
-  customVariants,
 }: {
   isOpen: boolean;
   onClose: () => void;
   onSave: (data: ExerciseFormData) => Promise<void>;
   exercise?: SimpleExercise | null;
   mode: "add" | "edit";
-  customVariants: Record<string, string[]>;
 }) {
   const [name, setName] = useState("");
   const [category, setCategory] = useState<TrainingCategory>("GYM");
@@ -141,22 +137,6 @@ function ExerciseModal({
   const [instructions, setInstructions] = useState<string[]>([""]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-
-  // Merge built-in + custom options
-  const allCategories = useMemo(() => {
-    const custom = customVariants["category"] ?? [];
-    return [...ALL_TRAINING_CATEGORIES, ...custom.filter((c) => !(ALL_TRAINING_CATEGORIES as string[]).includes(c))];
-  }, [customVariants]);
-
-  const allTypes = useMemo(() => {
-    const custom = customVariants["exerciseType"] ?? [];
-    return [...ALL_EXERCISE_TYPES, ...custom.filter((c) => !(ALL_EXERCISE_TYPES as string[]).includes(c))];
-  }, [customVariants]);
-
-  const allMuscles = useMemo(() => {
-    const custom = customVariants["muscleGroup"] ?? [];
-    return [...ALL_MUSCLE_GROUPS, ...custom.filter((c) => !(ALL_MUSCLE_GROUPS as string[]).includes(c))];
-  }, [customVariants]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -218,7 +198,7 @@ function ExerciseModal({
         <div className="space-y-1.5">
           <span className="text-[10px] font-semibold uppercase tracking-wider text-mist-dark">Category *</span>
           <div className="flex flex-wrap gap-1.5">
-            {allCategories.map((cat) => (
+            {ALL_TRAINING_CATEGORIES.map((cat) => (
               <button key={cat} type="button" onClick={() => setCategory(cat as TrainingCategory)} className={`${chipBase} ${category === cat ? chipOn : chipOff}`}>
                 {getCategoryIcon(cat as TrainingCategory)} {cat}
               </button>
@@ -229,7 +209,7 @@ function ExerciseModal({
         <div className="space-y-1.5">
           <span className="text-[10px] font-semibold uppercase tracking-wider text-mist-dark">Type *</span>
           <div className="flex flex-wrap gap-2">
-            {allTypes.map((type) => (
+            {ALL_EXERCISE_TYPES.map((type) => (
               <button key={type} type="button" onClick={() => setExerciseType(type as SimpleExerciseType)} className={`flex-1 min-w-[90px] ${chipBase} text-center ${exerciseType === type ? chipOn : chipOff}`}>
                 {getExerciseTypeIcon(type as SimpleExerciseType)} {type.charAt(0).toUpperCase() + type.slice(1)}
               </button>
@@ -240,7 +220,7 @@ function ExerciseModal({
         <div className="space-y-1.5">
           <span className="text-[10px] font-semibold uppercase tracking-wider text-mist-dark">Muscle Groups * (select all that apply)</span>
           <div className="flex flex-wrap gap-1.5">
-            {(allMuscles as string[]).map((mg) => (
+            {(ALL_MUSCLE_GROUPS as string[]).map((mg) => (
               <button key={mg} type="button" onClick={() => toggle(muscleGroups, mg as MuscleGroup, setMuscleGroups)} className={`${chipBase} ${muscleGroups.includes(mg as MuscleGroup) ? chipOn : chipOff}`}>
                 {mg}
               </button>
@@ -408,66 +388,94 @@ function OverviewTab({ exercises }: { exercises: SimpleExercise[] }) {
   );
 }
 
-// ─── Variants Tab ─────────────────────────────────────────────────────────────
+// ─── Exercise Variants Modal ─────────────────────────────────────────────────
 
-const VARIANT_FIELDS: { key: string; label: string; description: string }[] = [
-  { key: "category", label: "Categories", description: "Custom exercise categories (e.g., Martial Arts, Swimming)" },
-  { key: "exerciseType", label: "Exercise Types", description: "Custom movement types (e.g., isometric, plyometric)" },
-  { key: "muscleGroup", label: "Muscle Groups", description: "Custom muscle group names (e.g., Hip Flexors, Rotator Cuff)" },
-];
+function ExerciseVariantsModal({
+  isOpen,
+  onClose,
+  exercise,
+  variants,
+  onSave,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  exercise: SimpleExercise | null;
+  variants: string[];
+  onSave: (exerciseId: string, variants: string[]) => void;
+}) {
+  const [draft, setDraft] = useState<string[]>([]);
+  const [newVariant, setNewVariant] = useState("");
 
-function VariantsTab({ variants, onUpdate }: { variants: Record<string, string[]>; onUpdate: (v: Record<string, string[]>) => void }) {
-  const [inputs, setInputs] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (!isOpen) return;
+    setDraft(variants);
+    setNewVariant("");
+  }, [isOpen, variants]);
 
-  const add = (field: string) => {
-    const val = (inputs[field] ?? "").trim();
-    if (!val) return;
-    const current = variants[field] ?? [];
-    if (current.map((s) => s.toLowerCase()).includes(val.toLowerCase())) return;
-    const updated = { ...variants, [field]: [...current, val] };
-    onUpdate(updated);
-    setInputs((prev) => ({ ...prev, [field]: "" }));
+  const addVariant = () => {
+    const value = newVariant.trim();
+    if (!value) return;
+    if (draft.some((item) => item.toLowerCase() === value.toLowerCase())) return;
+    setDraft((prev) => [...prev, value]);
+    setNewVariant("");
   };
 
-  const remove = (field: string, val: string) => {
-    const updated = { ...variants, [field]: (variants[field] ?? []).filter((v) => v !== val) };
-    onUpdate(updated);
+  const removeVariant = (value: string) => {
+    setDraft((prev) => prev.filter((item) => item !== value));
+  };
+
+  const handleSave = () => {
+    if (!exercise) return;
+    onSave(exercise.id, draft);
+    onClose();
   };
 
   return (
-    <div className="space-y-5">
-      <p className="text-sm text-mist-light">Add custom values to the dropdowns used when creating or editing exercises. These are stored locally in your browser.</p>
-      {VARIANT_FIELDS.map(({ key, label, description }) => (
-        <div key={key} className="rounded-xl border border-ink-light/30 p-4 space-y-3" style={{ background: "var(--surface-gradient-strong)" }}>
-          <div>
-            <h3 className="text-sm font-semibold text-cloud-white">{label}</h3>
-            <p className="text-[11px] text-mist-dark">{description}</p>
-          </div>
-
-          <div className="flex flex-wrap gap-1.5">
-            {(variants[key] ?? []).map((val) => (
-              <span key={val} className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg bg-jade-deep/30 border border-jade-glow/30 text-jade-light">
-                {val}
-                <button onClick={() => remove(key, val)} className="text-jade-light/50 hover:text-crimson-light transition-colors ml-0.5">✕</button>
-              </span>
-            ))}
-            {(variants[key] ?? []).length === 0 && <span className="text-[11px] text-mist-dark italic">No custom values yet</span>}
-          </div>
-
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={inputs[key] ?? ""}
-              onChange={(e) => setInputs((prev) => ({ ...prev, [key]: e.target.value }))}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(key); } }}
-              placeholder={`Add custom ${label.toLowerCase().replace(/s$/, "")}…`}
-              className="flex-1 bg-ink-dark border border-ink-light/40 rounded-lg px-3 py-2 text-sm text-cloud-white placeholder:text-mist-dark/50 outline-none focus:border-jade-glow/60"
-            />
-            <GlowButton onClick={() => add(key)} variant="jade" size="sm">Add</GlowButton>
-          </div>
+    <GlowModal isOpen={isOpen} onClose={onClose} title="Exercise Variants" panelClassName="!max-w-lg">
+      <div className="space-y-4">
+        <div>
+          <p className="text-sm text-cloud-white font-medium">{exercise?.name ?? ""}</p>
+          <p className="text-[11px] text-mist-dark">Variants are managed per exercise and saved in your browser.</p>
         </div>
-      ))}
-    </div>
+
+        <div className="rounded-lg border border-ink-light/30 bg-ink-dark/60 p-3 min-h-20">
+          {draft.length === 0 ? (
+            <p className="text-[11px] text-mist-dark italic">No variants added yet.</p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {draft.map((value) => (
+                <span key={value} className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg bg-jade-deep/30 border border-jade-glow/30 text-jade-light">
+                  {value}
+                  <button onClick={() => removeVariant(value)} className="text-jade-light/50 hover:text-crimson-light transition-colors ml-0.5">✕</button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={newVariant}
+            onChange={(e) => setNewVariant(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addVariant();
+              }
+            }}
+            placeholder="Add variant"
+            className="flex-1 bg-ink-dark border border-ink-light/40 rounded-lg px-3 py-2 text-sm text-cloud-white placeholder:text-mist-dark/50 outline-none focus:border-jade-glow/60"
+          />
+          <GlowButton onClick={addVariant} variant="jade" size="sm">Add</GlowButton>
+        </div>
+
+        <div className="flex items-center justify-end gap-2 pt-2 border-t border-ink-light/20">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-mist-light hover:text-cloud-white transition-colors">Cancel</button>
+          <GlowButton onClick={handleSave} variant="jade" size="sm" glow>Save Variants</GlowButton>
+        </div>
+      </div>
+    </GlowModal>
   );
 }
 
@@ -476,19 +484,23 @@ function VariantsTab({ variants, onUpdate }: { variants: Record<string, string[]
 function ExercisesTab({
   exercises,
   loading,
+  exerciseVariants,
   onAdd,
   onEdit,
+  onEditVariants,
   onDelete,
   onDuplicate,
 }: {
   exercises: SimpleExercise[];
   loading: boolean;
+  exerciseVariants: Record<string, string[]>;
   onAdd: () => void;
   onEdit: (ex: SimpleExercise) => void;
+  onEditVariants: (ex: SimpleExercise) => void;
   onDelete: (ex: SimpleExercise) => void;
   onDuplicate: (ex: SimpleExercise) => void;
 }) {
-  const { isMobile } = useAppContext();
+  const isMobile = useIsMobile();
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState<TrainingCategory | "">("");
   const [muscleFilter, setMuscleFilter] = useState<MuscleGroup | "">("");
@@ -521,89 +533,162 @@ function ExercisesTab({
 
   return (
     <div className="space-y-3">
-      {/* Search + Add row */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <div className="relative flex-1">
-          <input
-            type="text"
-            placeholder=""
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-ink-dark/80 border border-ink-light/40 rounded-lg pl-10 pr-8 py-2 text-sm text-cloud-white placeholder:text-mist-dark/60 outline-none focus:border-jade-glow/60"
-          />
-          <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-mist-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-            <circle cx="11" cy="11" r="7" />
-            <path strokeLinecap="round" d="M16.5 16.5l4 4" />
-          </svg>
-          {search ? (
-            <button
-              type="button"
-              onClick={() => setSearch("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[13px] font-semibold leading-none text-mist-dark transition-colors hover:text-cloud-white"
-              aria-label="Clear search"
-            >
-              x
-            </button>
-          ) : null}
-        </div>
-        <div className="flex gap-2 shrink-0">
-          <button
-            onClick={() => setShowFilters((v) => !v)}
-            className={`px-3 py-2 text-xs rounded-lg border transition-colors relative ${showFilters ? "bg-ink-mid/30 border-jade-glow/40 text-jade-light" : "border-ink-light/40 text-mist-light hover:border-jade-glow/30"}`}
-          >
-            Filters
-            {activeFilterCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-jade-glow text-ink-deep text-[9px] font-bold flex items-center justify-center">{activeFilterCount}</span>
-            )}
-          </button>
-          <GlowButton onClick={onAdd} variant="jade" size="sm" glow>+ Add Exercise</GlowButton>
-        </div>
-      </div>
-
-      {/* Collapsible filters */}
-      <AnimatePresence>
-        {showFilters && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden"
-          >
-            <div className="rounded-xl border border-ink-light/30 p-3 space-y-2" style={{ background: "var(--surface-gradient-strong)" }}>
-              <div className="flex flex-wrap gap-2 items-center">
-                <select value={catFilter} onChange={(e) => setCatFilter(e.target.value as TrainingCategory | "")} className="bg-ink-dark border border-ink-light/40 rounded-lg px-2.5 py-1.5 text-[11px] text-cloud-white outline-none focus:border-jade-glow/50">
-                  <option value="">All Categories</option>
-                  {ALL_TRAINING_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
-                <select value={muscleFilter} onChange={(e) => setMuscleFilter(e.target.value as MuscleGroup | "")} className="bg-ink-dark border border-ink-light/40 rounded-lg px-2.5 py-1.5 text-[11px] text-cloud-white outline-none focus:border-jade-glow/50">
-                  <option value="">All Muscles</option>
-                  {ALL_MUSCLE_GROUPS.map((m) => <option key={m} value={m}>{m}</option>)}
-                </select>
-                <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as SimpleExerciseType | "")} className="bg-ink-dark border border-ink-light/40 rounded-lg px-2.5 py-1.5 text-[11px] text-cloud-white outline-none focus:border-jade-glow/50">
-                  <option value="">All Types</option>
-                  {ALL_EXERCISE_TYPES.map((t) => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
-                </select>
-                <button onClick={() => setCustomOnly((v) => !v)} className={`${chipBase} ${customOnly ? chipOn : chipOff}`}>🔧 Custom Only</button>
-                {activeFilterCount > 0 && (
-                  <button onClick={() => { setCatFilter(""); setMuscleFilter(""); setTypeFilter(""); setCustomOnly(false); }} className="text-[10px] text-crimson-light/70 hover:text-crimson-light transition-colors">Clear all</button>
-                )}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Table */}
       {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <p className="text-mist-mid text-sm animate-pulse">Loading exercises…</p>
+        <div className="rounded-xl border border-ink-light/30 overflow-hidden" style={{ background: "var(--surface-gradient-strong)" }}>
+          <div className="p-3 border-b border-ink-light/20 space-y-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  placeholder=""
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full bg-ink-dark/80 border border-ink-light/40 rounded-lg pl-10 pr-8 py-2 text-sm text-cloud-white placeholder:text-mist-dark/60 outline-none focus:border-jade-glow/60"
+                />
+                <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-mist-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <circle cx="11" cy="11" r="7" />
+                  <path strokeLinecap="round" d="M16.5 16.5l4 4" />
+                </svg>
+                {search ? (
+                  <button
+                    type="button"
+                    onClick={() => setSearch("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[13px] font-semibold leading-none text-mist-dark transition-colors hover:text-cloud-white"
+                    aria-label="Clear search"
+                  >
+                    x
+                  </button>
+                ) : null}
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <button
+                  onClick={() => setShowFilters((v) => !v)}
+                  className={`px-3 py-2 text-xs rounded-lg border transition-colors relative ${showFilters ? "bg-ink-mid/30 border-jade-glow/40 text-jade-light" : "border-ink-light/40 text-mist-light hover:border-jade-glow/30"}`}
+                >
+                  Filters
+                  {activeFilterCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-jade-glow text-ink-deep text-[9px] font-bold flex items-center justify-center">{activeFilterCount}</span>
+                  )}
+                </button>
+                <GlowButton onClick={onAdd} variant="jade" size="sm" glow>+ Add Exercise</GlowButton>
+              </div>
+            </div>
+            <AnimatePresence>
+              {showFilters && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="rounded-xl border border-ink-light/30 p-3 space-y-2" style={{ background: "var(--surface-gradient-strong)" }}>
+                    <div className="flex flex-wrap gap-2 items-center">
+                      <select value={catFilter} onChange={(e) => setCatFilter(e.target.value as TrainingCategory | "")} className="bg-ink-dark border border-ink-light/40 rounded-lg px-2.5 py-1.5 text-[11px] text-cloud-white outline-none focus:border-jade-glow/50">
+                        <option value="">All Categories</option>
+                        {ALL_TRAINING_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                      <select value={muscleFilter} onChange={(e) => setMuscleFilter(e.target.value as MuscleGroup | "")} className="bg-ink-dark border border-ink-light/40 rounded-lg px-2.5 py-1.5 text-[11px] text-cloud-white outline-none focus:border-jade-glow/50">
+                        <option value="">All Muscles</option>
+                        {ALL_MUSCLE_GROUPS.map((m) => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                      <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as SimpleExerciseType | "")} className="bg-ink-dark border border-ink-light/40 rounded-lg px-2.5 py-1.5 text-[11px] text-cloud-white outline-none focus:border-jade-glow/50">
+                        <option value="">All Types</option>
+                        {ALL_EXERCISE_TYPES.map((t) => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
+                      </select>
+                      <button onClick={() => setCustomOnly((v) => !v)} className={`${chipBase} ${customOnly ? chipOn : chipOff}`}>🔧 Custom Only</button>
+                      {activeFilterCount > 0 && (
+                        <button onClick={() => { setCatFilter(""); setMuscleFilter(""); setTypeFilter(""); setCustomOnly(false); }} className="text-[10px] text-crimson-light/70 hover:text-crimson-light transition-colors">Clear all</button>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+          <div className="flex items-center justify-center py-16">
+            <p className="text-mist-mid text-sm animate-pulse">Loading exercises…</p>
+          </div>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 space-y-3">
-          <div className="text-4xl opacity-40">📚</div>
-          <p className="text-sm text-mist-dark">{exercises.length === 0 ? "No exercises yet" : "No matching exercises"}</p>
-          {exercises.length === 0 && <GlowButton onClick={onAdd} variant="jade" size="sm" glow>+ Add Your First Exercise</GlowButton>}
+        <div className="rounded-xl border border-ink-light/30 overflow-hidden" style={{ background: "var(--surface-gradient-strong)" }}>
+          <div className="p-3 border-b border-ink-light/20 space-y-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  placeholder=""
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full bg-ink-dark/80 border border-ink-light/40 rounded-lg pl-10 pr-8 py-2 text-sm text-cloud-white placeholder:text-mist-dark/60 outline-none focus:border-jade-glow/60"
+                />
+                <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-mist-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <circle cx="11" cy="11" r="7" />
+                  <path strokeLinecap="round" d="M16.5 16.5l4 4" />
+                </svg>
+                {search ? (
+                  <button
+                    type="button"
+                    onClick={() => setSearch("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[13px] font-semibold leading-none text-mist-dark transition-colors hover:text-cloud-white"
+                    aria-label="Clear search"
+                  >
+                    x
+                  </button>
+                ) : null}
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <button
+                  onClick={() => setShowFilters((v) => !v)}
+                  className={`px-3 py-2 text-xs rounded-lg border transition-colors relative ${showFilters ? "bg-ink-mid/30 border-jade-glow/40 text-jade-light" : "border-ink-light/40 text-mist-light hover:border-jade-glow/30"}`}
+                >
+                  Filters
+                  {activeFilterCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-jade-glow text-ink-deep text-[9px] font-bold flex items-center justify-center">{activeFilterCount}</span>
+                  )}
+                </button>
+                <GlowButton onClick={onAdd} variant="jade" size="sm" glow>+ Add Exercise</GlowButton>
+              </div>
+            </div>
+            <AnimatePresence>
+              {showFilters && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="rounded-xl border border-ink-light/30 p-3 space-y-2" style={{ background: "var(--surface-gradient-strong)" }}>
+                    <div className="flex flex-wrap gap-2 items-center">
+                      <select value={catFilter} onChange={(e) => setCatFilter(e.target.value as TrainingCategory | "")} className="bg-ink-dark border border-ink-light/40 rounded-lg px-2.5 py-1.5 text-[11px] text-cloud-white outline-none focus:border-jade-glow/50">
+                        <option value="">All Categories</option>
+                        {ALL_TRAINING_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                      <select value={muscleFilter} onChange={(e) => setMuscleFilter(e.target.value as MuscleGroup | "")} className="bg-ink-dark border border-ink-light/40 rounded-lg px-2.5 py-1.5 text-[11px] text-cloud-white outline-none focus:border-jade-glow/50">
+                        <option value="">All Muscles</option>
+                        {ALL_MUSCLE_GROUPS.map((m) => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                      <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as SimpleExerciseType | "")} className="bg-ink-dark border border-ink-light/40 rounded-lg px-2.5 py-1.5 text-[11px] text-cloud-white outline-none focus:border-jade-glow/50">
+                        <option value="">All Types</option>
+                        {ALL_EXERCISE_TYPES.map((t) => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
+                      </select>
+                      <button onClick={() => setCustomOnly((v) => !v)} className={`${chipBase} ${customOnly ? chipOn : chipOff}`}>🔧 Custom Only</button>
+                      {activeFilterCount > 0 && (
+                        <button onClick={() => { setCatFilter(""); setMuscleFilter(""); setTypeFilter(""); setCustomOnly(false); }} className="text-[10px] text-crimson-light/70 hover:text-crimson-light transition-colors">Clear all</button>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+          <div className="flex flex-col items-center justify-center py-16 space-y-3">
+            <div className="text-4xl opacity-40">📚</div>
+            <p className="text-sm text-mist-dark">{exercises.length === 0 ? "No exercises yet" : "No matching exercises"}</p>
+            {exercises.length === 0 && <GlowButton onClick={onAdd} variant="jade" size="sm" glow>+ Add Your First Exercise</GlowButton>}
+          </div>
         </div>
       ) : (
         <>
@@ -611,14 +696,87 @@ function ExercisesTab({
             className="rounded-xl border border-ink-light/30 overflow-hidden"
             style={{ background: "var(--surface-gradient-strong)" }}
           >
+            <div className="p-3 border-b border-ink-light/20 space-y-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    placeholder=""
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full bg-ink-dark/80 border border-ink-light/40 rounded-lg pl-10 pr-8 py-2 text-sm text-cloud-white placeholder:text-mist-dark/60 outline-none focus:border-jade-glow/60"
+                  />
+                  <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-mist-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <circle cx="11" cy="11" r="7" />
+                    <path strokeLinecap="round" d="M16.5 16.5l4 4" />
+                  </svg>
+                  {search ? (
+                    <button
+                      type="button"
+                      onClick={() => setSearch("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[13px] font-semibold leading-none text-mist-dark transition-colors hover:text-cloud-white"
+                      aria-label="Clear search"
+                    >
+                      x
+                    </button>
+                  ) : null}
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <button
+                    onClick={() => setShowFilters((v) => !v)}
+                    className={`px-3 py-2 text-xs rounded-lg border transition-colors relative ${showFilters ? "bg-ink-mid/30 border-jade-glow/40 text-jade-light" : "border-ink-light/40 text-mist-light hover:border-jade-glow/30"}`}
+                  >
+                    Filters
+                    {activeFilterCount > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-jade-glow text-ink-deep text-[9px] font-bold flex items-center justify-center">{activeFilterCount}</span>
+                    )}
+                  </button>
+                  <GlowButton onClick={onAdd} variant="jade" size="sm" glow>+ Add Exercise</GlowButton>
+                </div>
+              </div>
+              <AnimatePresence>
+                {showFilters && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="rounded-xl border border-ink-light/30 p-3 space-y-2" style={{ background: "var(--surface-gradient-strong)" }}>
+                      <div className="flex flex-wrap gap-2 items-center">
+                        <select value={catFilter} onChange={(e) => setCatFilter(e.target.value as TrainingCategory | "")} className="bg-ink-dark border border-ink-light/40 rounded-lg px-2.5 py-1.5 text-[11px] text-cloud-white outline-none focus:border-jade-glow/50">
+                          <option value="">All Categories</option>
+                          {ALL_TRAINING_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                        <select value={muscleFilter} onChange={(e) => setMuscleFilter(e.target.value as MuscleGroup | "")} className="bg-ink-dark border border-ink-light/40 rounded-lg px-2.5 py-1.5 text-[11px] text-cloud-white outline-none focus:border-jade-glow/50">
+                          <option value="">All Muscles</option>
+                          {ALL_MUSCLE_GROUPS.map((m) => <option key={m} value={m}>{m}</option>)}
+                        </select>
+                        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as SimpleExerciseType | "")} className="bg-ink-dark border border-ink-light/40 rounded-lg px-2.5 py-1.5 text-[11px] text-cloud-white outline-none focus:border-jade-glow/50">
+                          <option value="">All Types</option>
+                          {ALL_EXERCISE_TYPES.map((t) => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
+                        </select>
+                        <button onClick={() => setCustomOnly((v) => !v)} className={`${chipBase} ${customOnly ? chipOn : chipOff}`}>🔧 Custom Only</button>
+                        {activeFilterCount > 0 && (
+                          <button onClick={() => { setCatFilter(""); setMuscleFilter(""); setTypeFilter(""); setCustomOnly(false); }} className="text-[10px] text-crimson-light/70 hover:text-crimson-light transition-colors">Clear all</button>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
             {/* Table header */}
             <div className="hidden sm:grid border-b border-ink-light/20 px-3 py-2 bg-ink-mid/20 text-[10px] font-semibold uppercase tracking-wider text-mist-dark"
-              style={{ gridTemplateColumns: "36px 1fr 110px 90px 1fr 40px" }}>
+              style={{ gridTemplateColumns: "36px 1fr 100px 90px 1fr 110px 40px" }}>
               <span>#</span>
               <span>Exercise</span>
               <span>Category</span>
               <span>Type</span>
               <span>Muscles</span>
+              <span>Variant</span>
               <span />
             </div>
 
@@ -636,7 +794,7 @@ function ExercisesTab({
                       className={`group px-3 py-2.5 hover:bg-ink-mid/20 transition-colors
                         grid grid-cols-1 gap-1
                         sm:grid sm:gap-2 sm:items-center`}
-                      style={isMobile ? undefined : { gridTemplateColumns: "36px 1fr 110px 90px 1fr 40px" }}
+                      style={isMobile ? undefined : { gridTemplateColumns: "36px 1fr 100px 90px 1fr 110px 40px" }}
                     >
                       {/* Row number — desktop only */}
                       <span className="hidden sm:block text-[11px] text-mist-dark font-mono">{rowNum}</span>
@@ -667,6 +825,16 @@ function ExercisesTab({
                           <span key={mg} className="text-[9px] px-1.5 py-0.5 rounded bg-ink-mid/40 text-mist-light border border-ink-light/20">{mg}</span>
                         ))}
                         {ex.muscleGroups.length > 3 && <span className="text-[9px] text-mist-dark">+{ex.muscleGroups.length - 3}</span>}
+                      </div>
+
+                      {/* Variants */}
+                      <div>
+                        <button
+                          onClick={() => onEditVariants(ex)}
+                          className="text-[10px] px-2 py-1 rounded-md border border-ink-light/30 text-mist-light hover:border-jade-glow/40 hover:text-jade-light transition-colors"
+                        >
+                          Manage ({(exerciseVariants[ex.id] ?? []).length})
+                        </button>
                       </div>
 
                       {/* Actions */}
@@ -707,23 +875,25 @@ export default function ExerciseDBPage() {
   const { user } = useAuth();
   const userId = user?.id;
 
-  const [tab, setTab] = useState<Tab>("overview");
   const [exercises, setExercises] = useState<SimpleExercise[]>([]);
   const [loading, setLoading] = useState(true);
-  const [variants, setVariants] = useState<Record<string, string[]>>({});
+  const [exerciseVariants, setExerciseVariants] = useState<Record<string, string[]>>({});
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"add" | "edit">("add");
   const [editingExercise, setEditingExercise] = useState<SimpleExercise | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<SimpleExercise | null>(null);
+  const [variantsTarget, setVariantsTarget] = useState<SimpleExercise | null>(null);
 
-  // Load variants from localStorage on mount
-  useEffect(() => { setVariants(loadVariants()); }, []);
+  useEffect(() => { setExerciseVariants(loadExerciseVariants()); }, []);
 
-  const handleVariantsUpdate = useCallback((v: Record<string, string[]>) => {
-    setVariants(v);
-    saveVariants(v);
+  const handleExerciseVariantsSave = useCallback((exerciseId: string, variants: string[]) => {
+    setExerciseVariants((prev) => {
+      const updated = { ...prev, [exerciseId]: variants };
+      saveExerciseVariants(updated);
+      return updated;
+    });
   }, []);
 
   const fetchExercises = useCallback(async () => {
@@ -775,63 +945,32 @@ export default function ExerciseDBPage() {
     } catch (err) { console.error("Duplicate failed:", err); }
   };
 
-  const TABS: { id: Tab; label: string }[] = [
-    { id: "overview", label: "Overview" },
-    { id: "exercises", label: "Exercises" },
-    { id: "variants", label: "Variants" },
-  ];
-
   return (
-    <PageLayout title="Exercise DB" subtitle="Manage your exercise database">
-      <div className="px-1 py-3 sm:px-0 sm:py-4 space-y-4">
-        {/* Header */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <h2 className="text-sm font-semibold text-cloud-white uppercase tracking-wider">Exercise Database</h2>
-        </div>
+    <PageLayout
+      title="Exercise DB"
+      subtitle="Manage your exercise database"
+      mobileContentPaddingClass="p-2 pb-24"
+    >
+      <div className="nyaa-history-page space-y-2 px-0 py-2 sm:py-3">
+        <div className="space-y-4">
+          {/* Header */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <h2 className="text-sm font-semibold text-cloud-white uppercase tracking-wider">Exercise Database</h2>
+          </div>
 
-        {/* Tab bar — MapleRanks-style horizontal pill tabs */}
-        <div className="flex gap-1 rounded-xl border border-ink-light/30 p-1" style={{ background: "var(--surface-gradient-strong)" }}>
-          {TABS.map(({ id, label }) => (
-            <button
-              key={id}
-              onClick={() => setTab(id)}
-              className={`relative flex-1 py-2 text-xs font-semibold rounded-lg transition-all duration-200 ${
-                tab === id
-                  ? "bg-jade-deep/50 text-jade-light shadow-[0_0_12px_var(--glow-jade)]"
-                  : "text-mist-dark hover:text-mist-light hover:bg-ink-mid/20"
-              }`}
-            >
-              {label}
-              {id === "exercises" && exercises.length > 0 && (
-                <span className="absolute top-1 right-2 text-[9px] text-mist-dark">{exercises.length}</span>
-              )}
-            </button>
-          ))}
-        </div>
+          <OverviewTab exercises={exercises} />
 
-        {/* Tab content */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={tab}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.15 }}
-          >
-            {tab === "overview" && <OverviewTab exercises={exercises} />}
-            {tab === "exercises" && (
-              <ExercisesTab
-                exercises={exercises}
-                loading={loading}
-                onAdd={handleAdd}
-                onEdit={handleEdit}
-                onDelete={setDeleteTarget}
-                onDuplicate={handleDuplicate}
-              />
-            )}
-            {tab === "variants" && <VariantsTab variants={variants} onUpdate={handleVariantsUpdate} />}
-          </motion.div>
-        </AnimatePresence>
+          <ExercisesTab
+            exercises={exercises}
+            loading={loading}
+            exerciseVariants={exerciseVariants}
+            onAdd={handleAdd}
+            onEdit={handleEdit}
+            onEditVariants={setVariantsTarget}
+            onDelete={setDeleteTarget}
+            onDuplicate={handleDuplicate}
+          />
+        </div>
       </div>
 
       <ExerciseModal
@@ -840,7 +979,14 @@ export default function ExerciseDBPage() {
         onSave={handleSave}
         exercise={editingExercise}
         mode={modalMode}
-        customVariants={variants}
+      />
+
+      <ExerciseVariantsModal
+        isOpen={variantsTarget !== null}
+        onClose={() => setVariantsTarget(null)}
+        exercise={variantsTarget}
+        variants={variantsTarget ? (exerciseVariants[variantsTarget.id] ?? []) : []}
+        onSave={handleExerciseVariantsSave}
       />
 
       <DeleteModal

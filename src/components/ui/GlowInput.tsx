@@ -8,10 +8,10 @@ interface GlowInputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 const focusGlow = {
-  jade: "focus:border-jade-glow focus:shadow-[0_0_12px_rgba(58,143,143,0.3)]",
-  crimson: "focus:border-crimson-glow focus:shadow-[0_0_12px_rgba(196,48,48,0.3)]",
-  gold: "focus:border-gold focus:shadow-[0_0_12px_rgba(232,200,74,0.3)]",
-  blue: "focus:border-mountain-blue-glow focus:shadow-[0_0_12px_rgba(74,143,184,0.3)]",
+  jade: "focus:border-jade-glow focus:shadow-[var(--glow-jade)]",
+  crimson: "focus:border-crimson-glow focus:shadow-[var(--glow-crimson)]",
+  gold: "focus:border-gold focus:shadow-[var(--glow-gold)]",
+  blue: "focus:border-mountain-blue-glow focus:shadow-[var(--glow-blue)]",
 };
 
 export default function GlowInput({

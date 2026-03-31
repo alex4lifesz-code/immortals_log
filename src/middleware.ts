@@ -2,6 +2,7 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 import { jwtVerify } from "jose";
+import { DASHBOARD_ROUTES } from "@/lib/navigation";
 
 const COOKIE_NAME = "auth-token";
 
@@ -15,8 +16,8 @@ const PUBLIC_API_ROUTES = new Set([
 // API routes that need auth
 const API_PREFIX = "/api/";
 // Dashboard pages that need auth
-const DASHBOARD_PREFIX = "/dashboard";
-const ADMIN_ONLY_DASHBOARD_ROUTES = ["/dashboard/attendance", "/dashboard/checkin"];
+const DASHBOARD_PREFIX = DASHBOARD_ROUTES.root;
+const ADMIN_ONLY_DASHBOARD_ROUTES = [DASHBOARD_ROUTES.attendance, DASHBOARD_ROUTES.checkinLegacy];
 
 function parseBooleanEnv(value: string | undefined): boolean | null {
   if (!value) return null;
@@ -120,7 +121,7 @@ export async function middleware(request: NextRequest) {
       ADMIN_ONLY_DASHBOARD_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`)) &&
       payload.role !== "admin"
     ) {
-      const dashboardUrl = new URL("/dashboard/overview", request.url);
+      const dashboardUrl = new URL(DASHBOARD_ROUTES.overview, request.url);
       return NextResponse.redirect(dashboardUrl);
     }
 

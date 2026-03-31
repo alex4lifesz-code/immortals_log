@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { NavItem, defaultNavItems } from "@/lib/constants";
 import { useAuth } from "@/context/AuthContext";
 import { CONFIG, type Theme } from "@/lib/config";
@@ -47,6 +47,8 @@ interface AppContextType extends AppState {
 }
 
 const AppContext = createContext<AppContextType | null>(null);
+const IsMobileContext = createContext(false);
+const SortedNavItemsContext = createContext<NavItem[]>(defaultNavItems.filter((item) => item.visible));
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -157,6 +159,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (savedStyle && (CONFIG.themes as readonly string[]).includes(savedStyle)) {
       setThemeStyle(savedStyle);
     }
+    // Layout selection removed: always use Layout 1 shell.
+    localStorage.removeItem("cultivation-layout-style");
   }, [setTheme, setThemeStyle]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -290,6 +294,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return [...pinned, ...unpinned];
   }, [navItems]);
 
+  const sortedNavItems = useMemo(() => getSortedNavItems(), [getSortedNavItems]);
+
   const setNavigationMode = useCallback((mode: NavigationMode) => {
     setNavigationModeState(mode);
   }, []);
@@ -302,9 +308,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setTrainingModeState(mode);
   }, []);
 
-  return (
-    <AppContext.Provider
-      value={{
+  const appContextValue = useMemo<AppContextType>(() => ({
         navItems,
         dualPageView,
         panelPosition,
@@ -333,10 +337,45 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setMobileSidebarOpen,
         registerDrawerClose,
         activeDrawerClose,
-      }}
-    >
-      {children}
-    </AppContext.Provider>
+      }), [
+        activeDrawerClose,
+        collapsed,
+        currentPage,
+        dualPageView,
+        getSortedNavItems,
+        isMobile,
+        mobileSidebarOpen,
+        navItems,
+        navigationMode,
+        panelPosition,
+        registerDrawerClose,
+        reorderNavItems,
+        setCollapsed,
+        setCurrentPage,
+        setMobileSidebarOpen,
+        setNavigationMode,
+        setTheme,
+        setThemeStyle,
+        setTopPanelExpanded,
+        setTrainingMode,
+        theme,
+        themeStyle,
+        toggleDualPage,
+        toggleNavPin,
+        toggleNavVisibility,
+        toggleTheme,
+        topPanelExpanded,
+        trainingMode,
+      ]);
+
+  return (
+    <IsMobileContext.Provider value={isMobile}>
+      <SortedNavItemsContext.Provider value={sortedNavItems}>
+        <AppContext.Provider value={appContextValue}>
+          {children}
+        </AppContext.Provider>
+      </SortedNavItemsContext.Provider>
+    </IsMobileContext.Provider>
   );
 }
 
@@ -344,4 +383,12 @@ export function useAppContext() {
   const ctx = useContext(AppContext);
   if (!ctx) throw new Error("useAppContext must be used within AppProvider");
   return ctx;
+}
+
+export function useIsMobile() {
+  return useContext(IsMobileContext);
+}
+
+export function useSortedNavItems() {
+  return useContext(SortedNavItemsContext);
 }

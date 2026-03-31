@@ -11,7 +11,7 @@ import PageLayout from "@/components/layout/PageLayout";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
-import { useAppContext } from "@/context/AppContext";
+import { useIsMobile } from "@/context/AppContext";
 import { formatDateWithPreference } from "@/lib/constants";
 import { syncWeightFromLatestCheckin } from "@/lib/user-physique";
 import { api } from "@/lib/api-client";
@@ -48,7 +48,7 @@ export default function DaoHallPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { settings } = useDisplaySettings();
-  const { isMobile } = useAppContext();
+  const isMobile = useIsMobile();
   const isAdmin = user?.role === "admin";
   const dateFormat = settings.dateFormat || "dd-mmm-yyyy";
   const router = useRouter();

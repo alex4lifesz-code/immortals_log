@@ -8,6 +8,8 @@ import MobileProgressRing from "@/components/mobile/progress/MobileProgressRing"
 import MobileSpeedDial from "@/components/mobile/actions/MobileSpeedDial";
 import MobileLoadingSkeleton from "@/components/mobile/feedback/MobileLoadingSkeleton";
 import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
+import { MOBILE_DASHBOARD_ROUTES } from "@/lib/navigation";
 
 function deriveStage(score: number): string {
   if (score >= 5000) return "Stage 7";
@@ -21,6 +23,7 @@ function deriveStage(score: number): string {
 
 export default function MobileDashboardPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [checkinCount, setCheckinCount] = useState(0);
   const [exerciseCount, setExerciseCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -94,8 +97,8 @@ export default function MobileDashboardPage() {
 
       <MobileSpeedDial
         actions={[
-          { id: "quick-log", label: "Quick log", onClick: () => (window.location.href = "/dashboard/mobile/check-in") },
-          { id: "start-training", label: "Start training", onClick: () => (window.location.href = "/dashboard/mobile/training") },
+          { id: "quick-log", label: "Quick log", onClick: () => router.push(MOBILE_DASHBOARD_ROUTES.checkIn) },
+          { id: "start-training", label: "Start training", onClick: () => router.push(MOBILE_DASHBOARD_ROUTES.training) },
         ]}
       />
     </div>

@@ -36,6 +36,8 @@ export const GET = withAuth(async (req, { auth }) => {
         weight3: log.weight3,
         reps3: log.reps3,
         holdTime: log.holdTime,
+        modifier: log.modifier,
+        variant: log.variant,
         notes: log.notes,
       }))
     );

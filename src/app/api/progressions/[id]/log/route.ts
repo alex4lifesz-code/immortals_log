@@ -32,6 +32,9 @@ export const POST = withAuth(async (request, { auth, params }) => {
       });
     }
 
+    const createdAt = body.createdAt ? new Date(String(body.createdAt)) : null;
+    const validCreatedAt = createdAt && !Number.isNaN(createdAt.getTime()) ? createdAt : null;
+
     const log = await prisma.progressionLog.create({
       data: {
         userProgressionId: userProgress.id,
@@ -50,6 +53,7 @@ export const POST = withAuth(async (request, { auth, params }) => {
         variant: body.variant ? String(body.variant).trim().slice(0, 200) : null,
         notes: body.notes ? String(body.notes).trim().slice(0, 1000) : null,
         completed: body.completed === true,
+        createdAt: validCreatedAt ?? undefined,
       },
     });
 

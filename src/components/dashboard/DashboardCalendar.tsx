@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { useState } from "react";
 import GlowCard from "@/components/ui/GlowCard";
 import GlowButton from "@/components/ui/GlowButton";
-import { useAppContext } from "@/context/AppContext";
+import { useIsMobile } from "@/context/AppContext";
 import { formatDateWithPreference } from "@/lib/constants";
 
 export interface DashboardUser {
@@ -337,7 +337,7 @@ export function Calendar({
   dateFormat?: "dd-mm-yyyy" | "dd-mmm-yyyy" | "dd-mm-yy" | "dd-mmm-yy";
   onManageNotes?: () => void;
 }) {
-  const { isMobile } = useAppContext();
+  const isMobile = useIsMobile();
   const compactMode = isMobile;
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
   const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();

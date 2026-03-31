@@ -96,74 +96,21 @@ export default function HistoryPage() {
       subtitle={subtitle}
       mobileContentPaddingClass="p-2 pb-24"
     >
-      <div className="space-y-3 px-0 py-2 sm:py-3">
+      <div className="nyaa-history-page space-y-2 px-0 py-2 sm:py-3">
         {loading ? (
-          <div className="rounded-xl border border-ink-light/40 p-6 text-center text-sm text-mist-dark" style={{ background: "var(--surface-gradient-strong)" }}>
+          <div className="rounded-lg border p-6 text-center text-sm" style={{ borderColor: "var(--border)", color: "var(--text-muted)", background: "var(--surface)" }}>
             Loading history...
           </div>
         ) : (
           <>
-            <section className="flex flex-wrap gap-3">
-              <div
-                className="min-w-[220px] flex-1 rounded-xl border border-jade-glow/25 p-3 shadow-[var(--shadow-elev-1)] md:basis-[calc(50%-0.375rem)]"
-                style={{ background: "var(--surface-gradient-strong)" }}
-              >
-                <p className="text-[10px] uppercase tracking-wider text-mist-dark">Total Log Entries</p>
-                <div className="mt-1 text-2xl font-bold text-jade-light">{historyInsights.total}</div>
-                <p className="mt-1 text-[11px] text-mist-light">
-                  Unique exercises: <span className="font-semibold text-cloud-white">{historyInsights.uniqueExercises}</span>
-                </p>
-              </div>
-
-              <div
-                className="min-w-[220px] flex-1 rounded-xl border border-gold/25 p-3 shadow-[var(--shadow-elev-1)] md:basis-[calc(50%-0.375rem)]"
-                style={{ background: "var(--surface-gradient-strong)" }}
-              >
-                <p className="text-[10px] uppercase tracking-wider text-mist-dark">Last 7 Days</p>
-                <div className="mt-1 text-2xl font-bold text-gold-glow">{historyInsights.logsLast7Days}</div>
-                <p className="mt-1 truncate text-[11px] text-mist-light" title={historyInsights.topExerciseName}>
-                  Top: <span className="font-semibold text-cloud-white">{historyInsights.topExerciseName}</span>
-                  {historyInsights.topExerciseCount > 0 ? ` (${historyInsights.topExerciseCount})` : ""}
-                </p>
-              </div>
-
-              <div
-                className="basis-full rounded-xl border border-ink-light/45 p-3 shadow-[var(--shadow-elev-1)]"
-                style={{ background: "var(--surface-gradient-strong)" }}
-              >
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <p className="text-[10px] uppercase tracking-wider text-mist-dark">Recent History</p>
-                </div>
-
-                {historyInsights.recentEntries.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {historyInsights.recentEntries.map((entry) => (
-                      <div
-                        key={entry.id}
-                        className="inline-flex min-w-[190px] flex-1 items-center justify-between gap-2 rounded-lg border border-ink-light/35 bg-ink-dark/35 px-2.5 py-2"
-                      >
-                        <div className="min-w-0">
-                          <p className="truncate text-[11px] font-semibold text-cloud-white">{entry.exerciseName}</p>
-                          <p className="text-[10px] text-mist-dark">{formatDateWithPreference(entry.createdAt, dateFormat)}</p>
-                        </div>
-                        <span className="shrink-0 rounded-md border border-jade-glow/30 bg-jade-deep/18 px-1.5 py-0.5 text-[10px] text-jade-light">
-                          Lv {entry.level}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-[11px] text-mist-mid">No training history yet.</p>
-                )}
-              </div>
-            </section>
-
-            <MemoTrainingLogTable
-              exercises={exercises}
-              physique={physique}
-              onRefresh={fetchExercises}
-              userId={userId}
-            />
+            <div className="nyaa-history-table-shell">
+              <MemoTrainingLogTable
+                exercises={exercises}
+                physique={physique}
+                onRefresh={fetchExercises}
+                userId={userId}
+              />
+            </div>
           </>
         )}
       </div>

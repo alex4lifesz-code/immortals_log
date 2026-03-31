@@ -1,5 +1,8 @@
 .mobile-shell {
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 74px);
+  padding-top: var(--safe-area-inset-top);
+  padding-right: var(--safe-area-inset-right);
+  padding-bottom: calc(var(--safe-area-inset-bottom) + 74px);
+  padding-left: var(--safe-area-inset-left);
 }
 
 .mobile-shell * {

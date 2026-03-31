@@ -5,7 +5,7 @@ import { useState, useMemo, startTransition, memo } from "react";
 import { createPortal } from "react-dom";
 import GlowButton from "@/components/ui/GlowButton";
 import { useDisplaySettings, DEFAULT_UNIFIED_VISIBLE_COLUMNS, DISPLAY_DEFAULTS } from "@/context/DisplaySettingsContext";
-import { useAppContext } from "@/context/AppContext";
+import { useIsMobile } from "@/context/AppContext";
 import { getTypeColor, formatDateWithPreference } from "@/lib/constants";
 import { api, ApiRequestError } from "@/lib/api-client";
 import { getExerciseDisplayName, getTypeDisplayName, getTypeColorKey } from "@/lib/exercise-name";
@@ -224,7 +224,7 @@ function UnifiedTrainingLogTable({
     [allEntries, selectedLogFilter, isSelectedGymExercise]
   );
   const { settings } = useDisplaySettings();
-  const { isMobile } = useAppContext();
+  const isMobile = useIsMobile();
 
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingData, setEditingData] = useState<Record<string, {

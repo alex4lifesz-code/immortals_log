@@ -7,7 +7,7 @@ import GlowButton from "@/components/ui/GlowButton";
 import PageSkeleton from "@/components/ui/PageSkeleton";
 import { GlowModal } from "@/components/ui/GlowCard";
 import { useAuth } from "@/context/AuthContext";
-import { useAppContext } from "@/context/AppContext";
+import { useIsMobile } from "@/context/AppContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { useRouter } from "next/navigation";
 import { formatDateWithPreference } from "@/lib/constants";
@@ -78,7 +78,7 @@ function getCompactUserLabel(name: string): string {
 
 export default function CheckInPage() {
   const { user } = useAuth();
-  const { isMobile } = useAppContext();
+  const isMobile = useIsMobile();
   const { settings } = useDisplaySettings();
   const router = useRouter();
   const isAdmin = user?.role === "admin";

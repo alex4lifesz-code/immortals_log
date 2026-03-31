@@ -43,6 +43,10 @@ export const CONFIG = {
     "calligraphy",
     "sakura",
     "sakura-dark",
+    "eternal",
+    "discord",
+    "document",
+    "nyaa",
   ] as const,
 
   bandResistance: {

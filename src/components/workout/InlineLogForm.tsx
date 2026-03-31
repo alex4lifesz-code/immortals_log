@@ -21,11 +21,12 @@ import {
 import { EquipmentBadges } from "@/components/workout/EquipmentBadges";
 import { getTierGlowFromLogs } from "@/components/workout/TierProgressBar";
 import { useDisplaySettings, DISPLAY_DEFAULTS } from "@/context/DisplaySettingsContext";
-import { useAppContext } from "@/context/AppContext";
+import { useIsMobile } from "@/context/AppContext";
 import { getTypeColor } from "@/lib/constants";
 import { getDifficultyColorClass, getDifficultyGlowStyleScaled } from "@/lib/difficulty-styles";
 import { getExerciseDisplayName, getTypeDisplayName, getDifficultyDisplayName, getTypeColorKey } from "@/lib/exercise-name";
 import type { UserPhysiqueSettings } from "@/lib/user-physique";
+import { useLatestCheckinWeight } from "@/hooks/useLatestCheckinWeight";
 
 export function InlineLogForm({
   queueItemId,
@@ -86,11 +87,10 @@ export function InlineLogForm({
   const [activeMobileSet, setActiveMobileSet] = useState<1 | 2 | 3>(1);
   const [focusedPrimarySetId, setFocusedPrimarySetId] = useState<1 | 2 | 3 | null>(null);
   const [draftReady, setDraftReady] = useState(false);
-  const [latestCheckInWeightKg, setLatestCheckInWeightKg] = useState<number | null>(null);
   const prevDraftKeyRef = useRef<string | null>(null);
   const showHold = inputMode === "hold";
   const { settings } = useDisplaySettings();
-  const { isMobile } = useAppContext();
+  const isMobile = useIsMobile();
 
   const mode = DISPLAY_DEFAULTS.progressionCardMode;
   const cardStyle = DISPLAY_DEFAULTS.progressionCardStyle;
@@ -121,6 +121,7 @@ export function InlineLogForm({
   const showAddedWeight = supportsResistanceBandAssistance(exercise);
   const showBodyweightQuickFill = supportsBodyweightQuickFill(exercise);
   const canUseBwQuickFill = !showHold && showBodyweightQuickFill;
+  const latestCheckInWeightKg = useLatestCheckinWeight(userId, canUseBwQuickFill);
   const availableVariationOptions = useMemo(() => {
     const options = new Set<string>();
 
@@ -219,31 +220,6 @@ export function InlineLogForm({
     setTimerTick(0);
     setActiveMobileSet(1);
   }, [exercise, exercise.id, selectedLevel]);
-
-  useEffect(() => {
-    if (!canUseBwQuickFill || !userId) {
-      setLatestCheckInWeightKg(null);
-      return;
-    }
-
-    let cancelled = false;
-    fetch("/api/checkins/latest-weight", { credentials: "include" })
-      .then(async (res) => {
-        if (!res.ok) return null;
-        const json = await res.json() as { weight?: number | null };
-        const parsed = typeof json.weight === "number" && Number.isFinite(json.weight) && json.weight > 0
-          ? json.weight
-          : null;
-        if (!cancelled) setLatestCheckInWeightKg(parsed);
-      })
-      .catch(() => {
-        if (!cancelled) setLatestCheckInWeightKg(null);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [canUseBwQuickFill, userId, exercise.id]);
 
   useEffect(() => {
     const draftKey = draftStorageKey ?? null;

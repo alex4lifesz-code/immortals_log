@@ -21,11 +21,12 @@ import {
 import { EquipmentBadges } from "@/components/workout/EquipmentBadges";
 import { getTierGlowFromLogs } from "@/components/workout/TierProgressBar";
 import { useDisplaySettings, DISPLAY_DEFAULTS } from "@/context/DisplaySettingsContext";
-import { useAppContext } from "@/context/AppContext";
+import { useIsMobile } from "@/context/AppContext";
 import { getTypeColor } from "@/lib/constants";
 import { getDifficultyColorClass, getDifficultyGlowStyleScaled } from "@/lib/difficulty-styles";
 import { getExerciseDisplayName, getTypeDisplayName, getDifficultyDisplayName, getTypeColorKey } from "@/lib/exercise-name";
 import type { UserPhysiqueSettings } from "@/lib/user-physique";
+import { useLatestCheckinWeight } from "@/hooks/useLatestCheckinWeight";
 
 export function SetLoggerPanel({
   queueItemId,
@@ -76,16 +77,22 @@ export function SetLoggerPanel({
   const [shakeError, setShakeError] = useState(false);
   const [weightUnit, setWeightUnit] = useState<"kg" | "lbs">("kg");
   const [inputMode, setInputMode] = useState<"weight" | "hold">(() => getTierInputMode(exercise, selectedLevel));
+  const [timerRunning, setTimerRunning] = useState(false);
+  const [timerStartedAt, setTimerStartedAt] = useState<number | null>(null);
+  const [timerElapsedMs, setTimerElapsedMs] = useState(0);
+  const [timerTick, setTimerTick] = useState(0);
+  const [showTimerModal, setShowTimerModal] = useState(false);
+  const [timerTarget, setTimerTarget] = useState<"hold" | "hold2" | "hold3">("hold");
+  const [timerReps, setTimerReps] = useState("");
   const [activeMobileSet, setActiveMobileSet] = useState<1 | 2 | 3>(1);
   const [focusedPrimarySetId, setFocusedPrimarySetId] = useState<1 | 2 | 3 | null>(null);
   const [expandedSetIds, setExpandedSetIds] = useState<Record<1 | 2 | 3, boolean>>({ 1: true, 2: false, 3: false });
   const [setCount, setSetCount] = useState<1 | 2 | 3>(1);
   const [draftReady, setDraftReady] = useState(false);
-  const [latestCheckInWeightKg, setLatestCheckInWeightKg] = useState<number | null>(null);
   const prevDraftKeyRef = useRef<string | null>(null);
   const showHold = inputMode === "hold";
   const { settings } = useDisplaySettings();
-  const { isMobile } = useAppContext();
+  const isMobile = useIsMobile();
 
   const mode = DISPLAY_DEFAULTS.progressionCardMode;
   const cardStyle = DISPLAY_DEFAULTS.progressionCardStyle;
@@ -116,6 +123,7 @@ export function SetLoggerPanel({
   const showAddedWeight = supportsResistanceBandAssistance(exercise);
   const showBodyweightQuickFill = supportsBodyweightQuickFill(exercise);
   const canUseBwQuickFill = !showHold && showBodyweightQuickFill;
+  const latestCheckInWeightKg = useLatestCheckinWeight(userId, canUseBwQuickFill);
   const availableVariationOptions = useMemo(() => {
     const options = new Set<string>();
 
@@ -159,6 +167,7 @@ export function SetLoggerPanel({
     setHold("");
     setHold2("");
     setHold3("");
+    resetTimer();
     setActiveMobileSet(1);
     setExpandedSetIds({ 1: true, 2: false, 3: false });
     setSetCount(1);
@@ -171,9 +180,9 @@ export function SetLoggerPanel({
   ];
 
   const mobileHoldSets = [
-    { id: 1 as const, title: "Set 1", primaryLabel: "Hold time (sec)", primaryValue: hold, setPrimary: setHold, secondaryLabel: "Reps", secondaryValue: r1, setSecondary: setR1 },
-    { id: 2 as const, title: "Set 2", primaryLabel: "Hold time (sec)", primaryValue: hold2, setPrimary: setHold2, secondaryLabel: "Reps", secondaryValue: r2, setSecondary: setR2 },
-    { id: 3 as const, title: "Set 3", primaryLabel: "Hold time (sec)", primaryValue: hold3, setPrimary: setHold3, secondaryLabel: "Reps", secondaryValue: r3, setSecondary: setR3 },
+    { id: 1 as const, title: "Set 1", primaryLabel: "Hold time (sec)", primaryValue: hold, setPrimary: setHold, secondaryLabel: "Work reps", secondaryValue: r1, setSecondary: setR1, timerKey: "hold" as const },
+    { id: 2 as const, title: "Set 2", primaryLabel: "Hold time (sec)", primaryValue: hold2, setPrimary: setHold2, secondaryLabel: "Work reps", secondaryValue: r2, setSecondary: setR2, timerKey: "hold2" as const },
+    { id: 3 as const, title: "Set 3", primaryLabel: "Hold time (sec)", primaryValue: hold3, setPrimary: setHold3, secondaryLabel: "Work reps", secondaryValue: r3, setSecondary: setR3, timerKey: "hold3" as const },
   ];
 
   const mobileSetConfigs = showHold ? mobileHoldSets : mobileWeightSets;
@@ -225,8 +234,6 @@ export function SetLoggerPanel({
     if (setCount <= 1) return;
     if (setId > setCount) return;
 
-    const prevExpanded = expandedSetIds;
-
     if (setId === 1) {
       setW1(w2);
       setR1(r2);
@@ -269,32 +276,13 @@ export function SetLoggerPanel({
     }
 
     const nextCount = (setCount - 1) as 1 | 2;
-
-    let nextExpanded: Record<1 | 2 | 3, boolean>;
-    if (setId === 1) {
-      nextExpanded = {
-        1: prevExpanded[2],
-        2: setCount === 3 ? prevExpanded[3] : false,
-        3: false,
-      };
-    } else if (setId === 2) {
-      nextExpanded = {
-        1: prevExpanded[1],
-        2: setCount === 3 ? prevExpanded[3] : false,
-        3: false,
-      };
-    } else {
-      nextExpanded = {
-        1: prevExpanded[1],
-        2: prevExpanded[2],
-        3: false,
-      };
-    }
-
-    const nextActiveSet = activeMobileSet > nextCount ? nextCount : activeMobileSet;
+    const nextActiveSet =
+      activeMobileSet === setId
+        ? (setId === 1 ? 1 : ((setId - 1) as 1 | 2))
+        : (activeMobileSet > nextCount ? nextCount : activeMobileSet);
 
     setSetCount(nextCount);
-    setExpandedSetIds(nextExpanded);
+    setExpandedSetIds({ 1: nextActiveSet === 1, 2: nextActiveSet === 2, 3: false });
     setActiveMobileSet(nextActiveSet);
   };
 
@@ -302,11 +290,7 @@ export function SetLoggerPanel({
     if (setCount >= 3) return;
     const nextCount = (setCount + 1) as 2 | 3;
     setSetCount(nextCount);
-    setExpandedSetIds({
-      1: false,
-      2: nextCount === 2,
-      3: nextCount === 3,
-    });
+    setExpandedSetIds({ 1: false, 2: false, 3: false });
     setActiveMobileSet(nextCount);
   };
 
@@ -319,35 +303,14 @@ export function SetLoggerPanel({
 
   useEffect(() => {
     setInputMode(getTierInputMode(exercise, selectedLevel));
+    setTimerRunning(false);
+    setTimerStartedAt(null);
+    setTimerElapsedMs(0);
+    setTimerTick(0);
     setActiveMobileSet(1);
     setExpandedSetIds({ 1: true, 2: false, 3: false });
     setSetCount(1);
   }, [exercise, exercise.id, selectedLevel]);
-
-  useEffect(() => {
-    if (!canUseBwQuickFill || !userId) {
-      setLatestCheckInWeightKg(null);
-      return;
-    }
-
-    let cancelled = false;
-    fetch("/api/checkins/latest-weight", { credentials: "include" })
-      .then(async (res) => {
-        if (!res.ok) return null;
-        const json = await res.json() as { weight?: number | null };
-        const parsed = typeof json.weight === "number" && Number.isFinite(json.weight) && json.weight > 0
-          ? json.weight
-          : null;
-        if (!cancelled) setLatestCheckInWeightKg(parsed);
-      })
-      .catch(() => {
-        if (!cancelled) setLatestCheckInWeightKg(null);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [canUseBwQuickFill, userId, exercise.id]);
 
   useEffect(() => {
     const draftKey = draftStorageKey ?? null;
@@ -438,6 +401,12 @@ export function SetLoggerPanel({
   ]);
 
   useEffect(() => {
+    if (!timerRunning || !showTimerModal) return;
+    const id = window.setInterval(() => setTimerTick(Date.now()), 500);
+    return () => window.clearInterval(id);
+  }, [showTimerModal, timerRunning]);
+
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       event.preventDefault();
@@ -456,6 +425,72 @@ export function SetLoggerPanel({
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, [handleBackNavigation]);
+
+  const liveTimerMs = timerElapsedMs + (timerRunning && timerStartedAt ? (timerTick - timerStartedAt) : 0);
+  const liveTimerSeconds = Math.max(0, Math.round(liveTimerMs / 1000));
+  const timerMinutes = Math.floor(liveTimerSeconds / 60).toString().padStart(2, "0");
+  const timerSeconds = (liveTimerSeconds % 60).toString().padStart(2, "0");
+  const timerMillis = Math.max(0, Math.floor(liveTimerMs % 1000)).toString().padStart(3, "0");
+
+  const resetTimer = () => {
+    setTimerRunning(false);
+    setTimerStartedAt(null);
+    setTimerElapsedMs(0);
+    setTimerTick(0);
+  };
+
+  const getNextTimerTarget = (): "hold" | "hold2" | "hold3" => {
+    if (!hold) return "hold";
+    if (setCount >= 2 && !hold2) return "hold2";
+    if (setCount >= 3 && !hold3) return "hold3";
+    if (setCount < 2) return "hold2";
+    if (setCount < 3) return "hold3";
+    if (!hold2) return "hold2";
+    return "hold3";
+  };
+
+  const closeTimerModal = () => {
+    resetTimer();
+    setShowTimerModal(false);
+    setTimerTarget(getNextTimerTarget());
+    setTimerReps("");
+  };
+
+  const handleTimerButton = () => {
+    if (!timerRunning) {
+      setTimerStartedAt(Date.now());
+      setTimerTick(Date.now());
+      setTimerRunning(true);
+      return;
+    }
+
+    const now = Date.now();
+    const totalMs = timerElapsedMs + (timerStartedAt ? now - timerStartedAt : 0);
+    const seconds = Math.max(1, Math.round(totalMs / 1000));
+    setTimerElapsedMs(totalMs);
+    setTimerStartedAt(null);
+    setTimerRunning(false);
+
+    if (timerTarget === "hold") {
+      setHold(String(seconds));
+      if (timerReps.trim()) setR1(timerReps.trim());
+      if (setCount < 2) setSetCount(2);
+      setTimerTarget("hold2");
+    } else if (timerTarget === "hold2") {
+      setHold2(String(seconds));
+      if (timerReps.trim()) setR2(timerReps.trim());
+      if (setCount < 3) setSetCount(3);
+      setTimerTarget("hold3");
+    } else {
+      setHold3(String(seconds));
+      if (timerReps.trim()) setR3(timerReps.trim());
+      setTimerTarget("hold3");
+    }
+
+    resetTimer();
+    setTimerReps("");
+    if (shakeError) setShakeError(false);
+  };
 
   const handleSubmit = async () => {
     const primaryMissing = showHold ? (!hold && !r1) : (!w1 && !r1);
@@ -529,12 +564,12 @@ export function SetLoggerPanel({
     >
       <div
         className={isMobile
-          ? `relative flex h-[100dvh] w-full min-h-0 flex-col overflow-y-auto overscroll-contain rounded-none border-0 pt-[max(env(safe-area-inset-top,0px),12px)] ${isCompact ? 'px-2 pb-2' : 'px-3 pb-3'}`
+          ? `relative flex h-[100dvh] min-h-0 flex-col overflow-hidden overscroll-contain rounded-2xl border pt-[max(env(safe-area-inset-top,0px),12px)] ${isCompact ? 'px-2 pb-2' : 'px-3 pb-3 sm:px-4 sm:pb-4'}`
           : `relative overflow-hidden rounded-lg border shadow-[var(--shadow-elev-1)] ${isCompact ? 'p-2' : 'p-3 sm:p-4'}`
         }
         style={{
           background: "color-mix(in srgb, var(--ink-deep) 86%, transparent)",
-          borderColor: isMobile ? "transparent" : `${diffStyle.glowColor}35`,
+          borderColor: `${diffStyle.glowColor}35`,
           boxShadow: isMobile
             ? `inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 3%, transparent)`
             : `var(--shadow-elev-1), inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 4%, transparent)`,
@@ -587,8 +622,8 @@ export function SetLoggerPanel({
         </div>
 
         {useSetPanelLayout ? (
-          <div className={`pl-2 ${isMobile ? "pr-1 pb-2" : "space-y-2"}`}>
-            <div className={isMobile ? "relative z-0 space-y-3" : "space-y-2"}>
+          <div className={`pl-2 ${isMobile ? "flex flex-1 min-h-0 flex-col overflow-hidden" : "space-y-2"}`}>
+            <div className={isMobile ? "relative z-0 flex-1 min-h-0 pr-1 pb-2 flex flex-col gap-3" : "space-y-2"}>
 
             {(showAddedWeight || showResistanceBand || availableVariationOptions.length > 0) && (
               <div className="grid gap-2">
@@ -717,21 +752,15 @@ export function SetLoggerPanel({
             </div>
 
             <div
-              className={isMobile ? "space-y-2" : "grid gap-2"}
+              className={isMobile ? "flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-2 pr-1" : "grid gap-2"}
               style={isMobile ? undefined : { gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}
             >
-              <AnimatePresence initial={false}>
-                {mobileSetConfigs.slice(0, setCount).map((setConfig) => {
-                  const isOpen = expandedSetIds[setConfig.id];
-                  return (
-                    <motion.div
-                      key={setConfig.id}
-                      layout
-                      initial={{ opacity: 0, y: 14, scale: 0.985 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -10, scale: 0.985 }}
-                      transition={{ type: "spring", stiffness: 360, damping: 32, mass: 0.75 }}
-                      className={`overflow-hidden border shadow-[var(--shadow-elev-1)] ${isMobile ? "rounded-xl" : "rounded-lg"}`}
+              {mobileSetConfigs.slice(0, setCount).map((setConfig) => {
+                const isOpen = expandedSetIds[setConfig.id];
+                return (
+                  <div
+                    key={setConfig.id}
+                    className={`overflow-hidden border shadow-[var(--shadow-elev-1)] ${isMobile ? "rounded-xl" : "rounded-lg"}`}
                       style={{
                         background: isOpen
                           ? `color-mix(in srgb, ${diffStyle.glowColor} 6%, var(--ink-deep))`
@@ -796,10 +825,30 @@ export function SetLoggerPanel({
                           initial={{ height: 0, opacity: 0 }}
                           animate={{ height: "auto", opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
-                          transition={{ type: "spring", stiffness: 320, damping: 34, mass: 0.72 }}
+                          transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
                           className="overflow-hidden"
                         >
                           <div className={`border-t ${isMobile ? "space-y-3 px-3 py-3" : "space-y-2 px-2.5 py-2"}`} style={{ borderColor: `${diffStyle.glowColor}22` }}>
+                            {showHold && "timerKey" in setConfig && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setShowTimerModal(true);
+                                  setTimerTarget(setConfig.timerKey as "hold" | "hold2" | "hold3");
+                                  setTimerReps("");
+                                  resetTimer();
+                                }}
+                                className={`w-full border font-bold text-cloud-white transition-all ${isMobile ? "rounded-xl px-3 py-2.5 text-[11px]" : "rounded-lg px-2.5 py-2 text-[10px]"}`}
+                                style={{
+                                  background: "var(--timed-accent-soft)",
+                                  borderColor: "var(--timed-accent-border)",
+                                  boxShadow: `0 0 10px ${diffStyle.glowColor}33`,
+                                }}
+                              >
+                                Use Timer for {setConfig.title.replace("Set", "T")}
+                              </button>
+                            )}
+
                             <div className={`grid grid-cols-2 ${isMobile ? "gap-2" : "gap-1.5"}`}>
                               <label className="block space-y-1">
                                 <div className={`grid items-center min-h-[18px] ${canUseBwQuickFill && latestCheckInWeightKg != null ? "grid-cols-[36px_minmax(0,1fr)] gap-2" : "grid-cols-1"}`}>
@@ -881,10 +930,9 @@ export function SetLoggerPanel({
                         </motion.div>
                       )}
                     </AnimatePresence>
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
+                  </div>
+                );
+              })}
 
               <div
                 className={`overflow-hidden border ${isMobile ? "rounded-xl" : "rounded-lg"}`}
@@ -922,8 +970,8 @@ export function SetLoggerPanel({
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Session notes, cues, or pain markers..."
-                  rows={isMobile ? 2 : 2}
-                  className={`w-full border border-ink-light/20 bg-ink-dark text-cloud-white outline-none transition-all duration-200 placeholder:text-mist-dark/40 focus:border-mist-mid/30 focus:bg-ink-mid/30 ${isMobile ? "rounded-xl px-3 py-2 text-sm" : "rounded-lg px-2.5 py-1.5 text-xs"}`}
+                  rows={isMobile ? 3 : 2}
+                  className={`w-full border border-ink-light/20 bg-ink-dark text-cloud-white outline-none transition-all duration-200 placeholder:text-mist-dark/40 focus:border-mist-mid/30 focus:bg-ink-mid/30 ${isMobile ? "rounded-xl px-3 py-3 text-sm" : "rounded-lg px-2.5 py-2 text-xs"}`}
                 />
               </label>
 
@@ -938,7 +986,23 @@ export function SetLoggerPanel({
                 </motion.span>
               )}
 
-              <div className="grid gap-2 grid-cols-1">
+              <div className={`grid gap-2 ${showHold ? "grid-cols-2" : "grid-cols-1"}`}>
+                {showHold && (
+                  <button
+                    type="button"
+                    onClick={() => { setShowTimerModal(true); setTimerTarget(getNextTimerTarget()); setTimerReps(""); resetTimer(); }}
+                    className={`border font-bold text-cloud-white transition-all ${isMobile ? "rounded-xl px-3 py-3 text-[11px]" : "rounded-lg px-2.5 py-2 text-[10px]"}`}
+                    style={{
+                      background: "var(--timed-accent-soft)",
+                      borderColor: "var(--timed-accent-border)",
+                      boxShadow: `inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 7%, transparent)`,
+                    }}
+                    title="Open compact hold timer"
+                  >
+                    Start Timer
+                  </button>
+                )}
+
                 <motion.button
                   onClick={handleSubmit}
                   disabled={submitting}
@@ -959,7 +1023,7 @@ export function SetLoggerPanel({
                     transition: 'background 0.3s, border-color 0.3s, box-shadow 0.3s',
                   }}
                 >
-                  {submitting ? "Saving…" : saved ? "✦ Logged!" : "Submit"}
+                  {submitting ? "Saving…" : saved ? "✦ Logged!" : "Log Training Data"}
                 </motion.button>
               </div>
             </div>
@@ -1061,6 +1125,13 @@ export function SetLoggerPanel({
               className="w-full rounded-lg px-2.5 py-2 text-xs outline-none bg-ink-dark border border-ink-light/20 text-cloud-white placeholder:text-mist-dark/40 focus:border-mist-mid/30" />
 
             <div className="flex gap-2">
+              {showHold && (
+                <button type="button" onClick={() => { setShowTimerModal(true); setTimerTarget(getNextTimerTarget()); setTimerReps(""); resetTimer(); }}
+                  className="flex-1 py-2 rounded-lg border text-[10px] font-bold text-cloud-white transition-all"
+                  style={{ background: "var(--timed-accent-soft)", borderColor: "var(--timed-accent-border)" }}>
+                  Timer
+                </button>
+              )}
               <motion.button onClick={handleSubmit} disabled={submitting}
                 whileTap={!submitting ? { scale: 0.97 } : {}}
                 className="flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-[0.08em] border disabled:opacity-40 cursor-pointer"
@@ -1071,7 +1142,7 @@ export function SetLoggerPanel({
                   color: "var(--cloud-white)",
                   textShadow: "0 1px 0 rgba(0,0,0,.35)",
                 }}>
-                {submitting ? "Saving…" : saved ? "✦ Logged!" : "Submit"}
+                {submitting ? "Saving…" : saved ? "✦ Logged!" : "Log Set"}
               </motion.button>
             </div>
           </div>
@@ -1324,6 +1395,17 @@ export function SetLoggerPanel({
                   ✦ Saved
                 </motion.span>
               )}
+              {showHold && (
+                <button
+                  type="button"
+                  onClick={() => { setShowTimerModal(true); setTimerTarget(getNextTimerTarget()); setTimerReps(""); resetTimer(); }}
+                  className="px-3 py-1.5 text-[10px] font-bold rounded-md border text-cloud-white bg-mountain-blue/35 hover:bg-mountain-blue/45 border-mountain-blue-glow/70 shadow-[var(--glow-blue)] hover:shadow-[var(--glow-blue)] transition-all"
+                  style={{ boxShadow: `0 0 10px ${diffStyle.glowColor}66, inset 0 0 0 1px ${diffStyle.glowColor}40` }}
+                  title="Open compact hold timer"
+                >
+                  Start Timer
+                </button>
+              )}
               <motion.button
                 onClick={handleSubmit}
                 disabled={submitting}
@@ -1345,12 +1427,105 @@ export function SetLoggerPanel({
                   transition: 'background 0.3s, border-color 0.3s, box-shadow 0.3s',
                 }}
               >
-                {submitting ? "Saving…" : saved ? "✦ Logged!" : "Submit"}
+                {submitting ? "Saving…" : saved ? "✦ Logged!" : "Log Set"}
               </motion.button>
             </div>
           </>
         )}
 
+        {showTimerModal && showHold && (
+          <div className="absolute inset-0 z-30 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-[2px] p-2" onClick={closeTimerModal}>
+            <div
+              className="w-full max-w-[300px] rounded-lg border bg-ink-deep/95 p-3"
+              style={{
+                borderColor: `${diffStyle.glowColor}80`,
+                boxShadow: `0 0 20px ${diffStyle.glowColor}40, var(--shadow-elev-2), inset 0 0 0 1px ${diffStyle.glowColor}20`,
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: diffStyle.glowColor }}>Hold Timer</p>
+                <button
+                  type="button"
+                  onClick={closeTimerModal}
+                  className="text-mist-dark hover:text-mist-light text-xs px-1"
+                  title="Close timer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="flex rounded-md border overflow-hidden mb-2" style={{ borderColor: `${diffStyle.glowColor}55` }}>
+                {([
+                  { key: "hold", label: "T1", rep: "R1" },
+                  { key: "hold2", label: "T2", rep: "R2" },
+                  { key: "hold3", label: "T3", rep: "R3" },
+                ] as const).map((slot, idx) => (
+                  <button
+                    key={slot.key}
+                    type="button"
+                    onClick={() => setTimerTarget(slot.key)}
+                    className={`flex-1 py-1 text-[10px] font-semibold text-center ${idx > 0 ? "border-l border-ink-light/30" : ""}`}
+                    style={slot.key === timerTarget ? {
+                      background: `${diffStyle.glowColor}2e`,
+                      color: diffStyle.glowColor,
+                    } : { color: "var(--mist-dark)" }}
+                  >
+                    <div>{slot.label}</div>
+                    <div className="text-[9px] opacity-80">
+                      {slot.key === "hold"
+                        ? `${hold || "-"}s${r1 ? ` • ${r1}r` : ""}`
+                        : slot.key === "hold2"
+                          ? `${hold2 || "-"}s${r2 ? ` • ${r2}r` : ""}`
+                          : `${hold3 || "-"}s${r3 ? ` • ${r3}r` : ""}`}
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              <div className="mb-2">
+                <span className="block text-center sm:text-left text-[12px] font-mono font-semibold mb-2" style={{ color: diffStyle.glowColor }}>{timerMinutes}:{timerSeconds}.{timerMillis}</span>
+              </div>
+
+              <div className="mb-3">
+                <label className="text-[10px] text-mist-dark block mb-1">
+                  Reps for {timerTarget === "hold" ? "R1" : timerTarget === "hold2" ? "R2" : "R3"} (optional)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="500"
+                  value={timerReps}
+                  onChange={(e) => setTimerReps(e.target.value)}
+                  placeholder="—"
+                  className="w-full rounded border border-ink-light/30 bg-ink-dark px-2 py-1 text-xs text-gold outline-none focus:border-gold/50"
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={resetTimer}
+                  className="flex-1 py-1 rounded border border-ink-light/30 text-[10px] text-mist-dark hover:text-mist-light"
+                >
+                  Reset
+                </button>
+                <button
+                  type="button"
+                  onClick={handleTimerButton}
+                  className={`flex-1 py-1 rounded border text-[10px] font-semibold transition-all ${timerRunning ? "text-crimson-light border-crimson/50 bg-crimson-deep/20 shadow-[var(--glow-crimson)]" : ""}`}
+                  style={!timerRunning ? {
+                    borderColor: `${diffStyle.glowColor}88`,
+                    background: `${diffStyle.glowColor}26`,
+                    color: diffStyle.glowColor,
+                  } : undefined}
+                >
+                  {timerRunning ? "Stop Timer" : "Start Timer"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </motion.div>
   );

@@ -74,12 +74,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
+    <div className="safe-area-shell min-h-screen flex items-center justify-center relative overflow-hidden">
       <div className="absolute top-0 inset-x-0 z-20">
         <ConnectivityBanner />
       </div>
       {/* Background mist layers */}
-      <div className="absolute inset-0 bg-gradient-to-br from-void-black via-ink-deep to-jade-deep/20" />
+      <div className="absolute inset-0 bg-gradient-to-br from-void-black via-ink-deep to-jade-glow/25" />
       <div className="absolute inset-0 opacity-30">
         <div
           className="absolute top-0 left-1/4 w-96 h-96 bg-jade-deep/20 rounded-full blur-3xl animate-glow-pulse"
@@ -131,7 +131,7 @@ export default function LoginPage() {
         transition={{ duration: 0.8, ease: "easeOut" }}
         className="relative z-10 w-full max-w-md mx-4"
       >
-        <div className="bg-ink-deep/80 backdrop-blur-xl border border-jade-deep/40 rounded-2xl p-8 glow-subtle">
+        <div className="bg-ink-deep/80 backdrop-blur-xl border border-jade-glow/45 rounded-2xl p-8 glow-subtle">
           {/* Title - bilingual */}
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -139,13 +139,13 @@ export default function LoginPage() {
             transition={{ delay: 0.3 }}
             className="text-center mb-8"
           >
-            <h1 className="text-3xl font-bold text-jade-glow mb-1 tracking-wider">
+            <h1 className="text-3xl font-bold text-jade-light mb-1 tracking-wider">
               修炼之路
             </h1>
             <p className="text-xs text-mist-mid tracking-[0.3em] uppercase">
               Path of Cultivation
             </p>
-            <div className="mt-4 w-16 h-px bg-gradient-to-r from-transparent via-jade-glow to-transparent mx-auto" />
+            <div className="mt-4 w-16 h-px bg-gradient-to-r from-transparent via-jade-light to-transparent mx-auto" />
           </motion.div>
 
           {/* Decorative subtitle */}
@@ -206,7 +206,7 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="w-full bg-ink-dark border border-ink-light rounded-lg px-3 py-2 pr-9 text-sm text-cloud-white placeholder:text-mist-dark outline-none transition-all duration-300 focus:border-jade-glow focus:shadow-[0_0_12px_rgba(58,143,143,0.3)]"
+                    className="w-full bg-ink-dark border border-ink-light rounded-lg px-3 py-2 pr-9 text-sm text-cloud-white placeholder:text-mist-dark outline-none transition-all duration-300 focus:border-jade-glow focus:shadow-[var(--glow-jade)]"
                   />
                   <button
                     type="button"
@@ -274,7 +274,7 @@ export default function LoginPage() {
                 variant="jade"
                 size="lg"
                 glow
-                className="w-full"
+                className="w-full !bg-jade-light !text-pure-white !border-jade-glow/80 hover:!bg-jade-glow hover:!border-jade-light"
                 disabled={loading}
               >
                 {loading

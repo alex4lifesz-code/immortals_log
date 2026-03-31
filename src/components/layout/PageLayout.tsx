@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { ReactNode, useState, useEffect, useRef, memo } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { DISPLAY_DEFAULTS } from "@/context/DisplaySettingsContext";
@@ -26,7 +26,9 @@ function PageLayout({
   contentMaxWidthClass = "max-w-[1400px]",
   mobileContentPaddingClass = "p-4 pb-24",
 }: PageLayoutProps) {
-  const { panelPosition, isMobile, mobileSidebarOpen, setMobileSidebarOpen } = useAppContext();
+  const { panelPosition, isMobile, mobileSidebarOpen, setMobileSidebarOpen, themeStyle } = useAppContext();
+  const prefersReducedMotion = useReducedMotion();
+  const disableMotion = themeStyle === "eternal" || themeStyle === "discord" || prefersReducedMotion;
   const effectivePosition = isMobile ? "top" : panelPosition;
   const mobileMode = isMobile;
   const mobileSidebarHistoryArmedRef = useRef(false);
@@ -124,7 +126,7 @@ function PageLayout({
   // Desktop sidebar element
   const desktopSidebar = sidebar && !isMobile && effectivePosition !== "top" ? (
     <motion.div
-      layout
+      layout={!disableMotion}
       className="sticky top-0 self-start h-full border-r border-l-0 border-ink-light/50 surface-panel surface-panel-strong shrink-0 overflow-hidden flex flex-col"
       style={{
         width: `${sidebarWidth}px`,
@@ -141,7 +143,7 @@ function PageLayout({
     </motion.div>
   ) : sidebar && !isMobile && effectivePosition === "top" ? (
     <motion.div
-      layout
+      layout={!disableMotion}
       className="w-full border-b border-ink-light surface-panel surface-panel-strong shrink-0 overflow-hidden flex flex-col max-h-[40vh]"
     >
       <div className="px-5 pt-4 pb-2.5 shrink-0 flex items-center justify-between">
@@ -156,9 +158,9 @@ function PageLayout({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
+      initial={disableMotion ? false : { opacity: 0 }}
+      animate={disableMotion ? { opacity: 1 } : { opacity: 1 }}
+      transition={{ duration: disableMotion ? 0 : 0.25, ease: [0.22, 1, 0.36, 1] }}
       className={`flex ${effectivePosition === "top" || isMobile ? "flex-col" : "flex-row"} relative ${isMobile ? "min-h-full" : "h-full overflow-hidden"}`}
     >
       {/* Desktop sidebar */}
@@ -170,9 +172,9 @@ function PageLayout({
         className={`flex-1 min-w-0 overflow-y-auto overflow-x-auto ${isMobile ? `${mobileContentPaddingClass} scrollbar-hide` : "h-full overscroll-contain [scrollbar-gutter:stable] p-2"}`}
       >
         <motion.div
-          initial={{ y: 12, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.04, duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+          initial={disableMotion ? false : { opacity: 0 }}
+          animate={disableMotion ? { opacity: 1 } : { opacity: 1 }}
+          transition={{ delay: disableMotion ? 0 : 0.04, duration: disableMotion ? 0 : 0.25, ease: [0.22, 1, 0.36, 1] }}
           className="page-rise"
         >
           <div className={`${contentContainerClass} ${isMobile ? "" : "rounded-2xl"}`}>
@@ -191,18 +193,18 @@ function PageLayout({
           <>
             <motion.div
               key="page-sidebar-backdrop"
-              initial={{ opacity: 0 }}
+              initial={disableMotion ? false : { opacity: 0 }}
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.18 }}
+              exit={disableMotion ? { opacity: 1 } : { opacity: 0 }}
+              transition={{ duration: disableMotion ? 0 : 0.18 }}
               className="fixed inset-0 z-40 bg-void-black/60 backdrop-blur-[2px]"
               onClick={() => setMobileSidebarOpen(false)}
             />
             <motion.div
               key="page-sidebar-panel"
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
+              initial={disableMotion ? false : { x: "-100%" }}
+              animate={disableMotion ? { x: 0 } : { x: 0 }}
+              exit={disableMotion ? { x: 0 } : { x: "-100%" }}
               drag="x"
               dragDirectionLock
               dragConstraints={{ left: 0, right: 0 }}
@@ -212,7 +214,7 @@ function PageLayout({
                   setMobileSidebarOpen(false);
                 }
               }}
-              transition={{ type: "spring", damping: 31, stiffness: 360, mass: 0.72 }}
+              transition={disableMotion ? { duration: 0 } : { type: "spring", damping: 31, stiffness: 360, mass: 0.72 }}
               className="fixed inset-y-0 left-0 z-50 surface-panel surface-panel-strong border-r border-jade-glow/15 flex flex-col shadow-2xl touch-pan-y pt-[max(env(safe-area-inset-top,0px),12px)]"
               style={{ width: "min(88vw, 380px)" }}
               onTouchStart={onSidebarTouchStart}

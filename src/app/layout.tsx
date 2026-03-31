@@ -71,7 +71,7 @@ export default function RootLayout({
         {/* Theme hydration script — theme list must stay in sync with CONFIG.themes in src/lib/config.ts */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('cultivation-theme');if(t==='light'){document.documentElement.classList.remove('dark');document.documentElement.classList.add('light')}var s=localStorage.getItem('cultivation-theme-style');if(s&&['midnight-ink','mountain-mist','calligraphy','sakura','sakura-dark'].indexOf(s)!==-1){document.documentElement.classList.add(s)}}catch(e){}})()`
+            __html: `(function(){try{var t=localStorage.getItem('cultivation-theme');if(t==='light'){document.documentElement.classList.remove('dark');document.documentElement.classList.add('light')}var s=localStorage.getItem('cultivation-theme-style');if(s&&['midnight-ink','mountain-mist','calligraphy','sakura','sakura-dark','eternal','discord','document','nyaa'].indexOf(s)!==-1){document.documentElement.classList.add(s)}}catch(e){}})()`
           }}
         />
       </head>
