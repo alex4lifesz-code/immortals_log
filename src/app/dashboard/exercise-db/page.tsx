@@ -15,6 +15,7 @@ import type {
   TrainingCategory,
   SimpleExerciseType,
   MuscleGroup,
+  Difficulty,
 } from "@/lib/exercise-types";
 import {
   getExerciseTypeIcon,
@@ -1633,7 +1634,7 @@ export default function ExerciseDBPage() {
     const afterValue = variants.length > 0 ? variants.join(", ") : "—";
     if (beforeValue === afterValue) return;
 
-    await api.patch(`/api/exercise-library/${exerciseId}`, { variations });
+    await api.patch(`/api/exercise-library/${exerciseId}`, { variations: variants });
     await fetchExercises();
 
     await appendEditHistory({
