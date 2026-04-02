@@ -1,11 +1,9 @@
 // ── Exercise System Types ──
 // Simplified exercise types (no tiers/levels/progression)
 
-export type TrainingCategory = 'Calisthenics' | 'GYM' | 'Yoga' | 'Cardio' | 'Stretching' | 'Other';
-export type SimpleExerciseType = 'weighted' | 'timed' | 'bodyweight';
-export type MuscleGroup =
-  | 'Chest' | 'Back' | 'Shoulders' | 'Biceps' | 'Triceps' | 'Forearms'
-  | 'Core' | 'Quads' | 'Hamstrings' | 'Glutes' | 'Calves' | 'Full Body' | 'Other';
+export type TrainingCategory = string;
+export type SimpleExerciseType = string;
+export type MuscleGroup = string;
 export type Difficulty = 'Beginner' | 'Intermediate' | 'Advanced';
 
 export const ALL_TRAINING_CATEGORIES: TrainingCategory[] = ['Calisthenics', 'GYM', 'Yoga', 'Cardio', 'Stretching', 'Other'];
@@ -27,6 +25,11 @@ export interface SimpleExercise {
   category: TrainingCategory;
   exerciseType: SimpleExerciseType;
   muscleGroups: MuscleGroup[];
+  progression?: string[];
+  variations?: Array<{
+    id?: string;
+    name: string;
+  }>;
   equipment?: string[];
   difficulty?: Difficulty;
   description?: string;
@@ -144,21 +147,23 @@ function inferDifficulty(diff?: string): Difficulty | undefined {
 
 /** Get the exercise type icon emoji */
 export function getExerciseTypeIcon(type: SimpleExerciseType): string {
-  switch (type) {
+  switch ((type || '').toLowerCase()) {
     case 'weighted': return '🏋️';
     case 'timed': return '⏱️';
     case 'bodyweight': return '🤸';
+    default: return '⚙️';
   }
 }
 
 /** Get category icon emoji */
 export function getCategoryIcon(category: TrainingCategory): string {
-  switch (category) {
-    case 'GYM': return '🏋️';
-    case 'Calisthenics': return '💪';
-    case 'Yoga': return '🧘';
-    case 'Cardio': return '🏃';
-    case 'Stretching': return '🤸';
-    case 'Other': return '🔱';
+  switch ((category || '').toLowerCase()) {
+    case 'gym': return '🏋️';
+    case 'calisthenics': return '💪';
+    case 'yoga': return '🧘';
+    case 'cardio': return '🏃';
+    case 'stretching': return '🤸';
+    case 'other': return '🔱';
+    default: return '🧩';
   }
 }

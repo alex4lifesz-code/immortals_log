@@ -8,7 +8,7 @@ export const GET = withAuth(async (_request, { auth, params }) => {
   try {
     const id = params.id as string;
 
-    const exercise = await prisma.progressionExercise.findFirst({
+    const exercise = await prisma.progressionExercise.findUnique({
       where: { id },
       include: {
         tiers: { orderBy: { level: "asc" } },
@@ -38,17 +38,15 @@ export const GET = withAuth(async (_request, { auth, params }) => {
 export const DELETE = withAuth(async (_request, { auth, params }) => {
   try {
     const id = params.id as string;
-    const userId = auth.userId;
 
-    const exercise = await prisma.progressionExercise.findFirst({
-      where: { id, userId },
+    const exercise = await prisma.progressionExercise.findUnique({
+      where: { id },
     });
 
     if (!exercise) {
       return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
     }
 
-    await prisma.userProgressionLevel.deleteMany({ where: { userId, exerciseId: id } });
     await prisma.progressionExercise.delete({ where: { id } });
 
     return NextResponse.json({ success: true });
@@ -63,11 +61,9 @@ export const PATCH = withAuth(async (request, { auth, params }) => {
   try {
     const id = params.id as string;
     const body = await request.json();
-    const userId = auth.userId;
 
-    // Verify ownership
-    const existing = await prisma.progressionExercise.findFirst({
-      where: { id, userId },
+    const existing = await prisma.progressionExercise.findUnique({
+      where: { id },
     });
     if (!existing) {
       return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
@@ -116,7 +112,6 @@ export const PATCH = withAuth(async (request, { auth, params }) => {
     // Duplicate name check
     if (data.name) {
       const allProgs = await prisma.progressionExercise.findMany({
-        where: { userId: auth.userId },
         select: { id: true, name: true },
       });
       const duplicate = allProgs.find(p => p.id !== id && p.name.toLowerCase() === String(data.name).toLowerCase());

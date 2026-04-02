@@ -49,9 +49,15 @@ function parseModifierDisplayToKg(modifier: string | null | undefined): number |
 
 function abbreviateVariantText(text: string): string {
   const words = text.trim().split(/[^A-Za-z0-9]+/).filter(Boolean);
-  if (words.length >= 2) return words.slice(0, 4).map((w) => w[0].toUpperCase()).join("");
+  if (words.length >= 2) {
+    return words
+      .slice(0, 2)
+      .map((w) => `${w[0].toUpperCase()}${w.slice(1, 3).toLowerCase()}`)
+      .join(" ");
+  }
   const compact = words[0] ?? text.trim();
-  return compact.slice(0, 6).toUpperCase();
+  if (!compact) return "";
+  return `${compact.slice(0, 1).toUpperCase()}${compact.slice(1, 6).toLowerCase()}`;
 }
 
 const ROW_GLOW_COLOR = "var(--exercise-glow)";

@@ -27,6 +27,7 @@ export type PopupLoggerStyle = "classic" | "minimal" | "compact";
 export type UnifiedVisibleColumnKey =
   | "date"
   | "category"
+  | "progression"
   | "val1"
   | "val2"
   | "val3"
@@ -43,6 +44,7 @@ export type UnifiedVisibleColumnKey =
 export const DEFAULT_UNIFIED_VISIBLE_COLUMNS: UnifiedVisibleColumnKey[] = [
   "date",
   "category",
+  "progression",
   "val1",
   "val2",
   "val3",

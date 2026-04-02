@@ -5,7 +5,7 @@ import { useSortedNavItems } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { t } from "@/lib/terminology";
-import { ADMIN_NAV_IDS_ORDER, MAIN_NAV_IDS_ORDER, NAV_LABELS, sortNavItemsByIdOrder } from "@/lib/navigation";
+import { ADMIN_NAV_IDS, ADMIN_NAV_IDS_ORDER, MAIN_NAV_IDS_ORDER, NAV_LABELS, sortNavItemsByIdOrder } from "@/lib/navigation";
 
 export default function MainNavigationPage() {
   const { user } = useAuth();
@@ -14,9 +14,9 @@ export default function MainNavigationPage() {
   const isAdmin = user?.role === "admin";
 
   const items = useSortedNavItems();
-  const mainItems = sortNavItemsByIdOrder(items.filter((item) => !["admin", "checkin"].includes(item.id)), MAIN_NAV_IDS_ORDER);
+  const mainItems = sortNavItemsByIdOrder(items.filter((item) => !ADMIN_NAV_IDS.has(item.id)), MAIN_NAV_IDS_ORDER);
   const adminItems = isAdmin
-    ? sortNavItemsByIdOrder(items.filter((item) => ["admin", "checkin"].includes(item.id)), ADMIN_NAV_IDS_ORDER)
+    ? sortNavItemsByIdOrder(items.filter((item) => ADMIN_NAV_IDS.has(item.id)), ADMIN_NAV_IDS_ORDER)
     : [];
 
   return (

@@ -29,6 +29,7 @@ export const GET = withAuth(async (req, { auth }) => {
       level.logs.map((log) => ({
         id: log.id,
         date: log.createdAt,
+        level: log.level,
         weight1: log.weight1,
         reps1: log.reps1,
         weight2: log.weight2,

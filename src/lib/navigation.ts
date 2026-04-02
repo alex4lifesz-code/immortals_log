@@ -3,12 +3,14 @@ export const DASHBOARD_ROUTES = {
   main: "/dashboard/main",
   overview: "/dashboard/overview",
   community: "/dashboard/community",
+  rankUp: "/dashboard/rank-up",
   workoutHistory: "/dashboard/workout-history",
   attendance: "/dashboard/attendance",
   exercises: "/dashboard/exercises",
   friends: "/dashboard/friends",
   settings: "/dashboard/settings",
   admin: "/dashboard/admin",
+  websiteInformation: "/dashboard/website-information",
   checkinLegacy: "/dashboard/checkin",
 } as const;
 
@@ -24,12 +26,14 @@ export const NAV_LABELS: Record<string, string> = {
   main: "Navigation Hub",
   dashboard: "Overview",
   newsfeed: "Community Feed",
+  "rank-up": "Rank Up",
   history: "Workout History",
   checkin: "Attendance",
   "exercise-db": "Exercise Library",
   friends: "Friends",
   settings: "Settings",
   admin: "Admin Panel",
+  "website-information": "Website Information",
 };
 
 export const MOBILE_PRIMARY_NAV_IDS: readonly string[] = [
@@ -42,6 +46,7 @@ export const MOBILE_PRIMARY_NAV_IDS: readonly string[] = [
 export const MAIN_NAV_IDS_ORDER: readonly string[] = [
   "dashboard",
   "main",
+  "rank-up",
   "history",
   "exercise-db",
   "friends",
@@ -51,8 +56,11 @@ export const MAIN_NAV_IDS_ORDER: readonly string[] = [
 
 export const ADMIN_NAV_IDS_ORDER: readonly string[] = [
   "checkin",
+  "website-information",
   "admin",
 ];
+
+export const ADMIN_NAV_IDS = new Set(ADMIN_NAV_IDS_ORDER);
 
 export function sortNavItemsByIdOrder<T extends { id: string }>(items: T[], orderedIds: readonly string[]): T[] {
   const rank = new Map(orderedIds.map((id, index) => [id, index]));

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 
-// GET /api/progressions — fetch shared progression exercise library plus user's progress
+// GET /api/progressions — fetch shared progression exercises plus requesting user's progress
 export const GET = withAuth(async (_request, { auth }) => {
   try {
     const exercises = await prisma.progressionExercise.findMany({

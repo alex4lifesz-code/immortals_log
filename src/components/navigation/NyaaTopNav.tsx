@@ -9,7 +9,7 @@ import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import Link from "next/link";
 import { t } from "@/lib/terminology";
 import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
-import { ADMIN_NAV_IDS_ORDER, DASHBOARD_ROUTES, MAIN_NAV_IDS_ORDER, sortNavItemsByIdOrder } from "@/lib/navigation";
+import { ADMIN_NAV_IDS, ADMIN_NAV_IDS_ORDER, DASHBOARD_ROUTES, MAIN_NAV_IDS_ORDER, sortNavItemsByIdOrder } from "@/lib/navigation";
 
 interface NyaaTopNavProps {
   incomingFriendRequestCount?: number;
@@ -26,12 +26,12 @@ function NyaaTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount = 
   const items = useSortedNavItems();
 
   const mainItems = useMemo(
-    () => sortNavItemsByIdOrder(items.filter((item) => !["admin", "checkin"].includes(item.id)), MAIN_NAV_IDS_ORDER),
+    () => sortNavItemsByIdOrder(items.filter((item) => !ADMIN_NAV_IDS.has(item.id)), MAIN_NAV_IDS_ORDER),
     [items]
   );
   const adminItems = useMemo(
     () => isAdmin
-      ? sortNavItemsByIdOrder(items.filter((item) => ["admin", "checkin"].includes(item.id)), ADMIN_NAV_IDS_ORDER)
+      ? sortNavItemsByIdOrder(items.filter((item) => ADMIN_NAV_IDS.has(item.id)), ADMIN_NAV_IDS_ORDER)
       : [],
     [items, isAdmin]
   );
@@ -94,7 +94,7 @@ function NyaaTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount = 
 
         {/* Primary nav links */}
         {!isMobile && (
-          <div className="flex items-center min-w-0 overflow-hidden">
+          <div className="flex items-center min-w-0 overflow-visible">
             {visibleNavItems.map((item, i) => (
               <span key={item.id} className="flex items-center">
                 {i > 0 && <span className="nyaa-nav-sep" aria-hidden />}

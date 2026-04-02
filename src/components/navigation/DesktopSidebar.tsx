@@ -8,9 +8,7 @@ import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { useRouter, usePathname } from "next/navigation";
 import { t } from "@/lib/terminology";
 import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
-import { ADMIN_NAV_IDS_ORDER, MAIN_NAV_IDS_ORDER, sortNavItemsByIdOrder } from "@/lib/navigation";
-
-const ADMIN_NAV_IDS = new Set(["admin", "checkin"]);
+import { ADMIN_NAV_IDS, ADMIN_NAV_IDS_ORDER, MAIN_NAV_IDS_ORDER, sortNavItemsByIdOrder } from "@/lib/navigation";
 
 function DesktopSidebar({ incomingFriendRequestCount = 0 }: { incomingFriendRequestCount?: number }) {
   const isMobile = useIsMobile();

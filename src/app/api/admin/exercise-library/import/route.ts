@@ -55,6 +55,7 @@ interface ExerciseImport {
   breathing?: string;
   safetyConsiderations?: string;
   competitionStandards?: string;
+  progression?: string[];
   assignedDays?: string;
   tiers?: TierImport[];
   variations?: VariationImport[];
@@ -105,6 +106,20 @@ export const POST = withAdmin(async (request, { auth }) => {
         continue;
       }
 
+      const importedProgression = Array.isArray(ex.progression)
+        ? ex.progression
+            .map((value) => String(value || "").trim().slice(0, 200))
+            .filter(Boolean)
+        : [];
+
+      const fallbackProgression = Array.isArray(ex.tiers)
+        ? ex.tiers
+            .map((tier) => String(tier.name || "").trim().slice(0, 200))
+            .filter(Boolean)
+        : [];
+
+      const progression = importedProgression.length > 0 ? importedProgression : fallbackProgression;
+
       if (existingNames.has(rawName.toLowerCase())) {
         if (skipDuplicates) {
           skipped++;
@@ -139,6 +154,7 @@ export const POST = withAdmin(async (request, { auth }) => {
             breathing: String(ex.breathing || "").trim(),
             safetyConsiderations: String(ex.safetyConsiderations || "[]").trim(),
             competitionStandards: String(ex.competitionStandards || "{}").trim(),
+            progression: JSON.stringify(progression),
             assignedDays: String(ex.assignedDays || "").trim(),
             userId: destUserId,
           },

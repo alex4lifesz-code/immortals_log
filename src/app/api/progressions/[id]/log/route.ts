@@ -16,7 +16,13 @@ export const POST = withAuth(async (request, { auth, params }) => {
 
     // Find or create user progression
     const exercise = await prisma.progressionExercise.findFirst({
-      where: { id },
+      where: {
+        id,
+        OR: [
+          { userId },
+          { userProgress: { some: { userId } } },
+        ],
+      },
     });
     if (!exercise) {
       return NextResponse.json({ error: "Exercise not found" }, { status: 404 });

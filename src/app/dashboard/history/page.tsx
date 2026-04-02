@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import PageLayout from "@/components/layout/PageLayout";
 import { MemoTrainingLogTable } from "@/components/workout/TrainingLogTable";
 import { useAuth } from "@/context/AuthContext";
@@ -16,6 +17,9 @@ import { stripBwPercentHint } from "../workout/utils";
 export default function HistoryPage() {
   const { user } = useAuth();
   const { settings } = useDisplaySettings();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const dateFormat = settings.dateFormat || "dd-mmm-yyyy";
 
   const [exercises, setExercises] = useState<ProgressionExercise[]>([]);
@@ -23,6 +27,24 @@ export default function HistoryPage() {
   const [physique, setPhysique] = useState<UserPhysiqueSettings>(DEFAULT_USER_PHYSIQUE);
 
   const userId = user?.id ?? "";
+  const prefillExerciseId = searchParams.get("prefillExerciseId");
+  const prefillExerciseName = searchParams.get("prefillExercise");
+  const prefillProgression = searchParams.get("prefillProgression");
+  const prefillVariant = searchParams.get("prefillVariant");
+
+  useEffect(() => {
+    const hasPrefill = Boolean(prefillExerciseId || prefillExerciseName || prefillProgression || prefillVariant);
+    if (!hasPrefill) return;
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("prefillExerciseId");
+    params.delete("prefillExercise");
+    params.delete("prefillProgression");
+    params.delete("prefillVariant");
+
+    const next = params.toString();
+    router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
+  }, [pathname, prefillExerciseId, prefillExerciseName, prefillProgression, prefillVariant, router, searchParams]);
 
   useEffect(() => {
     if (!userId) {
@@ -109,6 +131,10 @@ export default function HistoryPage() {
                 physique={physique}
                 onRefresh={fetchExercises}
                 userId={userId}
+                prefillExerciseId={prefillExerciseId}
+                prefillExerciseName={prefillExerciseName}
+                prefillProgression={prefillProgression}
+                prefillVariant={prefillVariant}
               />
             </div>
           </>

@@ -119,6 +119,7 @@ model ProgressionExercise {
   breathing       String   @default("")
   safetyConsiderations String @default("[]") // JSON array of strings
   competitionStandards String @default("{}")  // JSON object
+  progression     String   @default("[]") // JSON array of progression stage names
   assignedDays    String   @default("")   // Comma-separated list of days: "0,1,2" for Sun,Mon,Tue
   createdAt       DateTime @default(now())
   userId          String

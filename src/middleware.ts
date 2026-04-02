@@ -17,7 +17,7 @@ const PUBLIC_API_ROUTES = new Set([
 const API_PREFIX = "/api/";
 // Dashboard pages that need auth
 const DASHBOARD_PREFIX = DASHBOARD_ROUTES.root;
-const ADMIN_ONLY_DASHBOARD_ROUTES = [DASHBOARD_ROUTES.attendance, DASHBOARD_ROUTES.checkinLegacy];
+const ADMIN_ONLY_DASHBOARD_ROUTES = [DASHBOARD_ROUTES.attendance, DASHBOARD_ROUTES.checkinLegacy, DASHBOARD_ROUTES.websiteInformation];
 
 function parseBooleanEnv(value: string | undefined): boolean | null {
   if (!value) return null;

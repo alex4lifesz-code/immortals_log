@@ -8,7 +8,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
 import { t } from "@/lib/terminology";
-import { ADMIN_NAV_IDS_ORDER, DASHBOARD_ROUTES, MAIN_NAV_IDS_ORDER, sortNavItemsByIdOrder } from "@/lib/navigation";
+import { ADMIN_NAV_IDS, ADMIN_NAV_IDS_ORDER, DASHBOARD_ROUTES, MAIN_NAV_IDS_ORDER, sortNavItemsByIdOrder } from "@/lib/navigation";
 
 function DesktopNavBar() {
   const { collapsed, topPanelExpanded, setTopPanelExpanded, getSortedNavItems } = useAppContext();
@@ -24,12 +24,12 @@ function DesktopNavBar() {
 
   const allItems = getSortedNavItems();
   const mainItems = useMemo(
-    () => sortNavItemsByIdOrder(allItems.filter((item) => !["admin", "checkin"].includes(item.id)), MAIN_NAV_IDS_ORDER),
+    () => sortNavItemsByIdOrder(allItems.filter((item) => !ADMIN_NAV_IDS.has(item.id)), MAIN_NAV_IDS_ORDER),
     [allItems]
   );
   const adminItems = useMemo(
     () => isAdmin
-      ? sortNavItemsByIdOrder(allItems.filter((item) => ["admin", "checkin"].includes(item.id)), ADMIN_NAV_IDS_ORDER)
+      ? sortNavItemsByIdOrder(allItems.filter((item) => ADMIN_NAV_IDS.has(item.id)), ADMIN_NAV_IDS_ORDER)
       : [],
     [allItems, isAdmin]
   );

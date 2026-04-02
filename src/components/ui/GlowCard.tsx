@@ -103,7 +103,7 @@ export function GlowModal({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-void-black/80 z-50"
+            className="fixed inset-0 bg-void-black/80 z-[110]"
             onClick={onClose}
           />
           <motion.div
@@ -111,7 +111,7 @@ export function GlowModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
+            className="fixed inset-0 z-[120] flex items-center justify-center p-4 pointer-events-none"
           >
             <div
               ref={trapRef}
@@ -121,10 +121,9 @@ export function GlowModal({
               onClick={(e) => e.stopPropagation()}
               className={`bg-ink-deep w-full max-w-lg max-h-[80vh] overflow-y-auto pointer-events-auto glow-modal-container ${panelClassName}`}
               style={{
-                borderRadius: '24px',
-                boxShadow: glowColor 
-                  ? `0 0 40px ${glowColor}60, 0 0 80px ${glowColor}30, inset 0 0 30px ${glowColor}15` 
-                  : 'var(--glow-modal, 0 0 40px rgba(45, 95, 79, 0.4), 0 0 80px rgba(45, 95, 79, 0.2), inset 0 0 30px rgba(45, 95, 79, 0.1))'
+                borderRadius: '2px',
+                border: '1px solid var(--border)',
+                boxShadow: '0 8px 40px rgba(0,0,0,0.7), 0 2px 8px rgba(0,0,0,0.4)'
               }}
             >
               {!hideHeader && (

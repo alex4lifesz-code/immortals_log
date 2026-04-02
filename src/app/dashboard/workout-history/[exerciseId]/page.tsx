@@ -191,6 +191,7 @@ export default function WorkoutHistoryDetailPage() {
                 physique={physique}
                 onRefresh={fetchExercise}
                 userId={userId}
+                disableExerciseLinks
                 hideInputSection
               />
             </div>

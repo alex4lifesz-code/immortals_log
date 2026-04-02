@@ -49,6 +49,17 @@ export const GET = withAdmin(async (request, { auth }) => {
       breathing: ex.breathing,
       safetyConsiderations: ex.safetyConsiderations,
       competitionStandards: ex.competitionStandards,
+      progression: (() => {
+        try {
+          const parsed = JSON.parse(ex.progression || "[]");
+          if (Array.isArray(parsed)) {
+            return parsed.map((value) => String(value || "").trim()).filter(Boolean);
+          }
+        } catch {
+          // Ignore malformed JSON and fallback to tiers.
+        }
+        return ex.tiers.map((t) => t.name).filter(Boolean);
+      })(),
       assignedDays: ex.assignedDays,
       tiers: ex.tiers.map((t) => ({
         level: t.level,
