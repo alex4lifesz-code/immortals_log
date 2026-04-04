@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import { MemoTrainingLogTable } from "@/components/workout/TrainingLogTable";
 import { useAuth } from "@/context/AuthContext";
+import { useIsMobile } from "@/context/AppContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { api } from "@/lib/api-client";
 import { DASHBOARD_ROUTES } from "@/lib/navigation";
@@ -25,6 +26,7 @@ export default function WorkoutHistoryDetailPage() {
   const exerciseId = params?.exerciseId ?? "";
   const targetUserId = searchParams.get("targetUserId") || "";
   const { settings } = useDisplaySettings();
+  const isMobile = useIsMobile();
   const { user } = useAuth();
   const userId = user?.id ?? "";
 
@@ -310,8 +312,8 @@ export default function WorkoutHistoryDetailPage() {
                 historyTargetUserId={targetUserId || undefined}
                 disableExerciseLinks
                 hideInputSection
-                forceDesktopTableOnMobile
-                forceSimpleViewOnly
+                forceDesktopTableOnMobile={isMobile}
+                forceSimpleViewOnly={isMobile}
               />
             </div>
           </>

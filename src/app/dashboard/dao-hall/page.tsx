@@ -91,6 +91,29 @@ export default function DaoHallPage() {
     return m;
   }, [allUsers]);
 
+  const effectiveChartUserIds = useMemo(() => {
+    const validUserIds = new Set(allUsers.map((u) => u.id));
+    const filtered = chartUserIds.filter((id) => validUserIds.has(id));
+    if (filtered.length > 0) return filtered;
+    if (user?.id && validUserIds.has(user.id)) return [user.id];
+    return [];
+  }, [allUsers, chartUserIds, user?.id]);
+
+  useEffect(() => {
+    if (!user) return;
+    const validUserIds = new Set(allUsers.map((u) => u.id));
+
+    setChartUserIds((prev) => {
+      const filtered = prev.filter((id) => validUserIds.has(id));
+      const fallback = validUserIds.has(user.id) ? [user.id] : [];
+      const next = filtered.length > 0 ? filtered : fallback;
+      if (next.length === prev.length && next.every((id, index) => id === prev[index])) {
+        return prev;
+      }
+      return next;
+    });
+  }, [allUsers, user]);
+
   const sectRegisterRef = useRef<HTMLDivElement>(null);
   const rowsObserverTargetRef = useRef<HTMLDivElement | null>(null);
   // Check-in modal state
@@ -778,7 +801,10 @@ export default function DaoHallPage() {
     const userCheckInDates = new Set<string>();
     const grouped: Record<string, CheckInRow["entries"]> = {};
 
+    const visibleUserIds = new Set((usersData.users || []).map((u) => u.id));
+
     for (const checkin of checkinsData.checkins || []) {
+      if (!visibleUserIds.has(checkin.userId)) continue;
       const date = checkin.date.split("T")[0];
       if (checkin.present) {
         const current = usersByDate.get(date) || [];
@@ -933,11 +959,11 @@ export default function DaoHallPage() {
                 className="border bg-ink-dark/20 p-3 flex flex-col min-h-[260px]"
                 style={{ borderColor: "var(--border)" }}
               >
-                {user && chartUserIds.length > 0 && (
+                {user && effectiveChartUserIds.length > 0 && (
                   <CheckInStatsPanel
                     checkInRows={checkInRows}
                     currentMonth={currentMonth}
-                    selectedUserIds={chartUserIds}
+                    selectedUserIds={effectiveChartUserIds}
                     userNames={chartUserNames}
                     userColors={userColors}
                     currentUserId={user.id}
@@ -989,7 +1015,7 @@ export default function DaoHallPage() {
                   <ChartUserFilter
                     currentUserId={user.id}
                     allUsers={allUsers}
-                    selectedUserIds={chartUserIds}
+                    selectedUserIds={effectiveChartUserIds}
                     onSelectionChange={setChartUserIds}
                     userColors={userColors}
                   />
@@ -1005,11 +1031,11 @@ export default function DaoHallPage() {
                 className="border bg-ink-dark/20 p-3 flex flex-col min-h-[220px]"
                 style={{ borderColor: "var(--border)" }}
               >
-                {user && chartUserIds.length > 0 && (
+                {user && effectiveChartUserIds.length > 0 && (
                   <MonthlyComparisonChart
                     checkInRows={checkInRows}
                     currentMonth={currentMonth}
-                    selectedUserIds={chartUserIds}
+                    selectedUserIds={effectiveChartUserIds}
                     userNames={chartUserNames}
                     userColors={userColors}
                   />
@@ -1021,10 +1047,10 @@ export default function DaoHallPage() {
                 className="border bg-ink-dark/20 p-3 flex flex-col min-h-[220px]"
                 style={{ borderColor: "var(--border)" }}
               >
-                {user && chartUserIds.length > 0 && (
+                {user && effectiveChartUserIds.length > 0 && (
                   <WeightTrendChart
                     checkInRows={checkInRows}
-                    selectedUserIds={chartUserIds}
+                    selectedUserIds={effectiveChartUserIds}
                     userNames={chartUserNames}
                     userColors={userColors}
                   />
