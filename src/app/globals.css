@@ -9,35 +9,35 @@
   --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
   --safe-area-inset-left: env(safe-area-inset-left, 0px);
 
-  /* Core palette extracted from the wuxia mountain painting */
-  --void-black: #0d0f14;
-  --ink-deep: #151823;
-  --ink-dark: #1a1e2e;
-  --ink-mid: #252a3a;
-  --ink-light: #2f3548;
-  --mist-dark: #4a5568;
-  --mist-mid: #6b7b8d;
-  --mist-light: #94a3b8;
-  --mist-pale: #b8c4d4;
-  --cloud-white: #dce4ef;
-  --pure-white: #f0f4f8;
+  /* Core palette aligned to workout-history (Nyaa blue/green language) */
+  --void-black: #edf2f8;
+  --ink-deep: #ffffff;
+  --ink-dark: #f7f9fc;
+  --ink-mid: #eef3f9;
+  --ink-light: #c8d7ea;
+  --mist-dark: #627898;
+  --mist-mid: #4f6788;
+  --mist-light: #3b4f6b;
+  --mist-pale: #2a3f5f;
+  --cloud-white: #1f2f46;
+  --pure-white: #14243a;
 
   /* Accent colours */
-  --jade-deep: #1a4a4a;
-  --jade: #2d6b6b;
-  --jade-glow: #3a8f8f;
-  --jade-light: #5bbfbf;
-  --crimson-deep: #6b1a1a;
-  --crimson: #8b2020;
-  --crimson-glow: #c43030;
-  --crimson-light: #e84848;
-  --mountain-blue: #3a6b8f;
-  --mountain-blue-glow: #4a8fb8;
-  --forest-deep: #1a3a2a;
-  --forest: #2d5a3e;
-  --gold-dim: #8b7a3a;
-  --gold: #c4a84a;
-  --gold-glow: #e8c84a;
+  --jade-deep: #d3ebe6;
+  --jade: #2f8f9d;
+  --jade-glow: #257986;
+  --jade-light: #1d6570;
+  --crimson-deep: #f6d9d9;
+  --crimson: #c94848;
+  --crimson-glow: #b23d3d;
+  --crimson-light: #9a3333;
+  --mountain-blue: #3d5ea8;
+  --mountain-blue-glow: #2e51a2;
+  --forest-deep: #dff1d0;
+  --forest: #6fa94c;
+  --gold-dim: #b79d52;
+  --gold: #a98f45;
+  --gold-glow: #927b39;
 
   /* Difficulty colors */
   --difficulty-green: #22c55e;
@@ -61,28 +61,48 @@
   --surface: var(--ink-deep);
   --surface-hover: var(--ink-mid);
   --border: var(--ink-light);
-  --border-glow: var(--jade);
+  --border-glow: var(--mountain-blue-glow);
   --text-primary: var(--cloud-white);
   --text-secondary: var(--mist-light);
   --text-muted: var(--mist-dark);
-  --accent: var(--jade-glow);
-  --accent-hover: var(--jade-light);
+  --accent: var(--jade);
+  --accent-hover: var(--jade-glow);
+  --category-cali: #22c55e;
+  --category-gym: #f59e0b;
+  --category-yoga: #3b82f6;
+  --category-cardio: #ef4444;
+  --label-progression: #a855f7;
+  --label-variant: #06b6d4;
+  --link: color-mix(in srgb, var(--accent) 88%, var(--text-primary));
+  --link-hover: color-mix(in srgb, var(--accent-hover) 92%, var(--text-primary));
+  --link-visited: color-mix(in srgb, var(--accent) 70%, var(--mist-mid));
   --danger: var(--crimson);
   --danger-hover: var(--crimson-glow);
+  --header-bg: color-mix(in srgb, var(--surface) 82%, var(--border));
+  --header-border: var(--nyaa-table-grid);
 
   /* Glow effects */
-  --glow-jade: 0 0 20px rgba(58, 143, 143, 0.4), 0 0 40px rgba(58, 143, 143, 0.2);
-  --glow-crimson: 0 0 20px rgba(196, 48, 48, 0.4), 0 0 40px rgba(196, 48, 48, 0.2);
-  --glow-gold: 0 0 20px rgba(232, 200, 74, 0.4), 0 0 40px rgba(232, 200, 74, 0.2);
-  --glow-blue: 0 0 20px rgba(74, 143, 184, 0.4), 0 0 40px rgba(74, 143, 184, 0.2);
-  --glow-subtle: 0 0 10px rgba(58, 143, 143, 0.15);
-  --glow-modal: 0 0 40px rgba(58, 143, 143, 0.4), 0 0 80px rgba(58, 143, 143, 0.2), inset 0 0 30px rgba(58, 143, 143, 0.1);
+  --glow-jade: 0 0 12px rgba(106, 168, 79, 0.2), 0 0 24px rgba(106, 168, 79, 0.1);
+  --glow-crimson: 0 0 12px rgba(201, 72, 72, 0.2), 0 0 24px rgba(201, 72, 72, 0.1);
+  --glow-gold: 0 0 12px rgba(169, 143, 69, 0.2), 0 0 24px rgba(169, 143, 69, 0.1);
+  --glow-blue: 0 0 12px rgba(46, 81, 162, 0.22), 0 0 24px rgba(46, 81, 162, 0.1);
+  --glow-subtle: 0 0 8px rgba(46, 81, 162, 0.12);
+  --glow-modal: 0 0 30px rgba(46, 81, 162, 0.22), 0 0 60px rgba(46, 81, 162, 0.1), inset 0 0 20px rgba(46, 81, 162, 0.05);
 
   /* Column colours for W/R differentiation */
-  --col-weight: #3a8f8f;
-  --col-weight-bg: rgba(58, 143, 143, 0.08);
-  --col-reps: #c4a84a;
-  --col-reps-bg: rgba(196, 168, 74, 0.08);
+  --col-weight: var(--mountain-blue-glow);
+  --col-weight-bg: color-mix(in srgb, var(--mountain-blue-glow) 8%, transparent);
+  --col-reps: var(--jade-glow);
+  --col-reps-bg: color-mix(in srgb, var(--jade-glow) 8%, transparent);
+
+  /* Table tokens promoted globally from workout-history style */
+  --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 84%, var(--border));
+  --nyaa-table-head-text: var(--text-primary);
+  --nyaa-table-grid: var(--border);
+  --nyaa-table-row-text: var(--text-primary);
+  --nyaa-table-row-odd: var(--surface);
+  --nyaa-table-row-even: var(--surface);
+  --nyaa-table-row-hover: color-mix(in srgb, var(--surface) 84%, var(--mountain-blue-glow));
 
   /* Exercise/training colors */
   --exercise-glow: var(--accent);
@@ -274,7 +294,7 @@
 /* ===== Base Styles ===== */
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--ink-light) var(--void-black);
+  scrollbar-color: var(--ink-light) var(--background);
 }
 
 body {
@@ -310,6 +330,22 @@ textarea:focus-visible {
   box-shadow:
     0 0 0 2px color-mix(in srgb, var(--background) 75%, transparent),
     0 0 0 4px var(--ring-accent);
+}
+
+a[href] {
+  color: var(--link);
+  text-decoration-color: color-mix(in srgb, var(--link) 55%, transparent);
+  text-underline-offset: 0.12em;
+}
+
+a[href]:visited {
+  color: var(--link-visited);
+  text-decoration-color: color-mix(in srgb, var(--link-visited) 50%, transparent);
+}
+
+a[href]:hover {
+  color: var(--link-hover);
+  text-decoration-color: color-mix(in srgb, var(--link-hover) 70%, transparent);
 }
 
 #__next,
@@ -495,10 +531,40 @@ main {
 .app-atmosphere {
   position: relative;
   background:
-    radial-gradient(95rem 40rem at 8% -12%, color-mix(in srgb, var(--jade-glow) 12%, transparent), transparent 58%),
+    radial-gradient(95rem 40rem at 8% -12%, color-mix(in srgb, var(--jade) 12%, transparent), transparent 58%),
     radial-gradient(80rem 32rem at 88% -16%, color-mix(in srgb, var(--mountain-blue-glow) 14%, transparent), transparent 62%),
-    radial-gradient(65rem 30rem at 52% 118%, color-mix(in srgb, var(--gold) 10%, transparent), transparent 70%),
+    radial-gradient(65rem 30rem at 52% 118%, color-mix(in srgb, var(--forest) 10%, transparent), transparent 70%),
     var(--background);
+}
+
+/* Global table recolor based on workout-history palette */
+table {
+  border-collapse: collapse;
+  background: var(--surface);
+}
+
+thead th {
+  background: var(--nyaa-table-head-bg);
+  color: var(--nyaa-table-head-text);
+  border: 1px solid var(--nyaa-table-grid);
+  font-weight: 700;
+}
+
+tbody td {
+  border: 1px solid var(--nyaa-table-grid);
+  color: var(--nyaa-table-row-text);
+}
+
+tbody tr:nth-child(even) {
+  background: var(--nyaa-table-row-even);
+}
+
+tbody tr:nth-child(odd) {
+  background: var(--nyaa-table-row-odd);
+}
+
+tbody tr:hover {
+  background: var(--nyaa-table-row-hover);
 }
 
 .ambient-orb {
@@ -653,18 +719,23 @@ html.discord .app-atmosphere {
 /* Eternal theme content padding */
 html.eternal nav,
 html.discord nav {
-  background: var(--surface);
+  background: var(--header-bg);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 html.eternal a,
 html.discord a {
-  color: var(--accent);
+  color: var(--link);
 }
 
 html.eternal a:hover,
 html.discord a:hover {
-  color: var(--accent-hover);
+  color: var(--link-hover);
+}
+
+html.eternal a:visited,
+html.discord a:visited {
+  color: var(--link-visited);
 }
 
 html.eternal button:focus-visible,
@@ -692,8 +763,9 @@ html.discord textarea:focus-visible {
 
 /* Nav bar shell */
 .nyaa-nav-bar {
-  background: var(--nyaa-nav-bg, var(--surface));
-  border-bottom: 1px solid var(--nyaa-nav-border, var(--border));
+  background: color-mix(in srgb, var(--nyaa-nav-bg, var(--header-bg, var(--surface))) 94%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--nyaa-nav-border, var(--header-border, var(--border))) 88%, transparent);
+  backdrop-filter: blur(8px);
 }
 
 .nyaa-nav-inner {
@@ -701,7 +773,9 @@ html.discord textarea:focus-visible {
   align-items: center;
   max-width: var(--nyaa-content-max-width, 1220px);
   margin-inline: auto;
-  padding-inline: 0 !important;
+  min-height: 3.35rem;
+  padding-inline-start: 0.9rem !important;
+  padding-inline-end: 0.5rem !important;
 }
 
 /* Logo */
@@ -737,9 +811,9 @@ html.discord textarea:focus-visible {
 .nyaa-nav-link {
   color: var(--nyaa-nav-text, var(--text-secondary));
   text-decoration: none;
-  font-size: 0.875rem;
-  padding: 0.2rem 0.5rem;
-  border-radius: 2px;
+  font-size: 0.8125rem;
+  padding: 0.24rem 0.55rem;
+  border-radius: 6px;
   background: none;
   border: none;
   cursor: pointer;
@@ -753,7 +827,7 @@ html.discord textarea:focus-visible {
 
 .nyaa-nav-link-inactive:hover {
   color: var(--nyaa-nav-text-hover, var(--text-primary));
-  background: color-mix(in srgb, var(--nyaa-nav-text-hover, var(--text-primary)) 10%, transparent);
+  background: color-mix(in srgb, var(--nyaa-nav-text-hover, var(--text-primary)) 6%, transparent);
 }
 
 /* Admin badge */
@@ -872,6 +946,15 @@ html.discord textarea:focus-visible {
   padding-top: 2px !important;
   padding-bottom: 2px !important;
   line-height: 1.15 !important;
+}
+
+/* Rank-up inactive row override — must beat the !important above */
+.nyaa-layout .nyaa-history-page tbody tr.rank-up-inactive td {
+  color: color-mix(in srgb, var(--text-muted) 48%, var(--surface)) !important;
+  background: color-mix(in srgb, var(--surface) 88%, black) !important;
+}
+.nyaa-layout .nyaa-history-page tbody tr.rank-up-inactive td a {
+  color: color-mix(in srgb, var(--text-muted) 40%, var(--surface)) !important;
 }
 
 .nyaa-layout .nyaa-history-page tbody td:first-child {

@@ -2,11 +2,27 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { serializeDayAssignments } from "@/lib/constants";
 import { withAuth } from "@/lib/auth/middleware";
+import { canViewUserData } from "@/lib/friends";
 
-// GET /api/progressions/[id] — get a shared progression exercise with requesting user's progress
-export const GET = withAuth(async (_request, { auth, params }) => {
+// GET /api/progressions/[id] — get a shared progression exercise with selected user's progress
+export const GET = withAuth(async (request, { auth, params }) => {
   try {
     const id = params.id as string;
+    const { searchParams } = new URL(request.url);
+    const targetUserId = searchParams.get("targetUserId");
+    let userId = auth.userId;
+
+    if (targetUserId) {
+      const canViewTarget = await canViewUserData({
+        viewerId: auth.userId,
+        viewerRole: auth.role,
+        targetUserId,
+      });
+      if (!canViewTarget) {
+        return NextResponse.json({ error: "Not allowed to view this user's progression" }, { status: 403 });
+      }
+      userId = targetUserId;
+    }
 
     const exercise = await prisma.progressionExercise.findUnique({
       where: { id },
@@ -15,7 +31,7 @@ export const GET = withAuth(async (_request, { auth, params }) => {
         variations: true,
         modifiers: true,
         userProgress: {
-          where: { userId: auth.userId },
+          where: { userId },
           include: {
             logs: { orderBy: { createdAt: "desc" } },
           },

@@ -17,14 +17,16 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const prefersReducedMotion = useReducedMotion();
   const { count: incomingFriendRequestCount } = useIncomingFriendRequestsCount(user?.id);
-  const { themeStyle } = useAppContext();
+  const { themeStyle, isMobile } = useAppContext();
   const disableMotion = themeStyle === "eternal" || themeStyle === "discord" || prefersReducedMotion;
+  const isWorkoutInputFullscreen =
+    pathname?.startsWith("/dashboard/train/input/") || pathname?.startsWith("/dashboard/workout-history/input/") || false;
 
   return (
     <MotionConfig transition={disableMotion ? { duration: 0 } : undefined}>
       <div className="app-atmosphere safe-area-shell h-screen flex flex-col overflow-hidden nyaa-layout">
-        <NyaaTopNav incomingFriendRequestCount={incomingFriendRequestCount} />
-        <ConnectivityBanner />
+        {!isWorkoutInputFullscreen && !isMobile && <NyaaTopNav incomingFriendRequestCount={incomingFriendRequestCount} />}
+        {!isWorkoutInputFullscreen && <ConnectivityBanner />}
         <div className="flex-1 flex min-w-0 flex-col overflow-hidden nyaa-content-area">
           <SwipeNavigation>
             <div className="h-full min-w-0 overflow-y-auto">
@@ -34,7 +36,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                   initial={disableMotion ? false : { opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={disableMotion ? { opacity: 1 } : { opacity: 0 }}
-                  transition={{ duration: disableMotion ? 0 : 0.2, ease: [0.22, 1, 0.36, 1] }}
+                  transition={{ duration: disableMotion ? 0 : 0.1, ease: "easeOut" }}
                   className="h-full"
                 >
                   {children}
@@ -43,7 +45,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             </div>
           </SwipeNavigation>
         </div>
-        <MobileNavBar incomingFriendRequestCount={incomingFriendRequestCount} />
+        {!isWorkoutInputFullscreen && <MobileNavBar incomingFriendRequestCount={incomingFriendRequestCount} />}
       </div>
     </MotionConfig>
   );

@@ -328,7 +328,7 @@ export function getAutoGymLevel(exercise: ProgressionExercise, physique: UserPhy
 
 export function getTierName(exercise: ProgressionExercise, level: number): string {
   const tier = exercise.tiers.find((t) => t.level === level);
-  return tier ? tier.name : `Level ${level}`;
+  return tier ? tier.name : "";
 }
 
 export function tierUsesHoldTarget(tier: ProgressionTier): boolean {

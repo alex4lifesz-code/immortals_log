@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
+import { isDeletedExerciseDescription } from "@/lib/pending-exercises";
 
 // POST /api/progressions/[id]/log — log training data for a progression level
 export const POST = withAuth(async (request, { auth, params }) => {
@@ -14,18 +15,19 @@ export const POST = withAuth(async (request, { auth, params }) => {
       return NextResponse.json({ error: "level must be a positive number" }, { status: 400 });
     }
 
-    // Find or create user progression
-    const exercise = await prisma.progressionExercise.findFirst({
-      where: {
-        id,
-        OR: [
-          { userId },
-          { userProgress: { some: { userId } } },
-        ],
+    // Allow logging for any library exercise id; create user progress on first log.
+    const exercise = await prisma.progressionExercise.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        story: true,
       },
     });
     if (!exercise) {
       return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
+    }
+    if (isDeletedExerciseDescription(exercise.story)) {
+      return NextResponse.json({ error: "Exercise is unavailable" }, { status: 404 });
     }
 
     let userProgress = await prisma.userProgressionLevel.findUnique({

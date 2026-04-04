@@ -439,6 +439,14 @@ html.mountain-mist {
   --col-reps: #887840;
   --col-reps-bg: rgba(136, 120, 64, 0.08);
 
+  --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 86%, var(--border));
+  --nyaa-table-head-text: var(--text-primary);
+  --nyaa-table-grid: color-mix(in srgb, var(--border) 90%, var(--text-muted));
+  --nyaa-table-row-text: var(--text-primary);
+  --nyaa-table-row-odd: var(--surface);
+  --nyaa-table-row-even: color-mix(in srgb, var(--surface) 92%, var(--border));
+  --nyaa-table-row-hover: color-mix(in srgb, var(--surface) 84%, var(--mountain-blue-glow));
+
   /* Difficulty colors — deeper tones for light-background contrast */
   --difficulty-green: #15803d;
   --difficulty-green-glow: #166534;
@@ -548,6 +556,14 @@ html.calligraphy {
   --col-reps: #d4a860;
   --col-reps-bg: rgba(212, 168, 96, 0.08);
 
+  --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 84%, var(--border));
+  --nyaa-table-head-text: var(--text-primary);
+  --nyaa-table-grid: color-mix(in srgb, var(--border) 92%, var(--text-muted));
+  --nyaa-table-row-text: var(--text-primary);
+  --nyaa-table-row-odd: var(--surface);
+  --nyaa-table-row-even: color-mix(in srgb, var(--surface) 90%, var(--border));
+  --nyaa-table-row-hover: color-mix(in srgb, var(--surface) 82%, var(--accent));
+
   /* Difficulty colors — muted, desaturated for monochrome theme */
   --difficulty-green: #6aaa6a;
   --difficulty-green-glow: #508850;
@@ -648,6 +664,14 @@ html.sakura {
   --col-weight-bg: rgba(122, 150, 179, 0.08);
   --col-reps: #e8507a;
   --col-reps-bg: rgba(232, 80, 122, 0.08);
+
+  --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 86%, var(--border));
+  --nyaa-table-head-text: var(--text-primary);
+  --nyaa-table-grid: color-mix(in srgb, var(--border) 90%, var(--text-muted));
+  --nyaa-table-row-text: var(--text-primary);
+  --nyaa-table-row-odd: var(--surface);
+  --nyaa-table-row-even: color-mix(in srgb, var(--surface) 92%, var(--border));
+  --nyaa-table-row-hover: color-mix(in srgb, var(--surface) 84%, var(--accent));
 
   /* Difficulty colors — warm pink-tinted for sakura light theme */
   --difficulty-green: #15803d;
@@ -753,6 +777,14 @@ html.sakura-dark {
   --col-reps: #d83870;
   --col-reps-bg: rgba(216, 56, 112, 0.08);
 
+  --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 84%, var(--border));
+  --nyaa-table-head-text: var(--text-primary);
+  --nyaa-table-grid: color-mix(in srgb, var(--border) 92%, var(--text-muted));
+  --nyaa-table-row-text: var(--text-primary);
+  --nyaa-table-row-odd: var(--surface);
+  --nyaa-table-row-even: color-mix(in srgb, var(--surface) 90%, var(--border));
+  --nyaa-table-row-hover: color-mix(in srgb, var(--surface) 82%, var(--accent));
+
   /* Difficulty colors — magenta-tinted for sakura-dark theme */
   --difficulty-green: #2dd4a0;
   --difficulty-green-glow: #0fa87e;
@@ -857,6 +889,14 @@ html.eternal {
   --col-reps: #f59e0b;
   --col-reps-bg: rgba(245, 158, 11, 0.08);
 
+  --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 88%, var(--border));
+  --nyaa-table-head-text: var(--text-primary);
+  --nyaa-table-grid: color-mix(in srgb, var(--border) 88%, var(--text-muted));
+  --nyaa-table-row-text: var(--text-primary);
+  --nyaa-table-row-odd: var(--surface);
+  --nyaa-table-row-even: color-mix(in srgb, var(--surface) 94%, var(--border));
+  --nyaa-table-row-hover: color-mix(in srgb, var(--surface) 86%, var(--accent));
+
   /* Difficulty colors — vibrant & clear for light backgrounds */
   --difficulty-green: #16a34a;
   --difficulty-green-glow: #15803d;
@@ -956,6 +996,14 @@ html.discord {
   --col-reps: #fee75c;
   --col-reps-bg: rgba(254, 231, 92, 0.16);
 
+  --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 84%, var(--border));
+  --nyaa-table-head-text: var(--text-primary);
+  --nyaa-table-grid: color-mix(in srgb, var(--border) 92%, var(--text-muted));
+  --nyaa-table-row-text: var(--text-primary);
+  --nyaa-table-row-odd: var(--surface);
+  --nyaa-table-row-even: color-mix(in srgb, var(--surface) 90%, var(--border));
+  --nyaa-table-row-hover: color-mix(in srgb, var(--surface) 82%, var(--accent));
+
   /* Difficulty colors */
   --difficulty-green: #57f287;
   --difficulty-green-glow: #3ddd70;
@@ -1050,6 +1098,14 @@ html.document {
   --col-weight-bg: rgba(58, 88, 160, 0.07);
   --col-reps: #8a7040;
   --col-reps-bg: rgba(138, 112, 64, 0.07);
+
+  --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 88%, var(--border));
+  --nyaa-table-head-text: var(--text-primary);
+  --nyaa-table-grid: color-mix(in srgb, var(--border) 88%, var(--text-muted));
+  --nyaa-table-row-text: var(--text-primary);
+  --nyaa-table-row-odd: var(--surface);
+  --nyaa-table-row-even: color-mix(in srgb, var(--surface) 94%, var(--border));
+  --nyaa-table-row-hover: color-mix(in srgb, var(--surface) 86%, var(--accent));
 
   /* Difficulty colors — clear, professional for light backgrounds */
   --difficulty-green: #1a7a3a;
@@ -1149,12 +1205,12 @@ html.nyaa {
   --nyaa-nav-accent-hover: #47aab8;
   --nyaa-nav-sep: #3a444f;
 
-  --nyaa-table-head-bg: #ffffff;
-  --nyaa-table-head-text: #000000;
-  --nyaa-table-grid: #a9b2bf;
+  --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 88%, var(--border));
+  --nyaa-table-head-text: var(--text-primary);
+  --nyaa-table-grid: color-mix(in srgb, var(--border) 88%, var(--text-muted));
   --nyaa-table-row-text: var(--cloud-white);
   --nyaa-table-row-odd: var(--surface);
-  --nyaa-table-row-even: var(--surface);
+  --nyaa-table-row-even: color-mix(in srgb, var(--surface) 94%, var(--border));
   --nyaa-table-row-hover: color-mix(in srgb, var(--surface) 84%, var(--mountain-blue-glow));
 }
 
@@ -1173,4 +1229,102 @@ html.nyaa ::selection {
 
 html.nyaa * {
   scrollbar-color: var(--ink-light) var(--void-black);
+}
+
+/* ===== Per-theme label palettes ===== */
+html.midnight-ink {
+  --category-cali: #22c55e;
+  --category-gym: #f59e0b;
+  --category-yoga: #3b82f6;
+  --category-cardio: #ef4444;
+  --label-progression: #a855f7;
+  --label-variant: #06b6d4;
+}
+
+html.mountain-mist {
+  --category-cali: #2d7a7a;
+  --category-gym: #8a7030;
+  --category-yoga: #5a8aaa;
+  --category-cardio: #a04040;
+  --label-progression: #6d28d9;
+  --label-variant: #0e7490;
+  --header-bg: color-mix(in srgb, var(--surface) 86%, var(--border));
+  --header-border: var(--nyaa-table-grid);
+}
+
+html.calligraphy {
+  --category-cali: #d0d0d0;
+  --category-gym: #d4a860;
+  --category-yoga: #8aa0b8;
+  --category-cardio: #b87070;
+  --label-progression: #b07090;
+  --label-variant: #9bb0bb;
+  --header-bg: color-mix(in srgb, var(--surface) 82%, var(--border));
+  --header-border: var(--nyaa-table-grid);
+}
+
+html.sakura {
+  --category-cali: #e8507a;
+  --category-gym: #d8a878;
+  --category-yoga: #8aa8c8;
+  --category-cardio: #d85a4a;
+  --label-progression: #c4b5fd;
+  --label-variant: #67e8f9;
+  --header-bg: color-mix(in srgb, var(--surface) 86%, var(--border));
+  --header-border: var(--nyaa-table-grid);
+}
+
+html.sakura-dark {
+  --category-cali: #d83870;
+  --category-gym: #c08090;
+  --category-yoga: #8068b0;
+  --category-cardio: #ff6b6b;
+  --label-progression: #e890c0;
+  --label-variant: #67e8f9;
+  --header-bg: color-mix(in srgb, var(--surface) 82%, var(--border));
+  --header-border: var(--nyaa-table-grid);
+}
+
+html.eternal {
+  --category-cali: #2f8f9d;
+  --category-gym: #c59b2f;
+  --category-yoga: #5b7fd6;
+  --category-cardio: #c94848;
+  --label-progression: #7c3aed;
+  --label-variant: #0891b2;
+  --header-bg: color-mix(in srgb, var(--surface) 90%, var(--border));
+  --header-border: var(--nyaa-table-grid);
+}
+
+html.discord {
+  --category-cali: #5865f2;
+  --category-gym: #faa61a;
+  --category-yoga: #57f287;
+  --category-cardio: #ed4245;
+  --label-progression: #b18cff;
+  --label-variant: #00d1ff;
+  --header-bg: color-mix(in srgb, var(--surface) 84%, var(--border));
+  --header-border: var(--nyaa-table-grid);
+}
+
+html.document {
+  --category-cali: #3a58a0;
+  --category-gym: #b7791f;
+  --category-yoga: #2f7d32;
+  --category-cardio: #b43f3f;
+  --label-progression: #7e57c2;
+  --label-variant: #0e7490;
+  --header-bg: color-mix(in srgb, var(--surface) 90%, var(--border));
+  --header-border: var(--nyaa-table-grid);
+}
+
+html.nyaa {
+  --category-cali: #2e51a2;
+  --category-gym: #6aa84f;
+  --category-yoga: #7c3aed;
+  --category-cardio: #c43030;
+  --label-progression: #7c3aed;
+  --label-variant: #0891b2;
+  --header-bg: color-mix(in srgb, var(--surface) 90%, var(--border));
+  --header-border: var(--nyaa-table-grid);
 }

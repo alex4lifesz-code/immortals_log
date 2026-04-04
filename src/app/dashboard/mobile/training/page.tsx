@@ -52,7 +52,7 @@ export default function MobileTrainingPage() {
           />
         ))}
       </section>
-      <MobileFAB label="Start" icon="\u25b6" onClick={() => router.push(DASHBOARD_ROUTES.main)} />
+      <MobileFAB label="Start" icon="\u25b6" onClick={() => router.push(DASHBOARD_ROUTES.overview)} />
     </div>
   );
 }

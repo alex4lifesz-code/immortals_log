@@ -8,7 +8,7 @@ export function TierColorLegend({ isOpen, onClose }: { isOpen: boolean; onClose:
     <GlowModal isOpen={isOpen} onClose={onClose} title="Training Display Update">
       <div className="space-y-3 text-sm text-mist-mid">
         <p>The hardcoded cultivation color guide has been removed from the workout flow.</p>
-        <p>Training surfaces now use neutral styling and level-based labels instead of fixed rank colours and synthetic progression names.</p>
+        <p>Training surfaces now use neutral styling and progression names instead of fixed rank colours and synthetic labels.</p>
       </div>
     </GlowModal>
   );

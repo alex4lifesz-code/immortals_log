@@ -2,7 +2,6 @@
 
 import { motion } from "framer-motion";
 import { useState } from "react";
-import GlowCard from "@/components/ui/GlowCard";
 import GlowButton from "@/components/ui/GlowButton";
 import { useIsMobile } from "@/context/AppContext";
 import { formatDateWithPreference } from "@/lib/constants";
@@ -272,15 +271,17 @@ function CalendarDay({ date, checkedInUsers, isToday, isPast, hasNote, hasFuture
     <motion.div
       whileHover={compact ? undefined : { scale: 1.05 }}
       onClick={onClick}
-      className={`aspect-square flex flex-col items-center justify-center rounded-lg transition-all relative cursor-pointer ${
+      className={`aspect-square flex flex-col items-center justify-center transition-all relative cursor-pointer ${
         isToday
-          ? "border-2 border-jade-glow bg-jade-deep/30 hover:bg-jade-deep/50 shadow-[0_0_8px_rgba(58,143,143,0.3)]"
+          ? "border-2 border-jade-glow bg-jade-deep/42 hover:bg-jade-deep/55"
           : hasFutureNote
-          ? "border border-jade/30 bg-jade-deep/15 hover:bg-jade-deep/25 shadow-[0_0_6px_rgba(29,72,72,0.3)]"
+          ? "border border-jade/45 bg-jade-deep/30 hover:bg-jade-deep/38"
           : hasCheckIns
-          ? "border border-jade/40 bg-jade-deep/15 hover:bg-jade-deep/30"
-          : "border border-ink-light/60 bg-ink-dark/30 hover:bg-ink-mid/40"
-      } ${isPast && !isToday ? 'opacity-50' : ''}`}
+          ? "border border-jade/35 bg-jade-deep/24 hover:bg-jade-deep/32"
+          : isPast
+          ? "border border-ink-light/40 bg-ink-dark/35 hover:bg-ink-dark/50"
+          : "border border-ink-light/60 bg-jade-deep/18 hover:bg-jade-deep/24"
+      }`}
     >
       <div className="text-center">
         <div className={`${compact ? "text-xs" : "text-sm"} font-medium ${isPast && !isToday ? 'text-mist-mid' : 'text-cloud-white'}`}>{date.getDate()}</div>
@@ -292,7 +293,7 @@ function CalendarDay({ date, checkedInUsers, isToday, isPast, hasNote, hasFuture
             <span
               key={u.id}
               title={u.name}
-              className={`${compact ? "text-[9px]" : "text-[11px]"} leading-none font-bold drop-shadow-[0_0_3px_currentColor]`}
+              className={`${compact ? "text-[9px]" : "text-[11px]"} leading-none font-bold`}
               style={{ color: u.color }}
             >
               ✓
@@ -304,7 +305,7 @@ function CalendarDay({ date, checkedInUsers, isToday, isPast, hasNote, hasFuture
         <div className={`absolute ${compact ? "top-0 right-0" : "top-0.5 right-0.5"} ${compact ? "text-[7px]" : "text-[8px]"} text-gold-glow`}>📝</div>
       )}
       {hasFutureNote && (
-        <div className={`absolute ${compact ? "top-0 right-0" : "top-0.5 right-0.5"} ${compact ? "text-[8px]" : "text-[10px]"} text-gold-glow drop-shadow-[0_0_3px_rgba(232,200,74,0.5)]`}>✏️</div>
+        <div className={`absolute ${compact ? "top-0 right-0" : "top-0.5 right-0.5"} ${compact ? "text-[8px]" : "text-[10px]"} text-gold-glow`}>✏️</div>
       )}
     </motion.div>
   );
@@ -324,6 +325,7 @@ export function Calendar({
   upcomingNotes,
   dateFormat = "dd-mmm-yyyy",
   onManageNotes,
+  forceCompact = false,
 }: {
   checkInUsersByDate: Map<string, string[]>;
   currentMonth: Date;
@@ -336,9 +338,10 @@ export function Calendar({
   upcomingNotes?: DashboardUpcomingNote[];
   dateFormat?: "dd-mm-yyyy" | "dd-mmm-yyyy" | "dd-mm-yy" | "dd-mmm-yy";
   onManageNotes?: () => void;
+  forceCompact?: boolean;
 }) {
   const isMobile = useIsMobile();
-  const compactMode = isMobile;
+  const compactMode = isMobile || forceCompact;
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
   const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
   const days = [];
@@ -354,7 +357,10 @@ export function Calendar({
   }
 
   return (
-    <GlowCard glow="jade" className={`${compactMode ? "p-2.5" : "p-4"} space-y-3 min-w-0 overflow-hidden`}>
+    <div
+      className={`${compactMode ? "p-2.5" : "p-4"} space-y-3 min-w-0 overflow-hidden border bg-ink-dark/20`}
+      style={{ borderColor: "var(--border)" }}
+    >
       <div className={`flex ${compactMode ? "flex-wrap gap-2" : "items-center justify-between"}`}>
         <h3 className={`${compactMode ? "text-sm" : "text-lg"} font-bold text-cloud-white`}>
           {currentMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
@@ -448,13 +454,13 @@ export function Calendar({
                 <button
                   key={note.id}
                   onClick={() => onDayClick?.(note.date)}
-                  className="w-full text-left p-2 rounded-lg border border-ink-light/45 bg-gradient-to-r from-ink-dark/40 to-ink-mid/20 hover:from-gold-dim/12 hover:to-gold-dim/8 hover:border-gold-dim/45 transition-all duration-200"
+                  className="w-full text-left p-2 border border-ink-light/45 bg-ink-dark/20 hover:bg-ink-mid/20 hover:border-gold-dim/45 transition-all duration-200"
                   title="Jump to this date"
                 >
                   <div className="flex items-start gap-2">
                     <div
-                      className="w-2 h-2 rounded-full shrink-0 mt-1.5 shadow-lg"
-                      style={{ backgroundColor: noteColor, boxShadow: `0 0 6px ${getCultivatorGlowColor(noteColor, 0.6)}` }}
+                      className="w-2 h-2 rounded-full shrink-0 mt-1.5"
+                      style={{ backgroundColor: noteColor }}
                     />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5 mb-0.5">
@@ -475,11 +481,11 @@ export function Calendar({
 
       <div className={`pt-3 border-t border-ink-light flex flex-wrap ${compactMode ? "gap-2 text-[10px]" : "gap-3 text-xs"}`}>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded border-2 border-jade-glow bg-jade-deep/30 shadow-[0_0_4px_rgba(58,143,143,0.2)]" />
+          <div className="w-3 h-3 rounded border-2 border-jade-glow bg-jade-deep/30" />
           <span className="text-mist-mid">Today</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm font-bold text-jade-glow drop-shadow-[0_0_3px_rgba(58,143,143,0.6)]">✓</span>
+          <span className="text-sm font-bold text-jade-glow">✓</span>
           <span className="text-mist-mid">Check-In</span>
         </div>
         <div className="flex items-center gap-1">
@@ -496,6 +502,6 @@ export function Calendar({
           <span className="text-mist-mid ml-0.5">= cultivator</span>
         </div>
       </div>
-    </GlowCard>
+    </div>
   );
 }

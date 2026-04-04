@@ -30,7 +30,7 @@ export default function GlowInput({
       <input
         className={`
           w-full bg-ink-dark border border-ink-light rounded-lg px-3 py-2 text-sm text-cloud-white
-          placeholder:text-mist-dark outline-none transition-all duration-300
+          placeholder:text-mist-dark outline-none transition-[border-color,box-shadow] duration-150
           ${focusGlow[glowColor]}
           ${className}
         `}
@@ -62,7 +62,7 @@ export function GlowTextarea({
       <textarea
         className={`
           w-full bg-ink-dark border border-ink-light rounded-lg px-3 py-2 text-sm text-cloud-white
-          placeholder:text-mist-dark outline-none transition-all duration-300 resize-none
+          placeholder:text-mist-dark outline-none transition-[border-color,box-shadow] duration-150 resize-none
           ${focusGlow[glowColor]}
           ${className}
         `}
@@ -96,7 +96,7 @@ export function GlowSelect({
       <select
         className={`
           w-full bg-ink-dark border border-ink-light rounded-lg px-3 py-2 text-sm text-cloud-white
-          outline-none transition-all duration-300 cursor-pointer
+          outline-none transition-[border-color,box-shadow] duration-150 cursor-pointer
           ${focusGlow[glowColor]}
           ${className}
         `}

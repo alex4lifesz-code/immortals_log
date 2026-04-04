@@ -1,247 +1,650 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import PageLayout from "@/components/layout/PageLayout";
+import { useIsMobile } from "@/context/AppContext";
 import { api } from "@/lib/api-client";
 import { DASHBOARD_ROUTES } from "@/lib/navigation";
+import type { ProgressionExercise, ProgressionLog } from "../workout/types";
 
-type RankUpProgression = {
-  exerciseName: string;
-  progressionName: string;
-  label: string;
-  variantName?: string;
-  difficulty?: "Beginner" | "Intermediate" | "Advanced";
-  notes?: string;
+type TierStats = {
+  attempts: number;
+  bestReps: number | null;
+  bestHoldSeconds: number | null;
+  bestWeight: number | null;
+  lastPerformedAt: string | null;
 };
 
 type RankUpSkill = {
   id: string;
   name: string;
-  summary: string;
-  progressions: RankUpProgression[];
+  tierNames: string[];
+  tierStats: TierStats[];
+  performed: number;
+  lastLogAt: string | null;
+  sessions14d: number;
 };
 
-type ExerciseLibraryResponse = {
-  exercises: Array<{
-    id: string;
-    name: string;
-    variations?: Array<{
-      id: string;
-      name: string;
-    }>;
-  }>;
-};
+type ProgressionsResponse = { exercises: ProgressionExercise[] };
+type ActivityFilter = "all" | "active-7d" | "active-14d" | "active-30d" | "stale" | "never-attempted";
+type SortBy = "recent" | "performed" | "least-sessions" | "name" | "most-tiers";
 
-const RANK_UP_SKILLS: RankUpSkill[] = [
-  {
-    id: "muscle-up",
-    name: "Muscle Up",
-    summary: "Build pull power, transition strength, and clean lockout mechanics using canonical progressions.",
-    progressions: [
-      { exerciseName: "Pull up", progressionName: "Scapular", label: "Pull-up Scapular", variantName: "High", difficulty: "Beginner" },
-      { exerciseName: "Pull up", progressionName: "Assisted", label: "Pull-up Assisted", variantName: "Close grip", difficulty: "Beginner" },
-      { exerciseName: "Pull up", progressionName: "Standard", label: "Pull-up Standard", variantName: "Chin up", difficulty: "Beginner" },
-      { exerciseName: "Pull up", progressionName: "Strict", label: "Pull-up Strict", variantName: "Chest-to-bar", difficulty: "Intermediate" },
-      { exerciseName: "Dip", progressionName: "Standard", label: "Dip Standard", variantName: "Straight bar", difficulty: "Intermediate" },
-      { exerciseName: "Muscle up", progressionName: "Transition Drill", label: "Muscle up Transition Drill", variantName: "Bar", difficulty: "Intermediate" },
-      { exerciseName: "Muscle up", progressionName: "Band Assisted", label: "Muscle up Band Assisted", variantName: "Bar", difficulty: "Intermediate" },
-      { exerciseName: "Muscle up", progressionName: "Strict", label: "Muscle up Strict", variantName: "Bar", difficulty: "Advanced" },
-    ],
-  },
-  {
-    id: "front-lever",
-    name: "Front Lever",
-    summary: "Progress from bodyline control to full horizontal hold strength.",
-    progressions: [
-      { exerciseName: "Hang", progressionName: "Dead", label: "Hang Dead", difficulty: "Beginner" },
-      { exerciseName: "Front lever", progressionName: "Tuck Hold", label: "Front Lever Tuck Hold", variantName: "Pulls", difficulty: "Beginner" },
-      { exerciseName: "Front lever", progressionName: "Tucked Negative", label: "Front Lever Tucked Negative", variantName: "Raises", difficulty: "Intermediate" },
-      { exerciseName: "Front lever", progressionName: "Advanced Tuck Hold", label: "Front Lever Advanced Tuck", variantName: "Pulls", difficulty: "Intermediate" },
-      { exerciseName: "Front lever", progressionName: "One Leg Hold", label: "Front Lever One Leg", variantName: "Ice Cream Maker", difficulty: "Intermediate" },
-      { exerciseName: "Front lever", progressionName: "Straddle Hold", label: "Front Lever Straddle", variantName: "Raises", difficulty: "Advanced" },
-      { exerciseName: "Front lever", progressionName: "Full Hold", label: "Front Lever Full", variantName: "Pulls", difficulty: "Advanced" },
-    ],
-  },
-  {
-    id: "handstand-pushup",
-    name: "Handstand Push-Up",
-    summary: "Layer overhead pressing strength and balance under control.",
-    progressions: [
-      { exerciseName: "Handstand", progressionName: "Wall Hold", label: "Handstand Wall Hold", variantName: "Tuck", difficulty: "Beginner" },
-      { exerciseName: "Push up", progressionName: "Pike", label: "Push-up Pike", variantName: "Pike", difficulty: "Beginner" },
-      { exerciseName: "Handstand push up", progressionName: "Pike", label: "HSPU Pike", difficulty: "Beginner" },
-      { exerciseName: "Handstand push up", progressionName: "Elevated Pike", label: "HSPU Elevated Pike", difficulty: "Intermediate" },
-      { exerciseName: "Handstand push up", progressionName: "Wall", label: "HSPU Wall", variantName: "90 degree", difficulty: "Intermediate" },
-      { exerciseName: "Handstand push up", progressionName: "Deficit Wall", label: "HSPU Deficit Wall", difficulty: "Advanced" },
-      { exerciseName: "Handstand push up", progressionName: "Freestanding", label: "HSPU Freestanding", variantName: "Weighted", difficulty: "Advanced" },
-    ],
-  },
-];
+function isCalisthenicsCategory(category: string | null | undefined): boolean {
+  const lower = String(category || "").trim().toLowerCase();
+  return lower.includes("calisthenics") || lower.includes("cali");
+}
+
+function getLogsWithinDays(logs: ProgressionLog[], days: number): ProgressionLog[] {
+  const now = Date.now();
+  const limit = days * 24 * 60 * 60 * 1000;
+  return logs.filter((log) => now - new Date(log.createdAt).getTime() <= limit);
+}
+
+function getBestReps(log: ProgressionLog): number | null {
+  const reps = [log.reps1, log.reps2, log.reps3, log.reps].filter(
+    (value): value is number => typeof value === "number" && Number.isFinite(value),
+  );
+  return reps.length > 0 ? Math.max(...reps) : null;
+}
+
+function getBestHold(log: ProgressionLog): number | null {
+  const holds = [log.holdTime, log.holdTime2, log.holdTime3].filter(
+    (value): value is number => typeof value === "number" && Number.isFinite(value),
+  );
+  return holds.length > 0 ? Math.max(...holds) : null;
+}
+
+function getBestWeight(log: ProgressionLog): number | null {
+  const weights = [log.weight1, log.weight2, log.weight3].filter(
+    (value): value is number => typeof value === "number" && Number.isFinite(value),
+  );
+  return weights.length > 0 ? Math.max(...weights) : null;
+}
+
+function formatBest(stat: TierStats): string {
+  if (stat.bestWeight != null) return `${stat.bestWeight} kg`;
+  if (stat.bestReps != null) return `${stat.bestReps} reps`;
+  if (stat.bestHoldSeconds != null) return `${stat.bestHoldSeconds}s hold`;
+  return "-";
+}
+
+function formatDate(value: string | null): string {
+  if (!value) return "Never";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Never";
+  return date.toLocaleDateString();
+}
+
+function formatDaysAgo(value: string | null): string {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  const days = Math.max(0, Math.floor((Date.now() - date.getTime()) / (24 * 60 * 60 * 1000)));
+  if (days === 0) return "Today";
+  if (days === 1) return "1 day";
+  return `${days} days`;
+}
 
 export default function RankUpPage() {
-  const [activeSkillId, setActiveSkillId] = useState(RANK_UP_SKILLS[0]?.id ?? "");
-  const [exerciseIdByProgression, setExerciseIdByProgression] = useState<Record<string, string>>({});
+  const isMobile = useIsMobile();
   const [loading, setLoading] = useState(true);
-  const [syncMessage, setSyncMessage] = useState<string>("Syncing progression exercises to your library...");
-
-  const activeSkill = useMemo(
-    () => RANK_UP_SKILLS.find((skill) => skill.id === activeSkillId) ?? RANK_UP_SKILLS[0],
-    [activeSkillId],
-  );
-
-  const syncExercises = useCallback(async () => {
-    setLoading(true);
-    setSyncMessage("Syncing rank-up links with canonical exercise library...");
-
-    try {
-      const libraryData = await api.get<ExerciseLibraryResponse>("/api/exercise-library");
-      const existingByName = new Map<string, { id: string; name: string; variations: string[] }>();
-      for (const exercise of libraryData.exercises || []) {
-        existingByName.set(exercise.name.trim().toLowerCase(), {
-          id: exercise.id,
-          name: exercise.name,
-          variations: (exercise.variations ?? []).map((variation) => variation.name),
-        });
-      }
-
-      const nextMap: Record<string, string> = {};
-      let addedVariantCount = 0;
-      let missingCount = 0;
-
-      for (const progression of RANK_UP_SKILLS.flatMap((skill) => skill.progressions)) {
-        const key = progression.exerciseName.trim().toLowerCase();
-        const existing = existingByName.get(key);
-        const progressionKey = `${progression.exerciseName}::${progression.progressionName}::${progression.variantName || ""}`;
-
-        if (!existing) {
-          missingCount += 1;
-          continue;
-        }
-
-        if (progression.variantName) {
-          const hasVariant = existing.variations.some((variant) => variant.toLowerCase() === progression.variantName?.toLowerCase());
-          if (!hasVariant) {
-            const nextVariations = [...existing.variations, progression.variantName];
-            await api.patch(`/api/exercise-library/${existing.id}`, {
-              variations: nextVariations,
-            });
-            existing.variations = nextVariations;
-            addedVariantCount += 1;
-          }
-        }
-        nextMap[progressionKey] = existing.id;
-      }
-
-      setExerciseIdByProgression(nextMap);
-      if (addedVariantCount > 0 || missingCount > 0) {
-        const variantText = addedVariantCount > 0 ? `${addedVariantCount} missing variant${addedVariantCount > 1 ? "s" : ""} added` : "no missing variants";
-        const missingText = missingCount > 0 ? `${missingCount} progression step${missingCount > 1 ? "s" : ""} could not be linked` : "all progression steps linked";
-        setSyncMessage(`Synced. ${variantText}; ${missingText}.`);
-      } else {
-        setSyncMessage("Synced. All rank-up steps are linked to canonical exercises.");
-      }
-    } catch (error) {
-      console.error("Failed to sync rank-up exercises", error);
-      setSyncMessage("Could not sync rank-up links. You can still navigate to Workout History.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [skills, setSkills] = useState<RankUpSkill[]>([]);
+  const [search, setSearch] = useState("");
+  const [activityFilter, setActivityFilter] = useState<ActivityFilter>("all");
+  const [sortBy, setSortBy] = useState<SortBy>("recent");
+  const [attemptedParentsOnly, setAttemptedParentsOnly] = useState(false);
+  const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
+  const [hoveredActionKey, setHoveredActionKey] = useState<string | null>(null);
 
   useEffect(() => {
-    void syncExercises();
-  }, [syncExercises]);
+    const loadSkills = async () => {
+      setLoading(true);
+      setErrorMessage("");
+      try {
+        const data = await api.get<ProgressionsResponse>("/api/progressions");
+        const mapped: RankUpSkill[] = (data.exercises ?? [])
+          .filter((exercise) => isCalisthenicsCategory(exercise.category))
+          .map((exercise) => {
+            const tierNames = (exercise.tiers ?? [])
+              .slice()
+              .sort((a, b) => a.level - b.level)
+              .map((tier) => String(tier.name || "").trim())
+              .filter(Boolean);
+
+            const fallbackTierNames = tierNames.length > 0 ? tierNames : [exercise.name];
+            const logs = exercise.userProgress?.[0]?.logs ?? [];
+
+            const tierStats = fallbackTierNames.map((_, index) => {
+              const level = index + 1;
+              const levelLogs = logs.filter((log) => (Number(log.level) || 0) === level);
+              const bestReps = levelLogs.map(getBestReps).filter((value): value is number => value != null);
+              const bestHold = levelLogs.map(getBestHold).filter((value): value is number => value != null);
+              const bestWeight = levelLogs.map(getBestWeight).filter((value): value is number => value != null);
+              const lastPerformedAt = levelLogs.length
+                ? levelLogs
+                    .map((log) => log.createdAt)
+                    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0]
+                : null;
+
+              return {
+                attempts: levelLogs.length,
+                bestReps: bestReps.length ? Math.max(...bestReps) : null,
+                bestHoldSeconds: bestHold.length ? Math.max(...bestHold) : null,
+                bestWeight: bestWeight.length ? Math.max(...bestWeight) : null,
+                lastPerformedAt,
+              };
+            });
+
+            const lastLogAt = logs.length
+              ? logs
+                  .map((log) => log.createdAt)
+                  .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0]
+              : null;
+
+            return {
+              id: exercise.id,
+              name: exercise.name,
+              tierNames: fallbackTierNames,
+              tierStats,
+              performed: logs.length,
+              lastLogAt,
+              sessions14d: getLogsWithinDays(logs, 14).length,
+            };
+          })
+          .filter((skill) => skill.tierNames.length > 0);
+
+        setSkills(mapped);
+      } catch (error) {
+        console.error("Failed to load rank-up skills", error);
+        setErrorMessage("Could not load rank-up data. Please refresh and try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void loadSkills();
+  }, []);
+
+  const stats = useMemo(() => {
+    const total = skills.length;
+    const active = skills.filter((s) => s.sessions14d > 0).length;
+    const totalSessions = skills.reduce((sum, s) => sum + s.performed, 0);
+    return { total, active, totalSessions };
+  }, [skills]);
+
+  const visibleSkills = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const now = Date.now();
+    const DAY = 24 * 60 * 60 * 1000;
+
+    let list = skills.filter((skill) => {
+      const lastMs = skill.lastLogAt ? new Date(skill.lastLogAt).getTime() : 0;
+      const daysSinceLast = lastMs ? Math.floor((now - lastMs) / DAY) : Infinity;
+
+      if (attemptedParentsOnly && skill.performed === 0) return false;
+      if (activityFilter === "active-7d" && daysSinceLast > 7) return false;
+      if (activityFilter === "active-14d" && daysSinceLast > 14) return false;
+      if (activityFilter === "active-30d" && daysSinceLast > 30) return false;
+      if (activityFilter === "stale" && (skill.performed === 0 || daysSinceLast <= 30)) return false;
+      if (activityFilter === "never-attempted" && skill.performed > 0) return false;
+      if (!q) return true;
+      return skill.name.toLowerCase().includes(q);
+    });
+
+    list = [...list].sort((a, b) => {
+      if (sortBy === "name") return a.name.localeCompare(b.name);
+      if (sortBy === "performed") return b.performed - a.performed;
+      if (sortBy === "least-sessions") return a.performed - b.performed;
+      if (sortBy === "most-tiers") return b.tierNames.length - a.tierNames.length;
+      const aTime = a.lastLogAt ? new Date(a.lastLogAt).getTime() : 0;
+      const bTime = b.lastLogAt ? new Date(b.lastLogAt).getTime() : 0;
+      return bTime - aTime;
+    });
+
+    return list;
+  }, [skills, search, activityFilter, sortBy, attemptedParentsOnly]);
+
+  const toggleExpand = (id: string) => {
+    setExpandedIds((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const hasVisibleSkills = visibleSkills.length > 0;
+  const expandedVisibleCount = visibleSkills.filter((skill) => Boolean(expandedIds[skill.id])).length;
+  const hasAnyVisibleExpanded = expandedVisibleCount > 0;
+
+  const toggleAllVisible = () => {
+    setExpandedIds((prev) => {
+      const next = { ...prev };
+      for (const skill of visibleSkills) {
+        next[skill.id] = !hasAnyVisibleExpanded;
+      }
+      return next;
+    });
+  };
+
+  const controlClassName =
+    "w-full border rounded px-2 py-1.5 text-xs outline-none transition-all duration-150";
 
   return (
-    <PageLayout title="Rank Up" subtitle="Skill trees that jump you straight into Workout History" mobileContentPaddingClass="p-2 pb-24">
+    <PageLayout
+      title="Rank Up"
+      subtitle="Simple progression overview for calisthenics skills"
+      mobileContentPaddingClass="p-2 pb-24"
+    >
       <div className="nyaa-history-page space-y-2 px-0 py-2 sm:py-3">
-        <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)" }}>
-          <div className="px-4 py-3 border-b" style={{ borderColor: "#f5f5f5", backgroundColor: "#f5f5f5" }}>
-            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-primary)" }}>
-              Calisthenics Skill Paths
-            </p>
-            <p className="text-xs mt-1" style={{ color: "var(--text-secondary)" }}>
-              {syncMessage}
-            </p>
+        <div className="border rounded px-3 py-2" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--header-bg)" }}>
+          <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
+            Skills: {stats.total} | Active (14d): {stats.active} | Sessions: {stats.totalSessions}
+          </p>
+        </div>
+
+        <div className="border rounded overflow-hidden" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--surface)" }}>
+          <div className="px-3 py-2 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
+            <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-secondary)" }}>Filters</span>
           </div>
-
-          <div className="grid gap-2 p-2 md:grid-cols-[260px_minmax(0,1fr)]">
-            <div className="border rounded-md p-2" style={{ borderColor: "var(--border)", backgroundColor: "color-mix(in srgb, var(--border) 10%, var(--surface))" }}>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] mb-2" style={{ color: "var(--text-muted)" }}>
-                Skills
-              </p>
-              <div className="space-y-1">
-                {RANK_UP_SKILLS.map((skill) => {
-                  const isActive = activeSkill?.id === skill.id;
-                  return (
-                    <button
-                      key={skill.id}
-                      type="button"
-                      onClick={() => setActiveSkillId(skill.id)}
-                      className="w-full text-left rounded-md border px-2 py-2 transition-colors"
-                      style={{
-                        borderColor: isActive ? "var(--accent)" : "var(--border)",
-                        backgroundColor: isActive
-                          ? "color-mix(in srgb, var(--accent) 10%, var(--surface))"
-                          : "var(--surface)",
-                        color: isActive ? "var(--accent)" : "var(--text-primary)",
-                      }}
-                    >
-                      <div className="text-xs font-semibold">{skill.name}</div>
-                      <div className="text-[11px] mt-1" style={{ color: "var(--text-secondary)" }}>{skill.summary}</div>
-                    </button>
-                  );
-                })}
-              </div>
+          <div className="grid gap-2 sm:grid-cols-3 p-2">
+            <div className="relative">
+              <span className="pointer-events-none absolute inset-y-0 left-2 flex items-center" style={{ color: "var(--text-muted)" }}>
+                <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="none" aria-hidden>
+                  <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="1.6" />
+                  <path d="M13.5 13.5L18 18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+              </span>
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search skill..."
+                className={controlClassName}
+                style={{
+                  borderColor: "var(--nyaa-table-grid)",
+                  backgroundColor: "var(--surface)",
+                  color: "var(--text-primary)",
+                  paddingLeft: "1.75rem",
+                  paddingRight: search ? "1.75rem" : undefined,
+                }}
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="absolute inset-y-0 right-1 flex items-center justify-center px-1"
+                  style={{ color: "var(--text-muted)" }}
+                  aria-label="Clear search"
+                  title="Clear"
+                >
+                  <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="none" aria-hidden>
+                    <path d="M5 5L15 15M15 5L5 15" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                  </svg>
+                </button>
+              )}
             </div>
-
-            <div className="border rounded-md overflow-hidden" style={{ borderColor: "var(--border)" }}>
-              <div className="px-3 py-2 border-b" style={{ borderColor: "#f5f5f5", backgroundColor: "#f5f5f5" }}>
-                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-primary)" }}>
-                  {activeSkill?.name} Progressions
-                </p>
-              </div>
-              <div className="divide-y" style={{ borderColor: "var(--border)" }}>
-                {activeSkill?.progressions.map((progression, index) => {
-                  const progressionKey = `${progression.exerciseName}::${progression.progressionName}::${progression.variantName || ""}`;
-                  const linkedExerciseId = exerciseIdByProgression[progressionKey] || "";
-                  const href = linkedExerciseId
-                    ? `${DASHBOARD_ROUTES.workoutHistory}?prefillExerciseId=${encodeURIComponent(linkedExerciseId)}&prefillExercise=${encodeURIComponent(progression.exerciseName)}&prefillProgression=${encodeURIComponent(progression.progressionName)}${progression.variantName ? `&prefillVariant=${encodeURIComponent(progression.variantName)}` : ""}`
-                    : `${DASHBOARD_ROUTES.workoutHistory}?prefillExercise=${encodeURIComponent(progression.exerciseName)}&prefillProgression=${encodeURIComponent(progression.progressionName)}${progression.variantName ? `&prefillVariant=${encodeURIComponent(progression.variantName)}` : ""}`;
-
-                  return (
-                    <div key={`${progression.label}-${index}`} className="flex items-center justify-between gap-3 px-3 py-2" style={{ backgroundColor: index % 2 === 0 ? "var(--surface)" : "color-mix(in srgb, var(--border) 8%, var(--surface))" }}>
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold truncate" style={{ color: "var(--text-primary)" }}>
-                          {progression.label}
-                        </p>
-                        <p className="text-[11px] mt-0.5" style={{ color: "var(--text-secondary)" }}>
-                          {progression.exerciseName}
-                          {` • ${progression.progressionName}`}
-                          {progression.variantName ? ` • ${progression.variantName}` : ""}
-                          {` • ${progression.difficulty ?? "Progression"}`}
-                        </p>
-                      </div>
-                      <Link
-                        href={href}
-                        className="shrink-0 rounded-md border px-2 py-1 text-[11px] font-semibold transition-colors"
-                        style={{
-                          borderColor: "var(--accent)",
-                          color: "var(--accent)",
-                          backgroundColor: "color-mix(in srgb, var(--accent) 6%, transparent)",
-                          opacity: loading ? 0.75 : 1,
-                        }}
-                      >
-                        Open in History
-                      </Link>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            <select
+              value={activityFilter}
+              onChange={(e) => setActivityFilter(e.target.value as ActivityFilter)}
+              className={controlClassName}
+              style={{
+                borderColor: "var(--nyaa-table-grid)",
+                backgroundColor: "var(--surface)",
+                color: "var(--text-primary)",
+              }}
+            >
+              <option value="all">All Skills</option>
+              <option value="active-7d">Active (7 days)</option>
+              <option value="active-14d">Active (14 days)</option>
+              <option value="active-30d">Active (30 days)</option>
+              <option value="stale">Stale (30+ days ago)</option>
+              <option value="never-attempted">Never Attempted</option>
+            </select>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortBy)}
+              className={controlClassName}
+              style={{
+                borderColor: "var(--nyaa-table-grid)",
+                backgroundColor: "var(--surface)",
+                color: "var(--text-primary)",
+              }}
+            >
+              <option value="recent">Sort: Recently trained</option>
+              <option value="performed">Sort: Most sessions</option>
+              <option value="least-sessions">Sort: Least sessions</option>
+              <option value="most-tiers">Sort: Most tiers</option>
+              <option value="name">Sort: Name (A-Z)</option>
+            </select>
+            <button
+              type="button"
+              onClick={() => setAttemptedParentsOnly((prev) => !prev)}
+              className="w-full rounded border px-2 py-1.5 text-xs transition-colors duration-150"
+              style={{
+                borderColor: attemptedParentsOnly ? "var(--accent)" : "var(--nyaa-table-grid)",
+                color: attemptedParentsOnly ? "var(--accent)" : "var(--text-secondary)",
+                backgroundColor: attemptedParentsOnly
+                  ? "color-mix(in srgb, var(--accent) 10%, var(--surface))"
+                  : "var(--surface)",
+              }}
+            >
+              {attemptedParentsOnly ? "Showing: Attempted Exercises" : "Show Attempted Exercises Only"}
+            </button>
+            <button
+              type="button"
+              onClick={toggleAllVisible}
+              disabled={!hasVisibleSkills}
+              className="w-full rounded border px-2 py-1.5 text-xs transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                borderColor: hasAnyVisibleExpanded ? "var(--accent)" : "var(--nyaa-table-grid)",
+                color: hasAnyVisibleExpanded ? "var(--accent)" : "var(--text-secondary)",
+                backgroundColor: hasAnyVisibleExpanded
+                  ? "color-mix(in srgb, var(--accent) 10%, var(--surface))"
+                  : "var(--surface)",
+              }}
+            >
+              {hasAnyVisibleExpanded ? "Collapse All" : "Open All"}
+            </button>
           </div>
         </div>
+
+        {errorMessage ? (
+          <div className="border rounded px-3 py-2 text-xs" style={{ borderColor: "var(--danger)", color: "var(--danger)", backgroundColor: "color-mix(in srgb, var(--danger) 10%, var(--surface))" }}>
+            {errorMessage}
+          </div>
+        ) : null}
+
+        {loading ? (
+          <div className="border rounded px-3 py-6 text-sm" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--surface)", color: "var(--text-secondary)" }}>
+            Loading rank-up data...
+          </div>
+        ) : null}
+
+        {!loading && visibleSkills.length === 0 ? (
+          <div className="border rounded px-3 py-6 text-sm" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--surface)", color: "var(--text-secondary)" }}>
+            No skills found for the current filters.
+          </div>
+        ) : null}
+
+        {!loading &&
+          visibleSkills.map((skill) => {
+            const isExpanded = Boolean(expandedIds[skill.id]);
+            return (
+              <div key={skill.id} className="border rounded overflow-hidden" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--surface)" }}>
+                <button
+                  type="button"
+                  onClick={() => toggleExpand(skill.id)}
+                  aria-expanded={isExpanded}
+                  className="w-full px-3 py-2 text-left border-b cursor-pointer transition-all duration-150 hover:opacity-95 active:opacity-80 focus-visible:opacity-100"
+                  style={{
+                    borderColor: "var(--nyaa-table-grid)",
+                    backgroundColor: "var(--nyaa-table-head-bg)",
+                    color: "var(--nyaa-table-head-text)",
+                  }}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="inline-flex h-5 w-5 items-center justify-center border text-[10px] leading-none"
+                        style={{ borderColor: "var(--nyaa-table-grid)", color: "var(--text-secondary)" }}
+                      >
+                        {isExpanded ? "-" : "+"}
+                      </span>
+                      <p
+                        className="text-sm font-semibold transition-colors duration-150"
+                        style={{ color: isExpanded ? "var(--link-hover)" : "var(--link)" }}
+                      >
+                        {skill.name}
+                      </p>
+                    </div>
+                    <p className="text-[11px]" style={{ color: "var(--text-secondary)" }}>
+                      Sessions: {skill.performed} | Last: {formatDate(skill.lastLogAt)} | Tiers: {skill.tierNames.length}
+                    </p>
+                  </div>
+                </button>
+
+                {isExpanded && (
+                  isMobile ? (
+                    <div className="space-y-2 p-2">
+                      {skill.tierNames.map((tierName, index) => {
+                        const stat = skill.tierStats[index];
+                        const showKey = `show-${skill.id}-${index}`;
+                        const trainKey = `train-${skill.id}-${index}`;
+                        const attemptCount = stat?.attempts ?? 0;
+                        const isZeroAttempt = attemptCount === 0;
+                        const rowTextColor = isZeroAttempt
+                          ? "color-mix(in srgb, var(--text-muted) 48%, var(--surface))"
+                          : "var(--text-primary)";
+                        const rowBgColor = isZeroAttempt
+                          ? "color-mix(in srgb, var(--surface) 88%, black)"
+                          : "color-mix(in srgb, var(--surface) 96%, var(--border))";
+                        const lastPerformedAt = stat?.lastPerformedAt ?? null;
+                        const daysAgoLabel = formatDaysAgo(lastPerformedAt);
+                        const href = `/dashboard/train/input/${encodeURIComponent(`${skill.id}-${index + 1}`)}?prefillExerciseId=${encodeURIComponent(skill.id)}&prefillExercise=${encodeURIComponent(skill.name)}&prefillProgression=${encodeURIComponent(tierName)}`;
+                        const historyHref = `${DASHBOARD_ROUTES.workoutHistory}/${encodeURIComponent(skill.id)}?progressionLevel=${index + 1}`;
+
+                        return (
+                          <div
+                            key={`${skill.id}-tier-mobile-${index}`}
+                            className={`rounded border p-2 ${isZeroAttempt ? "rank-up-inactive" : ""}`}
+                            style={{
+                              borderColor: "var(--nyaa-table-grid)",
+                              backgroundColor: rowBgColor,
+                              color: rowTextColor,
+                            }}
+                          >
+                            <div className="mb-1 text-sm font-semibold" style={{ color: rowTextColor }}>{tierName}</div>
+                            <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px]" style={{ color: rowTextColor }}>
+                              <span>Attempts: {attemptCount}</span>
+                              <span>Best: {stat ? formatBest(stat) : "-"}</span>
+                              <span>Best Reps: {stat?.bestReps != null ? `${stat.bestReps}` : "-"}</span>
+                              <span>Best Hold: {stat?.bestHoldSeconds != null ? `${stat.bestHoldSeconds}s` : "-"}</span>
+                              <span>Best Weight: {stat?.bestWeight != null ? `${stat.bestWeight} kg` : "-"}</span>
+                              <span>Last: {formatDate(lastPerformedAt)}</span>
+                              <span>Days Ago: {daysAgoLabel}</span>
+                            </div>
+                            <div className="mt-2 flex gap-2">
+                              <Link
+                                href={historyHref}
+                                onMouseEnter={() => setHoveredActionKey(showKey)}
+                                onMouseLeave={() => setHoveredActionKey((prev) => (prev === showKey ? null : prev))}
+                                onFocus={() => setHoveredActionKey(showKey)}
+                                onBlur={() => setHoveredActionKey((prev) => (prev === showKey ? null : prev))}
+                                className="inline-flex flex-1 items-center justify-center gap-1 border px-2 py-1 text-[11px] font-medium transition-all duration-150 active:opacity-75"
+                                style={{
+                                  borderColor: hoveredActionKey === showKey
+                                    ? "var(--link-hover)"
+                                    : isZeroAttempt
+                                      ? "color-mix(in srgb, var(--text-muted) 14%, var(--border))"
+                                      : "color-mix(in srgb, var(--link) 30%, var(--border))",
+                                  color: hoveredActionKey === showKey
+                                    ? "var(--link-hover)"
+                                    : isZeroAttempt
+                                      ? "color-mix(in srgb, var(--text-muted) 52%, var(--surface))"
+                                      : "var(--link)",
+                                  backgroundColor:
+                                    hoveredActionKey === showKey
+                                      ? "color-mix(in srgb, var(--link) 14%, var(--surface))"
+                                      : isZeroAttempt
+                                        ? "color-mix(in srgb, var(--text-muted) 26%, var(--surface))"
+                                        : "color-mix(in srgb, var(--link) 6%, var(--surface))",
+                                }}
+                              >
+                                Show ↗
+                              </Link>
+                              <Link
+                                href={href}
+                                onMouseEnter={() => setHoveredActionKey(trainKey)}
+                                onMouseLeave={() => setHoveredActionKey((prev) => (prev === trainKey ? null : prev))}
+                                onFocus={() => setHoveredActionKey(trainKey)}
+                                onBlur={() => setHoveredActionKey((prev) => (prev === trainKey ? null : prev))}
+                                className="inline-flex flex-1 items-center justify-center gap-1 border px-2 py-1 text-[11px] font-medium transition-all duration-150 active:opacity-75"
+                                style={{
+                                  borderColor:
+                                    hoveredActionKey === trainKey
+                                      ? "var(--link-hover)"
+                                      : isZeroAttempt
+                                        ? "color-mix(in srgb, var(--text-muted) 14%, var(--border))"
+                                        : "var(--link)",
+                                  color:
+                                    hoveredActionKey === trainKey
+                                      ? "var(--link-hover)"
+                                      : isZeroAttempt
+                                        ? "color-mix(in srgb, var(--text-muted) 52%, var(--surface))"
+                                        : "var(--link)",
+                                  backgroundColor:
+                                    hoveredActionKey === trainKey
+                                      ? "color-mix(in srgb, var(--link) 16%, var(--surface))"
+                                      : isZeroAttempt
+                                        ? "color-mix(in srgb, var(--text-muted) 26%, var(--surface))"
+                                        : "color-mix(in srgb, var(--link) 7%, var(--surface))",
+                                }}
+                              >
+                                Train
+                              </Link>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr>
+                          <th className="px-2 py-1.5 text-left">Tier</th>
+                          <th className="px-2 py-1.5 text-left">Attempts</th>
+                          <th className="px-2 py-1.5 text-left">Best</th>
+                          <th className="px-2 py-1.5 text-left">Best Reps</th>
+                          <th className="px-2 py-1.5 text-left">Best Hold</th>
+                          <th className="px-2 py-1.5 text-left">Best Weight</th>
+                          <th className="px-2 py-1.5 text-left">Last</th>
+                          <th className="px-2 py-1.5 text-left">Days Ago</th>
+                          <th className="px-2 py-1.5 text-left">Show History</th>
+                          <th className="px-2 py-1.5 text-left">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {skill.tierNames.map((tierName, index) => {
+                          const stat = skill.tierStats[index];
+                          const showKey = `show-${skill.id}-${index}`;
+                          const trainKey = `train-${skill.id}-${index}`;
+                          const attemptCount = stat?.attempts ?? 0;
+                          const isZeroAttempt = attemptCount === 0;
+                          const rowTextColor = isZeroAttempt
+                            ? "color-mix(in srgb, var(--text-muted) 48%, var(--surface))"
+                            : "var(--text-primary)";
+                          const rowBgColor = isZeroAttempt
+                            ? "color-mix(in srgb, var(--surface) 88%, black)"
+                            : "transparent";
+                          const cellStyle = {
+                            backgroundColor: rowBgColor,
+                            color: rowTextColor,
+                          };
+                          const lastPerformedAt = stat?.lastPerformedAt ?? null;
+                          const daysAgoLabel = formatDaysAgo(lastPerformedAt);
+                          const href = `${DASHBOARD_ROUTES.workoutHistory}?prefillExerciseId=${encodeURIComponent(skill.id)}&prefillExercise=${encodeURIComponent(skill.name)}&prefillProgression=${encodeURIComponent(tierName)}`;
+                          const historyHref = `${DASHBOARD_ROUTES.workoutHistory}/${encodeURIComponent(skill.id)}?progressionLevel=${index + 1}`;
+                          return (
+                            <tr
+                              key={`${skill.id}-tier-${index}`}
+                              className={`transition-colors duration-150 ${isZeroAttempt ? "rank-up-inactive" : "hover:opacity-90"}`}
+                              style={{
+                                opacity: 1,
+                                color: rowTextColor,
+                                backgroundColor: rowBgColor,
+                                filter: isZeroAttempt ? "saturate(0.78)" : "none",
+                              }}
+                            >
+                              <td className="px-2 py-1.5" style={cellStyle}>{tierName}</td>
+                              <td className="px-2 py-1.5" style={cellStyle}>{attemptCount}</td>
+                              <td className="px-2 py-1.5" style={cellStyle}>{stat ? formatBest(stat) : "-"}</td>
+                              <td className="px-2 py-1.5" style={cellStyle}>{stat?.bestReps != null ? `${stat.bestReps}` : "-"}</td>
+                              <td className="px-2 py-1.5" style={cellStyle}>{stat?.bestHoldSeconds != null ? `${stat.bestHoldSeconds}s` : "-"}</td>
+                              <td className="px-2 py-1.5" style={cellStyle}>{stat?.bestWeight != null ? `${stat.bestWeight} kg` : "-"}</td>
+                              <td className="px-2 py-1.5" style={cellStyle}>{formatDate(lastPerformedAt)}</td>
+                              <td className="px-2 py-1.5" style={cellStyle}>{daysAgoLabel}</td>
+                              <td className="px-2 py-1.5" style={cellStyle}>
+                                <Link
+                                  href={historyHref}
+                                  onMouseEnter={() => setHoveredActionKey(showKey)}
+                                  onMouseLeave={() => setHoveredActionKey((prev) => (prev === showKey ? null : prev))}
+                                  onFocus={() => setHoveredActionKey(showKey)}
+                                  onBlur={() => setHoveredActionKey((prev) => (prev === showKey ? null : prev))}
+                                  className="inline-flex items-center gap-1 border px-2 py-1 font-medium transition-all duration-150 active:opacity-75"
+                                  style={{
+                                    borderColor: hoveredActionKey === showKey
+                                      ? "var(--link-hover)"
+                                      : isZeroAttempt
+                                        ? "color-mix(in srgb, var(--text-muted) 14%, var(--border))"
+                                        : "color-mix(in srgb, var(--link) 30%, var(--border))",
+                                    color: hoveredActionKey === showKey
+                                      ? "var(--link-hover)"
+                                      : isZeroAttempt
+                                        ? "color-mix(in srgb, var(--text-muted) 52%, var(--surface))"
+                                        : "var(--link)",
+                                    backgroundColor:
+                                      hoveredActionKey === showKey
+                                        ? "color-mix(in srgb, var(--link) 14%, var(--surface))"
+                                        : isZeroAttempt
+                                          ? "color-mix(in srgb, var(--text-muted) 26%, var(--surface))"
+                                          : "color-mix(in srgb, var(--link) 6%, var(--surface))",
+                                    boxShadow:
+                                      hoveredActionKey === showKey
+                                        ? "0 0 0 1px color-mix(in srgb, var(--link) 35%, transparent)"
+                                        : "none",
+                                    transform: hoveredActionKey === showKey ? "translateY(-1px)" : "translateY(0)",
+                                  }}
+                                >
+                                  Show ↗
+                                </Link>
+                              </td>
+                              <td className="px-2 py-1.5" style={cellStyle}>
+                                <Link
+                                  href={href}
+                                  onMouseEnter={() => setHoveredActionKey(trainKey)}
+                                  onMouseLeave={() => setHoveredActionKey((prev) => (prev === trainKey ? null : prev))}
+                                  onFocus={() => setHoveredActionKey(trainKey)}
+                                  onBlur={() => setHoveredActionKey((prev) => (prev === trainKey ? null : prev))}
+                                  className="inline-flex items-center gap-1 border px-2 py-1 font-medium transition-all duration-150 active:opacity-75"
+                                  style={{
+                                    borderColor:
+                                      hoveredActionKey === trainKey
+                                        ? "var(--link-hover)"
+                                        : isZeroAttempt
+                                          ? "color-mix(in srgb, var(--text-muted) 14%, var(--border))"
+                                          : "var(--link)",
+                                    color:
+                                      hoveredActionKey === trainKey
+                                        ? "var(--link-hover)"
+                                        : isZeroAttempt
+                                          ? "color-mix(in srgb, var(--text-muted) 52%, var(--surface))"
+                                          : "var(--link)",
+                                    backgroundColor:
+                                      hoveredActionKey === trainKey
+                                        ? "color-mix(in srgb, var(--link) 16%, var(--surface))"
+                                        : isZeroAttempt
+                                          ? "color-mix(in srgb, var(--text-muted) 26%, var(--surface))"
+                                          : "color-mix(in srgb, var(--link) 7%, var(--surface))",
+                                    boxShadow:
+                                      hoveredActionKey === trainKey
+                                        ? "0 0 0 1px color-mix(in srgb, var(--link) 45%, transparent)"
+                                        : "none",
+                                    transform: hoveredActionKey === trainKey ? "translateY(-1px)" : "translateY(0)",
+                                  }}
+                                >
+                                  Train
+                                </Link>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  )
+                )}
+              </div>
+            );
+          })}
       </div>
     </PageLayout>
   );

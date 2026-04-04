@@ -428,8 +428,8 @@ export const POST = withAuth(async (request, { auth }) => {
         data: {
           exerciseId: exercise.id,
           level: normalizedLevel,
-          name: normalizedLevel === 1 ? exercise.name : `${exercise.name} Level ${normalizedLevel}`,
-          wuxiaName: normalizedLevel === 1 ? (exercise.wuxiaName || exercise.name) : `${exercise.wuxiaName || exercise.name} Level ${normalizedLevel}`,
+          name: normalizedLevel === 1 ? exercise.name : `${exercise.name} Tier ${normalizedLevel}`,
+          wuxiaName: normalizedLevel === 1 ? (exercise.wuxiaName || exercise.name) : `${exercise.wuxiaName || exercise.name} Tier ${normalizedLevel}`,
           difficulty: exercise.difficulty || "",
           wuxiaDifficulty: exercise.wuxiaDifficulty || exercise.difficulty || "",
           wuxiaType: exercise.wuxiaType || "",

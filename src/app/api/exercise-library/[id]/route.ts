@@ -5,6 +5,12 @@ import {
 } from "@/lib/exercise-types";
 import { withAuth } from "@/lib/auth/middleware";
 import { getExerciseDbOptionsFromAppPrefs } from "@/lib/exercise-db-settings";
+import {
+  isPendingExerciseDescription,
+  markPendingExerciseAsEdited,
+  markExerciseAsPending,
+  stripExerciseStatusMarkers,
+} from "@/lib/pending-exercises";
 
 function parseJsonObject(value: string | null | undefined): Record<string, unknown> | null {
   if (!value) return null;
@@ -76,6 +82,7 @@ export const PATCH = withAuth(async (req, { auth, params }) => {
     const dbOptions = await getUserExerciseDbOptions(auth.userId);
 
     const updateData: Record<string, unknown> = {};
+    const existingIsPending = isPendingExerciseDescription(existing.story);
 
     if (name !== undefined) {
       const trimmedName = String(name).trim().slice(0, 200);
@@ -203,6 +210,13 @@ export const PATCH = withAuth(async (req, { auth, params }) => {
 
     if (normalizedProgression !== undefined) {
       updateData.progression = JSON.stringify(normalizedProgression);
+    }
+
+    if (existingIsPending && Object.keys(updateData).length > 0) {
+      const nextDescription = description !== undefined
+        ? String(description).trim().slice(0, 2000)
+        : stripExerciseStatusMarkers(existing.story);
+      updateData.story = markPendingExerciseAsEdited(markExerciseAsPending(nextDescription));
     }
 
     const updated = await prisma.$transaction(async (tx) => {

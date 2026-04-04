@@ -11,7 +11,6 @@ export interface NavItem {
 }
 
 export const defaultNavItems: NavItem[] = [
-  { id: "main", label: NAV_LABELS.main, icon: "🧭", path: DASHBOARD_ROUTES.main, pinned: false, visible: true },
   { id: "dashboard", label: NAV_LABELS.dashboard, icon: "⛩️", path: DASHBOARD_ROUTES.overview, pinned: false, visible: true },
   { id: "newsfeed", label: NAV_LABELS.newsfeed, icon: "🌿", path: DASHBOARD_ROUTES.community, pinned: false, visible: true },
   { id: "rank-up", label: NAV_LABELS["rank-up"], icon: "⬆️", path: DASHBOARD_ROUTES.rankUp, pinned: false, visible: true },

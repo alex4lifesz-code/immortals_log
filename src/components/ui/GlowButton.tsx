@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { ButtonHTMLAttributes, ReactNode } from "react";
 
 interface GlowButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -41,20 +40,19 @@ export default function GlowButton({
   ...props
 }: GlowButtonProps) {
   return (
-    <motion.button
-      whileHover={{ scale: 1.03 }}
-      whileTap={{ scale: 0.97 }}
-      transition={{ type: "spring", stiffness: 400, damping: 17 }}
+    <button
       className={`
-        border rounded-lg font-medium transition-all duration-300 cursor-pointer
+        border rounded-lg font-medium cursor-pointer
+        transition-[background-color,border-color,transform] duration-150 ease-out
+        hover:scale-[1.03] active:scale-[0.97]
         ${variantStyles[variant]}
         ${sizeStyles[size]}
         ${glow ? glowStyles[variant] : ""}
         ${className}
       `}
-      {...(props as React.ComponentProps<typeof motion.button>)}
+      {...props}
     >
       {children}
-    </motion.button>
+    </button>
   );
 }

@@ -38,7 +38,7 @@ interface ExerciseFormData {
 const ITEMS_PER_PAGE = 25;
 
 type ExerciseLibrarySortState = {
-  columnId: "exercise" | "category" | "type" | "muscles" | "progression" | "variants";
+  columnId: "exercise" | "category" | "type" | "muscles" | "progression" | "variants" | "dateAdded";
   direction: "asc" | "desc";
 };
 
@@ -144,7 +144,7 @@ function getDefaultExerciseLibraryViewPrefs(): ExerciseLibraryViewPrefs {
     muscleFilter: "",
     typeFilter: "",
     customOnly: false,
-    showFilters: false,
+    showFilters: true,
     sortState: null,
     fitToScreenMode: true,
   };
@@ -159,7 +159,7 @@ function readExerciseLibraryViewPrefs(storageKey: string): ExerciseLibraryViewPr
     const fallback = getDefaultExerciseLibraryViewPrefs();
     const validSort = parsed.sortState
       && typeof parsed.sortState === "object"
-      && ["exercise", "category", "type", "muscles", "progression", "variants"].includes(String(parsed.sortState.columnId))
+      && ["exercise", "category", "type", "muscles", "progression", "variants", "dateAdded"].includes(String(parsed.sortState.columnId))
       && ["asc", "desc"].includes(String(parsed.sortState.direction))
       ? parsed.sortState as ExerciseLibrarySortState
       : null;
@@ -170,7 +170,7 @@ function readExerciseLibraryViewPrefs(storageKey: string): ExerciseLibraryViewPr
       muscleFilter: typeof parsed.muscleFilter === "string" ? parsed.muscleFilter : fallback.muscleFilter,
       typeFilter: typeof parsed.typeFilter === "string" ? parsed.typeFilter : fallback.typeFilter,
       customOnly: typeof parsed.customOnly === "boolean" ? parsed.customOnly : fallback.customOnly,
-      showFilters: typeof parsed.showFilters === "boolean" ? parsed.showFilters : fallback.showFilters,
+      showFilters: true,
       sortState: validSort,
       fitToScreenMode: typeof parsed.fitToScreenMode === "boolean" ? parsed.fitToScreenMode : fallback.fitToScreenMode,
     };
@@ -530,7 +530,19 @@ function DeleteModal({ isOpen, onClose, onConfirm, name }: { isOpen: boolean; on
 
 // ─── Overview Tab ─────────────────────────────────────────────────────────────
 
-function OverviewTab({ exercises }: { exercises: SimpleExercise[] }) {
+function OverviewTab({
+  exercises,
+  onEdit,
+  onAppend,
+  onDeletePending,
+  pendingActionId,
+}: {
+  exercises: SimpleExercise[];
+  onEdit: (exercise: SimpleExercise) => void;
+  onAppend: (exercise: SimpleExercise) => Promise<void>;
+  onDeletePending: (exercise: SimpleExercise) => Promise<void>;
+  pendingActionId: string | null;
+}) {
   const byCat = useMemo(() => {
     const m: Record<string, number> = {};
     for (const ex of exercises) m[ex.category] = (m[ex.category] ?? 0) + 1;
@@ -550,16 +562,21 @@ function OverviewTab({ exercises }: { exercises: SimpleExercise[] }) {
   }, [exercises]);
 
   const customCount = exercises.filter((e) => e.isCustom).length;
+  const pendingExercises = useMemo(
+    () => exercises.filter((exercise) => exercise.isPendingAddition),
+    [exercises],
+  );
   const topCategory = byCat[0] ?? null;
   const topType = byType[0] ?? null;
   const topMuscle = byMuscle[0] ?? null;
 
   return (
     <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-      <div className="px-3 py-2 border-b" style={{ borderColor: "#f5f5f5", backgroundColor: "#f5f5f5" }}>
+      <div className="px-3 py-2 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
         <span className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>Database Overview</span>
       </div>
-      <table className="w-full text-[11px] border-collapse" style={{ backgroundColor: "var(--surface)" }}>
+      <div className="overflow-x-auto">
+      <table className="w-full text-[11px] border-collapse" style={{ minWidth: "620px", backgroundColor: "var(--surface)" }}>
         <tbody>
           <tr>
             <td className="px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "var(--border)", color: "var(--text-muted)", backgroundColor: "color-mix(in srgb, var(--border) 10%, var(--surface))", width: "22%" }}>Total Exercises:</td>
@@ -593,6 +610,66 @@ function OverviewTab({ exercises }: { exercises: SimpleExercise[] }) {
           </tr>
         </tbody>
       </table>
+      </div>
+
+      <div className="border-t px-3 py-2" style={{ borderColor: "var(--border)", backgroundColor: "color-mix(in srgb, var(--surface) 94%, var(--border))" }}>
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>
+            Pending exercise to be addd
+          </span>
+          <span className="text-[11px]" style={{ color: "var(--gold)" }}>
+            {pendingExercises.length}
+          </span>
+        </div>
+
+        {pendingExercises.length === 0 ? (
+          <p className="text-[11px]" style={{ color: "var(--text-secondary)" }}>No pending exercises.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {pendingExercises.map((exercise) => (
+              <div
+                key={exercise.id}
+                className="inline-flex items-center gap-2 rounded-md border px-2 py-1 text-[11px]"
+                style={{
+                  borderColor: "color-mix(in srgb, var(--gold) 45%, var(--border))",
+                  color: "var(--text-primary)",
+                  backgroundColor: "color-mix(in srgb, var(--gold) 8%, transparent)",
+                }}
+              >
+                <span className="font-medium" title={exercise.isPendingEdited ? "Edited after submission" : undefined}>
+                  {exercise.isPendingEdited ? `* ${exercise.name}` : exercise.name}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onEdit(exercise)}
+                  className="rounded border px-2 py-0.5"
+                  style={{ borderColor: "var(--border)", color: "var(--text-secondary)", backgroundColor: "var(--surface)" }}
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { void onAppend(exercise); }}
+                  disabled={pendingActionId === exercise.id}
+                  className="rounded border px-2 py-0.5 disabled:opacity-60"
+                  style={{ borderColor: "var(--accent)", color: "var(--accent)", backgroundColor: "color-mix(in srgb, var(--accent) 8%, transparent)" }}
+                >
+                  {pendingActionId === exercise.id ? "Working..." : "Append to Database"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { void onDeletePending(exercise); }}
+                  disabled={pendingActionId === exercise.id}
+                  className="rounded border px-2 py-0.5 disabled:opacity-60"
+                  style={{ borderColor: "var(--danger)", color: "var(--danger)", backgroundColor: "color-mix(in srgb, var(--danger) 8%, transparent)" }}
+                >
+                  Delete Pending
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -726,7 +803,7 @@ function ExercisesTab({
   onDuplicate: (ex: SimpleExercise) => void;
 }) {
   const isMobile = useIsMobile();
-  type ExerciseSortColumn = "exercise" | "category" | "type" | "muscles" | "progression" | "variants";
+  type ExerciseSortColumn = "exercise" | "category" | "type" | "muscles" | "progression" | "variants" | "dateAdded";
   type ExerciseSortState = { columnId: ExerciseSortColumn; direction: "asc" | "desc" };
   const resolvedUserId = userId && userId.trim().length > 0 ? userId : "anonymous";
   const viewPrefsStorageKey = `exercise-library-view-prefs:${resolvedUserId}`;
@@ -741,7 +818,7 @@ function ExercisesTab({
   const [typeFilter, setTypeFilter] = useState<SimpleExerciseType | "">(initialViewPrefs.typeFilter);
   const [customOnly, setCustomOnly] = useState(initialViewPrefs.customOnly);
   const [page, setPage] = useState(1);
-  const [showFilters, setShowFilters] = useState(initialViewPrefs.showFilters);
+  const showFilters = true;
   const [sortState, setSortState] = useState<ExerciseSortState | null>(initialViewPrefs.sortState);
   const [quickEditExercise, setQuickEditExercise] = useState<SimpleExercise | null>(null);
   const [quickEditField, setQuickEditField] = useState<"category" | "type" | "muscles" | null>(null);
@@ -779,6 +856,7 @@ function ExercisesTab({
       if (sortState.columnId === "type") return ex.exerciseType.toLowerCase();
       if (sortState.columnId === "muscles") return ex.muscleGroups.join(", ").toLowerCase();
       if (sortState.columnId === "progression") return (ex.progression ?? []).join(", ").toLowerCase();
+      if (sortState.columnId === "dateAdded") return ex.createdAt ? new Date(ex.createdAt).getTime() : 0;
       return (exerciseVariants[ex.id] ?? []).length;
     };
 
@@ -817,7 +895,6 @@ function ExercisesTab({
     setMuscleFilter(persisted.muscleFilter);
     setTypeFilter(persisted.typeFilter);
     setCustomOnly(persisted.customOnly);
-    setShowFilters(persisted.showFilters);
     setSortState(persisted.sortState);
     setFitToScreenMode(persisted.fitToScreenMode);
     setPage(1);
@@ -834,7 +911,7 @@ function ExercisesTab({
         muscleFilter,
         typeFilter,
         customOnly,
-        showFilters,
+        showFilters: true,
         sortState,
         fitToScreenMode,
       };
@@ -842,7 +919,7 @@ function ExercisesTab({
     } catch {
       // Ignore storage write errors.
     }
-  }, [loadedViewPrefsKey, viewPrefsStorageKey, search, catFilter, muscleFilter, typeFilter, customOnly, showFilters, sortState, fitToScreenMode]);
+  }, [loadedViewPrefsKey, viewPrefsStorageKey, search, catFilter, muscleFilter, typeFilter, customOnly, sortState, fitToScreenMode]);
 
   useEffect(() => {
     if (isMobile) return;
@@ -884,6 +961,13 @@ function ExercisesTab({
   const chipBase = "text-[10px] px-2 py-1 rounded-md border cursor-pointer transition-all duration-150 select-none";
   const chipOn = "bg-jade-deep/40 border-jade-glow/50 text-jade-light";
   const chipOff = "bg-ink-dark/60 border-ink-light/40 text-mist-light hover:border-jade/30";
+
+  const sortFilterValue = useMemo(() => {
+    if (!sortState) return "none";
+    if (sortState.columnId === "dateAdded" && sortState.direction === "desc") return "recently-added";
+    if (sortState.columnId === "dateAdded" && sortState.direction === "asc") return "oldest-added";
+    return "custom";
+  }, [sortState]);
 
   const activeFilterCount = [catFilter, muscleFilter, typeFilter, customOnly ? "1" : ""].filter(Boolean).length;
 
@@ -973,7 +1057,7 @@ function ExercisesTab({
   const getDateAddedDisplay = (ex: SimpleExercise) => formatDateValue(ex.createdAt);
 
   const renderToolbar = () => (
-    <div className="px-3 py-2 border-b space-y-2" style={{ borderColor: "#f5f5f5", backgroundColor: "#f5f5f5" }}>
+    <div className="px-3 py-2 border-b space-y-2" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative flex-1">
           <input
@@ -1004,7 +1088,7 @@ function ExercisesTab({
             </button>
           ) : null}
         </div>
-        <div className="flex gap-2 shrink-0">
+        <div className="flex w-full flex-wrap gap-2 shrink-0 sm:w-auto sm:flex-nowrap">
           {!isMobile && filtered.length > 0 && (
             <button
               type="button"
@@ -1034,68 +1118,64 @@ function ExercisesTab({
               </span>
             </button>
           )}
-          <button
-            onClick={() => setShowFilters((v) => !v)}
-            className="px-3 py-2 text-xs border transition-colors relative"
-            style={{
-              borderColor: showFilters ? "var(--accent)" : "var(--border)",
-              color: showFilters ? "var(--accent)" : "var(--text-secondary)",
-              backgroundColor: showFilters ? "color-mix(in srgb, var(--accent) 8%, transparent)" : "var(--surface)",
-              borderRadius: "2px",
-            }}
-          >
-            Filters
-            {activeFilterCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center" style={{ backgroundColor: "var(--accent)", color: "var(--surface)" }}>{activeFilterCount}</span>
-            )}
-          </button>
           <Link
             href="/dashboard/exercises/db-settings"
-            className="px-3 py-2 text-xs border transition-colors"
+            className="inline-flex items-center justify-center rounded-lg border px-2.5 py-1 text-xs font-medium transition-all duration-300 flex-1 sm:flex-none"
             style={{
-              borderColor: "var(--border)",
-              color: "var(--text-secondary)",
-              backgroundColor: "var(--surface)",
-              borderRadius: "2px",
+              borderColor: "color-mix(in srgb, var(--jade) 50%, var(--border))",
+              color: "var(--jade-light)",
+              backgroundColor: "color-mix(in srgb, var(--jade-deep) 80%, transparent)",
             }}
           >
             DB Settings
           </Link>
-          <GlowButton onClick={onAdd} variant="jade" size="sm">+ Add Exercise</GlowButton>
+          <div className="flex-1 sm:flex-none">
+            <GlowButton onClick={onAdd} variant="jade" size="sm" className="w-full sm:w-auto">+ Add Exercise</GlowButton>
+          </div>
         </div>
       </div>
-      <AnimatePresence>
-        {showFilters && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.18 }}
-            className="overflow-hidden"
-          >
-            <div className="border p-2.5" style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)", borderRadius: "2px" }}>
-              <div className="flex flex-wrap gap-2 items-center">
-                <select value={catFilter} onChange={(e) => setCatFilter(e.target.value as TrainingCategory | "")} className="px-2 py-1.5 text-[11px] outline-none border transition-colors cursor-pointer hover:border-accent/60 hover:bg-surface-hover focus:border-accent/70" style={{ borderColor: "var(--border)", color: "var(--text-primary)", backgroundColor: "var(--surface)", borderRadius: "2px" }}>
-                  <option value="">All Categories</option>
-                  {dbOptions.categories.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
-                <select value={muscleFilter} onChange={(e) => setMuscleFilter(e.target.value as MuscleGroup | "")} className="px-2 py-1.5 text-[11px] outline-none border transition-colors cursor-pointer hover:border-accent/60 hover:bg-surface-hover focus:border-accent/70" style={{ borderColor: "var(--border)", color: "var(--text-primary)", backgroundColor: "var(--surface)", borderRadius: "2px" }}>
-                  <option value="">All Muscles</option>
-                  {dbOptions.muscles.map((m) => <option key={m} value={m}>{m}</option>)}
-                </select>
-                <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as SimpleExerciseType | "")} className="px-2 py-1.5 text-[11px] outline-none border transition-colors cursor-pointer hover:border-accent/60 hover:bg-surface-hover focus:border-accent/70" style={{ borderColor: "var(--border)", color: "var(--text-primary)", backgroundColor: "var(--surface)", borderRadius: "2px" }}>
-                  <option value="">All Types</option>
-                  {dbOptions.types.map((t) => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
-                </select>
-                <button onClick={() => setCustomOnly((v) => !v)} className={`${chipBase} ${customOnly ? chipOn : chipOff}`} style={{ borderRadius: "2px" }}>Custom Only</button>
-                {activeFilterCount > 0 && (
-                  <button onClick={() => { setCatFilter(""); setMuscleFilter(""); setTypeFilter(""); setCustomOnly(false); }} className="text-[10px] transition-colors" style={{ color: "var(--danger)" }}>Clear all</button>
-                )}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <div className="flex flex-wrap gap-2 items-center px-0.5 py-1">
+              <select value={catFilter} onChange={(e) => setCatFilter(e.target.value as TrainingCategory | "")} className="w-full sm:w-auto px-2 py-1.5 text-[11px] outline-none border transition-colors cursor-pointer hover:border-accent/60 hover:bg-surface-hover focus:border-accent/70" style={{ borderColor: "var(--border)", color: "var(--text-primary)", backgroundColor: "var(--surface)", borderRadius: "2px" }}>
+                <option value="">All Categories</option>
+                {dbOptions.categories.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <select value={muscleFilter} onChange={(e) => setMuscleFilter(e.target.value as MuscleGroup | "")} className="w-full sm:w-auto px-2 py-1.5 text-[11px] outline-none border transition-colors cursor-pointer hover:border-accent/60 hover:bg-surface-hover focus:border-accent/70" style={{ borderColor: "var(--border)", color: "var(--text-primary)", backgroundColor: "var(--surface)", borderRadius: "2px" }}>
+                <option value="">All Muscles</option>
+                {dbOptions.muscles.map((m) => <option key={m} value={m}>{m}</option>)}
+              </select>
+              <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as SimpleExerciseType | "")} className="w-full sm:w-auto px-2 py-1.5 text-[11px] outline-none border transition-colors cursor-pointer hover:border-accent/60 hover:bg-surface-hover focus:border-accent/70" style={{ borderColor: "var(--border)", color: "var(--text-primary)", backgroundColor: "var(--surface)", borderRadius: "2px" }}>
+                <option value="">All Types</option>
+                {dbOptions.types.map((t) => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
+              </select>
+              <select
+                value={sortFilterValue}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === "none") {
+                    setSortState(null);
+                    return;
+                  }
+                  if (value === "recently-added") {
+                    setSortState({ columnId: "dateAdded", direction: "desc" });
+                    return;
+                  }
+                  if (value === "oldest-added") {
+                    setSortState({ columnId: "dateAdded", direction: "asc" });
+                  }
+                }}
+                className="w-full sm:w-auto px-2 py-1.5 text-[11px] outline-none border transition-colors cursor-pointer hover:border-accent/60 hover:bg-surface-hover focus:border-accent/70"
+                style={{ borderColor: "var(--border)", color: "var(--text-primary)", backgroundColor: "var(--surface)", borderRadius: "2px" }}
+              >
+                <option value="none">Sort: None</option>
+                <option value="recently-added">Sort: Recently added</option>
+                <option value="oldest-added">Sort: Oldest added</option>
+                {sortFilterValue === "custom" && <option value="custom">Sort: Custom (table header)</option>}
+              </select>
+              <button onClick={() => setCustomOnly((v) => !v)} className={`${chipBase} ${customOnly ? chipOn : chipOff}`} style={{ borderRadius: "2px" }}>Custom Only</button>
+              {activeFilterCount > 0 && (
+                <button onClick={() => { setCatFilter(""); setMuscleFilter(""); setTypeFilter(""); setCustomOnly(false); }} className="text-[10px] transition-colors" style={{ color: "var(--danger)" }}>Clear all</button>
+              )}
+      </div>
     </div>
   );
 
@@ -1313,7 +1393,7 @@ function ExercisesTab({
           </div>
 
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-3 py-2 border-t" style={{ borderColor: "#f5f5f5", backgroundColor: "#f5f5f5" }}>
+            <div className="flex items-center justify-between px-3 py-2 border-t" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
               <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>
                 Showing {(page - 1) * ITEMS_PER_PAGE + 1}–{Math.min(page * ITEMS_PER_PAGE, sorted.length)} of {sorted.length}
               </span>
@@ -1426,7 +1506,7 @@ function ExercisesTab({
               >
                 <div
                   className="flex items-center justify-between px-3 py-2 border-b transition-all duration-200"
-                  style={{ borderColor: "var(--border)", backgroundColor: "#f5f5f5" }}
+                  style={{ borderColor: "var(--border)", backgroundColor: "var(--nyaa-table-head-bg)" }}
                 >
                   <div className="min-w-0">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--text-primary)" }}>
@@ -1553,6 +1633,7 @@ export default function ExerciseDBPage() {
   const [editingExercise, setEditingExercise] = useState<SimpleExercise | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<SimpleExercise | null>(null);
   const [variantsTarget, setVariantsTarget] = useState<SimpleExercise | null>(null);
+  const [pendingActionId, setPendingActionId] = useState<string | null>(null);
 
   const fetchExercises = useCallback(async () => {
     if (!userId) return;
@@ -1786,6 +1867,55 @@ export default function ExerciseDBPage() {
     } catch (err) { console.error("Duplicate failed:", err); }
   };
 
+  const handleAppendPendingExercise = useCallback(async (exercise: SimpleExercise) => {
+    if (pendingActionId) return;
+    setPendingActionId(exercise.id);
+    try {
+      await api.post(`/api/exercise-library/${exercise.id}/pending`, { action: "append" });
+      await appendEditHistory({
+        exerciseId: exercise.id,
+        exerciseName: exercise.name,
+        field: "Approved",
+        beforeValue: "Pending",
+        afterValue: "Appended to database",
+      });
+      await fetchExercises();
+      void fetchEditHistory();
+      window.dispatchEvent(new Event("progression-exercises-updated"));
+    } catch (err) {
+      console.error("Failed to append pending exercise:", err);
+    } finally {
+      setPendingActionId(null);
+    }
+  }, [appendEditHistory, fetchEditHistory, fetchExercises, pendingActionId]);
+
+  const handleDeletePendingExercise = useCallback(async (exercise: SimpleExercise) => {
+    if (pendingActionId) return;
+    const confirmed = typeof window !== "undefined"
+      ? window.confirm(`Delete pending exercise \"${exercise.name}\"? Existing log rows will remain as \"Deleted exercise\".`)
+      : true;
+    if (!confirmed) return;
+
+    setPendingActionId(exercise.id);
+    try {
+      await api.post(`/api/exercise-library/${exercise.id}/pending`, { action: "delete" });
+      await appendEditHistory({
+        exerciseId: exercise.id,
+        exerciseName: exercise.name,
+        field: "Deleted",
+        beforeValue: "Pending",
+        afterValue: "Marked as deleted exercise",
+      });
+      await fetchExercises();
+      void fetchEditHistory();
+      window.dispatchEvent(new Event("progression-exercises-updated"));
+    } catch (err) {
+      console.error("Failed to delete pending exercise:", err);
+    } finally {
+      setPendingActionId(null);
+    }
+  }, [appendEditHistory, fetchEditHistory, fetchExercises, pendingActionId]);
+
   return (
     <PageLayout
       title="Exercise DB"
@@ -1794,7 +1924,13 @@ export default function ExerciseDBPage() {
     >
       <div className="nyaa-history-page space-y-2 px-0 py-2 sm:py-3">
         <div className="space-y-3">
-          <OverviewTab exercises={exercises} />
+          <OverviewTab
+            exercises={exercises}
+            onEdit={handleEdit}
+            onAppend={handleAppendPendingExercise}
+            onDeletePending={handleDeletePendingExercise}
+            pendingActionId={pendingActionId}
+          />
 
           <ExercisesTab
             exercises={exercises}

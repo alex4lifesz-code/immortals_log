@@ -67,7 +67,15 @@ export const DELETE = withAuth(async (_req, { auth, params }) => {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    await prisma.user.delete({ where: { id } });
+    await prisma.$transaction(async (tx) => {
+      // Remove directly-related rows that may not be configured with cascade.
+      await tx.userProgressionLevel.deleteMany({ where: { userId: id } });
+      await tx.progressionExercise.deleteMany({ where: { userId: id } });
+      await tx.checkInNote.deleteMany({ where: { userId: id } });
+      await tx.checkIn.deleteMany({ where: { userId: id } });
+      await tx.userSettings.deleteMany({ where: { userId: id } });
+      await tx.user.delete({ where: { id } });
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

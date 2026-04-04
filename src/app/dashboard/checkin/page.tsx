@@ -112,7 +112,7 @@ export default function CheckInPage() {
 
   useEffect(() => {
     if (user && !isAdmin) {
-      router.replace("/dashboard/overview");
+      router.replace("/dashboard/check-in");
     }
   }, [isAdmin, router, user]);
 

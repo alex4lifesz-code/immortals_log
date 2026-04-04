@@ -4,6 +4,13 @@ import type { SimpleExercise, TrainingCategory, SimpleExerciseType, MuscleGroup,
 import { ALL_DIFFICULTIES } from "@/lib/exercise-types";
 import { withAuth } from "@/lib/auth/middleware";
 import { getExerciseDbOptionsFromAppPrefs } from "@/lib/exercise-db-settings";
+import {
+  isDeletedExerciseDescription,
+  isPendingExerciseEditedDescription,
+  isPendingExerciseDescription,
+  markExerciseAsPending,
+  stripExerciseStatusMarkers,
+} from "@/lib/pending-exercises";
 
 function parseJsonObject(value: string | null | undefined): Record<string, unknown> | null {
   if (!value) return null;
@@ -109,6 +116,8 @@ function mapDbToSimpleExercise(pe: {
       .map((tier) => String(tier.name || "").trim())
       .filter(Boolean);
   })();
+  const isPendingAddition = isPendingExerciseDescription(pe.story);
+  const isPendingEdited = isPendingExerciseEditedDescription(pe.story);
 
   return {
     id: pe.id,
@@ -123,8 +132,10 @@ function mapDbToSimpleExercise(pe: {
     progression,
     equipment,
     difficulty,
-    description: pe.story || undefined,
+    description: stripExerciseStatusMarkers(pe.story) || undefined,
     isCustom: true,
+    isPendingAddition,
+    isPendingEdited,
     userId: pe.userId,
     createdAt: pe.createdAt.toISOString(),
   };
@@ -196,7 +207,8 @@ export const GET = withAuth(async (_req, { auth }) => {
     // Use the signed-in user's DB options to preserve custom category and muscle labels.
     const dbOptions = await getUserExerciseDbOptions(auth.userId);
 
-    const exercises: SimpleExercise[] = dbExercises.map((exercise) => mapDbToSimpleExercise(exercise, dbOptions));
+    const visibleExercises = dbExercises.filter((exercise) => !isDeletedExerciseDescription(exercise.story));
+    const exercises: SimpleExercise[] = visibleExercises.map((exercise) => mapDbToSimpleExercise(exercise, dbOptions));
 
     return NextResponse.json({ exercises });
   } catch (error) {
@@ -213,7 +225,19 @@ export const POST = withAuth(async (req, { auth }) => {
   try {
     const body = await req.json();
     const userId = auth.userId;
-    const { name, category, exerciseType, muscleGroups, equipment, difficulty, description, instructions, progression, variations } = body;
+    const {
+      name,
+      category,
+      exerciseType,
+      muscleGroups,
+      equipment,
+      difficulty,
+      description,
+      instructions,
+      progression,
+      variations,
+      pendingReview,
+    } = body;
     const dbOptions = await getUserExerciseDbOptions(userId);
 
     const trimmedName = String(name || "").trim().slice(0, 200);
@@ -294,7 +318,10 @@ export const POST = withAuth(async (req, { auth }) => {
         secondaryMuscles: '',
         difficulty: difficulty ? String(difficulty).trim() : '',
         wuxiaDifficulty: difficulty ? String(difficulty).trim() : '',
-        story: description ? String(description).trim().slice(0, 2000) : '',
+        story: (() => {
+          const baseDescription = description ? String(description).trim().slice(0, 2000) : "";
+          return pendingReview === true ? markExerciseAsPending(baseDescription) : baseDescription;
+        })(),
         tips: instructions ? JSON.stringify(instructions) : '[]',
         progression: JSON.stringify(progressionStages),
         userId,

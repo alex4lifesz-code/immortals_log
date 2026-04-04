@@ -35,11 +35,11 @@ function EternalTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount
     [items, isAdmin]
   );
   const primaryItems = useMemo(
-    () => mainItems.filter((item) => ["main", "history", "exercise-db"].includes(item.id)),
+    () => mainItems.filter((item) => ["dashboard", "history", "rank-up"].includes(item.id)),
     [mainItems]
   );
   const secondaryItems = useMemo(
-    () => mainItems.filter((item) => !["main", "history", "exercise-db"].includes(item.id)),
+    () => mainItems.filter((item) => !["dashboard", "history", "rank-up"].includes(item.id)),
     [mainItems]
   );
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -51,6 +51,9 @@ function EternalTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
+      if ((event.target as HTMLElement | null)?.closest?.(".glow-modal-container")) {
+        return;
+      }
       if (userMenuRef.current && !userMenuRef.current.contains(target)) {
         setUserMenuOpen(false);
       }

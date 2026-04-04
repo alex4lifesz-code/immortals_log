@@ -345,15 +345,11 @@ function TechniqueCard({ exercise, isSelected, onSelect, delay, displayMode, com
 
         {/* Hover Glow Enhancement */}
         {showIllumination && glowIntensity > 0 && (
-          <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-            <div 
-              className="absolute inset-0 rounded-lg"
-              style={{
-                background: `radial-gradient(circle at center, ${glowStyle?.boxShadow?.split(' ')[0] || 'color-mix(in srgb, var(--mountain-blue-glow) 30%, transparent)'} 0%, transparent 70%)`,
-                filter: 'blur(8px)'
-              }}
-            />
-          </div>
+          <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
+            style={{
+              boxShadow: `inset 0 0 16px ${glowStyle?.boxShadow?.split(' ')[0] || 'color-mix(in srgb, var(--mountain-blue-glow) 30%, transparent)'}`,
+            }}
+          />
         )}
       </div>
       {showConventionalName && dsSettings.terminologyMode === "fantasy" && exercise.name && (

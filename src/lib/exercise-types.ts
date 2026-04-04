@@ -37,6 +37,8 @@ export interface SimpleExercise {
   imageUrl?: string;
   videoUrl?: string;
   isCustom: boolean;
+  isPendingAddition?: boolean;
+  isPendingEdited?: boolean;
   userId?: string;
   createdAt?: string;
   updatedAt?: string;

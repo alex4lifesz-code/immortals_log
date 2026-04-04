@@ -193,7 +193,7 @@ export default function WebsiteInformationPage() {
     >
       <div className="nyaa-history-page space-y-3 px-0 py-2 sm:py-3">
         <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-          <div className="px-3 py-2 border-b" style={{ borderColor: "#f5f5f5", backgroundColor: "#f5f5f5" }}>
+          <div className="px-3 py-2 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
             <span className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>System Summary</span>
           </div>
           <table className="w-full text-[11px] border-collapse" style={{ backgroundColor: "var(--surface)" }}>
@@ -227,7 +227,7 @@ export default function WebsiteInformationPage() {
         </div>
 
         <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-          <div className="px-3 py-2 border-b" style={{ borderColor: "#f5f5f5", backgroundColor: "#f5f5f5" }}>
+          <div className="px-3 py-2 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
             <span className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>Website Overview</span>
           </div>
           <table className="w-full text-[11px] border-collapse" style={{ backgroundColor: "var(--surface)" }}>
@@ -243,7 +243,7 @@ export default function WebsiteInformationPage() {
         </div>
 
         <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-          <div className="px-3 py-2 border-b" style={{ borderColor: "#f5f5f5", backgroundColor: "#f5f5f5" }}>
+          <div className="px-3 py-2 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
             <span className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>Application Modules</span>
           </div>
           <table className="w-full text-[11px] border-collapse" style={{ backgroundColor: "var(--surface)" }}>
@@ -265,7 +265,7 @@ export default function WebsiteInformationPage() {
         </div>
 
         <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-          <div className="px-3 py-2 border-b" style={{ borderColor: "#f5f5f5", backgroundColor: "#f5f5f5" }}>
+          <div className="px-3 py-2 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
             <span className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>Persistence Boundaries</span>
           </div>
           <table className="w-full text-[11px] border-collapse" style={{ backgroundColor: "var(--surface)" }}>
@@ -291,7 +291,7 @@ export default function WebsiteInformationPage() {
         </div>
 
         <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-          <div className="px-3 py-2 border-b" style={{ borderColor: "#f5f5f5", backgroundColor: "#f5f5f5" }}>
+          <div className="px-3 py-2 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
             <span className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>Database Structure</span>
           </div>
           <table className="w-full text-[11px] border-collapse" style={{ backgroundColor: "var(--surface)" }}>
@@ -319,7 +319,7 @@ export default function WebsiteInformationPage() {
         </div>
 
         <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-          <div className="px-3 py-2 border-b" style={{ borderColor: "#f5f5f5", backgroundColor: "#f5f5f5" }}>
+          <div className="px-3 py-2 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
             <span className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>Database Schematics (Relationship Map)</span>
           </div>
           <table className="w-full text-[11px] border-collapse" style={{ backgroundColor: "var(--surface)" }}>
@@ -347,7 +347,7 @@ export default function WebsiteInformationPage() {
         </div>
 
         <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-          <div className="px-3 py-2 border-b" style={{ borderColor: "#f5f5f5", backgroundColor: "#f5f5f5" }}>
+          <div className="px-3 py-2 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
             <span className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>Table Dictionary (Detailed)</span>
           </div>
           <table className="w-full text-[11px] border-collapse" style={{ backgroundColor: "var(--surface)" }}>
@@ -373,7 +373,7 @@ export default function WebsiteInformationPage() {
         </div>
 
         <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-          <div className="px-3 py-2 border-b" style={{ borderColor: "#f5f5f5", backgroundColor: "#f5f5f5" }}>
+          <div className="px-3 py-2 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
             <span className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>Index & Constraint Strategy</span>
           </div>
           <table className="w-full text-[11px] border-collapse" style={{ backgroundColor: "var(--surface)" }}>
@@ -399,7 +399,7 @@ export default function WebsiteInformationPage() {
         </div>
 
         <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-          <div className="px-3 py-2 border-b" style={{ borderColor: "#f5f5f5", backgroundColor: "#f5f5f5" }}>
+          <div className="px-3 py-2 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
             <span className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>Raw SQL Managed Tables</span>
           </div>
           <table className="w-full text-[11px] border-collapse" style={{ backgroundColor: "var(--surface)" }}>
@@ -423,7 +423,7 @@ export default function WebsiteInformationPage() {
         </div>
 
         <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-          <div className="px-3 py-2 border-b" style={{ borderColor: "#f5f5f5", backgroundColor: "#f5f5f5" }}>
+          <div className="px-3 py-2 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
             <span className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>Key System Flows</span>
           </div>
           <table className="w-full text-[11px] border-collapse" style={{ backgroundColor: "var(--surface)" }}>
@@ -439,7 +439,7 @@ export default function WebsiteInformationPage() {
         </div>
 
         <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-          <div className="px-3 py-2 border-b" style={{ borderColor: "#f5f5f5", backgroundColor: "#f5f5f5" }}>
+          <div className="px-3 py-2 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
             <span className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>Data Lifecycle & Ownership</span>
           </div>
           <table className="w-full text-[11px] border-collapse" style={{ backgroundColor: "var(--surface)" }}>

@@ -32,7 +32,6 @@ import {
   getBandSoftDimOpacity,
   getBandAdjustedGlowStyle,
   getEffectiveWeight,
-  getTierName,
   RESISTANCE_BAND_OPTIONS,
   MODIFIER_WEIGHT_OPTIONS,
 } from "@/app/dashboard/workout/utils";
@@ -60,15 +59,32 @@ function abbreviateVariantText(text: string): string {
   return `${compact.slice(0, 1).toUpperCase()}${compact.slice(1, 6).toLowerCase()}`;
 }
 
+function getCategoryTone(categoryLabel: "GYM" | "Yoga" | "Cardio" | "Cali"): { color: string; borderColor: string; backgroundColor: string } {
+  const color = categoryLabel === "GYM"
+    ? "var(--category-gym)"
+    : categoryLabel === "Yoga"
+      ? "var(--category-yoga)"
+      : categoryLabel === "Cardio"
+        ? "var(--category-cardio)"
+        : "var(--category-cali)";
+
+  return {
+    color,
+    borderColor: `color-mix(in srgb, ${color} 55%, var(--border))`,
+    backgroundColor: `color-mix(in srgb, ${color} 13%, transparent)`,
+  };
+}
+
 const ROW_GLOW_COLOR = "var(--exercise-glow)";
 
 function getTierFromEntryWeights(
   exercise: ProgressionExercise | undefined,
   level: number,
 ): { glowColor: string; tierName: string } {
+  const tier = exercise?.tiers.find((t) => t.level === level);
   return {
     glowColor: ROW_GLOW_COLOR,
-    tierName: stripBwPercentHint(exercise ? getTierName(exercise, level) : `Level ${level}`),
+    tierName: stripBwPercentHint(tier?.name || ""),
   };
 }
 
@@ -150,7 +166,7 @@ function flattenLogsUnified(exercises: ProgressionExercise[]): UnifiedFlatLogEnt
         exerciseId: ex.id,
         level: log.level,
         levelNameLevel: parsed.displayLevelOverride ?? log.level,
-        tierName: stripBwPercentHint(getTierName(ex, parsed.displayLevelOverride ?? log.level)),
+        tierName: stripBwPercentHint(ex.tiers.find((t) => t.level === (parsed.displayLevelOverride ?? log.level))?.name || ""),
         val1,
         val2,
         val3,
@@ -647,19 +663,22 @@ function UnifiedTrainingLogTable({
                         )}
                         {showCategory && (
                           <td className={`${effectiveCompact ? "px-0.5 py-1" : "px-0.5 py-1.5"} w-[5rem] min-w-[5rem] text-center align-middle`}>
+                            {(() => {
+                              const categoryLabel = getExerciseCategoryLabel(ex);
+                              const tone = getCategoryTone(categoryLabel);
+                              return (
                             <span
-                              className={`text-[10px] font-semibold ${
-                                getExerciseCategoryLabel(ex) === "GYM"
-                                  ? "text-gold"
-                                  : getExerciseCategoryLabel(ex) === "Yoga"
-                                    ? "text-mountain-blue-glow"
-                                    : getExerciseCategoryLabel(ex) === "Cardio"
-                                      ? "text-crimson-light"
-                                      : "text-jade-light"
-                              }`}
+                              className="inline-block rounded border px-1.5 py-0.5 text-[10px] font-semibold leading-none"
+                              style={{
+                                color: tone.color,
+                                borderColor: tone.borderColor,
+                                backgroundColor: tone.backgroundColor,
+                              }}
                             >
-                              {getExerciseCategoryLabel(ex)}
+                              {categoryLabel}
                             </span>
+                              );
+                            })()}
                           </td>
                         )}
                         <td
@@ -936,7 +955,7 @@ function UnifiedTrainingLogTable({
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px]"
+                  className="fixed inset-0 z-40 bg-black/70"
                   onClick={() => setDeleteConfirm(null)}
                 />
                 <motion.div
@@ -998,7 +1017,7 @@ function UnifiedTrainingLogTable({
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px]"
+                      className="fixed inset-0 z-40 bg-black/70"
                       onClick={() => setLevelPicker(null)}
                     />
                     <motion.div
@@ -1025,7 +1044,7 @@ function UnifiedTrainingLogTable({
                               className={`w-full text-left px-2.5 py-2 rounded border transition-colors ${active ? "border-jade-glow/50 bg-jade-deep/20 text-jade-light" : "border-ink-light/40 bg-ink-mid/20 text-mist-light hover:border-jade-glow/35 hover:bg-jade-deep/10"}`}
                             >
                               <span className="text-[11px] font-semibold">
-                                Lv.{t.level} - {stripBwPercentHint(getExerciseDisplayName(t, settings.terminologyMode))}
+                                {stripBwPercentHint(getExerciseDisplayName(t, settings.terminologyMode))}
                               </span>
                             </button>
                           );

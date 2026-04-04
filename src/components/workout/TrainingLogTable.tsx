@@ -1,16 +1,19 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useMemo, startTransition, memo, useRef, useEffect } from "react";
+import { useState, useMemo, useCallback, startTransition, memo, useRef, useEffect, Fragment } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import GlowButton from "@/components/ui/GlowButton";
 import { useDisplaySettings, DEFAULT_UNIFIED_VISIBLE_COLUMNS, DISPLAY_DEFAULTS } from "@/context/DisplaySettingsContext";
 import { useIsMobile } from "@/context/AppContext";
 import { formatDateWithPreference } from "@/lib/constants";
 import { api, ApiRequestError } from "@/lib/api-client";
 import { getExerciseDisplayName } from "@/lib/exercise-name";
-import { inferExerciseType, formatSetValue, formatSetReps, getColumnHeaders, kgToLbs, type ExerciseType } from "@/lib/unit-conversion";
+import { DASHBOARD_ROUTES } from "@/lib/navigation";
+import { isDeletedExerciseDescription } from "@/lib/pending-exercises";
+import { inferExerciseType, formatSetValue, formatSetReps, getColumnHeaders, kgToLbs, lbsToKg, type ExerciseType } from "@/lib/unit-conversion";
 import { UserPhysiqueSettings } from "@/lib/user-physique";
 
 // Types — single source of truth
@@ -27,7 +30,6 @@ import {
   stripBwPercentHint,
   getExerciseCategoryLabel,
   getEffectiveWeight,
-  getTierName,
   MODIFIER_WEIGHT_OPTIONS,
 } from "@/app/dashboard/workout/utils";
 
@@ -59,6 +61,12 @@ function abbreviateVariantText(text: string): string {
   const compact = words[0] ?? text.trim();
   if (!compact) return "";
   return `${compact.slice(0, 1).toUpperCase()}${compact.slice(1, 6).toLowerCase()}`;
+}
+
+function getProgressionTierLabel(exercise: ProgressionExercise | undefined, level: number): string {
+  if (!exercise) return "";
+  const tier = exercise.tiers.find((t) => t.level === level);
+  return tier ? stripBwPercentHint(tier.name) : "";
 }
 
 function getNextTierStandardWeightKg(
@@ -133,6 +141,11 @@ interface ExerciseHistoryEntry {
   notes: string | null;
 }
 
+interface ExerciseHistoryResponse {
+  history?: ExerciseHistoryEntry[];
+  nextCursor?: string | null;
+}
+
 function flattenLogsUnified(exercises: ProgressionExercise[]): UnifiedFlatLogEntry[] {
   const entries: UnifiedFlatLogEntry[] = [];
 
@@ -155,7 +168,7 @@ function flattenLogsUnified(exercises: ProgressionExercise[]): UnifiedFlatLogEnt
         exerciseId: ex.id,
         level: log.level,
         levelNameLevel: parsed.displayLevelOverride ?? log.level,
-        tierName: stripBwPercentHint(getTierName(ex, parsed.displayLevelOverride ?? log.level)),
+        tierName: getProgressionTierLabel(ex, parsed.displayLevelOverride ?? log.level),
         val1,
         val2,
         val3,
@@ -200,16 +213,34 @@ function formatDate(dateString: string, dateFormat: "dd-mm-yyyy" | "dd-mmm-yyyy"
   return formatDateWithPreference(date, dateFormat);
 }
 
-function formatSimpleSet(entry: UnifiedFlatLogEntry, index: 0 | 1 | 2, weightUnit: "kg" | "lbs"): string {
-  const value = index === 0 ? entry.val1 : index === 1 ? entry.val2 : entry.val3;
-  const reps = index === 0 ? entry.reps1 : index === 1 ? entry.reps2 : entry.reps3;
-  if (value == null && reps == null) return "-";
-  const valueDisplay = formatSetValue(value, entry.exerciseType, weightUnit);
-  const repsDisplay = formatSetReps(reps, entry.exerciseType);
-  if (entry.exerciseType === "timed") return valueDisplay;
-  if (reps == null) return valueDisplay;
-  if (value == null) return `x ${repsDisplay}`;
-  return `${valueDisplay} x ${repsDisplay}`;
+function getCategoryTone(categoryLabel: string): { color: string; borderColor: string; backgroundColor: string } {
+  const normalized = categoryLabel.trim().toLowerCase();
+  const color = normalized === "gym" || normalized.includes("strength") || normalized.includes("weight")
+    ? "var(--category-gym)"
+    : normalized === "yoga" || normalized.includes("mobility") || normalized.includes("flex")
+      ? "var(--category-yoga)"
+      : normalized === "cardio" || normalized.includes("conditioning") || normalized.includes("endurance")
+        ? "var(--category-cardio)"
+        : normalized === "cali" || normalized.includes("calisthenics") || normalized.includes("bodyweight")
+          ? "var(--category-cali)"
+          : normalized.includes("skill") || normalized.includes("balance")
+            ? "var(--label-progression)"
+            : "var(--text-secondary)";
+
+  return {
+    color,
+    borderColor: `color-mix(in srgb, ${color} 52%, var(--border))`,
+    backgroundColor: `color-mix(in srgb, ${color} 12%, transparent)`,
+  };
+}
+
+function getSimpleLabelTone(kind: "progression" | "variant"): { color: string; borderColor: string; backgroundColor: string } {
+  const color = kind === "progression" ? "var(--label-progression)" : "var(--label-variant)";
+  return {
+    color,
+    borderColor: `color-mix(in srgb, ${color} 48%, var(--border))`,
+    backgroundColor: `color-mix(in srgb, ${color} 12%, transparent)`,
+  };
 }
 
 const TrainingLogMobileCard = memo(function TrainingLogMobileCard({
@@ -217,18 +248,30 @@ const TrainingLogMobileCard = memo(function TrainingLogMobileCard({
   entryDisplayName,
   typeLabel,
   formattedEntryDate,
-  variationDisplay,
   weightUnit,
+  onOpenExerciseHistory,
 }: {
   entry: UnifiedFlatLogEntry;
   entryDisplayName: string;
   typeLabel: string;
   formattedEntryDate: string;
-  variationDisplay: string;
   weightUnit: "kg" | "lbs";
+  onOpenExerciseHistory: () => void;
 }) {
+  const typeTone = getCategoryTone(typeLabel);
+  const progressionTone = getSimpleLabelTone("progression");
+  const variantTone = getSimpleLabelTone("variant");
+  const valueSamples = [entry.val1, entry.val2, entry.val3].filter((value): value is number => value != null && Number.isFinite(value));
+  const repsSamples = [entry.reps1, entry.reps2, entry.reps3].filter((reps): reps is number => reps != null && Number.isFinite(reps));
+  const averageValue = valueSamples.length > 0 ? Math.round((valueSamples.reduce((sum, value) => sum + value, 0) / valueSamples.length) * 10) / 10 : null;
+  const averageReps = repsSamples.length > 0 ? Math.round((repsSamples.reduce((sum, reps) => sum + reps, 0) / repsSamples.length) * 10) / 10 : null;
+  const averageValueText = formatSetValue(averageValue, entry.exerciseType, weightUnit);
+  const averageRepsText = formatSetReps(averageReps, entry.exerciseType);
+
   return (
-    <div
+    <button
+      type="button"
+      onClick={onOpenExerciseHistory}
       className="w-full rounded-lg border px-3 py-2.5 text-left"
       style={{ borderColor: "var(--border)", backgroundColor: "var(--surface-hover)", color: "var(--text-primary)" }}
     >
@@ -238,51 +281,50 @@ const TrainingLogMobileCard = memo(function TrainingLogMobileCard({
           <p className="mt-0.5 text-[10px]" style={{ color: "var(--text-muted)" }}>{formattedEntryDate}</p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <span className="rounded-md border px-1.5 py-0.5 text-[10px]" style={{ borderColor: "var(--accent)", backgroundColor: "color-mix(in srgb, var(--accent) 10%, transparent)", color: "var(--accent)" }}>
-            Lv {entry.levelNameLevel}
-          </span>
-          <span className="rounded-md border px-1.5 py-0.5 text-[10px]" style={{ borderColor: "var(--border)", backgroundColor: "color-mix(in srgb, var(--border) 20%, transparent)", color: "var(--text-secondary)" }}>
+          {entry.variant && (
+            <span
+              className="rounded-md border px-1.5 py-0.5 text-[10px] font-semibold"
+              style={{ borderColor: variantTone.borderColor, backgroundColor: variantTone.backgroundColor, color: variantTone.color }}
+              title={`Variant: ${entry.variant}`}
+            >
+              {abbreviateVariantText(entry.variant)}
+            </span>
+          )}
+          {entry.tierName.trim().length > 0 && (
+            <span
+              className="max-w-[9.75rem] truncate rounded-md border px-1.5 py-0.5 text-[10px]"
+              style={{ borderColor: progressionTone.borderColor, backgroundColor: progressionTone.backgroundColor, color: progressionTone.color }}
+              title={`Progression: ${entry.tierName}`}
+            >
+              {entry.tierName}
+            </span>
+          )}
+          <span className="rounded-md border px-1.5 py-0.5 text-[10px]" style={{ borderColor: typeTone.borderColor, backgroundColor: typeTone.backgroundColor, color: typeTone.color }}>
             {typeLabel}
           </span>
         </div>
       </div>
 
-      <div className="mt-2 grid grid-cols-3 gap-1">
-        <div className="rounded-md border px-2 py-1 text-center" style={{ borderColor: "var(--border)", backgroundColor: "color-mix(in srgb, var(--border) 15%, transparent)" }}>
-          <p className="text-[9px] uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>Set 1</p>
-          <p className="text-[10px]" style={{ color: "var(--text-primary)" }}>{formatSimpleSet(entry, 0, weightUnit)}</p>
-        </div>
-        <div className="rounded-md border px-2 py-1 text-center" style={{ borderColor: "var(--border)", backgroundColor: "color-mix(in srgb, var(--border) 15%, transparent)" }}>
-          <p className="text-[9px] uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>Set 2</p>
-          <p className="text-[10px]" style={{ color: "var(--text-primary)" }}>{formatSimpleSet(entry, 1, weightUnit)}</p>
-        </div>
-        <div className="rounded-md border px-2 py-1 text-center" style={{ borderColor: "var(--border)", backgroundColor: "color-mix(in srgb, var(--border) 15%, transparent)" }}>
-          <p className="text-[9px] uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>Set 3</p>
-          <p className="text-[10px]" style={{ color: "var(--text-primary)" }}>{formatSimpleSet(entry, 2, weightUnit)}</p>
-        </div>
+      <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px]">
+        <span className="rounded border px-1.5 py-0.5" style={{ borderColor: "color-mix(in srgb, var(--accent) 40%, var(--border))", backgroundColor: "color-mix(in srgb, var(--accent) 10%, transparent)", color: "var(--accent)" }}>
+          Avg W: {averageValueText}
+        </span>
+        <span className="rounded border px-1.5 py-0.5" style={{ borderColor: "color-mix(in srgb, var(--text-muted) 38%, var(--border))", backgroundColor: "color-mix(in srgb, var(--text-muted) 12%, transparent)", color: "var(--text-secondary)" }}>
+          Avg R: {averageRepsText}
+        </span>
+        {entry.modifier && (
+          <span className="rounded border px-1.5 py-0.5" style={{ borderColor: "var(--gold)", backgroundColor: "color-mix(in srgb, var(--gold) 12%, transparent)", color: "var(--gold)" }}>
+            {entry.modifier}
+          </span>
+        )}
       </div>
-
-      {(entry.modifier || entry.variant || entry.notes) && (
-        <div className="mt-2 flex flex-wrap gap-1">
-          {entry.modifier && (
-            <span className="rounded border px-1.5 py-0.5 text-[10px]" style={{ borderColor: "var(--gold)", backgroundColor: "color-mix(in srgb, var(--gold) 12%, transparent)", color: "var(--gold)" }}>
-              {entry.modifier}
-            </span>
-          )}
-          {entry.variant && (
-            <span className="rounded border px-1.5 py-0.5 text-[10px]" style={{ borderColor: "var(--border)", backgroundColor: "color-mix(in srgb, var(--border) 15%, transparent)", color: "var(--text-secondary)" }}>
-              {variationDisplay === "full" ? entry.variant : abbreviateVariantText(entry.variant)}
-            </span>
-          )}
-        </div>
-      )}
 
       {entry.notes && (
         <p className="mt-2 line-clamp-2 text-[10px]" style={{ color: "var(--text-secondary)" }}>
           {entry.notes}
         </p>
       )}
-    </div>
+    </button>
   );
 });
 
@@ -295,45 +337,6 @@ interface HeaderSortState {
 
 const TRAINING_LOG_SORT_STORAGE_KEY_PREFIX = "training-log-table-sort-v1";
 const TRAINING_LOG_COLUMN_ORDER_STORAGE_KEY_PREFIX = "training-log-column-order-v1";
-const CANONICAL_INPUT_EXERCISE_NAMES = new Set([
-  "Muscle up",
-  "Pull up",
-  "Dip",
-  "Push up",
-  "Handstand",
-  "Handstand push up",
-  "Front lever",
-  "Back lever",
-  "Planche",
-  "Dragon flag",
-  "L-sit",
-  "Human flag",
-  "Hang",
-  "Support hold",
-  "Leg raise",
-  "Pistol squat",
-  "Squat",
-  "Bench press",
-  "Chest fly",
-  "Row",
-  "Lat pulldown",
-  "Deadlift",
-  "Leg press",
-  "Leg extension",
-  "Leg curl",
-  "Calf raise",
-  "Hip abduction",
-  "Shoulder press",
-  "Lateral raise",
-  "Front raise",
-  "Upright row",
-  "Reverse fly",
-  "Face pull",
-  "Bicep curl",
-  "Forearm curl",
-  "Tricep pushdown",
-  "Cable kickback",
-]);
 
 type InputExerciseSearchResult = {
   exercise: ProgressionExercise;
@@ -346,6 +349,7 @@ type InputExerciseSearchResult = {
 function getDefaultWorkoutInput() {
   return {
     date: new Date().toISOString().slice(0, 10),
+    newExerciseName: "",
     exerciseId: "",
     level: "",
     val1: "",
@@ -365,6 +369,7 @@ type WorkoutInputState = ReturnType<typeof getDefaultWorkoutInput>;
 function clearWorkoutInputEntryFields(input: WorkoutInputState, exerciseId: string): WorkoutInputState {
   return {
     ...input,
+    newExerciseName: "",
     exerciseId,
     level: "",
     val1: "",
@@ -402,6 +407,7 @@ function readPersistedWorkoutInput(storageKey: string): WorkoutInputState | null
     const fallback = getDefaultWorkoutInput();
     return {
       date: typeof parsed.date === "string" && parsed.date ? parsed.date : fallback.date,
+      newExerciseName: typeof parsed.newExerciseName === "string" ? parsed.newExerciseName : "",
       exerciseId: typeof parsed.exerciseId === "string" ? parsed.exerciseId : "",
       level: typeof parsed.level === "string" ? parsed.level : "",
       val1: typeof parsed.val1 === "string" ? parsed.val1 : "",
@@ -452,6 +458,90 @@ function parseDataColumnIndex(columnId: string): number | null {
   return Number.isInteger(parsed) ? parsed : null;
 }
 
+function buildCreatedAtFromDateInput(dateValue: string): string | undefined {
+  if (!dateValue) return undefined;
+  const selected = new Date(`${dateValue}T00:00:00`);
+  if (Number.isNaN(selected.getTime())) return undefined;
+
+  const now = new Date();
+  selected.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+  return selected.toISOString();
+}
+
+function formatWorkoutInputDateDisplay(
+  isoDate: string,
+  dateFormat: "dd-mm-yyyy" | "dd-mmm-yyyy" | "dd-mm-yy" | "dd-mmm-yy",
+): string {
+  if (!isoDate) return "";
+  const date = new Date(`${isoDate}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return isoDate;
+  return formatDateWithPreference(date, dateFormat);
+}
+
+function parseWorkoutInputDateDisplay(
+  value: string,
+  dateFormat: "dd-mm-yyyy" | "dd-mmm-yyyy" | "dd-mm-yy" | "dd-mmm-yy",
+): string | null {
+  const raw = value.trim();
+  if (!raw) return null;
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    const d = new Date(`${raw}T00:00:00`);
+    return Number.isNaN(d.getTime()) ? null : raw;
+  }
+
+  const parts = raw.split("-").map((p) => p.trim());
+  if (parts.length !== 3) return null;
+
+  const day = Number.parseInt(parts[0], 10);
+  if (!Number.isFinite(day) || day < 1 || day > 31) return null;
+
+  let month: number | null = null;
+  if (dateFormat.includes("mmm")) {
+    const key = parts[1].slice(0, 3).toLowerCase();
+    const months: Record<string, number> = {
+      jan: 0,
+      feb: 1,
+      mar: 2,
+      apr: 3,
+      may: 4,
+      jun: 5,
+      jul: 6,
+      aug: 7,
+      sep: 8,
+      oct: 9,
+      nov: 10,
+      dec: 11,
+    };
+    month = Object.prototype.hasOwnProperty.call(months, key) ? months[key] : null;
+  } else {
+    const m = Number.parseInt(parts[1], 10);
+    if (Number.isFinite(m) && m >= 1 && m <= 12) month = m - 1;
+  }
+  if (month == null) return null;
+
+  let year = Number.parseInt(parts[2], 10);
+  if (!Number.isFinite(year)) return null;
+  if (dateFormat.endsWith("yy") && !dateFormat.endsWith("yyyy")) {
+    year += year >= 70 ? 1900 : 2000;
+  }
+
+  const parsed = new Date(year, month, day);
+  if (
+    Number.isNaN(parsed.getTime()) ||
+    parsed.getFullYear() !== year ||
+    parsed.getMonth() !== month ||
+    parsed.getDate() !== day
+  ) {
+    return null;
+  }
+
+  const yyyy = String(parsed.getFullYear());
+  const mm = String(parsed.getMonth() + 1).padStart(2, "0");
+  const dd = String(parsed.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 // ── The Unified Training Log Table ──
 
 function TrainingLogTable({
@@ -459,24 +549,33 @@ function TrainingLogTable({
   physique,
   onRefresh,
   userId,
+  historyTargetUserId,
   hideInputSection,
   disableExerciseLinks,
   prefillExerciseId,
   prefillExerciseName,
   prefillProgression,
   prefillVariant,
+  forceMobileInputOpen,
+  forceDesktopTableOnMobile,
+  forceSimpleViewOnly,
 }: {
   exercises: ProgressionExercise[];
   physique: UserPhysiqueSettings;
   onRefresh: () => void;
   userId: string;
+  historyTargetUserId?: string;
   hideInputSection?: boolean;
   disableExerciseLinks?: boolean;
   prefillExerciseId?: string | null;
   prefillExerciseName?: string | null;
   prefillProgression?: string | null;
   prefillVariant?: string | null;
+  forceMobileInputOpen?: boolean;
+  forceDesktopTableOnMobile?: boolean;
+  forceSimpleViewOnly?: boolean;
 }) {
+  const router = useRouter();
   const allEntries = useMemo(() => flattenLogsUnified(exercises), [exercises]);
   const exerciseLookup = useMemo(() => new Map(exercises.map((exercise) => [exercise.id, exercise])), [exercises]);
   const { settings } = useDisplaySettings();
@@ -511,6 +610,7 @@ function TrainingLogTable({
   const [hoveredEditLogId, setHoveredEditLogId] = useState<string | null>(null);
   const tableScrollRef = useRef<HTMLDivElement | null>(null);
   const tableScrollRafRef = useRef<number | null>(null);
+  const openModeMetricsRafRef = useRef<number | null>(null);
   const tableDragStateRef = useRef<{ active: boolean; startX: number; startScrollLeft: number; pointerId: number | null }>({
     active: false,
     startX: 0,
@@ -523,6 +623,9 @@ function TrainingLogTable({
   const [openModeVirtualMetrics, setOpenModeVirtualMetrics] = useState({ scrollTop: 0, viewportHeight: 560 });
   const [isTableDragging, setIsTableDragging] = useState(false);
   const resolvedUserId = userId && userId.trim().length > 0 ? userId : "anonymous";
+  const isViewingAnotherUser = Boolean(historyTargetUserId && historyTargetUserId !== userId);
+  const canEditTrainingLogs = !isViewingAnotherUser;
+  const shouldDisableInputSection = Boolean(hideInputSection) || isViewingAnotherUser;
   const tableModeStorageKey = `training-log-table-mode:${resolvedUserId}`;
   const workoutInputStorageKey = `training-log-workout-input:${resolvedUserId}`;
   const sortStorageKey = `${TRAINING_LOG_SORT_STORAGE_KEY_PREFIX}:${resolvedUserId}`;
@@ -547,6 +650,8 @@ function TrainingLogTable({
   const [historyDockExpanded, setHistoryDockExpanded] = useState(false);
   const [historyData, setHistoryData] = useState<ExerciseHistoryEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyLoadingMore, setHistoryLoadingMore] = useState(false);
+  const [historyNextCursor, setHistoryNextCursor] = useState<string | null>(null);
   const historyDockRef = useRef<HTMLDivElement | null>(null);
   const [exerciseSearchTerm, setExerciseSearchTerm] = useState("");
   const [exerciseDropdownOpen, setExerciseDropdownOpen] = useState(false);
@@ -554,8 +659,25 @@ function TrainingLogTable({
   const exerciseSearchWrapRef = useRef<HTMLDivElement | null>(null);
   const exerciseInputRef = useRef<HTMLInputElement | null>(null);
   const exerciseDropdownListRef = useRef<HTMLDivElement | null>(null);
+
+  const openExerciseHistoryFromMobileCard = useCallback((entry: UnifiedFlatLogEntry) => {
+    const query = new URLSearchParams();
+    if (historyTargetUserId) {
+      query.set("targetUserId", historyTargetUserId);
+    }
+    const basePath = `${DASHBOARD_ROUTES.root}/workout-history/${encodeURIComponent(entry.exerciseId)}`;
+    const href = query.toString() ? `${basePath}?${query.toString()}` : basePath;
+    router.push(href);
+  }, [historyTargetUserId, router]);
   const [exerciseDropdownRect, setExerciseDropdownRect] = useState<{ top: number; left: number; width: number } | null>(null);
   const appliedPrefillRef = useRef<string | null>(null);
+  const [inputMode, setInputMode] = useState<"existing" | "new">("existing");
+  const [inputValueMode, setInputValueMode] = useState<"weight" | "timed">("weight");
+  const [inputWeightUnit, setInputWeightUnit] = useState<"kg" | "lbs">(() => (settings.defaultWeightUnit === "lbs" ? "lbs" : "kg"));
+  const [isDateInputEditing, setIsDateInputEditing] = useState(false);
+  const [dateInputDraft, setDateInputDraft] = useState("");
+  const [activeDesktopInputCell, setActiveDesktopInputCell] = useState<string | null>(null);
+  const [mobileInputOpen, setMobileInputOpen] = useState(Boolean(forceMobileInputOpen));
 
   useEffect(() => {
     if (isEditMode) {
@@ -599,9 +721,37 @@ function TrainingLogTable({
   }, [loadedWorkoutInputKey, workoutInput, workoutInputStorageKey]);
 
   useEffect(() => {
+    if (!isMobile || shouldDisableInputSection) {
+      setMobileInputOpen(false);
+    }
+  }, [isMobile, shouldDisableInputSection]);
+
+  useEffect(() => {
+    if (canEditTrainingLogs) return;
+    if (!isEditMode && selectedEditLogId == null) return;
+    setIsEditMode(false);
+    setSelectedEditLogId(null);
+    setHoveredEditLogId(null);
+    setEditingData({});
+    setDeleteConfirm(null);
+  }, [canEditTrainingLogs, isEditMode, selectedEditLogId]);
+
+  useEffect(() => {
+    if (!isMobile) return;
+    if (forceMobileInputOpen) {
+      setMobileInputOpen(true);
+    }
+  }, [forceMobileInputOpen, isMobile]);
+
+  // Body scroll lock removed — mobile input is now in normal flow, not a modal.
+
+  useEffect(() => {
     return () => {
       if (tableScrollRafRef.current != null) {
         window.cancelAnimationFrame(tableScrollRafRef.current);
+      }
+      if (openModeMetricsRafRef.current != null) {
+        window.cancelAnimationFrame(openModeMetricsRafRef.current);
       }
     };
   }, []);
@@ -613,22 +763,34 @@ function TrainingLogTable({
   const columnGrouped = DISPLAY_DEFAULTS.progressionColumnOrderGrouped;
   const variationDisplay = settings.progressionVariationDisplay ?? "abbreviation";
   const dateFormat = settings.dateFormat || "dd-mmm-yyyy";
+  const workoutInputDateDisplay = useMemo(
+    () => formatWorkoutInputDateDisplay(workoutInput.date, dateFormat),
+    [dateFormat, workoutInput.date],
+  );
+  const dateInputPlaceholder = useMemo(() => {
+    if (dateFormat === "dd-mm-yyyy") return "dd-mm-yyyy";
+    if (dateFormat === "dd-mm-yy") return "dd-mm-yy";
+    if (dateFormat === "dd-mmm-yy") return "dd-mmm-yy";
+    return "dd-mmm-yyyy";
+  }, [dateFormat]);
   const weightUnit = settings.defaultWeightUnit ?? "kg";
+  const effectiveSimpleView = forceSimpleViewOnly ? true : isSimpleView;
   const visibleColumnKeys = DEFAULT_UNIFIED_VISIBLE_COLUMNS;
   const visibleColumnSet = useMemo(() => new Set(visibleColumnKeys), [visibleColumnKeys]);
   const showDate = visibleColumnSet.has("date");
-  const showCategory = visibleColumnSet.has("category");
-  const showProgression = visibleColumnSet.has("progression") && !isSimpleView;
+  const showCategory = visibleColumnSet.has("category") && !isMobile;
+  const showProgression = visibleColumnSet.has("progression") && !effectiveSimpleView;
   const showModifier = visibleColumnSet.has("modifier");
   const showBand = false;
-  const showVariant = visibleColumnSet.has("variant") && !isSimpleView;
+  const showVariant = visibleColumnSet.has("variant") && !effectiveSimpleView;
   const showNotes = visibleColumnSet.has("notes");
   const showStandardWeight = false;
   const showAvgWeight = visibleColumnSet.has("avgWeight");
-  const showLevelColumn = !isSimpleView;
-  const showActionsColumn = isEditMode;
+  const showLevelColumn = false;
+  const showActionsColumn = canEditTrainingLogs && isEditMode;
 
-  const useMobileTableStyling = isMobile;
+  const useMobileTableStyling = isMobile && !forceDesktopTableOnMobile;
+  const useMobileCardView = isMobile && !forceDesktopTableOnMobile;
   const effectiveCompact = compactSetting === "compact" || (compactSetting === "auto" && useMobileTableStyling);
 
   void logMode;
@@ -660,10 +822,8 @@ function TrainingLogTable({
 
     syncViewportHeight();
     window.addEventListener("resize", syncViewportHeight);
-    window.addEventListener("scroll", syncViewportHeight, { passive: true });
     return () => {
       window.removeEventListener("resize", syncViewportHeight);
-      window.removeEventListener("scroll", syncViewportHeight);
     };
   }, [isMobile, allEntries.length]);
 
@@ -706,7 +866,6 @@ function TrainingLogTable({
     cols.push("exercise");
     if (showProgression) cols.push("progression");
     if (showVariantColumnResponsive) cols.push("variant");
-    if (showLevelColumn) cols.push("level");
 
     // Insert data columns and place modifier after reps3
     let modifierInserted = false;
@@ -853,11 +1012,8 @@ function TrainingLogTable({
 
       if (sortState.columnId === "date") return new Date(entry.date).getTime();
       if (sortState.columnId === "category") return getExerciseCategoryLabel(ex).toLowerCase();
-      if (sortState.columnId === "level") return entry.levelNameLevel;
       if (sortState.columnId === "progression") {
-        const progressionLabel = ex
-          ? stripBwPercentHint(getTierName(ex, entry.levelNameLevel))
-          : `Level ${entry.levelNameLevel}`;
+        const progressionLabel = getProgressionTierLabel(ex, entry.levelNameLevel);
         return progressionLabel.toLowerCase();
       }
       if (sortState.columnId === "exercise") {
@@ -957,7 +1113,7 @@ function TrainingLogTable({
   }, [isEditMode, selectedEditLogId]);
 
   useEffect(() => {
-    if (isMobile || fitToScreenMode) return;
+    if (isMobile || fitToScreenMode || entries.length <= 40) return;
 
     const syncOpenModeVirtualMetrics = () => {
       const el = tableScrollRef.current;
@@ -972,14 +1128,26 @@ function TrainingLogTable({
       ));
     };
 
-    syncOpenModeVirtualMetrics();
-    window.addEventListener("scroll", syncOpenModeVirtualMetrics, { passive: true });
-    window.addEventListener("resize", syncOpenModeVirtualMetrics);
-    return () => {
-      window.removeEventListener("scroll", syncOpenModeVirtualMetrics);
-      window.removeEventListener("resize", syncOpenModeVirtualMetrics);
+    const scheduleOpenModeMetricSync = () => {
+      if (openModeMetricsRafRef.current != null) return;
+      openModeMetricsRafRef.current = window.requestAnimationFrame(() => {
+        openModeMetricsRafRef.current = null;
+        syncOpenModeVirtualMetrics();
+      });
     };
-  }, [VIRTUAL_ROW_HEIGHT, fitToScreenMode, isMobile]);
+
+    scheduleOpenModeMetricSync();
+    window.addEventListener("scroll", scheduleOpenModeMetricSync, { passive: true });
+    window.addEventListener("resize", scheduleOpenModeMetricSync);
+    return () => {
+      window.removeEventListener("scroll", scheduleOpenModeMetricSync);
+      window.removeEventListener("resize", scheduleOpenModeMetricSync);
+      if (openModeMetricsRafRef.current != null) {
+        window.cancelAnimationFrame(openModeMetricsRafRef.current);
+        openModeMetricsRafRef.current = null;
+      }
+    };
+  }, [VIRTUAL_ROW_HEIGHT, entries.length, fitToScreenMode, isMobile]);
 
   const shouldVirtualizeTable = !isMobile && entries.length > 40;
   const virtualScrollTop = fitToScreenMode ? tableScrollTop : openModeVirtualMetrics.scrollTop;
@@ -1046,10 +1214,9 @@ function TrainingLogTable({
   );
 
   const sortedExercises = useMemo(() => {
-    const canonicalOnly = exercises.filter((exercise) => CANONICAL_INPUT_EXERCISE_NAMES.has((exercise.name || "").trim()));
-    const source = canonicalOnly.length > 0 ? canonicalOnly : exercises;
+    const selectableExercises = exercises.filter((exercise) => !isDeletedExerciseDescription(exercise.story));
 
-    return [...source].sort((a, b) => {
+    return [...selectableExercises].sort((a, b) => {
       const aName = exerciseMetaById.get(a.id)?.displayName ?? a.name;
       const bName = exerciseMetaById.get(b.id)?.displayName ?? b.name;
       return aName.localeCompare(bName, undefined, { sensitivity: "base", numeric: true });
@@ -1063,6 +1230,23 @@ function TrainingLogTable({
     })),
     [exerciseMetaById, settings.terminologyMode, sortedExercises],
   );
+
+  const sortedProgressionTiersByExerciseId = useMemo(() => {
+    const map = new Map<string, ProgressionExercise["tiers"]>();
+    for (const exercise of exercises) {
+      map.set(exercise.id, [...(exercise.tiers ?? [])].sort((a, b) => a.level - b.level));
+    }
+    return map;
+  }, [exercises]);
+
+  const staleEntryByLogId = useMemo(() => {
+    const map = new Map<string, boolean>();
+    const staleCutoffMs = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    for (const entry of entries) {
+      map.set(entry.logId, new Date(entry.date).getTime() < staleCutoffMs);
+    }
+    return map;
+  }, [entries]);
 
   const filteredInputExercises = useMemo<InputExerciseSearchResult[]>(() => {
     const query = exerciseSearchTerm.trim().toLowerCase();
@@ -1091,7 +1275,7 @@ function TrainingLogTable({
     });
 
     if (!query) {
-      return baseResults.slice(0, 40).map((row) => ({
+      return baseResults.map((row) => ({
         exercise: row.exercise,
         displayLabel: row.displayName,
         searchLabel: row.displayName,
@@ -1139,7 +1323,7 @@ function TrainingLogTable({
       }
     }
 
-    return next.slice(0, 40);
+    return next;
   }, [exerciseMetaById, exerciseSearchTerm, sortedExercises]);
 
   const signedModifierOptions = useMemo(() => {
@@ -1162,10 +1346,10 @@ function TrainingLogTable({
       .sort((a, b) => a.level - b.level)
       .map((tier) => ({
         value: String(tier.level),
-        label: stripBwPercentHint(tier.name || `Level ${tier.level}`),
+        label: stripBwPercentHint(tier.name || "-"),
       }));
 
-    if (tiers.length === 0) return [{ value: "1", label: "Level 1" }];
+    if (tiers.length === 0) return [{ value: "1", label: "-" }];
     return tiers;
   }, [selectedInputExercise]);
 
@@ -1179,31 +1363,100 @@ function TrainingLogTable({
     });
   }, [inputProgressionOptions, selectedInputExercise]);
 
-  const hasSelectedInputExercise = Boolean(workoutInput.exerciseId);
+  useEffect(() => {
+    if (inputMode === "new") {
+      setInputValueMode("weight");
+      return;
+    }
+    if (!selectedInputExercise) {
+      setInputValueMode("weight");
+      return;
+    }
+    const inferred = inferExerciseType(selectedInputExercise, false);
+    setInputValueMode(inferred === "timed" ? "timed" : "weight");
+  }, [inputMode, selectedInputExercise]);
 
   useEffect(() => {
-    if (!userId || !selectedInputExercise?.id) {
+    setInputWeightUnit(weightUnit === "lbs" ? "lbs" : "kg");
+  }, [weightUnit]);
+
+  const hasSelectedInputExercise = Boolean(workoutInput.exerciseId);
+  const hasNewExerciseName = workoutInput.newExerciseName.trim().length >= 2;
+  const canSubmitWorkoutInput = inputMode === "new" ? hasNewExerciseName : hasSelectedInputExercise;
+  const isTimedInput = inputValueMode === "timed";
+  const desktopValueHeaderPrefix = isTimedInput ? "T" : "W";
+  const setValuePlaceholder = isTimedInput ? "" : (inputWeightUnit === "lbs" ? "lbs" : "kgs");
+  const trainingLogHeaderTextColor = "var(--gold)";
+  const inputSectionHeaderTextColor = "var(--mist-pale)";
+  const inputProgressionTone = getSimpleLabelTone("progression");
+  const inputVariantTone = getSimpleLabelTone("variant");
+  const desktopInputSetColumns = columnGrouped
+    ? [
+        { key: "val1", label: `${desktopValueHeaderPrefix}1` },
+        { key: "val2", label: `${desktopValueHeaderPrefix}2` },
+        { key: "val3", label: `${desktopValueHeaderPrefix}3` },
+        { key: "reps1", label: "R1" },
+        { key: "reps2", label: "R2" },
+        { key: "reps3", label: "R3" },
+      ]
+    : [
+        { key: "val1", label: `${desktopValueHeaderPrefix}1` },
+        { key: "reps1", label: "R1" },
+        { key: "val2", label: `${desktopValueHeaderPrefix}2` },
+        { key: "reps2", label: "R2" },
+        { key: "val3", label: `${desktopValueHeaderPrefix}3` },
+        { key: "reps3", label: "R3" },
+      ];
+
+  const fetchExerciseHistoryPage = useCallback(async (
+    exerciseId: string,
+    cursor: string | null,
+  ): Promise<{ history: ExerciseHistoryEntry[]; nextCursor: string | null }> => {
+    const params = new URLSearchParams({ exerciseId, limit: "24" });
+    if (historyTargetUserId) {
+      params.set("targetUserId", historyTargetUserId);
+    }
+    if (cursor) {
+      params.set("cursor", cursor);
+    }
+    const response = await fetch(`/api/exercises/history?${params.toString()}`, { credentials: "include" });
+    if (!response.ok) {
+      throw new Error("Failed to fetch exercise history page");
+    }
+    const data = (await response.json()) as ExerciseHistoryResponse;
+    return {
+      history: Array.isArray(data.history) ? data.history : [],
+      nextCursor: typeof data.nextCursor === "string" ? data.nextCursor : null,
+    };
+  }, [historyTargetUserId]);
+
+  useEffect(() => {
+    if (inputMode === "new" || !userId || !selectedInputExercise?.id) {
       setHistoryData([]);
       setHistoryLoading(false);
+      setHistoryLoadingMore(false);
+      setHistoryNextCursor(null);
       return;
     }
 
     let cancelled = false;
     setHistoryLoading(true);
+    setHistoryLoadingMore(false);
+    setHistoryNextCursor(null);
 
-    fetch(`/api/exercises/history?exerciseId=${encodeURIComponent(selectedInputExercise.id)}`, { credentials: "include" })
-      .then((response) => (response.ok ? response.json() : Promise.reject()))
-      .then((data) => {
+    fetchExerciseHistoryPage(selectedInputExercise.id, null)
+      .then(({ history, nextCursor }) => {
         if (cancelled) return;
-        const nextHistory = Array.isArray(data?.history) ? (data.history as ExerciseHistoryEntry[]) : [];
-        setHistoryData(nextHistory);
-        if (nextHistory.length > 0) {
+        setHistoryData(history);
+        setHistoryNextCursor(nextCursor);
+        if (history.length > 0) {
           setHistoryDockOpen(true);
         }
       })
       .catch(() => {
         if (cancelled) return;
         setHistoryData([]);
+        setHistoryNextCursor(null);
       })
       .finally(() => {
         if (cancelled) return;
@@ -1213,9 +1466,34 @@ function TrainingLogTable({
     return () => {
       cancelled = true;
     };
-  }, [selectedInputExercise?.id, userId]);
+  }, [fetchExerciseHistoryPage, inputMode, selectedInputExercise?.id, userId]);
+
+  const handleLoadMoreHistory = useCallback(async () => {
+    const selectedExerciseId = selectedInputExercise?.id;
+    if (!selectedExerciseId || !historyNextCursor || historyLoading || historyLoadingMore) return;
+
+    setHistoryLoadingMore(true);
+    try {
+      const { history, nextCursor } = await fetchExerciseHistoryPage(selectedExerciseId, historyNextCursor);
+      setHistoryData((prev) => {
+        if (history.length === 0) return prev;
+        const seen = new Set(prev.map((entry) => entry.id));
+        const appended = history.filter((entry) => !seen.has(entry.id));
+        return appended.length > 0 ? [...prev, ...appended] : prev;
+      });
+      setHistoryNextCursor(nextCursor);
+    } catch {
+      // Keep existing history panel state when pagination fails.
+    } finally {
+      setHistoryLoadingMore(false);
+    }
+  }, [fetchExerciseHistoryPage, historyLoading, historyLoadingMore, historyNextCursor, selectedInputExercise?.id]);
 
   useEffect(() => {
+    if (inputMode === "new") {
+      setExerciseSearchTerm("");
+      return;
+    }
     if (!workoutInput.exerciseId) {
       setExerciseSearchTerm("");
       return;
@@ -1226,7 +1504,7 @@ function TrainingLogTable({
       return;
     }
     setExerciseSearchTerm(stripBwPercentHint(getExerciseDisplayName(selectedExercise, settings.terminologyMode)));
-  }, [workoutInput.exerciseId, exerciseLookup, settings.terminologyMode]);
+  }, [inputMode, workoutInput.exerciseId, exerciseLookup, settings.terminologyMode]);
 
   useEffect(() => {
     const normalizedName = (prefillExerciseName || "").trim().toLowerCase();
@@ -1299,9 +1577,11 @@ function TrainingLogTable({
   }, [historyDockOpen, isMobile]);
 
   const getZeroValueStyle = (value: number | null, colType: string, exType: ExerciseType): React.CSSProperties | undefined => {
+    if (colType === "value" && exType === "timed") {
+      return { backgroundColor: "var(--timed-cell-bg)" };
+    }
     if (value === 0) return { backgroundColor: "var(--ink-mid)", color: "var(--mist-dark)" };
     if (columnColors && colType === "value") {
-      if (exType === "timed") return { backgroundColor: "var(--timed-cell-bg)" };
       return { backgroundColor: "var(--col-weight-bg)" };
     }
     if (columnColors && colType === "reps") return { backgroundColor: "var(--col-reps-bg)" };
@@ -1309,6 +1589,7 @@ function TrainingLogTable({
   };
 
   const handleEditModeToggle = () => {
+    if (!canEditTrainingLogs) return;
     if (!isEditMode) {
       setIsEditMode(true);
       setSelectedEditLogId(entries[0]?.logId ?? null);
@@ -1332,6 +1613,7 @@ function TrainingLogTable({
       });
     } else {
       setIsEditMode(false);
+      setEditingData({});
       setSelectedEditLogId(null);
       setHoveredEditLogId(null);
     }
@@ -1390,6 +1672,7 @@ function TrainingLogTable({
   };
 
   const handleSaveSingleRow = async (logId: string) => {
+    if (!canEditTrainingLogs) return;
     const rowData = editingData[logId];
     if (!rowData) return;
     setIsSaving(true);
@@ -1413,6 +1696,7 @@ function TrainingLogTable({
   };
 
   const handleSaveChanges = async () => {
+    if (!canEditTrainingLogs) return;
     setIsSaving(true);
     try {
       const updates = Object.entries(editingData).map(([id, data]) => buildUpdateFromEditingData(id, data));
@@ -1458,6 +1742,21 @@ function TrainingLogTable({
 
   const handleWorkoutInputChange = (field: keyof typeof workoutInput, value: string | number) => {
     setWorkoutInput((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleWorkoutInputDateBlur = () => {
+    const parsed = parseWorkoutInputDateDisplay(dateInputDraft, dateFormat);
+    if (parsed) {
+      handleWorkoutInputChange("date", parsed);
+    }
+    setIsDateInputEditing(false);
+  };
+
+  const handleDesktopInputCellKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter" || event.key === "Escape") {
+      setActiveDesktopInputCell(null);
+      event.currentTarget.blur();
+    }
   };
 
   const handleWorkoutExerciseSelection = (exerciseId: string) => {
@@ -1541,17 +1840,12 @@ function TrainingLogTable({
   };
 
   const handleAddWorkoutLog = async () => {
-    if (!workoutInput.exerciseId) {
-      setSaveMessage({ type: "error", text: "Please select an exercise first" });
-      return;
-    }
-
-    const selectedExercise = exerciseLookup.get(workoutInput.exerciseId);
-    if (!selectedExercise) {
-      setSaveMessage({ type: "error", text: "Selected exercise is not available" });
-      return;
-    }
-
+    const toSeconds = (value: number | null): number | null => (value == null ? null : Math.max(0, Math.round(value)));
+    const toStoredWeightKg = (value: number | null): number | null => {
+      if (value == null) return null;
+      if (isTimedInput) return null;
+      return inputWeightUnit === "lbs" ? lbsToKg(value) : value;
+    };
     const parseNumeric = (value: string, integerOnly = false): number | null => {
       if (!value || value.trim() === "") return null;
       const parsed = integerOnly ? parseInt(value, 10) : parseFloat(value);
@@ -1571,28 +1865,110 @@ function TrainingLogTable({
       return;
     }
 
-    const exerciseType = inferExerciseType(selectedExercise, false);
+    if (inputMode === "new") {
+      const nextExerciseName = workoutInput.newExerciseName.trim();
+      if (nextExerciseName.length < 2) {
+        setSaveMessage({ type: "error", text: "Enter a new exercise name" });
+        return;
+      }
+
+      const createdAt = buildCreatedAtFromDateInput(workoutInput.date);
+
+      setIsSaving(true);
+      try {
+        const created = await api.post<{ exercise?: { id: string } }>("/api/exercise-library", {
+          name: nextExerciseName,
+          category: "Other",
+          exerciseType: "bodyweight",
+          muscleGroups: ["Other"],
+          progression: [nextExerciseName],
+          variations: [],
+          pendingReview: true,
+        });
+
+        const exerciseId = created.exercise?.id;
+        if (!exerciseId) {
+          throw new Error("Unable to create exercise");
+        }
+
+        await api.post(`/api/progressions/${exerciseId}/log`, {
+          level: 1,
+          weight1: toStoredWeightKg(val1),
+          reps1,
+          weight2: toStoredWeightKg(val2),
+          reps2,
+          weight3: toStoredWeightKg(val3),
+          reps3,
+          holdTime: isTimedInput ? toSeconds(val1) : null,
+          holdTime2: isTimedInput ? toSeconds(val2) : null,
+          holdTime3: isTimedInput ? toSeconds(val3) : null,
+          modifier: null,
+          variant: null,
+          notes: workoutInput.notes || null,
+          completed: false,
+          createdAt,
+        });
+
+        setSaveMessage({ type: "success", text: "Pending exercise added to log and library" });
+        setWorkoutInput((prev) => ({
+          ...prev,
+          newExerciseName: "",
+          val1: "",
+          reps1: "",
+          val2: "",
+          reps2: "",
+          val3: "",
+          reps3: "",
+          modifierKg: "",
+          variant: "",
+          notes: "",
+        }));
+        window.dispatchEvent(new Event("progression-exercises-updated"));
+        onRefresh();
+        if (isMobile) handleMobileInputClose();
+      } catch (err) {
+        if (err instanceof ApiRequestError) {
+          setSaveMessage({ type: "error", text: err.message || "Failed to add pending exercise" });
+        } else {
+          setSaveMessage({ type: "error", text: "Failed to create pending exercise" });
+        }
+      } finally {
+        setIsSaving(false);
+      }
+      return;
+    }
+
+    if (!workoutInput.exerciseId) {
+      setSaveMessage({ type: "error", text: "Please select an exercise first" });
+      return;
+    }
+
+    const selectedExercise = exerciseLookup.get(workoutInput.exerciseId);
+    if (!selectedExercise) {
+      setSaveMessage({ type: "error", text: "Selected exercise is not available" });
+      return;
+    }
+
     const selectedLevel = Number.parseInt(workoutInput.level || "", 10);
     const level = Number.isFinite(selectedLevel) && selectedLevel > 0
       ? selectedLevel
       : (selectedExercise.userProgress?.[0]?.currentLevel ?? 1);
     const modifier = workoutInput.modifierKg ? formatSignedModifierKg(parseFloat(workoutInput.modifierKg)) : null;
-    const createdAtDate = workoutInput.date ? new Date(`${workoutInput.date}T00:00:00`) : null;
-    const createdAt = createdAtDate && !Number.isNaN(createdAtDate.getTime()) ? createdAtDate.toISOString() : undefined;
+    const createdAt = buildCreatedAtFromDateInput(workoutInput.date);
 
     setIsSaving(true);
     try {
       await api.post(`/api/progressions/${workoutInput.exerciseId}/log`, {
         level,
-        weight1: exerciseType === "timed" ? null : val1,
+        weight1: toStoredWeightKg(val1),
         reps1,
-        weight2: exerciseType === "timed" ? null : val2,
+        weight2: toStoredWeightKg(val2),
         reps2,
-        weight3: exerciseType === "timed" ? null : val3,
+        weight3: toStoredWeightKg(val3),
         reps3,
-        holdTime: exerciseType === "timed" ? val1 : null,
-        holdTime2: exerciseType === "timed" ? val2 : null,
-        holdTime3: exerciseType === "timed" ? val3 : null,
+        holdTime: isTimedInput ? toSeconds(val1) : null,
+        holdTime2: isTimedInput ? toSeconds(val2) : null,
+        holdTime3: isTimedInput ? toSeconds(val3) : null,
         modifier,
         variant: workoutInput.variant || null,
         notes: workoutInput.notes || null,
@@ -1614,6 +1990,7 @@ function TrainingLogTable({
         notes: "",
       }));
       onRefresh();
+      if (isMobile) handleMobileInputClose();
     } catch (err) {
       if (err instanceof ApiRequestError) {
         setSaveMessage({ type: "error", text: err.message || "Failed to add training log" });
@@ -1630,6 +2007,7 @@ function TrainingLogTable({
   };
 
   const handleDeleteLog = async (logId: string) => {
+    if (!canEditTrainingLogs) return;
     setIsDeleting(true);
     try {
       await api.post("/api/progressions/logs/delete", { logId });
@@ -1650,7 +2028,6 @@ function TrainingLogTable({
   const emptyRowColSpan =
     (showDate ? 1 : 0) +
     (showCategory ? 1 : 0) +
-    (showLevelColumn ? 1 : 0) +
     (showProgression ? 1 : 0) +
     1 +
     visibleDataIndices.length +
@@ -1679,43 +2056,604 @@ function TrainingLogTable({
     return `val${fieldIndex + 1}`;
   };
 
+  const handleMobileInputClose = () => {
+    if (forceMobileInputOpen) {
+      router.push("/dashboard/train");
+      return;
+    }
+    setMobileInputOpen(false);
+  };
+
   const headerTypographyClass = "font-medium text-[10px] sm:text-[11px] uppercase tracking-[0.08em]";
   const headerPadClass = effectiveCompact ? "py-1.5" : "py-2";
   const cellPadTight = effectiveCompact ? "px-0.5 py-1" : "px-0.5 py-1.5";
   const cellPadStandard = effectiveCompact ? "px-1 py-1" : "px-1 py-1.5";
   const cellPadWide = effectiveCompact ? "px-1 py-1" : "px-1.5 py-1.5";
   const cellPadExercise = effectiveCompact ? "px-1 py-1" : "px-1.5 py-1.5";
+  const segmentedToggleButtonClass = "rounded px-2 py-1 text-[11px] font-semibold transition-all duration-150";
+  const toolbarButtonClass = "inline-flex items-center gap-2 rounded-md border px-2 py-1 text-[11px] font-semibold transition-all duration-150 hover:scale-[1.02] active:scale-[0.98]";
+  const panelIconButtonClass = "inline-flex h-6 w-6 items-center justify-center rounded border text-xs font-bold transition-colors hover:bg-ink-mid/35";
+  const mobileFieldRowClass = "w-full min-w-0 max-w-[760px] mx-auto flex items-center gap-1.5 px-2 sm:px-4";
+  const mobileFieldLabelClass = "text-[11px] font-medium w-12 sm:w-20 shrink-0 text-left";
+  const inputModeOptionButtonClass = `w-full min-h-9 appearance-none rounded-md border px-3 py-2 text-center font-semibold leading-tight whitespace-nowrap transition-all duration-150 ${isMobile ? "text-sm" : "text-xs"}`;
+  const selectCaretStyle = {
+    appearance: "none" as const,
+    backgroundImage: "url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23b5bac1' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.7' d='M6 8l4 4 4-4'/%3e%3c/svg%3e\")",
+    backgroundPosition: "right 8px center",
+    backgroundRepeat: "no-repeat",
+    backgroundSize: "16px",
+    paddingRight: "30px",
+  };
+  const shouldRenderInputSection = !shouldDisableInputSection && (!isMobile || mobileInputOpen);
 
   return (
     <>
       <div className="w-full">
-        {!isMobile && !hideInputSection && (
+        {isViewingAnotherUser && (
           <div
-            className="w-full rounded-2xl relative overflow-hidden mb-4"
-            style={{ borderColor: "var(--border)", border: "1px solid", backgroundColor: "var(--surface)" }}
+            className="mb-4 w-full rounded-2xl border px-4 py-3"
+            style={{
+              borderColor: "color-mix(in srgb, var(--border) 78%, var(--text-muted) 22%)",
+              backgroundColor: "color-mix(in srgb, var(--surface) 70%, var(--border) 30%)",
+              opacity: 0.82,
+            }}
           >
-            <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "#f5f5f5", backgroundColor: "#f5f5f5" }}>
-              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-primary)" }}>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-secondary)" }}>
                 Training Log Input Section
               </span>
+              <span className="rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}>
+                Collapsed
+              </span>
             </div>
-            <div className="px-4 py-3">
-              <div className="flex flex-wrap items-end gap-2">
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] text-center" style={{ color: "var(--text-muted)" }}>Date</label>
+            <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
+              Input is disabled while viewing another user.
+            </p>
+          </div>
+        )}
+        {shouldRenderInputSection && (
+          <div
+            className={`w-full rounded-2xl relative overflow-hidden min-w-0 mb-4`}
+            style={{
+              borderColor: "var(--nyaa-table-grid)",
+              border: "1px solid",
+              backgroundColor: "var(--header-bg)",
+            }}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 border-b min-w-0" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
+              <span className="text-[11px] font-semibold uppercase tracking-wide shrink-0" style={{ color: "var(--text-primary)" }}>
+                Training Log Input
+              </span>
+              <div className="flex flex-wrap items-center gap-2 min-w-0">
+                {!isMobile && (
+                  <div className="flex items-center gap-2">
+                    <div className="inline-flex items-center rounded-md border p-1" style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)" }}>
+                      <button
+                        type="button"
+                        onClick={() => setInputValueMode("weight")}
+                        className={segmentedToggleButtonClass}
+                        style={{
+                          color: !isTimedInput ? "var(--accent)" : "var(--text-secondary)",
+                          backgroundColor: !isTimedInput ? "color-mix(in srgb, var(--accent) 14%, transparent)" : "transparent",
+                        }}
+                      >
+                        Weight
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setInputValueMode("timed")}
+                        className={segmentedToggleButtonClass}
+                        style={{
+                          color: isTimedInput ? "var(--timed-color)" : "var(--text-secondary)",
+                          backgroundColor: isTimedInput ? "color-mix(in srgb, var(--timed-color) 16%, transparent)" : "transparent",
+                        }}
+                      >
+                        Timed
+                      </button>
+                    </div>
+                    <div className="inline-flex items-center rounded-md border p-1" style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)" }}>
+                      <button
+                        type="button"
+                        onClick={() => setInputWeightUnit("kg")}
+                        disabled={isTimedInput}
+                        className={segmentedToggleButtonClass}
+                        style={{
+                          color: inputWeightUnit === "kg" ? "var(--accent)" : "var(--text-secondary)",
+                          backgroundColor: inputWeightUnit === "kg" ? "color-mix(in srgb, var(--accent) 14%, transparent)" : "transparent",
+                          opacity: isTimedInput ? 0.45 : 1,
+                          cursor: isTimedInput ? "not-allowed" : "pointer",
+                        }}
+                      >
+                        kg
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setInputWeightUnit("lbs")}
+                        disabled={isTimedInput}
+                        className={segmentedToggleButtonClass}
+                        style={{
+                          color: inputWeightUnit === "lbs" ? "var(--accent)" : "var(--text-secondary)",
+                          backgroundColor: inputWeightUnit === "lbs" ? "color-mix(in srgb, var(--accent) 14%, transparent)" : "transparent",
+                          opacity: isTimedInput ? 0.45 : 1,
+                          cursor: isTimedInput ? "not-allowed" : "pointer",
+                        }}
+                      >
+                        lbs
+                      </button>
+                    </div>
+                  </div>
+                )}
+                <div className="inline-flex items-center rounded-md border p-1" style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)" }}>
+                  <button
+                    type="button"
+                    onClick={() => setInputMode("existing")}
+                    className={segmentedToggleButtonClass}
+                    style={{
+                      color: inputMode === "existing" ? "var(--accent)" : "var(--text-secondary)",
+                      backgroundColor: inputMode === "existing" ? "color-mix(in srgb, var(--accent) 14%, transparent)" : "transparent",
+                    }}
+                  >
+                    Existing Exercise
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInputMode("new");
+                      setWorkoutInput((prev) => ({ ...prev, exerciseId: "", level: "", variant: "", modifierKg: "", notes: "" }));
+                      setExerciseDropdownOpen(false);
+                    }}
+                    className={segmentedToggleButtonClass}
+                    style={{
+                      color: inputMode === "new" ? "var(--gold)" : "var(--text-secondary)",
+                      backgroundColor: inputMode === "new" ? "color-mix(in srgb, var(--gold) 16%, transparent)" : "transparent",
+                    }}
+                  >
+                    Add New Exercise
+                  </button>
+                </div>
+                {isMobile && (
+                  <button
+                    type="button"
+                    onClick={handleMobileInputClose}
+                    className={toolbarButtonClass}
+                    style={{ borderColor: "var(--border)", color: "var(--text-secondary)", backgroundColor: "var(--surface)" }}
+                  >
+                    Close
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="px-0 py-3 min-w-0">
+              {!isMobile && (
+                <>
+                <div className="overflow-x-hidden rounded" style={{ border: "1px solid var(--nyaa-table-grid)" }}>
+                  <table className="w-full table-fixed border-collapse text-[11px]" style={{ color: "var(--text-primary)" }}>
+                    <colgroup>
+                      <col style={{ width: inputMode === "existing" ? "8.3%" : "12.9%" }} />
+                      <col style={{ width: inputMode === "existing" ? "23.5%" : "25.8%" }} />
+                      {inputMode === "existing" && <col style={{ width: "10.3%" }} />}
+                      {inputMode === "existing" && <col style={{ width: "12.4%" }} />}
+                      <col style={{ width: inputMode === "existing" ? "4.5%" : "7%" }} />
+                      <col style={{ width: inputMode === "existing" ? "4.5%" : "7%" }} />
+                      <col style={{ width: inputMode === "existing" ? "4.5%" : "7%" }} />
+                      <col style={{ width: inputMode === "existing" ? "4.5%" : "7%" }} />
+                      <col style={{ width: inputMode === "existing" ? "4.5%" : "7%" }} />
+                      <col style={{ width: inputMode === "existing" ? "4.5%" : "7%" }} />
+                      {inputMode === "existing" && <col style={{ width: "6.2%" }} />}
+                      <col style={{ width: inputMode === "existing" ? "12.8%" : "19.3%" }} />
+                    </colgroup>
+                    <thead style={{ backgroundColor: "var(--nyaa-table-head-bg)" }}>
+                      <tr>
+                        <th className="px-1 py-0.5 text-center font-semibold uppercase tracking-[0.08em]" style={{ borderRight: "1px solid var(--nyaa-table-grid)", borderBottom: "1px solid var(--nyaa-table-grid)", color: inputSectionHeaderTextColor }}>Date</th>
+                        <th className="px-1 py-0.5 text-center font-semibold uppercase tracking-[0.08em]" style={{ borderRight: "1px solid var(--nyaa-table-grid)", borderBottom: "1px solid var(--nyaa-table-grid)", color: inputSectionHeaderTextColor }}>{inputMode === "existing" ? "Exercise" : "Exercise Name"}</th>
+                        {inputMode === "existing" && (
+                          <th className="px-1 py-0.5 text-center font-semibold uppercase tracking-[0.08em]" style={{ borderRight: "1px solid var(--nyaa-table-grid)", borderBottom: "1px solid var(--nyaa-table-grid)", color: inputSectionHeaderTextColor }}>Progression</th>
+                        )}
+                        {inputMode === "existing" && (
+                          <th className="px-1 py-0.5 text-center font-semibold uppercase tracking-[0.08em]" style={{ borderRight: "1px solid var(--nyaa-table-grid)", borderBottom: "1px solid var(--nyaa-table-grid)", color: inputSectionHeaderTextColor }}>Variant</th>
+                        )}
+                        {desktopInputSetColumns.map((col) => (
+                          <th
+                            key={`desktop-input-head-${col.key}`}
+                            className="px-1 py-0.5 text-center font-semibold uppercase tracking-[0.08em]"
+                            style={{ borderRight: "1px solid var(--nyaa-table-grid)", borderBottom: "1px solid var(--nyaa-table-grid)", color: inputSectionHeaderTextColor }}
+                          >
+                            {col.label}
+                          </th>
+                        ))}
+                        {inputMode === "existing" && (
+                          <th className="px-1 py-0.5 text-center font-semibold uppercase tracking-[0.08em]" style={{ borderRight: "1px solid var(--nyaa-table-grid)", borderBottom: "1px solid var(--nyaa-table-grid)", color: inputSectionHeaderTextColor }}>Mod</th>
+                        )}
+                        <th className="px-1 py-0.5 text-center font-semibold uppercase tracking-[0.08em]" style={{ borderBottom: "1px solid var(--nyaa-table-grid)", color: inputSectionHeaderTextColor }}>Notes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr style={{ backgroundColor: "var(--surface)" }}>
+                        <td className="p-0.5" style={{ borderRight: "1px solid var(--nyaa-table-grid)" }}>
+                          {activeDesktopInputCell === "date" ? (
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              value={isDateInputEditing ? dateInputDraft : workoutInputDateDisplay}
+                              autoFocus
+                              onBlur={() => {
+                                handleWorkoutInputDateBlur();
+                                setActiveDesktopInputCell(null);
+                              }}
+                              onFocus={() => {
+                                setDateInputDraft(workoutInputDateDisplay);
+                                setIsDateInputEditing(true);
+                              }}
+                              onKeyDown={handleDesktopInputCellKeyDown}
+                              onChange={(event) => setDateInputDraft(event.target.value)}
+                              placeholder={dateInputPlaceholder}
+                              className="w-full h-7 rounded outline-none px-1.5 text-[11px]"
+                              style={{ backgroundColor: "var(--surface)", borderColor: "var(--nyaa-table-grid)", border: "1px solid", color: "var(--text-primary)" }}
+                            />
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setActiveDesktopInputCell("date")}
+                              className="w-full h-7 rounded border px-1.5 text-left text-[11px] appearance-none"
+                              style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--surface)", color: "var(--text-primary)" }}
+                            >
+                              {workoutInputDateDisplay || ""}
+                            </button>
+                          )}
+                        </td>
+                        <td className="p-0.5" style={{ borderRight: "1px solid var(--nyaa-table-grid)" }}>
+                          {inputMode === "existing" ? (
+                            <div className="relative" ref={exerciseSearchWrapRef}>
+                              <span className="pointer-events-none absolute inset-y-0 left-2 flex items-center" style={{ color: "var(--text-secondary)" }}>
+                                <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="none" aria-hidden>
+                                  <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="1.6" />
+                                  <path d="M13.5 13.5L18 18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                                </svg>
+                              </span>
+                              <input
+                                ref={exerciseInputRef}
+                                type="text"
+                                value={exerciseSearchTerm}
+                                onFocus={() => {
+                                  if (workoutInput.exerciseId) setExerciseSearchTerm("");
+                                  const rect = exerciseInputRef.current?.getBoundingClientRect();
+                                  if (rect) setExerciseDropdownRect({ top: rect.bottom + window.scrollY, left: rect.left + window.scrollX, width: rect.width });
+                                  setExerciseDropdownOpen(true);
+                                }}
+                                onClick={() => {
+                                  if (workoutInput.exerciseId) setExerciseSearchTerm("");
+                                  const rect = exerciseInputRef.current?.getBoundingClientRect();
+                                  if (rect) setExerciseDropdownRect({ top: rect.bottom + window.scrollY, left: rect.left + window.scrollX, width: rect.width });
+                                  setExerciseDropdownOpen(true);
+                                }}
+                                onBlur={() => {
+                                  const selected = exerciseLookup.get(workoutInput.exerciseId);
+                                  if (selected && exerciseSearchTerm.trim() === "") {
+                                    setExerciseSearchTerm(exerciseMetaById.get(selected.id)?.displayName ?? stripBwPercentHint(getExerciseDisplayName(selected, settings.terminologyMode)));
+                                  }
+                                }}
+                                onKeyDown={(event) => {
+                                  if (event.key === "Escape") {
+                                    event.preventDefault();
+                                    const selected = exerciseLookup.get(workoutInput.exerciseId);
+                                    setExerciseSearchTerm(
+                                      selected
+                                        ? exerciseMetaById.get(selected.id)?.displayName ?? stripBwPercentHint(getExerciseDisplayName(selected, settings.terminologyMode))
+                                        : "",
+                                    );
+                                    setExerciseDropdownOpen(false);
+                                    setExerciseHighlightIndex(-1);
+                                    return;
+                                  }
+                                  if (!exerciseDropdownOpen || filteredInputExercises.length === 0) return;
+                                  if (event.key === "ArrowDown") {
+                                    event.preventDefault();
+                                    setExerciseHighlightIndex((prev) => {
+                                      const next = prev < filteredInputExercises.length - 1 ? prev + 1 : 0;
+                                      requestAnimationFrame(() => {
+                                        exerciseDropdownListRef.current?.children[next]?.scrollIntoView({ block: "nearest" });
+                                      });
+                                      return next;
+                                    });
+                                  } else if (event.key === "ArrowUp") {
+                                    event.preventDefault();
+                                    setExerciseHighlightIndex((prev) => {
+                                      const next = prev > 0 ? prev - 1 : filteredInputExercises.length - 1;
+                                      requestAnimationFrame(() => {
+                                        exerciseDropdownListRef.current?.children[next]?.scrollIntoView({ block: "nearest" });
+                                      });
+                                      return next;
+                                    });
+                                  } else if (event.key === "Enter") {
+                                    event.preventDefault();
+                                    const idx = exerciseHighlightIndex >= 0 ? exerciseHighlightIndex : 0;
+                                    const picked = filteredInputExercises[idx];
+                                    if (picked) applyInputExerciseSelection(picked);
+                                  }
+                                }}
+                                onChange={(event) => {
+                                  const nextTerm = event.target.value;
+                                  setExerciseSearchTerm(nextTerm);
+                                  setExerciseDropdownOpen(true);
+                                  setExerciseHighlightIndex(-1);
+                                }}
+                                placeholder=""
+                                className="w-full h-7 rounded pl-6 pr-6 text-[11px] outline-none"
+                                style={{ backgroundColor: "var(--surface)", border: "none", boxShadow: "none", color: "var(--text-primary)", textShadow: "none" }}
+                              />
+                              {exerciseSearchTerm.trim() !== "" && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                        setExerciseSearchTerm("");
+                                    resetWorkoutInput();
+                                    setExerciseDropdownOpen(false);
+                                    setExerciseHighlightIndex(-1);
+                                  }}
+                                  className="absolute inset-y-0 right-1 flex items-center justify-center px-1.5"
+                                  style={{ color: "var(--text-secondary)" }}
+                                  aria-label="Clear exercise search"
+                                  title="Clear"
+                                >
+                                  <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="none" aria-hidden>
+                                    <path d="M5 5L15 15M15 5L5 15" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                                  </svg>
+                                </button>
+                              )}
+                            </div>
+                          ) : (
+                            activeDesktopInputCell === "newExerciseName" ? (
+                              <input
+                                type="text"
+                                value={workoutInput.newExerciseName}
+                                autoFocus
+                                onBlur={() => setActiveDesktopInputCell(null)}
+                                onKeyDown={handleDesktopInputCellKeyDown}
+                                onChange={(event) => handleWorkoutInputChange("newExerciseName", event.target.value)}
+                                placeholder=""
+                                className="w-full h-7 rounded px-1.5 text-[11px] outline-none"
+                                style={{ backgroundColor: "var(--surface)", border: "none", boxShadow: "none", color: "var(--text-primary)", textShadow: "none" }}
+                              />
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setActiveDesktopInputCell("newExerciseName")}
+                                className="w-full h-7 rounded border px-1.5 text-left text-[11px] appearance-none"
+                                style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--surface)", color: "var(--text-primary)" }}
+                              >
+                                {workoutInput.newExerciseName || ""}
+                              </button>
+                            )
+                          )}
+                        </td>
+                        {inputMode === "existing" && (
+                          <td className="p-0.5" style={{ borderRight: "1px solid var(--nyaa-table-grid)" }}>
+                            <select
+                              value={workoutInput.level}
+                              onChange={(event) => handleWorkoutInputChange("level", event.target.value)}
+                              disabled={!hasSelectedInputExercise}
+                              className="w-full h-7 rounded px-1.5 text-[11px] outline-none"
+                              style={{
+                                backgroundColor: !hasSelectedInputExercise ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
+                                borderColor: "var(--nyaa-table-grid)",
+                                borderWidth: "1px",
+                                borderStyle: "solid",
+                                color: !hasSelectedInputExercise ? "var(--text-secondary)" : "var(--text-primary)",
+                                opacity: !hasSelectedInputExercise ? 0.6 : 1,
+                                cursor: !hasSelectedInputExercise ? "not-allowed" : "pointer",
+                              }}
+                            >
+                              {inputProgressionOptions.map((option) => (
+                                <option key={option.value} value={option.value} style={{ backgroundColor: "var(--surface)", color: "var(--text-primary)" }}>{option.label}</option>
+                              ))}
+                            </select>
+                          </td>
+                        )}
+                        {inputMode === "existing" && (
+                          <td className="p-0.5" style={{ borderRight: "1px solid var(--nyaa-table-grid)" }}>
+                            <select
+                              value={workoutInput.variant}
+                              onChange={(event) => handleWorkoutInputChange("variant", event.target.value)}
+                              disabled={!hasSelectedInputExercise}
+                              className="w-full h-7 rounded px-1.5 text-[11px] outline-none"
+                              style={{
+                                backgroundColor: !hasSelectedInputExercise ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
+                                borderColor: "var(--nyaa-table-grid)",
+                                borderWidth: "1px",
+                                borderStyle: "solid",
+                                color: !hasSelectedInputExercise ? "var(--text-secondary)" : "var(--text-primary)",
+                                opacity: !hasSelectedInputExercise ? 0.6 : 1,
+                                cursor: !hasSelectedInputExercise ? "not-allowed" : "pointer",
+                              }}
+                            >
+                              <option value="">-</option>
+                              {inputVariantOptions.map((variantName) => (
+                                <option key={variantName} value={variantName}>{variantName}</option>
+                              ))}
+                            </select>
+                          </td>
+                        )}
+                        {desktopInputSetColumns.map((col) => {
+                          const key = col.key as "val1" | "val2" | "val3" | "reps1" | "reps2" | "reps3";
+                          const isValueField = key.startsWith("val");
+                          const hasCellValue = Boolean(workoutInput[key]);
+                          return (
+                            <td key={`desktop-${key}`} className="p-0.5" style={{ borderRight: "1px solid var(--nyaa-table-grid)" }}>
+                              {activeDesktopInputCell === key ? (
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step={isValueField ? "0.5" : "1"}
+                                  value={workoutInput[key]}
+                                  autoFocus
+                                  onBlur={() => setActiveDesktopInputCell(null)}
+                                  onKeyDown={handleDesktopInputCellKeyDown}
+                                  onChange={(event) => handleWorkoutInputChange(key, event.target.value)}
+                                  placeholder={isValueField ? setValuePlaceholder : ""}
+                                  disabled={!canSubmitWorkoutInput}
+                                  className={`w-full h-7 rounded px-1.5 text-[11px] outline-none ${isValueField ? "text-center" : ""}`}
+                                  style={{
+                                    backgroundColor: !canSubmitWorkoutInput ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
+                                    borderColor: "var(--nyaa-table-grid)",
+                                    border: "1px solid",
+                                    color: !canSubmitWorkoutInput ? "var(--text-secondary)" : "var(--text-primary)",
+                                    opacity: !canSubmitWorkoutInput ? 0.6 : 1,
+                                    cursor: !canSubmitWorkoutInput ? "not-allowed" : "text",
+                                  }}
+                                />
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => canSubmitWorkoutInput && setActiveDesktopInputCell(key)}
+                                  disabled={!canSubmitWorkoutInput}
+                                  className={`w-full h-7 rounded border px-1.5 text-[11px] appearance-none ${isValueField ? "text-center" : "text-left"}`}
+                                  style={{
+                                    borderColor: "var(--nyaa-table-grid)",
+                                    backgroundColor: !canSubmitWorkoutInput ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
+                                    color: !canSubmitWorkoutInput
+                                      ? "var(--text-secondary)"
+                                      : (isValueField && !hasCellValue ? "color-mix(in srgb, var(--text-secondary) 82%, var(--surface))" : "var(--text-primary)"),
+                                    opacity: !canSubmitWorkoutInput ? 0.6 : 1,
+                                    cursor: !canSubmitWorkoutInput ? "not-allowed" : "text",
+                                  }}
+                                >
+                                  {workoutInput[key] || (isValueField ? setValuePlaceholder : "")}
+                                </button>
+                              )}
+                            </td>
+                          );
+                        })}
+                        {inputMode === "existing" && (
+                          <td className="p-0.5" style={{ borderRight: "1px solid var(--nyaa-table-grid)" }}>
+                            <select
+                              value={workoutInput.modifierKg}
+                              onChange={(event) => handleWorkoutInputChange("modifierKg", event.target.value)}
+                              disabled={!hasSelectedInputExercise}
+                              className="w-full h-7 rounded px-1.5 text-[11px] outline-none"
+                              style={{
+                                backgroundColor: !hasSelectedInputExercise ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
+                                borderColor: "var(--nyaa-table-grid)",
+                                borderWidth: "1px",
+                                borderStyle: "solid",
+                                color: !hasSelectedInputExercise ? "var(--text-secondary)" : "var(--text-primary)",
+                                opacity: !hasSelectedInputExercise ? 0.6 : 1,
+                                cursor: !hasSelectedInputExercise ? "not-allowed" : "pointer",
+                              }}
+                            >
+                              <option value=""></option>
+                              {signedModifierOptions.map((kg) => (
+                                <option key={String(kg)} value={String(kg)}>
+                                  {formatSignedModifierKg(kg)}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                        )}
+                        <td className="p-0.5">
+                          {activeDesktopInputCell === "notes" ? (
+                            <input
+                              type="text"
+                              value={workoutInput.notes}
+                              autoFocus
+                              onBlur={() => setActiveDesktopInputCell(null)}
+                              onKeyDown={handleDesktopInputCellKeyDown}
+                              onChange={(event) => handleWorkoutInputChange("notes", event.target.value)}
+                              placeholder=""
+                              disabled={inputMode === "existing" && !hasSelectedInputExercise}
+                              className="w-full h-7 rounded px-1.5 text-[11px] outline-none"
+                              style={{
+                                backgroundColor: inputMode === "existing" && !hasSelectedInputExercise
+                                  ? "color-mix(in srgb, var(--border) 14%, var(--surface))"
+                                  : "var(--surface)",
+                                borderColor: "var(--nyaa-table-grid)",
+                                border: "1px solid",
+                                color: inputMode === "existing" && !hasSelectedInputExercise ? "var(--text-secondary)" : "var(--text-primary)",
+                                opacity: inputMode === "existing" && !hasSelectedInputExercise ? 0.6 : 1,
+                                cursor: inputMode === "existing" && !hasSelectedInputExercise ? "not-allowed" : "text",
+                              }}
+                            />
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => !(inputMode === "existing" && !hasSelectedInputExercise) && setActiveDesktopInputCell("notes")}
+                              disabled={inputMode === "existing" && !hasSelectedInputExercise}
+                              className="w-full h-7 rounded border px-1.5 text-left text-[11px] appearance-none"
+                              style={{
+                                borderColor: "var(--nyaa-table-grid)",
+                                backgroundColor: inputMode === "existing" && !hasSelectedInputExercise
+                                  ? "color-mix(in srgb, var(--border) 14%, var(--surface))"
+                                  : "var(--surface)",
+                                color: inputMode === "existing" && !hasSelectedInputExercise ? "var(--text-secondary)" : "var(--text-primary)",
+                                opacity: inputMode === "existing" && !hasSelectedInputExercise ? 0.6 : 1,
+                                cursor: inputMode === "existing" && !hasSelectedInputExercise ? "not-allowed" : "text",
+                              }}
+                            >
+                              {workoutInput.notes || ""}
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div className="mt-1.5 flex items-center justify-end gap-1.5 pr-1">
+                  <GlowButton
+                    variant="jade"
+                    size="sm"
+                    onClick={handleAddWorkoutLog}
+                    disabled={isSaving || !canSubmitWorkoutInput}
+                    className={!canSubmitWorkoutInput ? "opacity-50 cursor-not-allowed" : ""}
+                  >
+                    {isSaving ? "Saving..." : "+ Add"}
+                  </GlowButton>
+                  <GlowButton
+                    variant="ghost"
+                    size="sm"
+                    onClick={resetWorkoutInput}
+                  >
+                    Reset
+                  </GlowButton>
+                </div>
+                </>
+              )}
+
+              {isMobile && (
+              <div className={isMobile ? "grid grid-cols-1 gap-3" : "grid grid-cols-[repeat(28,minmax(0,1fr))] items-end gap-x-3 gap-y-2"}>
+              <div className="mx-auto w-full max-w-[760px] space-y-4 px-2 sm:px-3">
+              <div
+                className="flex flex-col gap-2 rounded-xl border px-2 py-2 pb-3"
+                style={{
+                  backgroundColor: "color-mix(in srgb, var(--surface) 92%, transparent)",
+                  borderColor: "color-mix(in srgb, var(--border) 78%, var(--accent) 22%)",
+                  boxShadow: "0 6px 16px color-mix(in srgb, var(--ink-deep) 12%, transparent)",
+                }}
+              >
+                <p className="px-4 text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--text-secondary)" }}>
+                  Exercise Details
+                </p>
+              <div className={isMobile ? mobileFieldRowClass : "col-span-2 flex flex-col gap-1"}>
+                <label className={isMobile ? mobileFieldLabelClass : "hidden"} style={{ color: "var(--text-secondary)" }}>Date</label>
                 <input
-                  type="date"
-                  value={workoutInput.date}
-                  onChange={(event) => handleWorkoutInputChange("date", event.target.value)}
-                  className="rounded px-2 py-1 text-xs outline-none"
-                  style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)", border: "1px solid", color: "var(--text-primary)" }}
+                  type="text"
+                  inputMode="numeric"
+                  value={isDateInputEditing ? dateInputDraft : workoutInputDateDisplay}
+                  onFocus={() => {
+                    setDateInputDraft(workoutInputDateDisplay);
+                    setIsDateInputEditing(true);
+                  }}
+                  onChange={(event) => setDateInputDraft(event.target.value)}
+                  onBlur={handleWorkoutInputDateBlur}
+                  placeholder={dateInputPlaceholder}
+                  className={`rounded outline-none ${isMobile ? "flex-1 px-3 py-2 text-sm" : "px-2 py-1 text-xs"}`}
+                  style={{ backgroundColor: "var(--surface)", borderColor: "var(--nyaa-table-grid)", border: "1px solid", color: "var(--text-primary)" }}
                 />
               </div>
 
-              <div className="flex flex-col gap-1 min-w-[220px]" ref={exerciseSearchWrapRef}>
-                <label className="text-[10px] text-center" style={{ color: "var(--text-muted)" }}>Exercise</label>
-                <div className="relative">
-                  <span className="pointer-events-none absolute inset-y-0 left-2 flex items-center" style={{ color: "var(--text-muted)" }}>
+              {inputMode === "existing" ? (
+              <div className={isMobile ? mobileFieldRowClass : "col-span-4 flex flex-col gap-1 min-w-[220px]"} ref={exerciseSearchWrapRef}>
+                <label className={isMobile ? mobileFieldLabelClass : "hidden"} style={{ color: "var(--text-secondary)" }}>Exercise</label>
+                <div className={`relative ${isMobile ? "flex-1" : ""}`}>
+                  <span className="pointer-events-none absolute inset-y-0 left-2 flex items-center" style={{ color: "var(--text-secondary)" }}>
                     <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="none" aria-hidden>
                       <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="1.6" />
                       <path d="M13.5 13.5L18 18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -1792,20 +2730,21 @@ function TrainingLogTable({
                       setExerciseDropdownOpen(true);
                       setExerciseHighlightIndex(-1);
                     }}
-                    placeholder="Search exercise"
-                    className="w-full rounded py-1 pl-7 pr-7 text-xs outline-none"
-                    style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)", border: "1px solid", color: "var(--text-primary)" }}
+                    placeholder=""
+                    className={`w-full rounded pl-7 pr-7 outline-none ${isMobile ? "py-2 text-sm" : "py-1 text-xs"}`}
+                    style={{ backgroundColor: "var(--surface)", borderColor: "var(--nyaa-table-grid)", border: "1px solid", color: "var(--text-primary)" }}
                   />
                   {exerciseSearchTerm.trim() !== "" && (
                     <button
                       type="button"
                       onClick={() => {
+                        setExerciseSearchTerm("");
                         resetWorkoutInput();
                         setExerciseDropdownOpen(false);
                         setExerciseHighlightIndex(-1);
                       }}
                       className="absolute inset-y-0 right-1 flex items-center justify-center px-1.5"
-                      style={{ color: "var(--text-muted)" }}
+                      style={{ color: "var(--text-secondary)" }}
                       aria-label="Clear exercise search"
                       title="Clear"
                     >
@@ -1818,49 +2757,197 @@ function TrainingLogTable({
                   {/* dropdown rendered via portal — see portalled section at component bottom */}
                 </div>
               </div>
+              ) : (
+              <div className={isMobile ? mobileFieldRowClass : "col-span-6 flex flex-col gap-1 min-w-[220px]"}>
+                <label className={isMobile ? mobileFieldLabelClass : "hidden"} style={{ color: "var(--text-secondary)" }}>Exercise Name</label>
+                <input
+                  type="text"
+                  value={workoutInput.newExerciseName}
+                  onChange={(event) => handleWorkoutInputChange("newExerciseName", event.target.value)}
+                  placeholder=""
+                  className={`w-full rounded outline-none ${isMobile ? "flex-1 px-3 py-2 text-sm" : "px-2 py-1 text-xs"}`}
+                  style={{ backgroundColor: "var(--surface)", borderColor: "var(--nyaa-table-grid)", border: "1px solid", color: "var(--text-primary)" }}
+                />
+              </div>
+              )}
 
-              <div className="flex flex-col gap-1 min-w-[150px]">
-                <label className="text-[10px] text-center" style={{ color: "var(--text-muted)" }}>Progression</label>
+              {inputMode === "existing" && (
+              <div className={isMobile ? mobileFieldRowClass : "col-span-2 flex flex-col gap-1 min-w-[150px]"}>
+                <label className={isMobile ? mobileFieldLabelClass : "hidden"} style={{ color: "var(--text-secondary)" }}>Progression</label>
                 <select
                   value={workoutInput.level}
                   onChange={(event) => handleWorkoutInputChange("level", event.target.value)}
                   disabled={!hasSelectedInputExercise}
-                  className="rounded px-2 py-1 text-xs outline-none"
+                  className={`rounded outline-none font-medium ${isMobile ? "flex-1 px-3 py-2 text-sm" : "px-2 py-1 text-xs"}`}
                   style={{
                     backgroundColor: !hasSelectedInputExercise ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
-                    borderColor: "var(--border)",
-                    border: "1px solid",
-                    color: !hasSelectedInputExercise ? "var(--text-muted)" : "var(--text-secondary)",
+                    borderColor: !hasSelectedInputExercise ? "var(--nyaa-table-grid)" : "var(--nyaa-table-grid)",
+                    borderWidth: "1px",
+                    borderStyle: "solid",
+                    color: !hasSelectedInputExercise ? "var(--text-secondary)" : "var(--text-primary)",
                     opacity: !hasSelectedInputExercise ? 0.6 : 1,
                     cursor: !hasSelectedInputExercise ? "not-allowed" : "pointer",
+                    boxShadow: hasSelectedInputExercise ? "inset 0 0 0 1px color-mix(in srgb, var(--border) 55%, transparent)" : undefined,
+                    ...selectCaretStyle,
                   }}
                 >
                   {inputProgressionOptions.map((option) => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
+                    <option key={option.value} value={option.value} style={{ backgroundColor: "var(--surface)", color: "var(--text-primary)" }}>{option.label}</option>
                   ))}
                 </select>
               </div>
+              )}
+
+              {inputMode === "existing" && (
+              <div className={isMobile ? mobileFieldRowClass : "col-span-2 flex flex-col gap-1 min-w-[150px]"}>
+                <label className={isMobile ? mobileFieldLabelClass : "hidden"} style={{ color: "var(--text-secondary)" }}>Variant</label>
+                <select
+                  value={workoutInput.variant}
+                  onChange={(event) => handleWorkoutInputChange("variant", event.target.value)}
+                  disabled={!hasSelectedInputExercise}
+                  className={`rounded outline-none font-medium ${isMobile ? "flex-1 px-3 py-2 text-sm" : "px-2 py-1 text-xs"}`}
+                  style={{
+                    backgroundColor: !hasSelectedInputExercise ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
+                    borderColor: !hasSelectedInputExercise ? "var(--nyaa-table-grid)" : "var(--nyaa-table-grid)",
+                    borderWidth: "1px",
+                    borderStyle: "solid",
+                    color: !hasSelectedInputExercise ? "var(--text-secondary)" : "var(--text-primary)",
+                    opacity: !hasSelectedInputExercise ? 0.6 : 1,
+                    cursor: !hasSelectedInputExercise ? "not-allowed" : "pointer",
+                    boxShadow: hasSelectedInputExercise ? "inset 0 0 0 1px color-mix(in srgb, var(--border) 55%, transparent)" : undefined,
+                    ...selectCaretStyle,
+                  }}
+                >
+                  <option value="" style={{ backgroundColor: "var(--surface)", color: "var(--text-primary)" }}>-</option>
+                  {inputVariantOptions.map((variantName) => (
+                    <option key={variantName} value={variantName} style={{ backgroundColor: "var(--surface)", color: "var(--text-primary)" }}>{variantName}</option>
+                  ))}
+                </select>
+              </div>
+              )}
+
+              </div>
+
+              <div
+                className="flex flex-col gap-2 rounded-xl border px-2 py-2"
+                style={{
+                  backgroundColor: "color-mix(in srgb, var(--surface) 92%, transparent)",
+                  borderColor: "color-mix(in srgb, var(--border) 78%, var(--accent) 22%)",
+                  boxShadow: "0 6px 16px color-mix(in srgb, var(--ink-deep) 12%, transparent)",
+                }}
+              >
+                <p className="px-4 text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--text-secondary)" }}>
+                  Input Mode
+                </p>
+
+              <div className={isMobile ? mobileFieldRowClass : "col-span-2 flex flex-col gap-1 min-w-[150px]"}>
+                <label className={isMobile ? mobileFieldLabelClass : "hidden"} style={{ color: "var(--text-secondary)" }}>Mode</label>
+                <div className={`grid grid-cols-2 gap-2 ${isMobile ? "flex-1" : ""}`}>
+                  <button
+                    type="button"
+                    onClick={() => setInputValueMode("weight")}
+                    className={inputModeOptionButtonClass}
+                    style={{
+                      borderColor: "var(--nyaa-table-grid)",
+                      color: !isTimedInput ? "var(--text-primary)" : "var(--text-secondary)",
+                      backgroundColor: !isTimedInput
+                        ? "color-mix(in srgb, var(--accent) 18%, transparent)"
+                        : "var(--surface)",
+                    }}
+                  >
+                    Weight
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInputValueMode("timed")}
+                    className={inputModeOptionButtonClass}
+                    style={{
+                      borderColor: "var(--nyaa-table-grid)",
+                      color: isTimedInput ? "var(--timed-color)" : "var(--text-secondary)",
+                      backgroundColor: isTimedInput
+                        ? "color-mix(in srgb, var(--timed-color) 20%, transparent)"
+                        : "var(--surface)",
+                    }}
+                  >
+                    Timed
+                  </button>
+                </div>
+              </div>
+
+              <div className={isMobile ? mobileFieldRowClass : "col-span-2 flex flex-col gap-1 min-w-[150px]"}>
+                <label className={isMobile ? mobileFieldLabelClass : "hidden"} style={{ color: "var(--text-secondary)" }}>Unit</label>
+                <div className={`grid grid-cols-2 gap-2 ${isMobile ? "flex-1" : ""}`}>
+                  <button
+                    type="button"
+                    onClick={() => setInputWeightUnit("kg")}
+                    disabled={isTimedInput}
+                    className={inputModeOptionButtonClass}
+                    style={{
+                      borderColor: "var(--nyaa-table-grid)",
+                      color: inputWeightUnit === "kg" ? "var(--text-primary)" : "var(--text-secondary)",
+                      backgroundColor: inputWeightUnit === "kg"
+                        ? "color-mix(in srgb, var(--accent) 18%, transparent)"
+                        : "var(--surface)",
+                      opacity: isTimedInput ? 0.45 : 1,
+                      cursor: isTimedInput ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    kg
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInputWeightUnit("lbs")}
+                    disabled={isTimedInput}
+                    className={inputModeOptionButtonClass}
+                    style={{
+                      borderColor: "var(--nyaa-table-grid)",
+                      color: inputWeightUnit === "lbs" ? "var(--text-primary)" : "var(--text-secondary)",
+                      backgroundColor: inputWeightUnit === "lbs"
+                        ? "color-mix(in srgb, var(--accent) 18%, transparent)"
+                        : "var(--surface)",
+                      opacity: isTimedInput ? 0.45 : 1,
+                      cursor: isTimedInput ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    lbs
+                  </button>
+                </div>
+              </div>
+
+              </div>
+
+              <div
+                className="flex flex-col gap-2 rounded-xl border px-2 py-2"
+                style={{
+                  backgroundColor: "color-mix(in srgb, var(--surface) 92%, transparent)",
+                  borderColor: "color-mix(in srgb, var(--border) 78%, var(--accent) 22%)",
+                  boxShadow: "0 6px 16px color-mix(in srgb, var(--ink-deep) 12%, transparent)",
+                }}
+              >
+                <p className="px-4 text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--text-secondary)" }}>
+                  Sets And Notes
+                </p>
 
               {[1, 2, 3].map((setNo) => (
-                <div key={`set-${setNo}`} className="flex flex-col gap-1">
-                  <label className="text-[10px] text-center" style={{ color: "var(--text-muted)" }}>{`Set ${setNo}`}</label>
-                  <div className="flex items-center gap-1">
+                <div key={`set-${setNo}`} className={isMobile ? mobileFieldRowClass : "col-span-2 flex flex-col gap-1"}>
+                  <label className={isMobile ? mobileFieldLabelClass : "hidden"} style={{ color: "var(--text-secondary)" }}>{`Set ${setNo}`}</label>
+                  <div className={`flex items-center gap-1 ${isMobile ? "flex-1 min-w-0" : ""}`}>
                     <input
                       type="number"
                       min="0"
                       step="0.5"
                       value={workoutInput[`val${setNo}` as "val1" | "val2" | "val3"]}
                       onChange={(event) => handleWorkoutInputChange(`val${setNo}` as "val1" | "val2" | "val3", event.target.value)}
-                      placeholder="W"
-                      disabled={!hasSelectedInputExercise}
-                      className="w-[56px] rounded px-2 py-1 text-xs outline-none"
+                      placeholder={setValuePlaceholder}
+                      disabled={!canSubmitWorkoutInput}
+                      className={`rounded outline-none text-center ${isMobile ? "flex-1 min-w-0 px-2 py-2 text-sm" : "w-[74px] px-2 py-1 text-xs"}`}
                       style={{
-                        backgroundColor: !hasSelectedInputExercise ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
-                        borderColor: "var(--border)",
+                        backgroundColor: !canSubmitWorkoutInput ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
+                        borderColor: "var(--nyaa-table-grid)",
                         border: "1px solid",
-                        color: !hasSelectedInputExercise ? "var(--text-muted)" : "var(--text-primary)",
-                        opacity: !hasSelectedInputExercise ? 0.6 : 1,
-                        cursor: !hasSelectedInputExercise ? "not-allowed" : "text",
+                        color: !canSubmitWorkoutInput ? "var(--text-secondary)" : "var(--text-primary)",
+                        opacity: !canSubmitWorkoutInput ? 0.6 : 1,
+                        cursor: !canSubmitWorkoutInput ? "not-allowed" : "text",
                       }}
                     />
                     <input
@@ -1869,133 +2956,160 @@ function TrainingLogTable({
                       step="1"
                       value={workoutInput[`reps${setNo}` as "reps1" | "reps2" | "reps3"]}
                       onChange={(event) => handleWorkoutInputChange(`reps${setNo}` as "reps1" | "reps2" | "reps3", event.target.value)}
-                      placeholder="R"
-                      disabled={!hasSelectedInputExercise}
-                      className="w-[50px] rounded px-2 py-1 text-xs outline-none"
+                      placeholder={isMobile ? "reps" : ""}
+                      disabled={!canSubmitWorkoutInput}
+                      className={`rounded outline-none ${isMobile ? "flex-1 min-w-0 px-2 py-2 text-sm" : "w-[50px] px-2 py-1 text-xs"}`}
                       style={{
-                        backgroundColor: !hasSelectedInputExercise ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
-                        borderColor: "var(--border)",
+                        backgroundColor: !canSubmitWorkoutInput ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
+                        borderColor: "var(--nyaa-table-grid)",
                         border: "1px solid",
-                        color: !hasSelectedInputExercise ? "var(--text-muted)" : "var(--text-primary)",
-                        opacity: !hasSelectedInputExercise ? 0.6 : 1,
-                        cursor: !hasSelectedInputExercise ? "not-allowed" : "text",
+                        color: !canSubmitWorkoutInput ? "var(--text-secondary)" : "var(--text-primary)",
+                        opacity: !canSubmitWorkoutInput ? 0.6 : 1,
+                        cursor: !canSubmitWorkoutInput ? "not-allowed" : "text",
                       }}
                     />
                   </div>
                 </div>
               ))}
 
-              <div className="flex flex-col gap-1 w-[110px]">
-                <label className="text-[10px] text-center" style={{ color: "var(--text-muted)" }}>Modifier</label>
-                <select
-                  value={workoutInput.modifierKg}
-                  onChange={(event) => handleWorkoutInputChange("modifierKg", event.target.value)}
-                  disabled={!hasSelectedInputExercise}
-                  className="rounded px-2 py-1 text-xs outline-none"
-                  style={{
-                    backgroundColor: !hasSelectedInputExercise ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
-                    borderColor: "var(--border)",
-                    border: "1px solid",
-                    color: !hasSelectedInputExercise ? "var(--text-muted)" : "var(--gold)",
-                    opacity: !hasSelectedInputExercise ? 0.6 : 1,
-                    cursor: !hasSelectedInputExercise ? "not-allowed" : "pointer",
-                  }}
-                >
-                  <option value=""></option>
-                  {signedModifierOptions.map((kg) => (
-                    <option key={String(kg)} value={String(kg)}>
-                      {formatSignedModifierKg(kg)}
-                    </option>
-                  ))}
-                </select>
+              {inputMode === "existing" && (
+              <div className={isMobile ? mobileFieldRowClass : "col-span-2 flex flex-col gap-1 min-w-[150px]"}>
+                {isMobile ? (
+                  <>
+                    <label className={mobileFieldLabelClass} style={{ color: "var(--text-secondary)" }}>Mod</label>
+                    <select
+                      value={workoutInput.modifierKg}
+                      onChange={(event) => handleWorkoutInputChange("modifierKg", event.target.value)}
+                      disabled={!hasSelectedInputExercise}
+                      className="flex-1 rounded outline-none px-3 py-2 text-sm"
+                      style={{
+                        backgroundColor: !hasSelectedInputExercise ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
+                        borderColor: "var(--nyaa-table-grid)",
+                        border: "1px solid",
+                        color: !hasSelectedInputExercise ? "var(--text-secondary)" : "var(--gold)",
+                        opacity: !hasSelectedInputExercise ? 0.6 : 1,
+                        cursor: !hasSelectedInputExercise ? "not-allowed" : "pointer",
+                      }}
+                    >
+                      <option value=""></option>
+                      {signedModifierOptions.map((kg) => (
+                        <option key={String(kg)} value={String(kg)}>
+                          {formatSignedModifierKg(kg)}
+                        </option>
+                      ))}
+                    </select>
+                  </>
+                ) : (
+                  <>
+                    <label className="hidden" style={{ color: "var(--text-secondary)" }}>Modifier</label>
+                    <select
+                      value={workoutInput.modifierKg}
+                      onChange={(event) => handleWorkoutInputChange("modifierKg", event.target.value)}
+                      disabled={!hasSelectedInputExercise}
+                      className="rounded outline-none px-2 py-1 text-xs"
+                      style={{
+                        backgroundColor: !hasSelectedInputExercise ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
+                        borderColor: "var(--nyaa-table-grid)",
+                        border: "1px solid",
+                        color: !hasSelectedInputExercise ? "var(--text-secondary)" : "var(--gold)",
+                        opacity: !hasSelectedInputExercise ? 0.6 : 1,
+                        cursor: !hasSelectedInputExercise ? "not-allowed" : "pointer",
+                      }}
+                    >
+                      <option value=""></option>
+                      {signedModifierOptions.map((kg) => (
+                        <option key={String(kg)} value={String(kg)}>
+                          {formatSignedModifierKg(kg)}
+                        </option>
+                      ))}
+                    </select>
+                  </>
+                )}
               </div>
+              )}
 
-              <div className="flex flex-col gap-1 min-w-[150px]">
-                <label className="text-[10px] text-center" style={{ color: "var(--text-muted)" }}>Variant</label>
-                <select
-                  value={workoutInput.variant}
-                  onChange={(event) => handleWorkoutInputChange("variant", event.target.value)}
-                  disabled={!hasSelectedInputExercise}
-                  className="rounded px-2 py-1 text-xs outline-none"
-                  style={{
-                    backgroundColor: !hasSelectedInputExercise ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
-                    borderColor: "var(--border)",
-                    border: "1px solid",
-                    color: !hasSelectedInputExercise ? "var(--text-muted)" : "var(--text-primary)",
-                    opacity: !hasSelectedInputExercise ? 0.6 : 1,
-                    cursor: !hasSelectedInputExercise ? "not-allowed" : "pointer",
-                  }}
-                >
-                  <option value="">-</option>
-                  {inputVariantOptions.map((variantName) => (
-                    <option key={variantName} value={variantName}>{variantName}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex flex-col gap-1 min-w-[180px] grow">
-                <label className="text-[10px] text-center" style={{ color: "var(--text-muted)" }}>Notes</label>
+              {inputMode === "existing" && (
+              <div className={isMobile ? mobileFieldRowClass : "col-span-4 flex flex-col gap-1 min-w-[220px]"}>
+                <label className={isMobile ? mobileFieldLabelClass : "hidden"} style={{ color: "var(--text-secondary)" }}>Notes</label>
                 <input
                   type="text"
                   value={workoutInput.notes}
                   onChange={(event) => handleWorkoutInputChange("notes", event.target.value)}
-                  placeholder="Optional notes"
+                  placeholder=""
                   disabled={!hasSelectedInputExercise}
-                  className="rounded px-2 py-1 text-xs outline-none"
+                  className={`rounded outline-none ${isMobile ? "flex-1 px-3 py-2 text-sm" : "px-2 py-1 text-xs"}`}
                   style={{
                     backgroundColor: !hasSelectedInputExercise ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
-                    borderColor: "var(--border)",
+                    borderColor: "var(--nyaa-table-grid)",
                     border: "1px solid",
-                    color: !hasSelectedInputExercise ? "var(--text-muted)" : "var(--text-primary)",
+                    color: !hasSelectedInputExercise ? "var(--text-secondary)" : "var(--text-primary)",
                     opacity: !hasSelectedInputExercise ? 0.6 : 1,
                     cursor: !hasSelectedInputExercise ? "not-allowed" : "text",
                   }}
                 />
               </div>
+              )}
 
-              <div className="flex items-end gap-2">
-                <button
-                  type="button"
-                  className="text-xs px-3 py-1 rounded-md border transition-all duration-100 hover:scale-105 active:scale-95"
+              {inputMode === "new" && (
+              <div className={isMobile ? mobileFieldRowClass : "col-span-4 flex flex-col gap-1 min-w-[220px]"}>
+                <label className={isMobile ? mobileFieldLabelClass : "hidden"} style={{ color: "var(--text-secondary)" }}>Notes</label>
+                <input
+                  type="text"
+                  value={workoutInput.notes}
+                  onChange={(event) => handleWorkoutInputChange("notes", event.target.value)}
+                  placeholder=""
+                  className={`rounded outline-none ${isMobile ? "flex-1 px-3 py-2 text-sm" : "px-2 py-1 text-xs"}`}
                   style={{
-                    borderColor: !hasSelectedInputExercise ? "var(--border)" : "var(--accent)",
-                    color: !hasSelectedInputExercise ? "var(--text-muted)" : "var(--accent)",
-                    backgroundColor: !hasSelectedInputExercise
-                      ? "color-mix(in srgb, var(--border) 10%, transparent)"
-                      : "color-mix(in srgb, var(--accent) 6%, transparent)",
-                    opacity: !hasSelectedInputExercise ? 0.7 : 1,
-                    cursor: !hasSelectedInputExercise ? "not-allowed" : "pointer",
+                    backgroundColor: "var(--surface)",
+                    borderColor: "var(--nyaa-table-grid)",
+                    border: "1px solid",
+                    color: "var(--text-primary)",
                   }}
+                />
+              </div>
+              )}
+              </div>
+              </div>
+
+              <div
+                className={`flex gap-2 ${isMobile ? "mx-auto w-full max-w-[760px] items-stretch px-2 sm:px-3 pt-3 pb-2" : "col-span-2 items-end justify-end pr-1"}`}
+              >
+                <GlowButton
+                  variant="jade"
+                  size={isMobile ? "md" : "sm"}
                   onClick={handleAddWorkoutLog}
-                  disabled={isSaving || !hasSelectedInputExercise}
+                  disabled={isSaving || !canSubmitWorkoutInput}
+                  className={`${isMobile ? "order-2 flex-1" : ""} ${!canSubmitWorkoutInput ? "opacity-50 cursor-not-allowed" : ""}`}
                 >
                   {isSaving ? "Saving..." : "+ Add"}
-                </button>
-                <button
-                  type="button"
-                  className="text-xs px-3 py-1 rounded-md border transition-all duration-100 hover:scale-105 active:scale-95"
-                  style={{ borderColor: "var(--border)", color: "var(--text-secondary)" }}
+                </GlowButton>
+                <GlowButton
+                  variant="ghost"
+                  size={isMobile ? "md" : "sm"}
                   onClick={resetWorkoutInput}
+                  className={isMobile ? "order-1 flex-1" : ""}
                 >
                   Reset
-                </button>
+                </GlowButton>
               </div>
               </div>
+              )}
             </div>
           </div>
         )}
 
+        {!forceMobileInputOpen && (
         <div
           className="w-full rounded-2xl relative overflow-hidden"
           style={{
             borderColor: "var(--border)",
             border: "1px solid",
-            backgroundColor: "var(--surface)"
+            backgroundColor: "var(--surface)",
           }}
         >
           <div className="relative">
           {/* Edit header bar */}
-            <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "#f5f5f5", backgroundColor: "#f5f5f5" }}>
+            <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-primary)" }}>Training Log</span>
                 {saveMessage && (
@@ -2014,15 +3128,15 @@ function TrainingLogTable({
                 )}
               </div>
               <div className="flex items-center gap-2">
-                {!isMobile && entries.length > 0 && (
+                {!isMobile && entries.length > 0 && !forceSimpleViewOnly && (
                   <button
                     type="button"
                     role="switch"
-                    aria-checked={isSimpleView}
+                    aria-checked={effectiveSimpleView}
                     aria-disabled={isEditMode}
                     onClick={() => setIsSimpleView((prev) => !prev)}
                     disabled={isEditMode}
-                    className="inline-flex items-center gap-2 rounded-md border px-2 py-1 text-[11px] transition-all duration-100 hover:scale-105 active:scale-95"
+                    className={toolbarButtonClass}
                     style={{
                       borderColor: "var(--border)",
                       color: "var(--text-secondary)",
@@ -2036,7 +3150,7 @@ function TrainingLogTable({
                     <span
                       className="relative inline-flex h-4 w-8 items-center rounded-full transition-colors"
                       style={{
-                        backgroundColor: isSimpleView
+                        backgroundColor: effectiveSimpleView
                           ? "color-mix(in srgb, var(--accent) 40%, transparent)"
                           : "color-mix(in srgb, var(--border) 55%, transparent)",
                       }}
@@ -2044,8 +3158,8 @@ function TrainingLogTable({
                       <span
                         className="absolute h-3 w-3 rounded-full transition-all"
                         style={{
-                          left: isSimpleView ? "16px" : "2px",
-                          backgroundColor: isSimpleView ? "var(--accent)" : "var(--text-muted)",
+                          left: effectiveSimpleView ? "16px" : "2px",
+                          backgroundColor: effectiveSimpleView ? "var(--accent)" : "var(--text-muted)",
                         }}
                       />
                     </span>
@@ -2057,7 +3171,7 @@ function TrainingLogTable({
                     role="switch"
                     aria-checked={isOpenedTableMode}
                     onClick={() => setFitToScreenMode((prev) => !prev)}
-                    className="inline-flex items-center gap-2 rounded-md border px-2 py-1 text-[11px] transition-all duration-100 hover:scale-105 active:scale-95"
+                    className={toolbarButtonClass}
                     style={{ borderColor: "var(--border)", color: "var(--text-secondary)", backgroundColor: "var(--surface)" }}
                     title={isOpenedTableMode ? "Full-page table" : "Fit-to-screen table"}
                   >
@@ -2080,29 +3194,49 @@ function TrainingLogTable({
                     </span>
                   </button>
                 )}
-                {!isMobile && entries.length > 0 && isEditMode ? (
-                  <>
-                    <GlowButton variant="ghost" size="sm" onClick={handleResetHeadersToDefault} disabled={isSaving}>
-                      Reset Headers
-                    </GlowButton>
-                    <GlowButton variant="jade" size="sm" onClick={handleSaveChanges} disabled={isSaving}>
-                      {isSaving ? "Saving..." : "✓ Save"}
-                    </GlowButton>
-                    <GlowButton variant="ghost" size="sm" onClick={handleCancel} disabled={isSaving}>
-                      ✕ Cancel
-                    </GlowButton>
-                  </>
-                ) : !isMobile && entries.length > 0 ? (
+                {!isMobile && entries.length > 0 && isEditMode && (
+                  <GlowButton variant="ghost" size="sm" onClick={handleResetHeadersToDefault} disabled={isSaving}>
+                    Reset Headers
+                  </GlowButton>
+                )}
+                {!isMobile && entries.length > 0 && canEditTrainingLogs ? (
                   <button
-                    onClick={handleEditModeToggle}
-                    className="text-xs px-3 py-1 rounded-md border transition-all duration-100 hover:scale-105 active:scale-95"
-                    style={{
-                      borderColor: "var(--accent)",
-                      color: "var(--accent)",
-                      backgroundColor: "color-mix(in srgb, var(--accent) 5%, transparent)"
+                    type="button"
+                    role="switch"
+                    aria-checked={isEditMode}
+                    aria-label="Toggle edit training log mode"
+                    onClick={() => {
+                      if (isEditMode) {
+                        handleCancel();
+                      } else {
+                        handleEditModeToggle();
+                      }
                     }}
+                    className={toolbarButtonClass}
+                    style={{
+                      borderColor: isEditMode ? "var(--accent)" : "var(--border)",
+                      color: isEditMode ? "var(--accent)" : "var(--text-secondary)",
+                      backgroundColor: "var(--surface)",
+                    }}
+                    title="Edit training log"
                   >
-                    ✎ Edit
+                    <span>Edit Training Log</span>
+                    <span
+                      className="relative inline-flex h-4 w-8 items-center rounded-full transition-colors"
+                      style={{
+                        backgroundColor: isEditMode
+                          ? "color-mix(in srgb, var(--accent) 40%, transparent)"
+                          : "color-mix(in srgb, var(--border) 55%, transparent)",
+                      }}
+                    >
+                      <span
+                        className="absolute h-3 w-3 rounded-full transition-all"
+                        style={{
+                          left: isEditMode ? "16px" : "2px",
+                          backgroundColor: isEditMode ? "var(--accent)" : "var(--text-muted)",
+                        }}
+                      />
+                    </span>
                   </button>
                 ) : (
                   <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>No logs yet</span>
@@ -2110,7 +3244,7 @@ function TrainingLogTable({
               </div>
             </div>
 
-          {isMobile ? (
+          {useMobileCardView ? (
             <div
               ref={tableScrollRef}
               className="overflow-y-auto px-2 py-2 space-y-2 scrollbar-hide"
@@ -2142,8 +3276,8 @@ function TrainingLogTable({
                       entryDisplayName={entryDisplayName}
                       typeLabel={typeLabel}
                       formattedEntryDate={formattedEntryDate}
-                      variationDisplay={variationDisplay}
                       weightUnit={weightUnit}
+                      onOpenExerciseHistory={() => openExerciseHistoryFromMobileCard(entry)}
                     />
                   );
                 })
@@ -2197,8 +3331,8 @@ function TrainingLogTable({
             <thead
               className="sticky top-0 z-10"
               style={{
-                backgroundColor: "var(--surface)",
-                boxShadow: "0 -2px 0 var(--surface)",
+                backgroundColor: "var(--nyaa-table-head-bg)",
+                boxShadow: "0 -2px 0 var(--nyaa-table-head-bg)",
                 cursor: isEditMode ? (isTableDragging ? "grabbing" : "grab") : undefined,
               }}
             >
@@ -2206,7 +3340,7 @@ function TrainingLogTable({
                 className="border-b"
                 style={{
                   borderColor: "var(--border)",
-                  color: "var(--text-secondary)",
+                  color: trainingLogHeaderTextColor,
                 }}
               >
                 {orderedColumnIds.map((columnId) => {
@@ -2251,8 +3385,8 @@ function TrainingLogTable({
                     style: {
                       opacity: draggingColumnId === columnId ? 0.6 : 1,
                       backgroundColor: isEditMode && hoveredHeaderId === columnId
-                        ? "color-mix(in srgb, var(--accent) 10%, var(--surface))"
-                        : "var(--surface)",
+                        ? "color-mix(in srgb, var(--accent) 10%, var(--nyaa-table-head-bg))"
+                        : "var(--nyaa-table-head-bg)",
                       boxShadow: isEditMode && hoveredHeaderId === columnId
                         ? "inset 0 -1px 0 color-mix(in srgb, var(--accent) 45%, transparent)"
                         : undefined,
@@ -2271,13 +3405,6 @@ function TrainingLogTable({
                     return (
                       <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-0.5 sm:px-1 w-[5rem] min-w-[5rem] text-center`}>
                         {renderHeaderLabel("Category")}
-                      </th>
-                    );
-                  }
-                  if (columnId === "level") {
-                    return (
-                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-0.5 sm:px-1 w-[4rem] min-w-[4rem] text-center`}>
-                        {renderHeaderLabel("Level")}
                       </th>
                     );
                   }
@@ -2311,7 +3438,7 @@ function TrainingLogTable({
                   }
                   if (columnId === "variant") {
                     return (
-                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-0.5 sm:px-1 w-[5.5rem] min-w-[5.5rem] text-left text-mountain-blue-glow`}>
+                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-0.5 sm:px-1 w-[9rem] min-w-[9rem] text-left text-mountain-blue-glow`}>
                         {renderHeaderLabel("Variant")}
                       </th>
                     );
@@ -2390,14 +3517,8 @@ function TrainingLogTable({
                     const ex = exerciseLookup.get(effectiveExerciseId);
                     const exerciseMeta = ex ? exerciseMetaById.get(ex.id) : undefined;
                     const categoryLabel = exerciseMeta?.categoryLabel ?? getExerciseCategoryLabel(ex);
-                    const categoryColor = categoryLabel === "GYM"
-                      ? "var(--gold)"
-                      : categoryLabel === "Yoga"
-                        ? "var(--mountain-blue-glow)"
-                        : categoryLabel === "Cardio"
-                          ? "var(--crimson-light)"
-                          : "var(--accent)";
-                    const isOlderThan7Days = Date.now() - new Date(entry.date).getTime() > 7 * 24 * 60 * 60 * 1000;
+                    const categoryTone = getCategoryTone(categoryLabel);
+                    const isOlderThan7Days = staleEntryByLogId.get(entry.logId) ?? false;
                     const activeBand = entry.resistanceBandKg;
                     const activeModifierKg = isRowEditing
                       ? parseModifierDisplayToSignedKg(editData.modifier)
@@ -2411,7 +3532,7 @@ function TrainingLogTable({
                       selectedVariantValue && !exerciseVariantOptions.includes(selectedVariantValue)
                         ? [...exerciseVariantOptions, selectedVariantValue]
                         : exerciseVariantOptions;
-                    const progressionTierOptions = [...(ex?.tiers ?? [])].sort((a, b) => a.level - b.level);
+                    const progressionTierOptions = ex ? (sortedProgressionTiersByExerciseId.get(ex.id) ?? []) : [];
                     const selectedProgressionLevel = editData?.level ?? entry.levelNameLevel;
                     const progressionSelectOptions =
                       progressionTierOptions.some((tier) => tier.level === selectedProgressionLevel)
@@ -2421,7 +3542,7 @@ function TrainingLogTable({
                             {
                               id: `fallback-${selectedProgressionLevel}`,
                               level: selectedProgressionLevel,
-                              name: `Level ${selectedProgressionLevel}`,
+                              name: "Unassigned progression",
                               wuxiaName: "",
                               difficulty: "",
                               wuxiaDifficulty: "",
@@ -2434,12 +3555,12 @@ function TrainingLogTable({
                           ].sort((a, b) => a.level - b.level);
                     const formattedEntryDate = formattedDateByLogId.get(entry.logId) ?? formatDate(entry.date, dateFormat);
                     const displayLevel = isRowEditing && editData ? editData.level : entry.levelNameLevel;
-                    const progressionLabelForExercise = ex
-                      ? stripBwPercentHint(getTierName(ex, displayLevel))
-                      : "";
+                    const progressionLabelForExercise = getProgressionTierLabel(ex, displayLevel);
                     const variantLabelForExercise = ((isRowEditing && editData ? editData.variant : entry.variant) ?? "").trim();
                     const showSimpleProgressionLabel = isSimpleView && progressionLabelForExercise.trim().length > 0;
                     const showSimpleVariantLabel = isSimpleView && variantLabelForExercise.length > 0;
+                    const progressionTone = getSimpleLabelTone("progression");
+                    const variantTone = getSimpleLabelTone("variant");
 
                     // Determine per-row value display style
                     const isTimedEntry = entry.exerciseType === "timed";
@@ -2486,22 +3607,12 @@ function TrainingLogTable({
                                 <span
                                   className="inline-block px-2 py-1 border rounded text-[10px] leading-none font-semibold"
                                   style={{
-                                    color: categoryColor,
-                                    borderColor: "color-mix(in srgb, currentColor 50%, var(--border))",
-                                    backgroundColor: "color-mix(in srgb, currentColor 10%, transparent)",
+                                    color: categoryTone.color,
+                                    borderColor: categoryTone.borderColor,
+                                    backgroundColor: categoryTone.backgroundColor,
                                   }}
                                 >
                                   {categoryLabel}
-                                </span>
-                              </td>
-                            );
-                          }
-
-                          if (columnId === "level") {
-                            return (
-                              <td key={`${entry.logId}-level`} className={`${cellPadStandard} w-[4rem] min-w-[4rem] text-center align-middle`}>
-                                <span className="text-[10px] font-semibold" style={{ color: "var(--accent)" }}>
-                                  Lv {entry.levelNameLevel}
                                 </span>
                               </td>
                             );
@@ -2551,9 +3662,9 @@ function TrainingLogTable({
                                           <span
                                             className="inline-block max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded border px-1 py-0.5"
                                             style={{
-                                              color: "var(--accent)",
-                                              borderColor: "color-mix(in srgb, var(--accent) 45%, var(--border))",
-                                              backgroundColor: "color-mix(in srgb, var(--accent) 10%, transparent)",
+                                              color: progressionTone.color,
+                                              borderColor: progressionTone.borderColor,
+                                              backgroundColor: progressionTone.backgroundColor,
                                             }}
                                           >
                                             {progressionLabelForExercise}
@@ -2563,9 +3674,9 @@ function TrainingLogTable({
                                           <span
                                             className="inline-block max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded border px-1 py-0.5"
                                             style={{
-                                              color: "var(--mountain-blue-glow)",
-                                              borderColor: "color-mix(in srgb, var(--mountain-blue-glow) 45%, var(--border))",
-                                              backgroundColor: "color-mix(in srgb, var(--mountain-blue-glow) 10%, transparent)",
+                                              color: variantTone.color,
+                                              borderColor: variantTone.borderColor,
+                                              backgroundColor: variantTone.backgroundColor,
                                             }}
                                           >
                                             {variantLabelForExercise}
@@ -2577,7 +3688,9 @@ function TrainingLogTable({
                                 ) : (
                                   <div className="flex min-w-0 items-center gap-1 overflow-hidden">
                                     <Link
-                                      href={`/dashboard/workout-history/${entry.exerciseId}`}
+                                      href={historyTargetUserId
+                                        ? `/dashboard/train/${entry.exerciseId}?targetUserId=${encodeURIComponent(historyTargetUserId)}`
+                                        : `/dashboard/train/${entry.exerciseId}`}
                                       className="text-xs training-log-exercise-link truncate"
                                       title={entryDisplayName}
                                       onClick={(e) => {
@@ -2593,9 +3706,9 @@ function TrainingLogTable({
                                           <span
                                             className="inline-block max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded border px-1 py-0.5"
                                             style={{
-                                              color: "var(--accent)",
-                                              borderColor: "color-mix(in srgb, var(--accent) 45%, var(--border))",
-                                              backgroundColor: "color-mix(in srgb, var(--accent) 10%, transparent)",
+                                              color: progressionTone.color,
+                                              borderColor: progressionTone.borderColor,
+                                              backgroundColor: progressionTone.backgroundColor,
                                             }}
                                           >
                                             {progressionLabelForExercise}
@@ -2605,9 +3718,9 @@ function TrainingLogTable({
                                           <span
                                             className="inline-block max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded border px-1 py-0.5"
                                             style={{
-                                              color: "var(--mountain-blue-glow)",
-                                              borderColor: "color-mix(in srgb, var(--mountain-blue-glow) 45%, var(--border))",
-                                              backgroundColor: "color-mix(in srgb, var(--mountain-blue-glow) 10%, transparent)",
+                                              color: variantTone.color,
+                                              borderColor: variantTone.borderColor,
+                                              backgroundColor: variantTone.backgroundColor,
                                             }}
                                           >
                                             {variantLabelForExercise}
@@ -2622,9 +3735,7 @@ function TrainingLogTable({
                           }
 
                           if (columnId === "progression") {
-                            const progressionLabel = ex
-                              ? stripBwPercentHint(getTierName(ex, displayLevel))
-                              : `Level ${displayLevel}`;
+                            const progressionLabel = getProgressionTierLabel(ex, displayLevel);
                             return isRowEditing && editData ? (
                               <td key={`${entry.logId}-progression`} className="w-[7.5rem] min-w-[7.5rem] overflow-hidden px-1 py-1.5 text-left align-middle [contain:paint]">
                                 <select
@@ -2635,12 +3746,16 @@ function TrainingLogTable({
                                     backgroundColor: "var(--surface)",
                                     borderColor: "var(--border)",
                                     border: "1px solid",
-                                    color: "var(--text-secondary)"
+                                    color: "var(--text-primary)"
                                   }}
                                 >
                                   {progressionSelectOptions.map((tier) => (
-                                    <option key={`${entry.logId}-tier-${tier.level}`} value={String(tier.level)}>
-                                      {stripBwPercentHint(tier.name || `Level ${tier.level}`)}
+                                    <option
+                                      key={`${entry.logId}-tier-${tier.level}`}
+                                      value={String(tier.level)}
+                                      style={{ backgroundColor: "var(--surface)", color: "var(--text-primary)" }}
+                                    >
+                                      {stripBwPercentHint(tier.name || "Unassigned progression")}
                                     </option>
                                   ))}
                                 </select>
@@ -2700,7 +3815,7 @@ function TrainingLogTable({
 
                           if (columnId === "variant") {
                             return isRowEditing && editData ? (
-                              <td key={`${entry.logId}-variant`} className="w-[5.5rem] min-w-[5.5rem] overflow-hidden px-1 py-1.5 text-left align-middle [contain:paint]">
+                              <td key={`${entry.logId}-variant`} className="w-[9rem] min-w-[9rem] overflow-hidden px-1 py-1.5 text-left align-middle [contain:paint]">
                                 <select
                                   value={editData.variant ?? ""}
                                   onChange={(e) => handleEditChange(entry.logId, "variant", e.target.value || null)}
@@ -2723,15 +3838,11 @@ function TrainingLogTable({
                             ) : (
                               <td
                                 key={`${entry.logId}-variant`}
-                                className={`${cellPadStandard} w-[5.5rem] min-w-[5.5rem] text-left text-mountain-blue-glow text-xs align-middle`}
+                                className={`${cellPadStandard} w-[9rem] min-w-[9rem] text-left text-mountain-blue-glow text-xs align-middle`}
                                 title={entry.variant || ""}
                               >
-                                <span className="block overflow-hidden text-ellipsis whitespace-nowrap">
-                                  {entry.variant
-                                    ? variationDisplay === "full"
-                                      ? entry.variant
-                                      : abbreviateVariantText(entry.variant)
-                                    : "—"}
+                                <span className="block whitespace-normal break-words leading-tight">
+                                  {entry.variant ? entry.variant : "—"}
                                 </span>
                               </td>
                             );
@@ -2931,7 +4042,25 @@ function TrainingLogTable({
           )}
           </div>
         </div>
+        )}
       </div>
+
+      {isMobile && !shouldDisableInputSection && !mobileInputOpen && !forceMobileInputOpen && (
+        <button
+          type="button"
+          aria-label="Open training log input"
+          onClick={() => router.push(`/dashboard/train/input/${Date.now()}`)}
+          className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+5rem)] right-4 z-[70] h-14 w-14 rounded-full border text-3xl leading-none shadow-lg transition-transform duration-150 active:scale-95"
+          style={{
+            borderColor: "var(--accent)",
+            color: "var(--cloud-white)",
+            backgroundColor: "color-mix(in srgb, var(--accent) 70%, var(--ink-deep))",
+            boxShadow: "0 10px 24px color-mix(in srgb, var(--accent) 35%, transparent)",
+          }}
+        >
+          +
+        </button>
+      )}
 
       {/* Delete Confirmation Modal — portalled */}
       {typeof document !== "undefined" &&
@@ -2943,7 +4072,7 @@ function TrainingLogTable({
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px]"
+                  className="fixed inset-0 z-40 bg-black/70"
                   onClick={() => setDeleteConfirm(null)}
                 />
                 <motion.div
@@ -2962,11 +4091,9 @@ function TrainingLogTable({
                   </p>
                   <div className="flex gap-3">
                     <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
                       onClick={() => handleDeleteLog(deleteConfirm.logId)}
                       disabled={isDeleting}
-                      className="flex-1 px-4 py-2 text-xs font-semibold rounded-lg border transition-all duration-200 disabled:opacity-50"
+                      className="flex-1 px-4 py-2 text-xs font-semibold rounded-lg border transition-[transform] duration-150 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
                       style={{
                         backgroundColor: "color-mix(in srgb, var(--danger) 10%, transparent)",
                         borderColor: "var(--danger)",
@@ -2976,11 +4103,9 @@ function TrainingLogTable({
                       {isDeleting ? "Deleting..." : "Delete Record"}
                     </motion.button>
                     <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
                       onClick={() => setDeleteConfirm(null)}
                       disabled={isDeleting}
-                      className="flex-1 px-4 py-2 text-xs font-semibold rounded-lg border transition-all duration-200 disabled:opacity-50"
+                      className="flex-1 px-4 py-2 text-xs font-semibold rounded-lg border transition-[transform] duration-150 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
                       style={{
                         borderColor: "var(--border)",
                         color: "var(--text-secondary)"
@@ -3014,7 +4139,7 @@ function TrainingLogTable({
               >
                 <div
                   className="flex items-center justify-between px-3 py-2 border-b transition-all duration-200"
-                  style={{ borderColor: "var(--border)", backgroundColor: "#f5f5f5" }}
+                  style={{ borderColor: "var(--border)", backgroundColor: "var(--nyaa-table-head-bg)" }}
                 >
                   <div className="min-w-0">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--text-primary)" }}>
@@ -3027,12 +4152,25 @@ function TrainingLogTable({
                     </p>
                   </div>
                   <div className="ml-3 flex items-center gap-1">
+                    {selectedInputExercise?.id ? (
+                      <Link
+                        href={historyTargetUserId
+                          ? `${DASHBOARD_ROUTES.workoutHistory}/${encodeURIComponent(selectedInputExercise.id)}?targetUserId=${encodeURIComponent(historyTargetUserId)}`
+                          : `${DASHBOARD_ROUTES.workoutHistory}/${encodeURIComponent(selectedInputExercise.id)}`}
+                        aria-label="Open full exercise history"
+                        title="Open full history"
+                        className={panelIconButtonClass}
+                        style={{ borderColor: "var(--border)", color: "var(--text-secondary)" }}
+                      >
+                        ↗
+                      </Link>
+                    ) : null}
                     <button
                       type="button"
                       aria-label="Minimize exercise history"
                       title="Minimize"
                       onClick={() => setHistoryDockOpen(false)}
-                      className="inline-flex h-6 w-6 items-center justify-center rounded border text-xs font-bold transition-colors hover:bg-ink-mid/35"
+                      className={panelIconButtonClass}
                       style={{ borderColor: "var(--border)", color: "var(--text-secondary)" }}
                     >
                       _
@@ -3042,7 +4180,7 @@ function TrainingLogTable({
                       aria-label={historyDockExpanded ? "Collapse exercise history" : "Expand exercise history"}
                       title={historyDockExpanded ? "Collapse" : "Expand"}
                       onClick={() => setHistoryDockExpanded((prev) => !prev)}
-                      className="inline-flex h-6 w-6 items-center justify-center rounded border text-xs font-bold transition-colors hover:bg-ink-mid/35"
+                      className={panelIconButtonClass}
                       style={{ borderColor: "var(--border)", color: "var(--text-secondary)" }}
                     >
                       {historyDockExpanded ? "↔" : "⤢"}
@@ -3052,7 +4190,7 @@ function TrainingLogTable({
                       aria-label="Close exercise history"
                       title="Close"
                       onClick={() => setHistoryDockOpen(false)}
-                      className="inline-flex h-6 w-6 items-center justify-center rounded border text-xs font-bold transition-colors hover:bg-ink-mid/35"
+                      className={panelIconButtonClass}
                       style={{ borderColor: "var(--border)", color: "var(--text-secondary)" }}
                     >
                       x
@@ -3074,29 +4212,30 @@ function TrainingLogTable({
                       No history found for this exercise yet.
                     </p>
                   ) : (
+                    <>
                     <table className="w-full text-[11px] border-collapse whitespace-nowrap">
                       <thead className="sticky top-0 z-10">
                         <tr className="border-b" style={{ borderColor: "var(--border)" }}>
-                          <th className="text-center px-2 py-1 font-semibold" style={{ color: "var(--text-secondary)", backgroundColor: "var(--surface)" }}>Date</th>
-                          <th className="text-center px-2 py-1 font-semibold" style={{ color: "var(--accent)", backgroundColor: "var(--surface)" }}>
+                          <th className="text-center px-2 py-1 font-semibold" style={{ color: "var(--text-secondary)", backgroundColor: "var(--nyaa-table-head-bg)" }}>Date</th>
+                          <th className="text-center px-2 py-1 font-semibold" style={{ color: "var(--accent)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
                             {historyDockExpanded ? "Progression" : "P"}
                           </th>
-                          <th className="text-center px-2 py-1 font-semibold" style={{ color: "var(--col-weight)", backgroundColor: "var(--surface)" }}>
+                          <th className="text-center px-2 py-1 font-semibold" style={{ color: "var(--col-weight)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
                             {historyDockExpanded ? "Average Weight" : "Avg W"}
                           </th>
-                          <th className="text-center px-2 py-1 font-semibold" style={{ color: "var(--col-reps)", backgroundColor: "var(--surface)" }}>
+                          <th className="text-center px-2 py-1 font-semibold" style={{ color: "var(--col-reps)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
                             {historyDockExpanded ? "Average Reps" : "Avg R"}
                           </th>
-                          <th className="text-center px-2 py-1 font-semibold" style={{ color: "var(--gold)", backgroundColor: "var(--surface)" }}>
+                          <th className="text-center px-2 py-1 font-semibold" style={{ color: "var(--gold)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
                             {historyDockExpanded ? "Modifier" : "Mod"}
                           </th>
-                          <th className="text-center px-2 py-1 font-semibold" style={{ color: "var(--text-secondary)", backgroundColor: "var(--surface)" }}>
+                          <th className="text-center px-2 py-1 font-semibold" style={{ color: "var(--text-secondary)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
                             {historyDockExpanded ? "Variant" : "Var"}
                           </th>
                         </tr>
                       </thead>
                       <tbody>
-                        {historyData.slice(0, 24).map((entry) => {
+                        {historyData.map((entry) => {
                           const weights = [entry.weight1, entry.weight2, entry.weight3].filter(
                             (value): value is number => value != null,
                           );
@@ -3126,7 +4265,7 @@ function TrainingLogTable({
                           const variantDisplayText = historyDockExpanded ? (variantRaw || "-") : variantAbbrev;
                           const progressionLevel = Number.isFinite(entry.level) ? Number(entry.level) : null;
                           const progressionText = progressionLevel != null
-                            ? stripBwPercentHint(getTierName(selectedInputExercise, progressionLevel))
+                            ? getProgressionTierLabel(selectedInputExercise, progressionLevel)
                             : "-";
                           const compactProgressionText = progressionText === "-"
                             ? "-"
@@ -3159,6 +4298,25 @@ function TrainingLogTable({
                         })}
                       </tbody>
                     </table>
+                    {(historyNextCursor || historyLoadingMore) && (
+                      <div className="px-2 py-2 border-t" style={{ borderColor: "color-mix(in srgb, var(--border) 55%, transparent)" }}>
+                        <button
+                          type="button"
+                          onClick={handleLoadMoreHistory}
+                          disabled={historyLoadingMore}
+                          className="w-full rounded-md border px-2 py-1 text-[11px] font-semibold transition-all duration-150 disabled:opacity-60"
+                          style={{
+                            borderColor: "var(--border)",
+                            color: "var(--text-secondary)",
+                            backgroundColor: "var(--surface)",
+                            cursor: historyLoadingMore ? "wait" : "pointer",
+                          }}
+                        >
+                          {historyLoadingMore ? "Loading more..." : "Load more history"}
+                        </button>
+                      </div>
+                    )}
+                    </>
                   )}
                 </div>
               </div>

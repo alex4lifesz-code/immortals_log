@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { ReactNode, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
@@ -37,14 +37,12 @@ export default function GlowCard({
   };
 
   return (
-    <motion.div
-      whileHover={hoverable ? { y: -3, scale: 1.005 } : undefined}
-      whileTap={onClick ? { scale: 0.985 } : undefined}
-      transition={{ type: "spring", stiffness: 300, damping: 26, mass: 0.7 }}
+    <div
       onClick={onClick}
       className={`
         surface-panel interactive-panel p-4
-        transition-all duration-300 ease-[var(--ease-polish)]
+        transition-[transform,box-shadow,border-color] duration-150 ease-out
+        ${hoverable ? "hover:-translate-y-0.5 hover:scale-[1.005] active:scale-[0.985]" : ""}
         ${hoverable ? glowHover[glow] : ""}
         ${onClick ? "cursor-pointer" : ""}
         ${className}
@@ -54,7 +52,7 @@ export default function GlowCard({
       }}
     >
       {children}
-    </motion.div>
+    </div>
   );
 }
 

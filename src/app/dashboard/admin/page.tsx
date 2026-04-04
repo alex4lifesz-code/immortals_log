@@ -124,7 +124,7 @@ export default function AdminPanelPage() {
     if (!newUsername.trim() || !newPassword.trim() || !newName.trim()) return;
 
     try {
-      await api.post("/api/auth/register", {
+      await api.post("/api/users", {
         username: newUsername,
         password: newPassword,
         name: newName,

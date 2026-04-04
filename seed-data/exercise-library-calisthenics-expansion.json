@@ -1,0 +1,918 @@
+{
+  "version": 1,
+  "exercises": [
+    {
+      "name": "Muscle up",
+      "category": "Calisthenics",
+      "equipmentType": "Bar, Rings",
+      "bodyweight": true,
+      "weighted": true,
+      "rings": true,
+      "primaryMuscles": "Back, Chest, Shoulders, Triceps, Core",
+      "progression": ["Transition Drill", "Band Assisted", "Negative", "Strict", "Slow"],
+      "tiers": [
+        { "level": 1, "name": "Transition Drill" },
+        { "level": 2, "name": "Band Assisted" },
+        { "level": 3, "name": "Negative" },
+        { "level": 4, "name": "Strict" },
+        { "level": 5, "name": "Slow" }
+      ],
+      "variations": [
+        { "name": "Bar" },
+        { "name": "Ring" },
+        { "name": "L-sit" },
+        { "name": "Weighted" }
+      ]
+    },
+    {
+      "name": "Pull up",
+      "category": "Calisthenics",
+      "equipmentType": "Bar, Rings",
+      "bodyweight": true,
+      "weighted": true,
+      "rings": true,
+      "primaryMuscles": "Back, Biceps, Forearms, Core",
+      "progression": ["Scapular", "Assisted", "Standard", "Strict", "Weighted", "One Arm Assisted", "One Arm Negatives", "One Arm"],
+      "tiers": [
+        { "level": 1, "name": "Scapular" },
+        { "level": 2, "name": "Assisted" },
+        { "level": 3, "name": "Standard" },
+        { "level": 4, "name": "Strict" },
+        { "level": 5, "name": "Weighted" },
+        { "level": 6, "name": "One Arm Assisted" },
+        { "level": 7, "name": "One Arm Negatives" },
+        { "level": 8, "name": "One Arm" }
+      ],
+      "variations": [
+        { "name": "Wide grip" },
+        { "name": "Close grip" },
+        { "name": "Chin up" },
+        { "name": "Neutral grip" },
+        { "name": "Archer" },
+        { "name": "Typewriter" },
+        { "name": "L-sit" },
+        { "name": "Commando" },
+        { "name": "Chest-to-bar" },
+        { "name": "High" },
+        { "name": "Ring" },
+        { "name": "Explosive" },
+        { "name": "Kipping" }
+      ]
+    },
+    {
+      "name": "Dip",
+      "category": "Calisthenics",
+      "equipmentType": "Parallel bars, Rings, Straight bar",
+      "bodyweight": true,
+      "weighted": true,
+      "rings": true,
+      "primaryMuscles": "Chest, Shoulders, Triceps",
+      "progression": ["Bench", "Negative", "Assisted", "Standard", "Weighted"],
+      "tiers": [
+        { "level": 1, "name": "Bench" },
+        { "level": 2, "name": "Negative" },
+        { "level": 3, "name": "Assisted" },
+        { "level": 4, "name": "Standard" },
+        { "level": 5, "name": "Weighted" }
+      ],
+      "variations": [
+        { "name": "Parallel bar" },
+        { "name": "Ring" },
+        { "name": "Straight bar" },
+        { "name": "Korean" },
+        { "name": "L-sit" },
+        { "name": "Russian" },
+        { "name": "Archer" }
+      ]
+    },
+    {
+      "name": "Push up",
+      "category": "Calisthenics",
+      "equipmentType": "Floor",
+      "bodyweight": true,
+      "weighted": true,
+      "rings": false,
+      "primaryMuscles": "Chest, Shoulders, Triceps, Core",
+      "progression": ["Incline", "Standard", "Decline", "Weighted"],
+      "tiers": [
+        { "level": 1, "name": "Incline" },
+        { "level": 2, "name": "Standard" },
+        { "level": 3, "name": "Decline" },
+        { "level": 4, "name": "Weighted" }
+      ],
+      "variations": [
+        { "name": "Wide" },
+        { "name": "Diamond" },
+        { "name": "Archer" },
+        { "name": "One arm" },
+        { "name": "Clapping" },
+        { "name": "Planche" },
+        { "name": "Pike" },
+        { "name": "Pseudo planche" },
+        { "name": "Explosive" },
+        { "name": "Typewriter" },
+        { "name": "Staggered" },
+        { "name": "Spiderman" },
+        { "name": "Hindu" },
+        { "name": "Aztec" },
+        { "name": "Superman" }
+      ]
+    },
+    {
+      "name": "Handstand",
+      "category": "Calisthenics",
+      "equipmentType": "Floor",
+      "bodyweight": true,
+      "weighted": false,
+      "rings": false,
+      "primaryMuscles": "Shoulders, Triceps, Core",
+      "progression": ["Wall Hold", "Freestanding", "One arm"],
+      "tiers": [
+        { "level": 1, "name": "Wall Hold" },
+        { "level": 2, "name": "Freestanding" },
+        { "level": 3, "name": "One arm" }
+      ],
+      "variations": [
+        { "name": "Tuck" },
+        { "name": "Straddle" },
+        { "name": "Press to handstand" },
+        { "name": "Walking" },
+        { "name": "Fingertip" }
+      ]
+    },
+    {
+      "name": "Handstand push up",
+      "category": "Calisthenics",
+      "equipmentType": "Wall, Parallettes, Floor",
+      "bodyweight": true,
+      "weighted": true,
+      "rings": false,
+      "primaryMuscles": "Shoulders, Triceps, Upper chest, Core",
+      "progression": ["Pike", "Elevated Pike", "Wall", "Deficit Wall", "Freestanding"],
+      "tiers": [
+        { "level": 1, "name": "Pike" },
+        { "level": 2, "name": "Elevated Pike" },
+        { "level": 3, "name": "Wall" },
+        { "level": 4, "name": "Deficit Wall" },
+        { "level": 5, "name": "Freestanding" }
+      ],
+      "variations": [
+        { "name": "90 degree" },
+        { "name": "Weighted" },
+        { "name": "Clapping" }
+      ]
+    },
+    {
+      "name": "Front lever",
+      "category": "Calisthenics",
+      "equipmentType": "Bar, Rings",
+      "bodyweight": true,
+      "weighted": false,
+      "rings": true,
+      "primaryMuscles": "Lats, Core, Rear delts, Forearms",
+      "progression": ["Tuck Hold", "Tucked Negative", "Advanced Tuck Hold", "One Leg Hold", "Straddle Hold", "Full Hold"],
+      "tiers": [
+        { "level": 1, "name": "Tuck Hold" },
+        { "level": 2, "name": "Tucked Negative" },
+        { "level": 3, "name": "Advanced Tuck Hold" },
+        { "level": 4, "name": "One Leg Hold" },
+        { "level": 5, "name": "Straddle Hold" },
+        { "level": 6, "name": "Full Hold" }
+      ],
+      "variations": [
+        { "name": "Pulls" },
+        { "name": "Raises" },
+        { "name": "Ice Cream Maker" },
+        { "name": "Touch" }
+      ]
+    },
+    {
+      "name": "Back lever",
+      "category": "Calisthenics",
+      "equipmentType": "Bar, Rings",
+      "bodyweight": true,
+      "weighted": false,
+      "rings": true,
+      "primaryMuscles": "Shoulders, Back, Core, Biceps",
+      "progression": ["Tuck", "Advanced tuck", "Straddle", "Half lay", "Full"],
+      "tiers": [
+        { "level": 1, "name": "Tuck" },
+        { "level": 2, "name": "Advanced tuck" },
+        { "level": 3, "name": "Straddle" },
+        { "level": 4, "name": "Half lay" },
+        { "level": 5, "name": "Full" }
+      ],
+      "variations": [
+        { "name": "One leg" },
+        { "name": "Pulls" },
+        { "name": "Raises" }
+      ]
+    },
+    {
+      "name": "Planche",
+      "category": "Calisthenics",
+      "equipmentType": "Floor, Parallettes, Rings",
+      "bodyweight": true,
+      "weighted": false,
+      "rings": true,
+      "primaryMuscles": "Shoulders, Chest, Triceps, Core",
+      "progression": ["Lean", "Tuck", "Tucked Press", "Advanced tuck", "Straddle", "Full"],
+      "tiers": [
+        { "level": 1, "name": "Lean" },
+        { "level": 2, "name": "Tuck" },
+        { "level": 3, "name": "Tucked Press" },
+        { "level": 4, "name": "Advanced tuck" },
+        { "level": 5, "name": "Straddle" },
+        { "level": 6, "name": "Full" }
+      ],
+      "variations": [
+        { "name": "Push up" },
+        { "name": "Press" },
+        { "name": "One arm" }
+      ]
+    },
+    {
+      "name": "Dragon flag",
+      "category": "Calisthenics",
+      "equipmentType": "Bench, Pole",
+      "bodyweight": true,
+      "weighted": false,
+      "rings": false,
+      "primaryMuscles": "Core, Lats, Hip flexors",
+      "progression": ["Tuck", "Advanced tuck", "Straddle", "Full"],
+      "tiers": [
+        { "level": 1, "name": "Tuck" },
+        { "level": 2, "name": "Advanced tuck" },
+        { "level": 3, "name": "Straddle" },
+        { "level": 4, "name": "Full" }
+      ],
+      "variations": [
+        { "name": "Negatives" },
+        { "name": "Raises" }
+      ]
+    },
+    {
+      "name": "L-sit",
+      "category": "Calisthenics",
+      "equipmentType": "Floor, Parallettes, Rings, Bar",
+      "bodyweight": true,
+      "weighted": false,
+      "rings": true,
+      "primaryMuscles": "Core, Hip flexors, Shoulders, Triceps",
+      "progression": ["Tuck", "One leg", "Full", "Straddle", "V-sit", "Manna"],
+      "tiers": [
+        { "level": 1, "name": "Tuck" },
+        { "level": 2, "name": "One leg" },
+        { "level": 3, "name": "Full" },
+        { "level": 4, "name": "Straddle" },
+        { "level": 5, "name": "V-sit" },
+        { "level": 6, "name": "Manna" }
+      ],
+      "variations": [
+        { "name": "Floor" },
+        { "name": "Parallettes" },
+        { "name": "Rings" },
+        { "name": "Bar" }
+      ]
+    },
+    {
+      "name": "Human flag",
+      "category": "Calisthenics",
+      "equipmentType": "Pole, Stall bars",
+      "bodyweight": true,
+      "weighted": false,
+      "rings": false,
+      "primaryMuscles": "Shoulders, Lats, Obliques, Core",
+      "progression": ["Tuck", "Straddle", "Half", "Full"],
+      "tiers": [
+        { "level": 1, "name": "Tuck" },
+        { "level": 2, "name": "Straddle" },
+        { "level": 3, "name": "Half" },
+        { "level": 4, "name": "Full" }
+      ],
+      "variations": [
+        { "name": "Vertical" },
+        { "name": "Pulls" },
+        { "name": "Raises" }
+      ]
+    },
+    {
+      "name": "Hang",
+      "category": "Calisthenics",
+      "equipmentType": "Bar, Rings",
+      "bodyweight": true,
+      "weighted": true,
+      "rings": true,
+      "primaryMuscles": "Grip, Shoulders, Lats",
+      "progression": ["Dead", "Active"],
+      "tiers": [
+        { "level": 1, "name": "Dead" },
+        { "level": 2, "name": "Active" }
+      ],
+      "variations": [
+        { "name": "One arm" },
+        { "name": "Weighted" },
+        { "name": "Scapular" }
+      ]
+    },
+    {
+      "name": "Support hold",
+      "category": "Calisthenics",
+      "equipmentType": "Parallel bars, Rings",
+      "bodyweight": true,
+      "weighted": false,
+      "rings": true,
+      "primaryMuscles": "Shoulders, Triceps, Core",
+      "progression": ["Parallel bar", "Ring"],
+      "tiers": [
+        { "level": 1, "name": "Parallel bar" },
+        { "level": 2, "name": "Ring" }
+      ],
+      "variations": [
+        { "name": "Tuck" },
+        { "name": "L-sit" },
+        { "name": "Turned out" }
+      ]
+    },
+    {
+      "name": "Leg raise",
+      "category": "Calisthenics",
+      "equipmentType": "Floor, Bar",
+      "bodyweight": true,
+      "weighted": false,
+      "rings": false,
+      "primaryMuscles": "Core, Hip flexors",
+      "progression": ["Lying", "Hanging"],
+      "tiers": [
+        { "level": 1, "name": "Lying" },
+        { "level": 2, "name": "Hanging" }
+      ],
+      "variations": [
+        { "name": "Tuck" },
+        { "name": "Straight" },
+        { "name": "Windshield wiper" },
+        { "name": "Side to side" }
+      ]
+    },
+    {
+      "name": "Pistol squat",
+      "category": "Calisthenics",
+      "equipmentType": "Floor, Box",
+      "bodyweight": true,
+      "weighted": true,
+      "rings": false,
+      "primaryMuscles": "Quads, Glutes, Hamstrings, Core",
+      "progression": ["Assisted", "Standard", "Weighted"],
+      "tiers": [
+        { "level": 1, "name": "Assisted" },
+        { "level": 2, "name": "Standard" },
+        { "level": 3, "name": "Weighted" }
+      ],
+      "variations": [
+        { "name": "Jumping" },
+        { "name": "Elevated" },
+        { "name": "Airborne" }
+      ]
+    },
+    {
+      "name": "Squat",
+      "category": "Calisthenics",
+      "equipmentType": "Floor, Weights",
+      "bodyweight": true,
+      "weighted": true,
+      "rings": false,
+      "primaryMuscles": "Quads, Glutes, Hamstrings, Core",
+      "progression": ["Bodyweight", "Weighted"],
+      "tiers": [
+        { "level": 1, "name": "Bodyweight" },
+        { "level": 2, "name": "Weighted" }
+      ],
+      "variations": [
+        { "name": "Sumo" },
+        { "name": "Cossack" },
+        { "name": "Shrimp" },
+        { "name": "Sissy" },
+        { "name": "Hindu" },
+        { "name": "Jump" },
+        { "name": "Bulgarian split" }
+      ]
+    },
+    {
+      "name": "Lunge",
+      "category": "Calisthenics",
+      "equipmentType": "Floor, Weights",
+      "bodyweight": true,
+      "weighted": true,
+      "rings": false,
+      "primaryMuscles": "Quads, Glutes, Hamstrings",
+      "progression": ["Standard", "Weighted"],
+      "tiers": [
+        { "level": 1, "name": "Standard" },
+        { "level": 2, "name": "Weighted" }
+      ],
+      "variations": [
+        { "name": "Forward" },
+        { "name": "Reverse" },
+        { "name": "Walking" },
+        { "name": "Jumping" },
+        { "name": "Lateral" },
+        { "name": "Curtsy" }
+      ]
+    },
+    {
+      "name": "Step up",
+      "category": "Calisthenics",
+      "equipmentType": "Box, Bench, Weights",
+      "bodyweight": true,
+      "weighted": true,
+      "rings": false,
+      "primaryMuscles": "Quads, Glutes, Hamstrings",
+      "progression": ["Standard", "Weighted"],
+      "tiers": [
+        { "level": 1, "name": "Standard" },
+        { "level": 2, "name": "Weighted" }
+      ],
+      "variations": [
+        { "name": "Lateral" },
+        { "name": "Crossover" },
+        { "name": "Explosive" }
+      ]
+    },
+    {
+      "name": "Glute bridge",
+      "category": "Calisthenics",
+      "equipmentType": "Floor, Bench",
+      "bodyweight": true,
+      "weighted": true,
+      "rings": false,
+      "primaryMuscles": "Glutes, Hamstrings, Core",
+      "progression": ["Standard", "Single leg", "Weighted"],
+      "tiers": [
+        { "level": 1, "name": "Standard" },
+        { "level": 2, "name": "Single leg" },
+        { "level": 3, "name": "Weighted" }
+      ],
+      "variations": [
+        { "name": "Elevated" },
+        { "name": "Marching" }
+      ]
+    },
+    {
+      "name": "Hip thrust",
+      "category": "Calisthenics",
+      "equipmentType": "Bench, Barbell, Band",
+      "bodyweight": true,
+      "weighted": true,
+      "rings": false,
+      "primaryMuscles": "Glutes, Hamstrings",
+      "progression": ["Standard", "Single leg", "Weighted"],
+      "tiers": [
+        { "level": 1, "name": "Standard" },
+        { "level": 2, "name": "Single leg" },
+        { "level": 3, "name": "Weighted" }
+      ],
+      "variations": [
+        { "name": "Elevated" },
+        { "name": "Banded" }
+      ]
+    },
+    {
+      "name": "Nordic curl",
+      "category": "Calisthenics",
+      "equipmentType": "Floor, Anchor",
+      "bodyweight": true,
+      "weighted": true,
+      "rings": false,
+      "primaryMuscles": "Hamstrings, Glutes, Core",
+      "progression": ["Assisted", "Eccentric", "Full"],
+      "tiers": [
+        { "level": 1, "name": "Assisted" },
+        { "level": 2, "name": "Eccentric" },
+        { "level": 3, "name": "Full" }
+      ],
+      "variations": [
+        { "name": "Banded" },
+        { "name": "Weighted" }
+      ]
+    },
+    {
+      "name": "Reverse nordic",
+      "category": "Calisthenics",
+      "equipmentType": "Floor",
+      "bodyweight": true,
+      "weighted": true,
+      "rings": false,
+      "primaryMuscles": "Quads, Hip flexors, Core",
+      "progression": ["Assisted", "Standard", "Full"],
+      "tiers": [
+        { "level": 1, "name": "Assisted" },
+        { "level": 2, "name": "Standard" },
+        { "level": 3, "name": "Full" }
+      ],
+      "variations": [
+        { "name": "Weighted" }
+      ]
+    },
+    {
+      "name": "Calf raise",
+      "category": "Calisthenics",
+      "equipmentType": "Floor, Step, Weights",
+      "bodyweight": true,
+      "weighted": true,
+      "rings": false,
+      "primaryMuscles": "Calves",
+      "progression": ["Standard", "Single leg", "Weighted"],
+      "tiers": [
+        { "level": 1, "name": "Standard" },
+        { "level": 2, "name": "Single leg" },
+        { "level": 3, "name": "Weighted" }
+      ],
+      "variations": [
+        { "name": "Elevated" },
+        { "name": "Seated" }
+      ]
+    },
+    {
+      "name": "Inverted row",
+      "category": "Calisthenics",
+      "equipmentType": "Bar, Rings",
+      "bodyweight": true,
+      "weighted": false,
+      "rings": true,
+      "primaryMuscles": "Back, Biceps, Rear delts",
+      "progression": ["Incline", "Standard", "Elevated feet"],
+      "tiers": [
+        { "level": 1, "name": "Incline" },
+        { "level": 2, "name": "Standard" },
+        { "level": 3, "name": "Elevated feet" }
+      ],
+      "variations": [
+        { "name": "Wide" },
+        { "name": "Close" },
+        { "name": "Archer" },
+        { "name": "One arm" }
+      ]
+    },
+    {
+      "name": "Australian pull up",
+      "category": "Calisthenics",
+      "equipmentType": "Bar, Rings",
+      "bodyweight": true,
+      "weighted": false,
+      "rings": true,
+      "primaryMuscles": "Back, Biceps, Rear delts",
+      "progression": ["Incline", "Standard", "Elevated feet"],
+      "tiers": [
+        { "level": 1, "name": "Incline" },
+        { "level": 2, "name": "Standard" },
+        { "level": 3, "name": "Elevated feet" }
+      ],
+      "variations": [
+        { "name": "Wide" },
+        { "name": "Close" },
+        { "name": "Underhand" }
+      ]
+    },
+    {
+      "name": "Skin the cat",
+      "category": "Calisthenics",
+      "equipmentType": "Rings, Bar",
+      "bodyweight": true,
+      "weighted": false,
+      "rings": true,
+      "primaryMuscles": "Shoulders, Lats, Core, Biceps",
+      "progression": ["Assisted", "Standard", "Full"],
+      "tiers": [
+        { "level": 1, "name": "Assisted" },
+        { "level": 2, "name": "Standard" },
+        { "level": 3, "name": "Full" }
+      ],
+      "variations": [
+        { "name": "German hang" },
+        { "name": "Reverse" }
+      ]
+    },
+    {
+      "name": "Toes to bar",
+      "category": "Calisthenics",
+      "equipmentType": "Bar",
+      "bodyweight": true,
+      "weighted": false,
+      "rings": false,
+      "primaryMuscles": "Core, Hip flexors, Lats",
+      "progression": ["Knees to chest", "Knees to bar", "Full"],
+      "tiers": [
+        { "level": 1, "name": "Knees to chest" },
+        { "level": 2, "name": "Knees to bar" },
+        { "level": 3, "name": "Full" }
+      ],
+      "variations": [
+        { "name": "Strict" },
+        { "name": "Kipping" }
+      ]
+    },
+    {
+      "name": "Hollow body",
+      "category": "Calisthenics",
+      "equipmentType": "Floor",
+      "bodyweight": true,
+      "weighted": false,
+      "rings": false,
+      "primaryMuscles": "Core, Hip flexors",
+      "progression": ["Tuck", "Straddle", "Full"],
+      "tiers": [
+        { "level": 1, "name": "Tuck" },
+        { "level": 2, "name": "Straddle" },
+        { "level": 3, "name": "Full" }
+      ],
+      "variations": [
+        { "name": "Rocks" },
+        { "name": "Hold" }
+      ]
+    },
+    {
+      "name": "Arch body",
+      "category": "Calisthenics",
+      "equipmentType": "Floor",
+      "bodyweight": true,
+      "weighted": false,
+      "rings": false,
+      "primaryMuscles": "Lower back, Glutes, Hamstrings",
+      "progression": ["Tuck", "Full"],
+      "tiers": [
+        { "level": 1, "name": "Tuck" },
+        { "level": 2, "name": "Full" }
+      ],
+      "variations": [
+        { "name": "Rocks" },
+        { "name": "Hold" },
+        { "name": "Superman" }
+      ]
+    },
+    {
+      "name": "Plank",
+      "category": "Calisthenics",
+      "equipmentType": "Floor",
+      "bodyweight": true,
+      "weighted": true,
+      "rings": false,
+      "primaryMuscles": "Core, Shoulders, Glutes",
+      "progression": ["Knee", "Standard", "Weighted"],
+      "tiers": [
+        { "level": 1, "name": "Knee" },
+        { "level": 2, "name": "Standard" },
+        { "level": 3, "name": "Weighted" }
+      ],
+      "variations": [
+        { "name": "Forearm" },
+        { "name": "High" },
+        { "name": "Side" },
+        { "name": "Reverse" },
+        { "name": "Copenhagen" }
+      ]
+    },
+    {
+      "name": "Ab wheel rollout",
+      "category": "Calisthenics",
+      "equipmentType": "Ab wheel",
+      "bodyweight": true,
+      "weighted": false,
+      "rings": false,
+      "primaryMuscles": "Core, Lats, Shoulders",
+      "progression": ["Kneeling", "Standing"],
+      "tiers": [
+        { "level": 1, "name": "Kneeling" },
+        { "level": 2, "name": "Standing" }
+      ],
+      "variations": [
+        { "name": "Wide" },
+        { "name": "Narrow" },
+        { "name": "One arm" }
+      ]
+    },
+    {
+      "name": "Windmill",
+      "category": "Calisthenics",
+      "equipmentType": "Bodyweight, Kettlebell, Dumbbell",
+      "bodyweight": true,
+      "weighted": true,
+      "rings": false,
+      "primaryMuscles": "Core, Shoulders, Hamstrings, Obliques",
+      "progression": ["Standard", "Weighted"],
+      "tiers": [
+        { "level": 1, "name": "Standard" },
+        { "level": 2, "name": "Weighted" }
+      ],
+      "variations": [
+        { "name": "Standing" },
+        { "name": "Kneeling" }
+      ]
+    },
+    {
+      "name": "Crow pose",
+      "category": "Calisthenics",
+      "equipmentType": "Floor",
+      "bodyweight": true,
+      "weighted": false,
+      "rings": false,
+      "primaryMuscles": "Shoulders, Wrists, Core",
+      "progression": ["Frogger", "Toes down", "Full"],
+      "tiers": [
+        { "level": 1, "name": "Frogger" },
+        { "level": 2, "name": "Toes down" },
+        { "level": 3, "name": "Full" }
+      ],
+      "variations": [
+        { "name": "Side crow" },
+        { "name": "One leg" }
+      ]
+    },
+    {
+      "name": "Elbow lever",
+      "category": "Calisthenics",
+      "equipmentType": "Floor, Parallettes",
+      "bodyweight": true,
+      "weighted": false,
+      "rings": false,
+      "primaryMuscles": "Core, Shoulders, Wrists",
+      "progression": ["Straddle", "Full"],
+      "tiers": [
+        { "level": 1, "name": "Straddle" },
+        { "level": 2, "name": "Full" }
+      ],
+      "variations": [
+        { "name": "One arm" }
+      ]
+    },
+    {
+      "name": "360 pull",
+      "category": "Calisthenics",
+      "equipmentType": "Bar, Rings",
+      "bodyweight": true,
+      "weighted": false,
+      "rings": true,
+      "primaryMuscles": "Back, Shoulders, Core, Grip",
+      "progression": ["Assisted", "Standard"],
+      "tiers": [
+        { "level": 1, "name": "Assisted" },
+        { "level": 2, "name": "Standard" }
+      ],
+      "variations": [
+        { "name": "Bar" },
+        { "name": "Ring" }
+      ]
+    },
+    {
+      "name": "Impossible dip",
+      "category": "Calisthenics",
+      "equipmentType": "Parallel bars, Rings",
+      "bodyweight": true,
+      "weighted": true,
+      "rings": true,
+      "primaryMuscles": "Chest, Shoulders, Triceps",
+      "progression": ["Negative", "Assisted", "Full"],
+      "tiers": [
+        { "level": 1, "name": "Negative" },
+        { "level": 2, "name": "Assisted" },
+        { "level": 3, "name": "Full" }
+      ],
+      "variations": [
+        { "name": "Weighted" }
+      ]
+    },
+    {
+      "name": "Victorian cross",
+      "category": "Calisthenics",
+      "equipmentType": "Rings",
+      "bodyweight": true,
+      "weighted": false,
+      "rings": true,
+      "primaryMuscles": "Shoulders, Chest, Back, Core",
+      "progression": ["Tuck", "Advanced tuck", "Straddle", "Full"],
+      "tiers": [
+        { "level": 1, "name": "Tuck" },
+        { "level": 2, "name": "Advanced tuck" },
+        { "level": 3, "name": "Straddle" },
+        { "level": 4, "name": "Full" }
+      ],
+      "variations": [
+        { "name": "Rings" }
+      ]
+    },
+    {
+      "name": "Iron cross",
+      "category": "Calisthenics",
+      "equipmentType": "Rings",
+      "bodyweight": true,
+      "weighted": false,
+      "rings": true,
+      "primaryMuscles": "Shoulders, Chest, Biceps, Forearms",
+      "progression": ["Band assisted", "Negative", "Full"],
+      "tiers": [
+        { "level": 1, "name": "Band assisted" },
+        { "level": 2, "name": "Negative" },
+        { "level": 3, "name": "Full" }
+      ],
+      "variations": [
+        { "name": "Rings" }
+      ]
+    },
+    {
+      "name": "Maltese",
+      "category": "Calisthenics",
+      "equipmentType": "Rings, Floor",
+      "bodyweight": true,
+      "weighted": false,
+      "rings": true,
+      "primaryMuscles": "Shoulders, Chest, Core",
+      "progression": ["Tuck", "Advanced tuck", "Straddle", "Full"],
+      "tiers": [
+        { "level": 1, "name": "Tuck" },
+        { "level": 2, "name": "Advanced tuck" },
+        { "level": 3, "name": "Straddle" },
+        { "level": 4, "name": "Full" }
+      ],
+      "variations": [
+        { "name": "Rings" },
+        { "name": "Floor" }
+      ]
+    },
+    {
+      "name": "Reverse planche",
+      "category": "Calisthenics",
+      "equipmentType": "Rings, Floor",
+      "bodyweight": true,
+      "weighted": false,
+      "rings": true,
+      "primaryMuscles": "Posterior shoulders, Back, Core",
+      "progression": ["Tuck", "Advanced tuck", "Straddle", "Full"],
+      "tiers": [
+        { "level": 1, "name": "Tuck" },
+        { "level": 2, "name": "Advanced tuck" },
+        { "level": 3, "name": "Straddle" },
+        { "level": 4, "name": "Full" }
+      ],
+      "variations": [
+        { "name": "Rings" }
+      ]
+    },
+    {
+      "name": "Press to handstand",
+      "category": "Calisthenics",
+      "equipmentType": "Floor, Parallettes, Rings",
+      "bodyweight": true,
+      "weighted": false,
+      "rings": true,
+      "primaryMuscles": "Shoulders, Core, Hip flexors, Triceps",
+      "progression": ["Tuck", "Straddle", "Pike", "Full"],
+      "tiers": [
+        { "level": 1, "name": "Tuck" },
+        { "level": 2, "name": "Straddle" },
+        { "level": 3, "name": "Pike" },
+        { "level": 4, "name": "Full" }
+      ],
+      "variations": [
+        { "name": "Floor" },
+        { "name": "Parallettes" },
+        { "name": "Rings" }
+      ]
+    },
+    {
+      "name": "Hefesto",
+      "category": "Calisthenics",
+      "equipmentType": "Bar, Rings",
+      "bodyweight": true,
+      "weighted": false,
+      "rings": true,
+      "primaryMuscles": "Biceps, Forearms, Shoulders, Back",
+      "progression": ["Assisted", "Negative", "Full"],
+      "tiers": [
+        { "level": 1, "name": "Assisted" },
+        { "level": 2, "name": "Negative" },
+        { "level": 3, "name": "Full" }
+      ],
+      "variations": [
+        { "name": "Bar" },
+        { "name": "Rings" }
+      ]
+    },
+    {
+      "name": "Pelican curl",
+      "category": "Calisthenics",
+      "equipmentType": "Rings",
+      "bodyweight": true,
+      "weighted": false,
+      "rings": true,
+      "primaryMuscles": "Biceps, Forearms, Shoulders, Chest",
+      "progression": ["Band assisted", "Negative", "Full"],
+      "tiers": [
+        { "level": 1, "name": "Band assisted" },
+        { "level": 2, "name": "Negative" },
+        { "level": 3, "name": "Full" }
+      ],
+      "variations": [
+        { "name": "Rings" }
+      ]
+    }
+  ]
+}

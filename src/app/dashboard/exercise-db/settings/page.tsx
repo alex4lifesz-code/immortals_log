@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import PageLayout from "@/components/layout/PageLayout";
+import { useIsMobile } from "@/context/AppContext";
 import GlowButton from "@/components/ui/GlowButton";
 import { api } from "@/lib/api-client";
 import {
@@ -101,7 +102,7 @@ function OptionListEditor({
 
   return (
     <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-      <div className="px-3 py-2 border-b" style={{ borderColor: "#f5f5f5", backgroundColor: "#f5f5f5" }}>
+      <div className="px-3 py-2 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
         <p className="text-xs font-semibold" style={{ color: "var(--text-primary)" }}>{title}</p>
         <p className="text-[11px]" style={{ color: "var(--text-secondary)" }}>{subtitle}</p>
       </div>
@@ -165,7 +166,7 @@ function OptionListEditor({
           ))}
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
@@ -185,7 +186,7 @@ function OptionListEditor({
               onAdd(draft);
               setDraft("");
             }}
-            className="px-3 py-1.5 text-xs border transition-colors"
+            className="px-3 py-1.5 text-xs border transition-colors sm:w-auto"
             style={{ borderColor: "var(--accent)", color: "var(--accent)", backgroundColor: "color-mix(in srgb, var(--accent) 10%, transparent)", borderRadius: "2px" }}
           >
             Add
@@ -407,6 +408,7 @@ function ExerciseRowLabelEditor({
 
 export default function ExerciseDbSettingsPage() {
   const router = useRouter();
+  const isMobile = useIsMobile();
   const defaults = useMemo(() => getDefaultExerciseDbOptions(), []);
 
   const [categories, setCategories] = useState<string[]>(defaults.categories);
@@ -727,7 +729,7 @@ export default function ExerciseDbSettingsPage() {
             />
 
             <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-              <div className="px-3 py-2 border-b" style={{ borderColor: "#f5f5f5", backgroundColor: "#f5f5f5" }}>
+              <div className="px-3 py-2 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
                 <p className="text-xs font-semibold" style={{ color: "var(--text-primary)" }}>Exercise Progressions and Variants</p>
                 <p className="text-[11px]" style={{ color: "var(--text-secondary)" }}>Review progression tracks and manage each exercise's unique variants here.</p>
               </div>
@@ -735,7 +737,7 @@ export default function ExerciseDbSettingsPage() {
                 <select
                   value={variantCategoryFilter}
                   onChange={(e) => setVariantCategoryFilter(e.target.value)}
-                  className="px-2 py-1.5 text-[11px] outline-none border transition-colors cursor-pointer hover:border-accent/60 hover:bg-surface-hover focus:border-accent/70"
+                  className="w-full sm:w-auto px-2 py-1.5 text-[11px] outline-none border transition-colors cursor-pointer hover:border-accent/60 hover:bg-surface-hover focus:border-accent/70"
                   style={{ borderColor: "var(--border)", color: "var(--text-primary)", backgroundColor: "var(--surface)", borderRadius: "2px" }}
                 >
                   <option value="">All Categories</option>
@@ -746,7 +748,7 @@ export default function ExerciseDbSettingsPage() {
                 <select
                   value={variantTypeFilter}
                   onChange={(e) => setVariantTypeFilter(e.target.value)}
-                  className="px-2 py-1.5 text-[11px] outline-none border transition-colors cursor-pointer hover:border-accent/60 hover:bg-surface-hover focus:border-accent/70"
+                  className="w-full sm:w-auto px-2 py-1.5 text-[11px] outline-none border transition-colors cursor-pointer hover:border-accent/60 hover:bg-surface-hover focus:border-accent/70"
                   style={{ borderColor: "var(--border)", color: "var(--text-primary)", backgroundColor: "var(--surface)", borderRadius: "2px" }}
                 >
                   <option value="">All Types</option>
@@ -755,6 +757,67 @@ export default function ExerciseDbSettingsPage() {
                   ))}
                 </select>
               </div>
+              {isMobile ? (
+                <div className="space-y-2 p-2" style={{ backgroundColor: "var(--surface)" }}>
+                  {filteredExerciseVariantRows.length === 0 ? (
+                    <div className="rounded border px-3 py-6 text-center text-xs" style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}>
+                      No exercises found.
+                    </div>
+                  ) : (
+                    filteredExerciseVariantRows.map((row) => (
+                      <div key={row.id} className="rounded border p-2 space-y-2" style={{ borderColor: "var(--border)", backgroundColor: "color-mix(in srgb, var(--surface) 95%, var(--border))" }}>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px]" style={{ borderRadius: "2px", color: "var(--text-secondary)", backgroundColor: "color-mix(in srgb, var(--border) 10%, transparent)" }}>
+                            {row.category}
+                          </span>
+                          <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px]" style={{ borderRadius: "2px", color: "var(--text-secondary)", backgroundColor: "color-mix(in srgb, var(--border) 10%, transparent)" }}>
+                            {row.exerciseType}
+                          </span>
+                        </div>
+                        <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>{row.name}</p>
+
+                        <div className="rounded border p-2" style={{ borderColor: "var(--border)" }}>
+                          <p className="mb-1 text-[10px] font-semibold uppercase" style={{ color: "var(--text-secondary)" }}>Progression</p>
+                          <ExerciseRowLabelEditor
+                            row={row}
+                            values={row.progression}
+                            kind="progression"
+                            emptyLabel="No progression yet"
+                            addPlaceholder="Add progression"
+                            onSave={(exerciseId, exerciseName, previousValues, nextValues) => updateExerciseMetadata(
+                              exerciseId,
+                              exerciseName,
+                              previousValues,
+                              nextValues,
+                              row.variants,
+                              row.variants,
+                            )}
+                          />
+                        </div>
+
+                        <div className="rounded border p-2" style={{ borderColor: "var(--border)" }}>
+                          <p className="mb-1 text-[10px] font-semibold uppercase" style={{ color: "var(--text-secondary)" }}>Variants</p>
+                          <ExerciseRowLabelEditor
+                            row={row}
+                            values={row.variants}
+                            kind="variant"
+                            emptyLabel="No variants yet"
+                            addPlaceholder="Add variant"
+                            onSave={(exerciseId, exerciseName, previousValues, nextValues) => updateExerciseMetadata(
+                              exerciseId,
+                              exerciseName,
+                              row.progression,
+                              row.progression,
+                              previousValues,
+                              nextValues,
+                            )}
+                          />
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              ) : (
               <div className="overflow-x-auto" style={{ backgroundColor: "var(--surface)" }}>
                 <table className="w-full text-[11px] border-collapse" style={{ minWidth: "880px" }}>
                   <thead>
@@ -841,6 +904,7 @@ export default function ExerciseDbSettingsPage() {
                   </tbody>
                 </table>
               </div>
+              )}
             </div>
 
             {message && (
@@ -853,7 +917,7 @@ export default function ExerciseDbSettingsPage() {
               <button
                 type="button"
                 onClick={handleBack}
-                className="px-3 py-1.5 text-xs border"
+                className="w-full sm:w-auto px-3 py-1.5 text-xs border"
                 style={{ borderColor: "var(--border)", borderRadius: "2px", color: "var(--text-secondary)", backgroundColor: "var(--surface)" }}
               >
                 Back to Exercise DB
@@ -869,7 +933,7 @@ export default function ExerciseDbSettingsPage() {
                   <p className="text-xs font-semibold" style={{ color: "var(--text-primary)" }}>Unsaved changes detected</p>
                   <p className="text-[11px]" style={{ color: "var(--text-secondary)" }}>Review your edits and save to apply DB setting updates.</p>
                 </div>
-                <div className="flex items-center gap-2 justify-end">
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
                   <button
                     type="button"
                     onClick={() => {
@@ -880,15 +944,17 @@ export default function ExerciseDbSettingsPage() {
                       setPendingRenames({ categories: [], types: [], muscles: [], variants: [] });
                       setMessage("Changes discarded.");
                     }}
-                    className="px-3 py-1.5 text-xs border"
+                    className="w-full sm:w-auto px-3 py-1.5 text-xs border"
                     style={{ borderColor: "var(--border)", borderRadius: "2px", color: "var(--text-secondary)", backgroundColor: "var(--surface)" }}
                     disabled={saving}
                   >
                     Discard
                   </button>
-                  <GlowButton onClick={save} variant="jade" size="sm" disabled={saving}>
-                    {saving ? "Saving..." : "Save DB Settings"}
-                  </GlowButton>
+                  <div className="w-full sm:w-auto">
+                    <GlowButton onClick={save} variant="jade" size="sm" disabled={saving} className="w-full sm:w-auto">
+                      {saving ? "Saving..." : "Save DB Settings"}
+                    </GlowButton>
+                  </div>
                 </div>
               </div>
             )}

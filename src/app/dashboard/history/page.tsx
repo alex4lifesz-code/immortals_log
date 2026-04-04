@@ -1,36 +1,46 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import PageLayout from "@/components/layout/PageLayout";
 import { MemoTrainingLogTable } from "@/components/workout/TrainingLogTable";
 import { useAuth } from "@/context/AuthContext";
-import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { api } from "@/lib/api-client";
-import { formatDateWithPreference } from "@/lib/constants";
-import { getExerciseDisplayName } from "@/lib/exercise-name";
 import { DEFAULT_USER_PHYSIQUE, loadUserPhysique } from "@/lib/user-physique";
 import type { UserPhysiqueSettings } from "@/lib/user-physique";
 import type { ProgressionExercise } from "../workout/types";
-import { stripBwPercentHint } from "../workout/utils";
 
 export default function HistoryPage() {
   const { user } = useAuth();
-  const { settings } = useDisplaySettings();
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const dateFormat = settings.dateFormat || "dd-mmm-yyyy";
+  const didApplyInitialUserScopeRef = useRef(false);
 
   const [exercises, setExercises] = useState<ProgressionExercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [physique, setPhysique] = useState<UserPhysiqueSettings>(DEFAULT_USER_PHYSIQUE);
+  const [visibleUsers, setVisibleUsers] = useState<Array<{ id: string; name: string; username: string }>>([]);
 
   const userId = user?.id ?? "";
+  const targetUserId = searchParams.get("targetUserId") || "";
+  const activeUserId = targetUserId || userId;
   const prefillExerciseId = searchParams.get("prefillExerciseId");
   const prefillExerciseName = searchParams.get("prefillExercise");
   const prefillProgression = searchParams.get("prefillProgression");
   const prefillVariant = searchParams.get("prefillVariant");
+
+  useEffect(() => {
+    if (!userId || didApplyInitialUserScopeRef.current) return;
+
+    didApplyInitialUserScopeRef.current = true;
+
+    if (!targetUserId) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("targetUserId");
+    const next = params.toString();
+    router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
+  }, [pathname, router, searchParams, targetUserId, userId]);
 
   useEffect(() => {
     const hasPrefill = Boolean(prefillExerciseId || prefillExerciseName || prefillProgression || prefillVariant);
@@ -47,24 +57,47 @@ export default function HistoryPage() {
   }, [pathname, prefillExerciseId, prefillExerciseName, prefillProgression, prefillVariant, router, searchParams]);
 
   useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    const loadUsers = async () => {
+      try {
+        const data = await api.get<{ users: Array<{ id: string; name: string; username: string }> }>("/api/users/public?scope=community");
+        if (!cancelled) {
+          setVisibleUsers(Array.isArray(data.users) ? data.users : []);
+        }
+      } catch {
+        if (!cancelled) {
+          setVisibleUsers([]);
+        }
+      }
+    };
+    void loadUsers();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  useEffect(() => {
     if (!userId) {
       setPhysique(DEFAULT_USER_PHYSIQUE);
       return;
     }
-    setPhysique(loadUserPhysique(userId));
-  }, [userId]);
+    setPhysique(loadUserPhysique(activeUserId || userId));
+  }, [activeUserId, userId]);
 
   const fetchExercises = useCallback(async () => {
     if (!userId) return;
     try {
-      const data = await api.get<{ exercises: ProgressionExercise[] }>("/api/progressions");
+      const params = new URLSearchParams({ logLimit: "200" });
+      if (targetUserId) params.set("targetUserId", targetUserId);
+      const data = await api.get<{ exercises: ProgressionExercise[] }>(`/api/progressions/history?${params.toString()}`);
       setExercises(data.exercises || []);
     } catch (err) {
       console.error("Failed to load history:", err);
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [targetUserId, userId]);
 
   useEffect(() => {
     setLoading(true);
@@ -73,48 +106,32 @@ export default function HistoryPage() {
 
   const subtitle = "Review your training logs and cultivation entries";
 
-  const historyInsights = useMemo(() => {
-    const flattened = exercises.flatMap((exercise) => {
-      const logs = exercise.userProgress?.[0]?.logs ?? [];
-      const displayName = stripBwPercentHint(getExerciseDisplayName(exercise, settings.terminologyMode));
-      return logs.map((log) => ({
-        id: log.id,
-        exerciseId: exercise.id,
-        exerciseName: displayName,
-        level: log.level,
-        createdAt: log.createdAt,
-      }));
-    });
+  const orderedVisibleUsers = useMemo(() => {
+    if (!userId) return visibleUsers;
 
-    const sorted = [...flattened].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-
-    const now = Date.now();
-    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-    const logsLast7Days = sorted.filter((entry) => now - new Date(entry.createdAt).getTime() <= sevenDaysMs).length;
-
-    const uniqueExercises = new Set(sorted.map((entry) => entry.exerciseId)).size;
-
-    const countsByExercise = new Map<string, number>();
-    for (const entry of sorted) {
-      countsByExercise.set(entry.exerciseName, (countsByExercise.get(entry.exerciseName) ?? 0) + 1);
-    }
-    const topExercise = [...countsByExercise.entries()].sort((a, b) => b[1] - a[1])[0] ?? null;
-
-    return {
-      total: sorted.length,
-      logsLast7Days,
-      uniqueExercises,
-      topExerciseName: topExercise?.[0] ?? "None yet",
-      topExerciseCount: topExercise?.[1] ?? 0,
-      recentEntries: sorted.slice(0, 5),
+    const selfEntry = visibleUsers.find((u) => u.id === userId) ?? {
+      id: userId,
+      name: user?.name || "Me",
+      username: user?.username || "",
     };
-  }, [exercises, settings.terminologyMode]);
+    const others = visibleUsers.filter((u) => u.id !== userId);
+    return [selfEntry, ...others];
+  }, [user?.name, user?.username, userId, visibleUsers]);
+
+  const handleUserScopeChange = (nextUserId: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (!nextUserId || nextUserId === userId) {
+      params.delete("targetUserId");
+    } else {
+      params.set("targetUserId", nextUserId);
+    }
+    const next = params.toString();
+    router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
+  };
 
   return (
     <PageLayout
-      title="History"
+      title="Train"
       subtitle={subtitle}
       mobileContentPaddingClass="p-2 pb-24"
     >
@@ -125,12 +142,38 @@ export default function HistoryPage() {
           </div>
         ) : (
           <>
+            <div className="rounded-lg border p-3" style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)" }}>
+              <div className="flex flex-wrap items-center gap-2">
+                <label htmlFor="history-user-scope" className="text-xs font-medium" style={{ color: "var(--text-secondary)" }}>
+                  View user
+                </label>
+                <select
+                  id="history-user-scope"
+                  value={activeUserId || userId}
+                  onChange={(event) => handleUserScopeChange(event.target.value)}
+                  className="rounded border px-2 py-1 text-xs outline-none"
+                  style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)", color: "var(--text-primary)" }}
+                >
+                  {orderedVisibleUsers.length === 0 ? (
+                    <option value={userId}>{user?.name || "Me"}</option>
+                  ) : (
+                    orderedVisibleUsers.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.id === userId ? `* ${u.name || u.username}` : (u.name || u.username)}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+            </div>
+
             <div className="nyaa-history-table-shell">
               <MemoTrainingLogTable
                 exercises={exercises}
                 physique={physique}
                 onRefresh={fetchExercises}
                 userId={userId}
+                historyTargetUserId={targetUserId || undefined}
                 prefillExerciseId={prefillExerciseId}
                 prefillExerciseName={prefillExerciseName}
                 prefillProgression={prefillProgression}

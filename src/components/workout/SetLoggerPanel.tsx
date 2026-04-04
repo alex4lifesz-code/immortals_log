@@ -1434,7 +1434,7 @@ export function SetLoggerPanel({
         )}
 
         {showTimerModal && showHold && (
-          <div className="absolute inset-0 z-30 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-[2px] p-2" onClick={closeTimerModal}>
+          <div className="absolute inset-0 z-30 flex items-end sm:items-center justify-center bg-black/75 p-2" onClick={closeTimerModal}>
             <div
               className="w-full max-w-[300px] rounded-lg border bg-ink-deep/95 p-3"
               style={{

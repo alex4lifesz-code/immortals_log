@@ -2,11 +2,17 @@
 
 import { motion } from "framer-motion";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import GlowCard from "@/components/ui/GlowCard";
 import GlowButton from "@/components/ui/GlowButton";
 import PageSkeleton from "@/components/ui/PageSkeleton";
 import { GlowModal } from "@/components/ui/GlowCard";
+import dynamic from "next/dynamic";
+
+const MonthlyComparisonChart = dynamic(() => import("@/components/dashboard/MonthlyComparisonChart"), { ssr: false });
+const WeightTrendChart = dynamic(() => import("@/components/dashboard/WeightTrendChart"), { ssr: false });
+const CheckInStatsPanel = dynamic(() => import("@/components/dashboard/CheckInStatsPanel"), { ssr: false });
+import ChartUserFilter from "@/components/dashboard/ChartUserFilter";
 import PageLayout from "@/components/layout/PageLayout";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -61,8 +67,30 @@ export default function DaoHallPage() {
   const [futureNotes, setFutureNotes] = useState<CommunityNote[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [checkInRows, setCheckInRows] = useState<CheckInRow[]>([]);
+  const [chartUserIds, setChartUserIds] = useState<string[]>(() => {
+    if (typeof window === "undefined") return [];
+    try { const v = localStorage.getItem("dao-chart-users"); return v ? JSON.parse(v) : []; } catch { return []; }
+  });
   const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE);
   const [isLoadingMoreRows, setIsLoadingMoreRows] = useState(false);
+  // Initialise chart user filter to current user (fallback if nothing saved)
+  useEffect(() => {
+    if (user && chartUserIds.length === 0) setChartUserIds([user.id]);
+  }, [user, chartUserIds.length]);
+
+  // Persist chart user selection
+  useEffect(() => {
+    if (chartUserIds.length > 0) {
+      try { localStorage.setItem("dao-chart-users", JSON.stringify(chartUserIds)); } catch {}
+    }
+  }, [chartUserIds]);
+
+  const chartUserNames = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const u of allUsers) m[u.id] = u.name;
+    return m;
+  }, [allUsers]);
+
   const sectRegisterRef = useRef<HTMLDivElement>(null);
   const rowsObserverTargetRef = useRef<HTMLDivElement | null>(null);
   // Check-in modal state
@@ -74,6 +102,25 @@ export default function DaoHallPage() {
   // Weight prompt modal state
   const [showWeightPrompt, setShowWeightPrompt] = useState(false);
   const [weightPromptValue, setWeightPromptValue] = useState("");
+  const [statsTabOpen, setStatsTabOpen] = useState(false);
+  const [chartsOpen, setChartsOpen] = useState(() => {
+    if (typeof window === "undefined") return true;
+    try { return localStorage.getItem("dao-charts-open") !== "false"; } catch { return true; }
+  });
+  const [cultivationViewOpen, setCultivationViewOpen] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try { return localStorage.getItem("dao-cultivation-open") === "true"; } catch { return false; }
+  });
+
+  // Persist charts toggle
+  useEffect(() => {
+    try { localStorage.setItem("dao-charts-open", String(chartsOpen)); } catch {}
+  }, [chartsOpen]);
+
+  // Persist cultivation view open toggle
+  useEffect(() => {
+    try { localStorage.setItem("dao-cultivation-open", String(cultivationViewOpen)); } catch {}
+  }, [cultivationViewOpen]);
   const dayNotesStorageKey = useMemo(
     () => (user?.id ? `cultivation-day-notes:${user.id}` : "cultivation-day-notes"),
     [user?.id]
@@ -813,17 +860,16 @@ export default function DaoHallPage() {
     <PageLayout
       title="Dao Hall"
       subtitle="The spiritual center of your cultivation journey"
-      sidebar={<DashboardSidebar stats={stats} allUsers={allUsers} userColors={userColors} onColorChange={handleColorChange} currentUserId={user.id} isAdmin={isAdmin} />}
-      sidebarLabel="Cultivation Stats"
-      mobileContentPaddingClass="p-3 pb-24"
+      mobileContentPaddingClass="p-2 pb-24"
+      contentMaxWidthClass="max-w-[1220px]"
     >
       {loading ? (
         <PageSkeleton statCards={4} wideBlock rows={3} />
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-2 px-0 py-2 sm:py-3">
           {/* Upcoming Notes */}
           {scopedFutureNotes.length > 0 && (
-            <GlowCard glow="gold" className="w-full">
+            <div className="w-full border bg-ink-dark/20 p-4" style={{ borderColor: "var(--border)" }}>
               <div className="space-y-2.5">
                 <div className="flex items-center gap-2">
                   <h4 className="text-xs text-gold-glow uppercase tracking-wide font-semibold">Upcoming Notes</h4>
@@ -836,7 +882,7 @@ export default function DaoHallPage() {
                       <button
                         key={note.id}
                         onClick={() => handleDayClick(note.date)}
-                        className="w-full text-left p-2 rounded-lg border border-ink-light/45 bg-gradient-to-r from-ink-dark/40 to-ink-mid/20 hover:from-gold-dim/12 hover:to-gold-dim/8 hover:border-gold-dim/45 transition-all duration-200"
+                        className="w-full text-left p-2 border border-ink-light/45 bg-ink-dark/20 hover:bg-ink-mid/20 hover:border-gold-dim/45 transition-all duration-200"
                         title="Jump to this date"
                       >
                         <div className="flex items-start gap-2">
@@ -859,36 +905,176 @@ export default function DaoHallPage() {
                   })}
                 </div>
               </div>
-            </GlowCard>
+            </div>
           )}
 
-          {/* Calendar */}
-          <div>
-            <Calendar
-              checkInUsersByDate={scopedCheckInUsersByDate}
-              currentMonth={currentMonth}
-              setCurrentMonth={setCurrentMonth}
-              dayNotes={scopedDayNotes}
-              futureNoteDates={new Set(scopedFutureNotes.map((n) => n.date))}
-              onDayClick={handleDayClick}
-              allUsers={allUsers}
-              userColors={userColors}
-              upcomingNotes={[]}
-              dateFormat={dateFormat}
-              onManageNotes={undefined}
-            />
+          {/* Calendar — always visible */}
+          <div className={`grid ${isMobile ? "grid-cols-1" : "grid-cols-2"} gap-4`}>
+            <div className="min-w-0">
+              <Calendar
+                checkInUsersByDate={scopedCheckInUsersByDate}
+                currentMonth={currentMonth}
+                setCurrentMonth={setCurrentMonth}
+                dayNotes={scopedDayNotes}
+                futureNoteDates={new Set(scopedFutureNotes.map((n) => n.date))}
+                onDayClick={handleDayClick}
+                allUsers={allUsers}
+                userColors={userColors}
+                upcomingNotes={[]}
+                dateFormat={dateFormat}
+                onManageNotes={undefined}
+                forceCompact
+              />
+            </div>
+
+            {/* Stats panel — always visible beside calendar on desktop */}
+            {!isMobile && (
+              <div
+                className="border bg-ink-dark/20 p-3 flex flex-col min-h-[260px]"
+                style={{ borderColor: "var(--border)" }}
+              >
+                {user && chartUserIds.length > 0 && (
+                  <CheckInStatsPanel
+                    checkInRows={checkInRows}
+                    currentMonth={currentMonth}
+                    selectedUserIds={chartUserIds}
+                    userNames={chartUserNames}
+                    userColors={userColors}
+                    currentUserId={user.id}
+                  />
+                )}
+              </div>
+            )}
           </div>
 
+          {/* Charts + cultivation stats are desktop-only */}
+          {!isMobile && (
+            <div
+              className="flex items-center gap-3 border px-3 py-2"
+              style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)" }}
+            >
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={chartsOpen}
+                  onClick={() => setChartsOpen((prev) => !prev)}
+                  className="inline-flex items-center gap-2 border px-2.5 py-1 text-xs font-medium transition-colors"
+                  style={{
+                    borderColor: chartsOpen ? "var(--jade-glow)" : "var(--border)",
+                    color: chartsOpen ? "var(--jade-glow)" : "var(--text-secondary)",
+                    backgroundColor: chartsOpen ? "rgba(0,255,128,0.06)" : "transparent",
+                  }}
+                >
+                  <span>{chartsOpen ? "Hide Charts" : "Show Charts"}</span>
+                  <span
+                    className="relative inline-flex h-4 w-8 items-center rounded-full transition-colors"
+                    style={{
+                      backgroundColor: chartsOpen
+                        ? "color-mix(in srgb, var(--jade-glow) 40%, transparent)"
+                        : "color-mix(in srgb, var(--border) 55%, transparent)",
+                    }}
+                  >
+                    <span
+                      className="absolute h-3 w-3 rounded-full transition-all"
+                      style={{
+                        left: chartsOpen ? "16px" : "2px",
+                        backgroundColor: chartsOpen ? "var(--jade-glow)" : "var(--text-muted)",
+                      }}
+                    />
+                  </span>
+                </button>
+
+                {user && allUsers.length > 0 && (
+                  <ChartUserFilter
+                    currentUserId={user.id}
+                    allUsers={allUsers}
+                    selectedUserIds={chartUserIds}
+                    onSelectionChange={setChartUserIds}
+                    userColors={userColors}
+                  />
+                )}
+              </div>
+            </div>
+          )}
+
+          {!isMobile && chartsOpen && (
+            <div className={`grid ${isMobile ? "grid-cols-1" : "grid-cols-2"} gap-4`}>
+              {/* Monthly Comparison (last 6 months) */}
+              <div
+                className="border bg-ink-dark/20 p-3 flex flex-col min-h-[220px]"
+                style={{ borderColor: "var(--border)" }}
+              >
+                {user && chartUserIds.length > 0 && (
+                  <MonthlyComparisonChart
+                    checkInRows={checkInRows}
+                    currentMonth={currentMonth}
+                    selectedUserIds={chartUserIds}
+                    userNames={chartUserNames}
+                    userColors={userColors}
+                  />
+                )}
+              </div>
+
+              {/* Weight Trend (all-time) */}
+              <div
+                className="border bg-ink-dark/20 p-3 flex flex-col min-h-[220px]"
+                style={{ borderColor: "var(--border)" }}
+              >
+                {user && chartUserIds.length > 0 && (
+                  <WeightTrendChart
+                    checkInRows={checkInRows}
+                    selectedUserIds={chartUserIds}
+                    userNames={chartUserNames}
+                    userColors={userColors}
+                  />
+                )}
+              </div>
+            </div>
+          )}
+
           {/* User View — Personal cultivation history */}
-          <GlowCard glow="jade" className="w-full">
+          <div className="w-full border bg-ink-dark/20 p-4" style={{ borderColor: "var(--border)" }}>
             <div ref={sectRegisterRef} className="space-y-4">
               <div className="flex items-center justify-between gap-2">
                 <h3 className="text-lg font-bold text-jade-glow">My Cultivation View</h3>
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1 rounded-lg border border-ink-light/50 p-0.5">
+                  {!isMobile && (
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={cultivationViewOpen}
+                      onClick={() => setCultivationViewOpen((prev) => !prev)}
+                      className="inline-flex items-center gap-2 border px-2 py-1 text-[11px] transition-colors"
+                      style={{
+                        borderColor: cultivationViewOpen ? "color-mix(in srgb, var(--accent) 35%, var(--border))" : "var(--border)",
+                        color: cultivationViewOpen ? "var(--accent)" : "var(--text-muted)",
+                      }}
+                      title={cultivationViewOpen ? "Full-width table" : "Fit-to-screen table"}
+                    >
+                      <span>Open</span>
+                      <span
+                        className="relative inline-flex h-4 w-8 items-center rounded-full transition-colors"
+                        style={{
+                          backgroundColor: cultivationViewOpen
+                            ? "color-mix(in srgb, var(--accent) 40%, transparent)"
+                            : "color-mix(in srgb, var(--border) 55%, transparent)",
+                        }}
+                      >
+                        <span
+                          className="absolute h-3 w-3 rounded-full transition-all"
+                          style={{
+                            left: cultivationViewOpen ? "16px" : "2px",
+                            backgroundColor: cultivationViewOpen ? "var(--accent)" : "var(--text-muted)",
+                          }}
+                        />
+                      </span>
+                    </button>
+                  )}
+                  <div className="flex items-center gap-1 border border-ink-light/50 p-0.5">
                     <button
                       onClick={() => setCalendarScope("all")}
-                      className={`text-xs px-2 py-1 rounded transition-all ${
+                      className={`text-xs px-2 py-1 transition-all ${
                         calendarScope === "all"
                           ? "bg-jade-deep/20 border border-jade/40 text-jade-light"
                           : "text-mist-light hover:text-jade-light"
@@ -898,7 +1084,7 @@ export default function DaoHallPage() {
                     </button>
                     <button
                       onClick={() => setCalendarScope("mine")}
-                      className={`text-xs px-2 py-1 rounded transition-all ${
+                      className={`text-xs px-2 py-1 transition-all ${
                         calendarScope === "mine"
                           ? "bg-jade-deep/20 border border-jade/40 text-jade-light"
                           : "text-mist-light hover:text-jade-light"
@@ -908,7 +1094,7 @@ export default function DaoHallPage() {
                     </button>
                     <button
                       onClick={() => setCalendarScope("friends")}
-                      className={`text-xs px-2 py-1 rounded transition-all ${
+                      className={`text-xs px-2 py-1 transition-all ${
                         calendarScope === "friends"
                           ? "bg-jade-deep/20 border border-jade/40 text-jade-light"
                           : "text-mist-light hover:text-jade-light"
@@ -921,125 +1107,220 @@ export default function DaoHallPage() {
               </div>
 
               {renderedCheckInRows.length === 0 ? (
-                <div className="flex flex-col items-center py-10 text-center border border-ink-light/40 rounded-lg bg-ink-mid/10">
+                <div className="flex flex-col items-center py-10 text-center border border-ink-light/40 bg-ink-mid/10">
                   <div className="text-2xl opacity-30 mb-2">🧭</div>
                   <p className="text-xs text-mist-dark">No entries for this view</p>
                   <p className="text-[10px] text-mist-dark/60 mt-1">Use the calendar above to check in and add notes</p>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {visibleRenderedCheckInRows.map(({ date, mine, mineWeight, presentCount, everyoneDetails }) => {
-                    return (
-                      <div
-                        key={date}
-                        className="rounded-xl border border-ink-light/45 bg-gradient-to-b from-ink-mid/15 to-ink-mid/5 p-3.5 sm:p-4 flex flex-col gap-2.5"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <button
-                            onClick={() => handleDayClick(date)}
-                            className="text-sm text-mist-light hover:text-jade-glow transition-colors text-left"
-                            title="Open this day"
-                          >
-                            {formatDateWithPreference(date, dateFormat)}
-                          </button>
-                          <span
-                            className={`text-[10px] px-2 py-0.5 rounded border ${
-                              (calendarScope === "mine" ? mine.present : presentCount > 0)
-                                ? "border-jade-glow/40 text-jade-glow bg-jade-deep/20"
-                                : "border-ink-light/50 text-mist-dark"
-                            }`}
-                          >
-                            {calendarScope === "mine"
-                              ? (mine.present ? "Checked In" : "Not Checked In")
-                              : `${presentCount} Checked In`}
-                          </span>
-                        </div>
+                isMobile ? (
+                  <div className={`space-y-1.5 ${cultivationViewOpen ? "" : "max-h-[600px] overflow-y-auto"}`}>
+                    {visibleRenderedCheckInRows.map(({ date, mine, mineWeight, presentCount, everyoneDetails }) => {
+                      return (
+                        <div
+                          key={date}
+                          className="border border-ink-light/40 bg-ink-dark/20 px-3 py-2.5 flex flex-col gap-2"
+                        >
+                          {/* Date + status row */}
+                          <div className="flex items-center justify-between gap-2">
+                            <button
+                              onClick={() => handleDayClick(date)}
+                              className="text-xs font-medium text-mist-light hover:text-jade-glow transition-colors text-left"
+                              title="Open this day"
+                            >
+                              {formatDateWithPreference(date, dateFormat)}
+                            </button>
+                            <span
+                              className={`text-[10px] px-1.5 py-0.5 border ${
+                                (calendarScope === "mine" ? mine.present : presentCount > 0)
+                                  ? "border-jade-glow/40 text-jade-glow bg-jade-deep/15"
+                                  : "border-ink-light/40 text-mist-dark"
+                              }`}
+                            >
+                              {calendarScope === "mine"
+                                ? (mine.present ? "✓ In" : "Not In")
+                                : `${presentCount} In`}
+                            </span>
+                          </div>
 
-                        {calendarScope === "mine" ? (
-                          <>
-                            <div className="flex items-center gap-4 text-xs text-mist-light">
-                              <span>
-                                Weight: <span className="text-cloud-white">{mineWeight}</span>
-                              </span>
+                          {calendarScope === "mine" ? (
+                            <div className="flex items-center gap-4 text-[11px] text-mist-light">
+                              <span>Weight: <span className="text-cloud-white">{mineWeight}</span></span>
+                              {mine.comment?.trim() && (
+                                <span className="truncate text-mist-light/80">{mine.comment.trim()}</span>
+                              )}
                             </div>
-
-                            <div className="text-xs text-mist-light/90">
-                              <span className="text-mist-dark">Comment:</span>{" "}
-                              {mine.comment?.trim() || "-"}
-                            </div>
-                          </>
-                        ) : (
-                          <div className="pt-0.5">
-                            <div className="rounded-lg border border-ink-light/30 bg-ink-dark/40 overflow-hidden divide-y divide-ink-light/20">
+                          ) : (
+                            <div className="flex flex-col gap-1">
                               {everyoneDetails.map((detail) => {
-                                const detailColor = getUserCultivatorColor(detail.id, userColors);
+                                const c = getUserCultivatorColor(detail.id, userColors);
+                                return (
+                                  <div key={detail.id} className="flex items-center gap-2 text-[11px] min-w-0">
+                                    {/* Color dot + name */}
+                                    <span className="flex items-center gap-1.5 shrink-0">
+                                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: c }} />
+                                      <span className="font-medium" style={{ color: c }}>{detail.name}</span>
+                                    </span>
 
-                                return <div key={detail.id} className="px-3 py-2.5">
-                                  <div className="flex items-start justify-between gap-2 text-xs">
-                                    <div className="min-w-0 flex-1 grid grid-cols-[minmax(108px,160px)_minmax(0,1fr)] items-start gap-x-1">
-                                      <div className="flex items-center gap-2 min-w-0">
-                                        <div
-                                          className="w-8 h-8 rounded-full grid place-items-center shrink-0 shadow-[0_0_0_1px_rgba(255,255,255,0.05)]"
-                                          style={{
-                                            backgroundColor: detailColor,
-                                            border: `1px solid ${getCultivatorGlowColor(detailColor, 0.7)}`,
-                                            boxShadow: `0 0 8px ${getCultivatorGlowColor(detailColor, 0.25)}`,
-                                          }}
-                                        >
-                                          <span className="text-sm font-bold text-pure-white leading-none">
-                                            {(detail.name || "?").charAt(0).toUpperCase()}
-                                          </span>
-                                        </div>
-                                        <span className="text-cloud-white font-semibold truncate tracking-wide">{detail.name}</span>
-                                      </div>
-
-                                      <div className="text-[11px] text-mist-light">
-                                        <div className="flex items-center gap-1.5">
-                                          <span className="text-mist-dark uppercase tracking-wide">Weight</span>
-                                          <span className="text-cloud-white font-medium">{detail.weight ? `${detail.weight} kg` : "-"}</span>
-                                        </div>
-                                        <div className="mt-1 text-mist-light/90 break-words leading-relaxed">
-                                          <span className="text-mist-dark uppercase tracking-wide mr-1">Note</span>
-                                          <span className="text-cloud-white/90">{detail.comment || "-"}</span>
-                                        </div>
-                                      </div>
-                                    </div>
-
+                                    {/* Check status */}
                                     {detail.present ? (
-                                      <span
-                                        className="mt-1 inline-flex h-2.5 w-2.5 shrink-0 rounded-full bg-jade-glow shadow-[0_0_0_1px_rgba(245,56,107,0.25)]"
-                                        title="Checked in"
-                                        aria-label="Checked in"
-                                      />
+                                      <span className="text-jade-glow text-[10px]">✓</span>
                                     ) : (
-                                      <span className="px-2 py-0.5 rounded-full border border-ink-light/45 text-[10px] text-mist-dark shrink-0">
-                                        Not in
+                                      <span className="text-mist-dark text-[10px]">✗</span>
+                                    )}
+
+                                    {/* Weight (if any) */}
+                                    {detail.weight && (
+                                      <span className="text-mist-light/70">{detail.weight}kg</span>
+                                    )}
+
+                                    {/* Comment (truncated) */}
+                                    {detail.comment && (
+                                      <span className="text-mist-light/60 truncate min-w-0 flex-1" title={detail.comment}>
+                                        {detail.comment}
                                       </span>
                                     )}
                                   </div>
-                                </div>;
+                                );
                               })}
                             </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                          )}
+                        </div>
+                      );
+                    })}
 
-                  {(hasMoreRows || isLoadingMoreRows) && (
-                    <div
-                      ref={rowsObserverTargetRef}
-                      className="flex justify-center py-2"
-                    >
-                      <span className="text-[11px] text-mist-dark">
-                        {isLoadingMoreRows ? "Loading more rows..." : "Scroll to load more"}
-                      </span>
-                    </div>
-                  )}
-                </div>
+                    {(hasMoreRows || isLoadingMoreRows) && (
+                      <div
+                        ref={rowsObserverTargetRef}
+                        className="flex justify-center py-2"
+                      >
+                        <span className="text-[11px] text-mist-dark">
+                          {isLoadingMoreRows ? "Loading more rows..." : "Scroll to load more"}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className={`overflow-x-auto border border-ink-light/35 bg-ink-dark/20 ${cultivationViewOpen ? "" : "max-h-[520px] overflow-y-auto"}`}>
+                    <table className="w-full min-w-[900px] text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-ink-light/40 bg-ink-dark/35">
+                          <th className="px-3 py-2 text-center text-mist-light font-semibold">Date</th>
+                          <th className="px-3 py-2 text-center text-mist-light font-semibold">Status</th>
+                          <th className="px-3 py-2 text-center text-mist-light font-semibold">Participants</th>
+                          <th className="px-3 py-2 text-center text-mist-light font-semibold">Weight</th>
+                          <th className="px-3 py-2 text-center text-mist-light font-semibold">Comment</th>
+                          <th className="px-3 py-2 text-center text-mist-light font-semibold">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {visibleRenderedCheckInRows.map(({ date, mine, mineWeight, presentCount, everyoneDetails }) => {
+                          const hasCheckin = calendarScope === "mine" ? mine.present : presentCount > 0;
+
+                          return (
+                            <tr key={date} className="border-b border-ink-light/25 last:border-b-0 hover:bg-ink-mid/15">
+                              <td className="px-3 py-2 text-cloud-white whitespace-nowrap">{formatDateWithPreference(date, dateFormat)}</td>
+                              <td className="px-3 py-2 whitespace-nowrap">
+                                <span
+                                  className={`inline-flex items-center rounded border px-2 py-0.5 text-[11px] ${
+                                    hasCheckin
+                                      ? "border-jade-glow/40 text-jade-glow bg-jade-deep/20"
+                                      : "border-ink-light/50 text-mist-dark"
+                                  }`}
+                                >
+                                  {calendarScope === "mine"
+                                    ? (mine.present ? "Checked In" : "Not Checked In")
+                                    : `${presentCount} Checked In`}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2">
+                                {calendarScope === "mine"
+                                  ? <span className="text-mist-dark text-[11px]">-</span>
+                                  : (
+                                    <div className="flex flex-wrap gap-1">
+                                      {everyoneDetails.filter((d) => d.present).map((d) => {
+                                        const c = getUserCultivatorColor(d.id, userColors);
+                                        return (
+                                          <span key={d.id} className="inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px]" style={{ borderColor: c, color: c, backgroundColor: `color-mix(in srgb, ${c} 10%, transparent)` }}>
+                                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: c }} />
+                                            {d.name}
+                                          </span>
+                                        );
+                                      })}
+                                      {everyoneDetails.filter((d) => d.present).length === 0 && <span className="text-mist-dark text-[11px]">-</span>}
+                                    </div>
+                                  )}
+                              </td>
+                              <td className="px-3 py-2">
+                                {calendarScope === "mine"
+                                  ? <span className="text-mist-light whitespace-nowrap">{mineWeight}</span>
+                                  : (
+                                    <div className="flex flex-wrap gap-1">
+                                      {everyoneDetails
+                                        .filter((d) => d.weight)
+                                        .map((d) => {
+                                          const c = getUserCultivatorColor(d.id, userColors);
+                                          return (
+                                            <span key={`${d.id}-weight`} className="inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px]" style={{ borderColor: `color-mix(in srgb, ${c} 40%, var(--border))`, color: "var(--text-secondary)" }}>
+                                              <span className="font-semibold shrink-0" style={{ color: c }}>{d.name}:</span>
+                                              <span className="whitespace-nowrap">{d.weight} kg</span>
+                                            </span>
+                                          );
+                                        })}
+                                      {everyoneDetails.filter((d) => d.weight).length === 0 && <span className="text-mist-dark text-[11px]">-</span>}
+                                    </div>
+                                  )}
+                              </td>
+                              <td className="px-3 py-2 max-w-[380px]">
+                                {calendarScope === "mine"
+                                  ? <span className="text-mist-light truncate block" title={mine.comment?.trim() || "-"}>{mine.comment?.trim() || "-"}</span>
+                                  : (
+                                    <div className="flex flex-wrap gap-1">
+                                      {everyoneDetails
+                                        .filter((d) => d.comment)
+                                        .map((d) => {
+                                          const c = getUserCultivatorColor(d.id, userColors);
+                                          return (
+                                            <span key={d.id} className="inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px]" style={{ borderColor: `color-mix(in srgb, ${c} 40%, var(--border))`, color: "var(--text-secondary)" }}>
+                                              <span className="font-semibold shrink-0" style={{ color: c }}>{d.name}:</span>
+                                              <span className="truncate max-w-[160px]" title={d.comment}>{d.comment}</span>
+                                            </span>
+                                          );
+                                        })}
+                                      {everyoneDetails.filter((d) => d.comment).length === 0 && <span className="text-mist-dark text-[11px]">-</span>}
+                                    </div>
+                                  )}
+                              </td>
+                              <td className="px-3 py-2 text-right">
+                                <button
+                                  onClick={() => handleDayClick(date)}
+                                  className="text-xs px-2 py-1 border border-ink-light/45 text-mist-light hover:text-jade-glow hover:border-jade-glow/45 transition-colors"
+                                  title="Open this day"
+                                >
+                                  Open
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+
+                    {(hasMoreRows || isLoadingMoreRows) && (
+                      <div
+                        ref={rowsObserverTargetRef}
+                        className="flex justify-center py-2 border-t border-ink-light/25"
+                      >
+                        <span className="text-[11px] text-mist-dark">
+                          {isLoadingMoreRows ? "Loading more rows..." : "Scroll to load more"}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )
               )}
             </div>
-          </GlowCard>
+          </div>
         </div>
       )}
 
@@ -1173,9 +1454,30 @@ export default function DaoHallPage() {
                           const existingNote = futureNotes.find(n => n.date === checkInModal.date && n.user.id === user.id);
                           if (existingNote) {
                             await api.delete("/api/checkins/notes", { noteId: existingNote.id });
+                            // Also clear the comment from the check-in entry on the server
+                            await api.post("/api/checkins", {
+                              date: checkInModal.date,
+                              entries: { [user.id]: { present: false, weight: "", comment: "" } },
+                            });
                             refreshFutureNotes();
                             broadcastNotesUpdated();
                             if (user?.id) updateCheckInModalEntry(user.id, "comment", "");
+                            // Update local checkInRows to clear the comment
+                            setCheckInRows(prev => {
+                              return prev.map(r => {
+                                if (r.date !== checkInModal.date) return r;
+                                const updatedEntries = { ...r.entries };
+                                if (updatedEntries[user.id]) {
+                                  updatedEntries[user.id] = { ...updatedEntries[user.id], comment: "" };
+                                }
+                                // Remove row if no meaningful data remains
+                                const hasData = Object.values(updatedEntries).some(
+                                  e => e.present || e.weight || e.comment?.trim()
+                                );
+                                if (!hasData) return null;
+                                return { ...r, entries: updatedEntries };
+                              }).filter(Boolean) as typeof prev;
+                            });
                           }
                         }}
                         size="sm"
@@ -1263,6 +1565,70 @@ export default function DaoHallPage() {
           </button>
         </div>
       </GlowModal>
+
+      {typeof document !== "undefined" && createPortal(
+        <div className="fixed bottom-0 right-3 z-50">
+          {statsTabOpen ? (
+            <div
+              className="w-[min(320px,calc(100vw-0.75rem))] rounded-t-xl border shadow-2xl overflow-hidden"
+              style={{
+                backgroundColor: "var(--surface)",
+                borderColor: "var(--border)",
+                boxShadow: "var(--shadow-elev-2)",
+              }}
+            >
+              <div
+                className="flex items-center justify-between px-3 py-2 border-b"
+                style={{ borderColor: "var(--border)", backgroundColor: "var(--nyaa-table-head-bg)" }}
+              >
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--text-primary)" }}>
+                    Cultivation Stats
+                  </p>
+                  <p className="text-[11px] truncate" style={{ color: "var(--text-secondary)" }}>
+                    Overview sidebar
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  aria-label="Close cultivation stats"
+                  title="Close"
+                  onClick={() => setStatsTabOpen(false)}
+                  className="inline-flex h-6 w-6 items-center justify-center rounded border text-xs font-bold transition-colors hover:bg-ink-mid/35"
+                  style={{ borderColor: "var(--border)", color: "var(--text-secondary)" }}
+                >
+                  x
+                </button>
+              </div>
+
+              <div className="max-h-[70vh] overflow-y-auto sidebar-scroll p-2">
+                <DashboardSidebar
+                  stats={stats}
+                  allUsers={allUsers}
+                  userColors={userColors}
+                  onColorChange={handleColorChange}
+                  currentUserId={user.id}
+                  isAdmin={isAdmin}
+                />
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setStatsTabOpen(true)}
+              className="w-[min(220px,calc(100vw-0.75rem))] rounded-t-xl border border-b-0 px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] shadow-lg transition-all duration-200 hover:bg-ink-mid/30 hover:shadow-[0_16px_36px_rgb(0_0_0_/_0.35)] hover:border-jade-glow/55"
+              style={{
+                backgroundColor: "var(--surface)",
+                borderColor: "var(--border)",
+                color: "var(--text-primary)",
+              }}
+            >
+              Cultivation Stats
+            </button>
+          )}
+        </div>,
+        document.body,
+      )}
     </PageLayout>
   );
 }

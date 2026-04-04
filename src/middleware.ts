@@ -86,6 +86,25 @@ export async function middleware(request: NextRequest) {
   const isApiRoute = pathname.startsWith(API_PREFIX);
   const isDashboardRoute = pathname.startsWith(DASHBOARD_PREFIX);
 
+  // Canonical dashboard route migration redirects (preserve query string).
+  if (isDashboardRoute) {
+    let canonicalPath: string | null = null;
+
+    if (pathname === "/dashboard/overview" || pathname.startsWith("/dashboard/overview/")) {
+      canonicalPath = DASHBOARD_ROUTES.overview;
+    } else if (pathname === "/dashboard/main" || pathname.startsWith("/dashboard/main/")) {
+      canonicalPath = DASHBOARD_ROUTES.overview;
+    } else if (pathname === "/dashboard/workout-history" || pathname.startsWith("/dashboard/workout-history/")) {
+      canonicalPath = pathname.replace("/dashboard/workout-history", DASHBOARD_ROUTES.workoutHistory);
+    }
+
+    if (canonicalPath && canonicalPath !== pathname) {
+      const canonicalUrl = request.nextUrl.clone();
+      canonicalUrl.pathname = canonicalPath;
+      return NextResponse.redirect(canonicalUrl);
+    }
+  }
+
   // Only process API and dashboard routes
   if (!isApiRoute && !isDashboardRoute) {
     return NextResponse.next();

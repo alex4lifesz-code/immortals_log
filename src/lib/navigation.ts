@@ -1,10 +1,10 @@
 export const DASHBOARD_ROUTES = {
   root: "/dashboard",
   main: "/dashboard/main",
-  overview: "/dashboard/overview",
+  overview: "/dashboard/check-in",
   community: "/dashboard/community",
   rankUp: "/dashboard/rank-up",
-  workoutHistory: "/dashboard/workout-history",
+  workoutHistory: "/dashboard/train",
   attendance: "/dashboard/attendance",
   exercises: "/dashboard/exercises",
   friends: "/dashboard/friends",
@@ -24,10 +24,10 @@ export const MOBILE_DASHBOARD_ROUTES = {
 
 export const NAV_LABELS: Record<string, string> = {
   main: "Navigation Hub",
-  dashboard: "Overview",
+  dashboard: "Check-In",
   newsfeed: "Community Feed",
   "rank-up": "Rank Up",
-  history: "Workout History",
+  history: "Train",
   checkin: "Attendance",
   "exercise-db": "Exercise Library",
   friends: "Friends",
@@ -38,19 +38,25 @@ export const NAV_LABELS: Record<string, string> = {
 
 export const MOBILE_PRIMARY_NAV_IDS: readonly string[] = [
   "dashboard",
-  "main",
   "history",
+  "rank-up",
+];
+
+export const MOBILE_MORE_NAV_IDS_ORDER: readonly string[] = [
+  "newsfeed",
   "friends",
+  "exercise-db",
+  "settings",
+  "main",
 ];
 
 export const MAIN_NAV_IDS_ORDER: readonly string[] = [
   "dashboard",
-  "main",
-  "rank-up",
   "history",
-  "exercise-db",
-  "friends",
+  "rank-up",
   "newsfeed",
+  "friends",
+  "exercise-db",
   "settings",
 ];
 
@@ -76,6 +82,5 @@ export const MOBILE_BOTTOM_TABS = [
   { href: MOBILE_DASHBOARD_ROUTES.home, label: "Home", icon: "\u2302" },
   { href: MOBILE_DASHBOARD_ROUTES.training, label: "Training", icon: "\u2694" },
   { href: MOBILE_DASHBOARD_ROUTES.checkIn, label: "Check-In", icon: "\u270e" },
-  { href: MOBILE_DASHBOARD_ROUTES.progress, label: "Progress", icon: "\u25c9" },
   { href: MOBILE_DASHBOARD_ROUTES.theme, label: "Theme", icon: "\u25e8" },
 ] as const;

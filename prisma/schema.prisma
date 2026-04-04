@@ -216,4 +216,5 @@ model ProgressionLog {
   createdAt           DateTime  @default(now())
 
   @@index([userProgressionId])
+  @@index([userProgressionId, createdAt])
 }

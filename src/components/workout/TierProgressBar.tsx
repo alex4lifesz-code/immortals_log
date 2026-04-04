@@ -40,6 +40,6 @@ export function getTierGlowFromLogs(
   const currentTier = exercise.tiers.find((tier) => tier.level === currentLevel);
   return {
     glowColor: "var(--exercise-glow)",
-    tierName: currentTier?.name?.trim() || `Level ${currentLevel}`,
+    tierName: currentTier?.name?.trim() || "",
   };
 }

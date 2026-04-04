@@ -31,6 +31,7 @@ export function ExerciseInfoModal({
     logs.some((l) => l.level === t.level && l.completed)
   ).length;
   const progressPercent = totalTiers > 0 ? Math.round((Math.min(currentLevel - 1, totalTiers) / totalTiers) * 100) : 0;
+  const currentTierName = exercise.tiers.find((tier) => tier.level === currentLevel)?.name?.trim() || "Unassigned progression";
 
   const modalDiffKey = getWeightedDifficulty(exercise, currentLevel);
   const modalDiffDisplay = getDifficultyDisplayName(exercise, settings.terminologyMode) || modalDiffKey;
@@ -95,7 +96,7 @@ export function ExerciseInfoModal({
           <div className="rounded-lg border border-ink-light/40 bg-ink-dark/40 p-2.5 space-y-2">
             <div className="flex items-center justify-between">
               <p className="text-[10px] text-mist-light uppercase tracking-wider">Progress</p>
-              <p className="text-[10px] text-mist-mid">Lv.{currentLevel}</p>
+              <p className="max-w-[60%] truncate text-[10px] text-mist-mid" title={currentTierName}>{currentTierName}</p>
             </div>
             <div className="h-1.5 bg-ink-mid rounded-full overflow-hidden">
               <div
@@ -141,7 +142,6 @@ export function ExerciseInfoModal({
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-[10px] text-mist-dark font-mono">Lv.{tier.level}</span>
                         <span className={`text-xs font-medium ${isCompleted ? "text-jade-light" : isCurrent ? "text-gold" : "text-cloud-white"}`}>
                           {getExerciseDisplayName(exercise, settings.terminologyMode)}
                         </span>

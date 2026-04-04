@@ -3,15 +3,16 @@ import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 import { getVisibleSocialUserIds, normalizeScope } from "@/lib/friends";
 
-// GET /api/users/public — fetch all users (public info only, no admin required)
-// Authenticated users can see all user names for shared features like check-ins
+// GET /api/users/public — fetch visible users (public info only)
+// Non-admin users are restricted to friends scope; admins can request community scope.
 export const GET = withAuth(async (request, { auth }) => {
   try {
     const requestUrl = new URL(request.url);
-    const scope = normalizeScope(
+    const requestedScope = normalizeScope(
       requestUrl.searchParams.get("scope"),
       auth.role === "admin" ? "community" : "friends"
     );
+    const scope = auth.role === "admin" ? requestedScope : "friends";
     const visibleUserIds = await getVisibleSocialUserIds({
       viewerId: auth.userId,
       viewerRole: auth.role,

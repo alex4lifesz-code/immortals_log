@@ -72,7 +72,7 @@ function FloatingMobileSidebar() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25, ease: "easeOut" }}
             onClick={handleClose}
-            className="fixed inset-0 bg-void-black/60 backdrop-blur-[2px] z-30"
+            className="fixed inset-0 bg-void-black/70 z-30"
           />
         )}
       </AnimatePresence>

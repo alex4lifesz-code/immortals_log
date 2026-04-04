@@ -197,7 +197,7 @@ function PageLayout({
               animate={{ opacity: 1 }}
               exit={disableMotion ? { opacity: 1 } : { opacity: 0 }}
               transition={{ duration: disableMotion ? 0 : 0.18 }}
-              className="fixed inset-0 z-40 bg-void-black/60 backdrop-blur-[2px]"
+              className="fixed inset-0 z-40 bg-void-black/70"
               onClick={() => setMobileSidebarOpen(false)}
             />
             <motion.div

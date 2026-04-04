@@ -9,6 +9,9 @@ import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import Link from "next/link";
 import { t } from "@/lib/terminology";
 import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
+import { loadUserPhysique } from "@/lib/user-physique";
+import { kgToLbs } from "@/lib/unit-conversion";
+import { api } from "@/lib/api-client";
 import { ADMIN_NAV_IDS, ADMIN_NAV_IDS_ORDER, DASHBOARD_ROUTES, MAIN_NAV_IDS_ORDER, sortNavItemsByIdOrder } from "@/lib/navigation";
 
 interface NyaaTopNavProps {
@@ -26,7 +29,7 @@ function NyaaTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount = 
   const items = useSortedNavItems();
 
   const mainItems = useMemo(
-    () => sortNavItemsByIdOrder(items.filter((item) => !ADMIN_NAV_IDS.has(item.id)), MAIN_NAV_IDS_ORDER),
+    () => sortNavItemsByIdOrder(items.filter((item) => item.id !== "main" && !ADMIN_NAV_IDS.has(item.id)), MAIN_NAV_IDS_ORDER),
     [items]
   );
   const adminItems = useMemo(
@@ -38,16 +41,21 @@ function NyaaTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount = 
 
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const [bodyWeightKg, setBodyWeightKg] = useState<number | null>(null);
+  const [weightTrendLabel, setWeightTrendLabel] = useState<string | null>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
 
-  // Determine which items to show in the compact nav bar and which go under "More"
-  const visibleNavItems = useMemo(() => mainItems.slice(0, isMobile ? 0 : 5), [mainItems, isMobile]);
-  const overflowNavItems = useMemo(() => mainItems.slice(isMobile ? 0 : 5), [mainItems, isMobile]);
+  // Keep top bar tighter so utility sections (e.g. Exercise Library, Friends) live under More.
+  const visibleNavItems = useMemo(() => mainItems.slice(0, isMobile ? 0 : 3), [mainItems, isMobile]);
+  const overflowNavItems = useMemo(() => mainItems.slice(isMobile ? 0 : 3), [mainItems, isMobile]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
+      if ((event.target as HTMLElement | null)?.closest?.(".glow-modal-container")) {
+        return;
+      }
       if (userMenuRef.current && !userMenuRef.current.contains(target)) {
         setUserMenuOpen(false);
       }
@@ -61,6 +69,113 @@ function NyaaTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount = 
       return () => document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [userMenuOpen, moreMenuOpen]);
+
+  useEffect(() => {
+    setUserMenuOpen(false);
+    setMoreMenuOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!user?.id || typeof window === "undefined") {
+      setBodyWeightKg(null);
+      setWeightTrendLabel(null);
+      return;
+    }
+
+    const syncBodyWeight = () => {
+      const physique = loadUserPhysique(user.id);
+      setBodyWeightKg(physique.bodyWeightKg);
+    };
+
+    const onPhysiqueUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<{ userId?: string }>).detail;
+      if (!detail?.userId || detail.userId === user.id) {
+        syncBodyWeight();
+      }
+    };
+
+    syncBodyWeight();
+    window.addEventListener("user-physique-updated", onPhysiqueUpdated as EventListener);
+    return () => {
+      window.removeEventListener("user-physique-updated", onPhysiqueUpdated as EventListener);
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setWeightTrendLabel(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadWeightTrend = async () => {
+      try {
+        const payload = await api.get<{ checkins: Array<{ userId: string; date: string; weight: number | null }> }>("/api/checkins");
+        if (cancelled) return;
+
+        const userWeights = (payload.checkins || [])
+          .filter((checkin) => checkin.userId === user.id && checkin.weight != null && Number.isFinite(Number(checkin.weight)) && Number(checkin.weight) > 0)
+          .map((checkin) => ({ date: checkin.date, weight: Number(checkin.weight) }))
+          .sort((a, b) => a.date.localeCompare(b.date));
+
+        if (userWeights.length < 2) {
+          setWeightTrendLabel(null);
+          return;
+        }
+
+        const first = userWeights[0].weight;
+        const latest = userWeights[userWeights.length - 1].weight;
+        if (!Number.isFinite(first) || first <= 0 || !Number.isFinite(latest)) {
+          setWeightTrendLabel(null);
+          return;
+        }
+
+        const changePct = ((latest - first) / first) * 100;
+        const absPct = Math.abs(changePct).toFixed(1);
+        if (absPct === "0.0") {
+          setWeightTrendLabel("0.0%");
+          return;
+        }
+
+        setWeightTrendLabel(changePct >= 0 ? `+${absPct}%` : `-${absPct}%`);
+      } catch {
+        if (!cancelled) {
+          setWeightTrendLabel(null);
+        }
+      }
+    };
+
+    void loadWeightTrend();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname, user?.id]);
+
+  const bodyWeightLabel = useMemo(() => {
+    if (bodyWeightKg == null) return null;
+    const displayUnit = settings.defaultWeightUnit === "lbs" ? "lbs" : "kg";
+    const displayValue = displayUnit === "lbs" ? kgToLbs(bodyWeightKg) : bodyWeightKg;
+    return `${displayValue.toFixed(1)} ${displayUnit}`;
+  }, [bodyWeightKg, settings.defaultWeightUnit]);
+
+  const trendTone = useMemo(() => {
+    if (!weightTrendLabel) return "neutral";
+    if (weightTrendLabel.startsWith("+")) return "up";
+    if (weightTrendLabel.startsWith("-")) return "down";
+    return "neutral";
+  }, [weightTrendLabel]);
+
+  const navigateAndCloseMore = (path: string) => {
+    setMoreMenuOpen(false);
+    router.push(path);
+  };
+
+  const navigateAndCloseUserMenu = (path: string) => {
+    setUserMenuOpen(false);
+    router.push(path);
+  };
 
   const NavLink = ({ href, label, isActive }: { href: string; label: string; isActive: boolean }) => (
     <Link
@@ -131,31 +246,31 @@ function NyaaTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount = 
                         className="nyaa-dropdown absolute left-0 mt-1 w-48 z-50"
                       >
                         {overflowNavItems.map((item) => (
-                          <Link
+                          <button
                             key={item.id}
-                            href={item.path}
-                            onClick={() => setMoreMenuOpen(false)}
-                            className={`nyaa-dropdown-item block px-3 py-1.5 text-xs transition-colors ${
+                            type="button"
+                            onClick={() => navigateAndCloseMore(item.path)}
+                            className={`nyaa-dropdown-item block w-full text-left px-3 py-1.5 text-xs transition-colors ${
                               pathname === item.path ? "nyaa-dropdown-item-active" : ""
                             }`}
                           >
                             {t(item.label, terminologyMode)}
-                          </Link>
+                          </button>
                         ))}
                         {adminItems.length > 0 && (
                           <>
                             <div className="nyaa-dropdown-divider my-1" />
                             {adminItems.map((item) => (
-                              <Link
+                              <button
                                 key={item.id}
-                                href={item.path}
-                                onClick={() => setMoreMenuOpen(false)}
-                                className={`nyaa-dropdown-item block px-3 py-1.5 text-xs transition-colors ${
+                                type="button"
+                                onClick={() => navigateAndCloseMore(item.path)}
+                                className={`nyaa-dropdown-item block w-full text-left px-3 py-1.5 text-xs transition-colors ${
                                   pathname === item.path ? "nyaa-dropdown-item-active" : ""
                                 }`}
                               >
                                 {t(item.label, terminologyMode)}
-                              </Link>
+                              </button>
                             ))}
                           </>
                         )}
@@ -187,6 +302,45 @@ function NyaaTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount = 
             aria-label={userMenuOpen ? "Close user menu" : "Open user menu"}
             className="nyaa-nav-link nyaa-nav-link-inactive px-2 py-1 text-xs transition-colors flex items-center gap-1"
           >
+            {bodyWeightLabel && (
+              <span
+                className="hidden sm:inline rounded border px-1.5 py-0.5 text-[10px] font-semibold"
+                style={{
+                  borderColor: "color-mix(in srgb, var(--accent) 40%, var(--border))",
+                  color: "var(--accent)",
+                  backgroundColor: "color-mix(in srgb, var(--accent) 12%, transparent)",
+                }}
+              >
+                {bodyWeightLabel}
+              </span>
+            )}
+            {weightTrendLabel && (
+              <span
+                className="hidden sm:inline rounded border px-1.5 py-0.5 text-[10px] font-semibold"
+                style={{
+                  borderColor:
+                    trendTone === "up"
+                      ? "color-mix(in srgb, var(--difficulty-green) 55%, var(--border))"
+                      : trendTone === "down"
+                        ? "color-mix(in srgb, var(--difficulty-red) 55%, var(--border))"
+                        : "color-mix(in srgb, var(--text-muted) 45%, var(--border))",
+                  color:
+                    trendTone === "up"
+                      ? "var(--difficulty-green)"
+                      : trendTone === "down"
+                        ? "var(--difficulty-red)"
+                        : "var(--text-muted)",
+                  backgroundColor:
+                    trendTone === "up"
+                      ? "color-mix(in srgb, var(--difficulty-green) 14%, transparent)"
+                      : trendTone === "down"
+                        ? "color-mix(in srgb, var(--difficulty-red) 14%, transparent)"
+                        : "color-mix(in srgb, var(--text-muted) 10%, transparent)",
+                }}
+              >
+                {weightTrendLabel}
+              </span>
+            )}
             <span className="hidden sm:inline max-w-[120px] truncate">{user?.name ?? "Guest"}</span>
             <span>▾</span>
           </button>
@@ -211,31 +365,31 @@ function NyaaTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount = 
                   <>
                     <div className="nyaa-dropdown-divider my-1" />
                     {mainItems.map((item) => (
-                      <Link
+                      <button
                         key={item.id}
-                        href={item.path}
-                        onClick={() => setUserMenuOpen(false)}
-                        className={`nyaa-dropdown-item block px-3 py-1.5 text-xs transition-colors ${
+                        type="button"
+                        onClick={() => navigateAndCloseUserMenu(item.path)}
+                        className={`nyaa-dropdown-item block w-full text-left px-3 py-1.5 text-xs transition-colors ${
                           pathname === item.path ? "nyaa-dropdown-item-active" : ""
                         }`}
                       >
                         {t(item.label, terminologyMode)}
-                      </Link>
+                      </button>
                     ))}
                     {adminItems.length > 0 && (
                       <>
                         <div className="nyaa-dropdown-divider my-1" />
                         {adminItems.map((item) => (
-                          <Link
+                          <button
                             key={item.id}
-                            href={item.path}
-                            onClick={() => setUserMenuOpen(false)}
-                            className={`nyaa-dropdown-item block px-3 py-1.5 text-xs transition-colors ${
+                            type="button"
+                            onClick={() => navigateAndCloseUserMenu(item.path)}
+                            className={`nyaa-dropdown-item block w-full text-left px-3 py-1.5 text-xs transition-colors ${
                               pathname === item.path ? "nyaa-dropdown-item-active" : ""
                             }`}
                           >
                             {t(item.label, terminologyMode)}
-                          </Link>
+                          </button>
                         ))}
                       </>
                     )}

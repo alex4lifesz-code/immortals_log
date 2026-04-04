@@ -34,11 +34,11 @@ function DesktopNavBar() {
     [allItems, isAdmin]
   );
   const primaryItems = useMemo(
-    () => mainItems.filter((item) => ["main", "history", "exercise-db"].includes(item.id)),
+    () => mainItems.filter((item) => ["dashboard", "history", "rank-up"].includes(item.id)),
     [mainItems]
   );
   const secondaryItems = useMemo(
-    () => mainItems.filter((item) => !["main", "history", "exercise-db"].includes(item.id)),
+    () => mainItems.filter((item) => !["dashboard", "history", "rank-up"].includes(item.id)),
     [mainItems]
   );
 

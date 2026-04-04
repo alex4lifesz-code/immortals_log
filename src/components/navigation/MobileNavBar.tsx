@@ -6,9 +6,12 @@ import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { useState, memo, useCallback, useMemo, useEffect, useRef, type ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { loadUserPhysique } from "@/lib/user-physique";
+import { kgToLbs } from "@/lib/unit-conversion";
+import { api } from "@/lib/api-client";
 import { t } from "@/lib/terminology";
 import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
-import { ADMIN_NAV_IDS_ORDER, DASHBOARD_ROUTES, MAIN_NAV_IDS_ORDER, MOBILE_PRIMARY_NAV_IDS, sortNavItemsByIdOrder } from "@/lib/navigation";
+import { ADMIN_NAV_IDS_ORDER, DASHBOARD_ROUTES, MAIN_NAV_IDS_ORDER, MOBILE_MORE_NAV_IDS_ORDER, MOBILE_PRIMARY_NAV_IDS, sortNavItemsByIdOrder } from "@/lib/navigation";
 
 const ADMIN_NAV_IDS = new Set(["admin", "checkin"]);
 
@@ -26,6 +29,13 @@ const NAV_ICON_MAP: Record<string, ReactNode> = {
   [DASHBOARD_ROUTES.main]: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+    </svg>
+  ),
+  [DASHBOARD_ROUTES.rankUp]: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 20V6" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 12l6-6 6 6" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 20h14" />
     </svg>
   ),
   [DASHBOARD_ROUTES.workoutHistory]: (
@@ -81,11 +91,13 @@ function MobileNavBar({ incomingFriendRequestCount = 0 }: { incomingFriendReques
   const pathname = usePathname();
   const isAdmin = user?.role === "admin";
   const items = sortNavItemsByIdOrder(
-    getSortedNavItems().filter((item) => (isAdmin ? true : !ADMIN_NAV_IDS.has(item.id))),
+    getSortedNavItems().filter((item) => item.id !== "main" && (isAdmin ? true : !ADMIN_NAV_IDS.has(item.id))),
     [...MAIN_NAV_IDS_ORDER, ...ADMIN_NAV_IDS_ORDER]
   );
   const [menuOpen, setMenuOpen] = useState(false);
   const [navVisible, setNavVisible] = useState(true);
+  const [bodyWeightKg, setBodyWeightKg] = useState<number | null>(null);
+  const [weightTrendLabel, setWeightTrendLabel] = useState<string | null>(null);
   const lastScrollYRef = useRef(0);
 
   const effectiveMobile = isMobile;
@@ -101,7 +113,7 @@ function MobileNavBar({ incomingFriendRequestCount = 0 }: { incomingFriendReques
   );
 
   const regularMoreItems = useMemo(
-    () => moreItems.filter((item) => !ADMIN_NAV_IDS.has(item.id)),
+    () => sortNavItemsByIdOrder(moreItems.filter((item) => !ADMIN_NAV_IDS.has(item.id)), MOBILE_MORE_NAV_IDS_ORDER),
     [moreItems]
   );
 
@@ -110,10 +122,24 @@ function MobileNavBar({ incomingFriendRequestCount = 0 }: { incomingFriendReques
     [isAdmin, moreItems]
   );
 
+  const bodyWeightLabel = useMemo(() => {
+    if (bodyWeightKg == null) return null;
+    const displayUnit = settings.defaultWeightUnit === "lbs" ? "lbs" : "kg";
+    const displayValue = displayUnit === "lbs" ? kgToLbs(bodyWeightKg) : bodyWeightKg;
+    return `${displayValue.toFixed(1)} ${displayUnit}`;
+  }, [bodyWeightKg, settings.defaultWeightUnit]);
+
+  const trendTone = useMemo(() => {
+    if (!weightTrendLabel) return "neutral";
+    if (weightTrendLabel.startsWith("+")) return "up";
+    if (weightTrendLabel.startsWith("-")) return "down";
+    return "neutral";
+  }, [weightTrendLabel]);
+
   const handleNavigate = useCallback((path: string) => {
-    router.push(path);
     setMenuOpen(false);
     setMobileSidebarOpen(false);
+    router.push(path);
   }, [router, setMobileSidebarOpen]);
 
   const handleMenuToggle = useCallback(() => {
@@ -159,6 +185,87 @@ function MobileNavBar({ incomingFriendRequestCount = 0 }: { incomingFriendReques
     };
   }, [effectiveMobile]);
 
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!user?.id || typeof window === "undefined") {
+      setBodyWeightKg(null);
+      return;
+    }
+
+    const syncBodyWeight = () => {
+      const physique = loadUserPhysique(user.id);
+      setBodyWeightKg(physique.bodyWeightKg);
+    };
+
+    const onPhysiqueUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<{ userId?: string }>).detail;
+      if (!detail?.userId || detail.userId === user.id) {
+        syncBodyWeight();
+      }
+    };
+
+    syncBodyWeight();
+    window.addEventListener("user-physique-updated", onPhysiqueUpdated as EventListener);
+    return () => {
+      window.removeEventListener("user-physique-updated", onPhysiqueUpdated as EventListener);
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setWeightTrendLabel(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadWeightTrend = async () => {
+      try {
+        const payload = await api.get<{ checkins: Array<{ userId: string; date: string; weight: number | null }> }>("/api/checkins");
+        if (cancelled) return;
+
+        const userWeights = (payload.checkins || [])
+          .filter((checkin) => checkin.userId === user.id && checkin.weight != null && Number.isFinite(Number(checkin.weight)) && Number(checkin.weight) > 0)
+          .map((checkin) => ({ date: checkin.date, weight: Number(checkin.weight) }))
+          .sort((a, b) => a.date.localeCompare(b.date));
+
+        if (userWeights.length < 2) {
+          setWeightTrendLabel(null);
+          return;
+        }
+
+        const first = userWeights[0].weight;
+        const latest = userWeights[userWeights.length - 1].weight;
+        if (!Number.isFinite(first) || first <= 0 || !Number.isFinite(latest)) {
+          setWeightTrendLabel(null);
+          return;
+        }
+
+        const changePct = ((latest - first) / first) * 100;
+        const absPct = Math.abs(changePct).toFixed(1);
+        if (absPct === "0.0") {
+          setWeightTrendLabel("0.0%");
+          return;
+        }
+
+        setWeightTrendLabel(changePct >= 0 ? `+${absPct}%` : `-${absPct}%`);
+      } catch {
+        if (!cancelled) {
+          setWeightTrendLabel(null);
+        }
+      }
+    };
+
+    void loadWeightTrend();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname, user?.id]);
+
   // Show the APK-style bottom nav whenever mobile viewport is active.
   if (!effectiveMobile) return null;
 
@@ -173,7 +280,7 @@ function MobileNavBar({ incomingFriendRequestCount = 0 }: { incomingFriendReques
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-void-black/60 z-40 backdrop-blur-sm"
+            className="fixed inset-0 bg-void-black/70 z-40"
             onClick={() => setMenuOpen(false)}
           />
         )}
@@ -197,7 +304,7 @@ function MobileNavBar({ incomingFriendRequestCount = 0 }: { incomingFriendReques
               <div className="mb-2 flex items-start justify-between px-1 pt-1">
                 <div>
                   <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-mist-dark">Navigation</span>
-                  <p className="mt-0.5 text-[12px] text-mist-mid">Quick access to your pages</p>
+                  <p className="mt-0.5 text-[12px] text-mist-mid">Quick access to your pages and profile</p>
                 </div>
                 <button
                   onClick={() => setMenuOpen(false)}
@@ -216,6 +323,49 @@ function MobileNavBar({ incomingFriendRequestCount = 0 }: { incomingFriendReques
                       <div className="min-w-0 flex-1">
                         <p className="text-[10px] uppercase tracking-[0.14em] text-mist-dark">Body Profile</p>
                         <p className="mt-0.5 text-[12px] text-mist-light">Keep your stats current for accurate training targets.</p>
+                        {(bodyWeightLabel || weightTrendLabel) && (
+                          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                            {bodyWeightLabel && (
+                              <span
+                                className="rounded border px-1.5 py-0.5 text-[10px] font-semibold"
+                                style={{
+                                  borderColor: "color-mix(in srgb, var(--accent) 40%, var(--border))",
+                                  color: "var(--accent)",
+                                  backgroundColor: "color-mix(in srgb, var(--accent) 12%, transparent)",
+                                }}
+                              >
+                                {bodyWeightLabel}
+                              </span>
+                            )}
+                            {weightTrendLabel && (
+                              <span
+                                className="rounded border px-1.5 py-0.5 text-[10px] font-semibold"
+                                style={{
+                                  borderColor:
+                                    trendTone === "up"
+                                      ? "color-mix(in srgb, var(--difficulty-green) 55%, var(--border))"
+                                      : trendTone === "down"
+                                        ? "color-mix(in srgb, var(--difficulty-red) 55%, var(--border))"
+                                        : "color-mix(in srgb, var(--text-muted) 45%, var(--border))",
+                                  color:
+                                    trendTone === "up"
+                                      ? "var(--difficulty-green)"
+                                      : trendTone === "down"
+                                        ? "var(--difficulty-red)"
+                                        : "var(--text-muted)",
+                                  backgroundColor:
+                                    trendTone === "up"
+                                      ? "color-mix(in srgb, var(--difficulty-green) 14%, transparent)"
+                                      : trendTone === "down"
+                                        ? "color-mix(in srgb, var(--difficulty-red) 14%, transparent)"
+                                        : "color-mix(in srgb, var(--text-muted) 10%, transparent)",
+                                }}
+                              >
+                                {weightTrendLabel}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-jade-glow/40 bg-jade-deep/18 text-jade-light">
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
@@ -231,6 +381,11 @@ function MobileNavBar({ incomingFriendRequestCount = 0 }: { incomingFriendReques
                         className="inline-flex min-h-[40px] items-center justify-center rounded-xl border border-jade-glow/40 bg-jade-deep/20 px-3 text-[13px] font-semibold text-jade-light transition-all duration-150 hover:border-jade-glow/55 hover:bg-jade-deep/28 hover:text-jade-glow active:scale-[0.98]"
                       />
                     </div>
+                  </div>
+                )}
+                {regularMoreItems.length > 0 && (
+                  <div className="col-span-2 mt-0.5 px-1">
+                    <p className="text-[10px] uppercase tracking-[0.14em] text-mist-dark">Pages</p>
                   </div>
                 )}
                 {regularMoreItems.map((item, index) => (
@@ -263,6 +418,10 @@ function MobileNavBar({ incomingFriendRequestCount = 0 }: { incomingFriendReques
                     )}
                   </motion.button>
                 ))}
+
+                <div className="col-span-2 mt-0.5 px-1">
+                  <p className="text-[10px] uppercase tracking-[0.14em] text-mist-dark">Account</p>
+                </div>
 
                 {adminMoreItems.length > 0 && (
                   <div className="col-span-2 mt-1 px-1">
@@ -327,7 +486,7 @@ function MobileNavBar({ incomingFriendRequestCount = 0 }: { incomingFriendReques
                 key={item.id}
                 whileTap={{ scale: 0.9 }}
                 aria-current={isActive ? "page" : undefined}
-                onClick={() => { router.push(item.path); setMobileSidebarOpen(false); setMenuOpen(false); }}
+                onClick={() => handleNavigate(item.path)}
                 className={`relative flex flex-col items-center justify-center gap-0.5 min-w-[64px] min-h-[56px] pt-2 pb-1 rounded-2xl transition-colors ${
                   isActive ? "text-[var(--accent)]" : "text-mist-mid active:text-mist-light"
                 }`}
