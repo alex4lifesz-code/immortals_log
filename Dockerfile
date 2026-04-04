@@ -31,6 +31,8 @@ WORKDIR /app
 
 COPY --from=prisma /app/node_modules ./node_modules
 COPY . .
+# Keep deployment seed aligned with the current local DB snapshot when available.
+RUN if [ -f /app/dev.db ]; then cp /app/dev.db /app/seed-data/cultivation.seed.sqlite; elif [ -f /app/prisma/dev.db ]; then cp /app/prisma/dev.db /app/seed-data/cultivation.seed.sqlite; fi
 # Copy generated Prisma client AFTER `COPY . .` so it isn't overwritten
 # (src/generated/prisma is gitignored and absent from the build context)
 COPY --from=prisma /app/src/generated ./src/generated

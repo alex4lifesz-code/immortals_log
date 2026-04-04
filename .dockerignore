@@ -33,6 +33,9 @@ dev.db-journal
 test-db.js
 _rollback_backup_*/
 
+# Keep local SQLite DB in context for release seed snapshot sync
+!dev.db
+
 # Misc
 coverage
 .vercel
