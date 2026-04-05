@@ -11,6 +11,8 @@ import {
   WeightUnitPref,
 } from "@/context/DisplaySettingsContext";
 import type { Theme } from "@/lib/config";
+import type { LanguageMode } from "@/lib/language";
+import LearningText from "@/components/ui/LearningText";
 
 const THEME_OPTIONS: Array<{ value: Theme; label: string; desc: string }> = [
   { value: "midnight-ink", label: "Midnight Ink", desc: "Deep void + jade accents" },
@@ -31,7 +33,7 @@ const DATE_OPTIONS: Array<{ value: DateFormatOption; label: string; sample: stri
   { value: "dd-mmm-yy", label: "DD-MMM-YY", sample: "24-Feb-26" },
 ];
 
-function PanelTitle({ text }: { text: string }) {
+function PanelTitle({ text, languageMode, learningEnabled }: { text: string; languageMode: LanguageMode; learningEnabled: boolean }) {
   return (
     <div
       className="px-3 py-2 border-b"
@@ -41,7 +43,7 @@ function PanelTitle({ text }: { text: string }) {
       }}
     >
       <p className="text-xs font-bold" style={{ color: "var(--nyaa-table-head-text)" }}>
-        {text}
+        <LearningText text={text} languageMode={languageMode} enabled={learningEnabled} />
       </p>
     </div>
   );
@@ -52,11 +54,15 @@ function OptionButton({
   title,
   subtitle,
   onClick,
+  languageMode,
+  learningEnabled,
 }: {
   active: boolean;
   title: string;
   subtitle?: string;
   onClick: () => void;
+  languageMode: LanguageMode;
+  learningEnabled: boolean;
 }) {
   return (
     <button
@@ -71,10 +77,10 @@ function OptionButton({
         color: active ? "var(--accent)" : "var(--text-primary)",
       }}
     >
-      <p className="text-[11px] font-semibold">{title}</p>
+      <p className="text-[11px] font-semibold"><LearningText text={title} languageMode={languageMode} enabled={learningEnabled} /></p>
       {subtitle ? (
         <p className="mt-0.5 text-[10px]" style={{ color: "var(--text-secondary)" }}>
-          {subtitle}
+          <LearningText text={subtitle} languageMode={languageMode} enabled={learningEnabled} />
         </p>
       ) : null}
     </button>
@@ -90,27 +96,29 @@ export default function SettingsPage() {
     () => THEME_OPTIONS.find((theme) => theme.value === themeStyle)?.label ?? themeStyle,
     [themeStyle],
   );
+  const languageMode = settings.languageMode ?? "english";
+  const learningEnabled = settings.terminologyMode === "normal";
 
   return (
     <PageLayout
-      title="Settings"
-      subtitle="Configure your training interface"
+      title={learningEnabled ? (languageMode === "vietnamese" ? "Cài đặt" : "Settings") : "Settings"}
+      subtitle={learningEnabled ? (languageMode === "vietnamese" ? "Tùy chỉnh giao diện tập luyện" : "Configure your training interface") : "Configure your training interface"}
       mobileContentPaddingClass="p-2 pb-24"
     >
       <div className="nyaa-history-page space-y-2 px-0 py-2 sm:py-3">
         <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-          <PanelTitle text="Settings Summary" />
+          <PanelTitle text="Settings Summary" languageMode={languageMode} learningEnabled={learningEnabled} />
           <table className="w-full text-[11px] border-collapse" style={{ backgroundColor: "var(--surface)" }}>
             <tbody>
               <tr>
                 <td className="px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "var(--border)", color: "var(--text-muted)", backgroundColor: "color-mix(in srgb, var(--border) 10%, var(--surface))", width: "30%" }}>
-                  User:
+                  <LearningText text="User:" languageMode={languageMode} enabled={learningEnabled} />
                 </td>
                 <td className="px-2 py-1.5 border-b border-r" style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}>
                   {user?.name || "Unknown"}
                 </td>
                 <td className="px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "var(--border)", color: "var(--text-muted)", backgroundColor: "color-mix(in srgb, var(--border) 10%, var(--surface))", width: "20%" }}>
-                  Theme:
+                  <LearningText text="Theme:" languageMode={languageMode} enabled={learningEnabled} />
                 </td>
                 <td className="px-2 py-1.5 border-b" style={{ borderColor: "var(--border)", color: "var(--accent)" }}>
                   {themeLabel}
@@ -118,30 +126,46 @@ export default function SettingsPage() {
               </tr>
               <tr>
                 <td className="px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "var(--border)", color: "var(--text-muted)", backgroundColor: "color-mix(in srgb, var(--border) 10%, var(--surface))" }}>
-                  Date Format:
+                  <LearningText text="Date Format:" languageMode={languageMode} enabled={learningEnabled} />
                 </td>
                 <td className="px-2 py-1.5 border-b border-r" style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}>
                   {settings.dateFormat}
                 </td>
                 <td className="px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "var(--border)", color: "var(--text-muted)", backgroundColor: "color-mix(in srgb, var(--border) 10%, var(--surface))" }}>
-                  Terminology:
+                  <LearningText text="Terminology:" languageMode={languageMode} enabled={learningEnabled} />
                 </td>
                 <td className="px-2 py-1.5 border-b" style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}>
-                  {settings.terminologyMode === "fantasy" ? "Cultivation" : "Conventional"}
+                  <LearningText text={settings.terminologyMode === "fantasy" ? "Cultivation" : "Conventional"} languageMode={languageMode} enabled={learningEnabled} />
                 </td>
               </tr>
               <tr>
                 <td className="px-2 py-1.5 font-semibold border-r whitespace-nowrap" style={{ borderColor: "var(--border)", color: "var(--text-muted)", backgroundColor: "color-mix(in srgb, var(--border) 10%, var(--surface))" }}>
-                  Weight Unit:
+                  <LearningText text="Weight Unit:" languageMode={languageMode} enabled={learningEnabled} />
                 </td>
                 <td className="px-2 py-1.5 border-r" style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}>
                   {settings.defaultWeightUnit}
                 </td>
                 <td className="px-2 py-1.5 font-semibold border-r whitespace-nowrap" style={{ borderColor: "var(--border)", color: "var(--text-muted)", backgroundColor: "color-mix(in srgb, var(--border) 10%, var(--surface))" }}>
-                  Variation Labels:
+                  <LearningText text="Variation Labels:" languageMode={languageMode} enabled={learningEnabled} />
                 </td>
                 <td className="px-2 py-1.5" style={{ color: "var(--text-primary)" }}>
                   {settings.progressionVariationDisplay}
+                </td>
+              </tr>
+              <tr>
+                <td className="px-2 py-1.5 font-semibold border-t border-r whitespace-nowrap" style={{ borderColor: "var(--border)", color: "var(--text-muted)", backgroundColor: "color-mix(in srgb, var(--border) 10%, var(--surface))" }}>
+                  <LearningText text="Language:" languageMode={languageMode} enabled={learningEnabled} />
+                </td>
+                <td className="px-2 py-1.5 border-t" colSpan={3} style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}>
+                  <LearningText text={languageMode === "vietnamese" ? "Vietnamese" : "English"} languageMode={languageMode} enabled={learningEnabled} />
+                </td>
+              </tr>
+              <tr>
+                <td className="px-2 py-1.5 font-semibold border-t border-r whitespace-nowrap" style={{ borderColor: "var(--border)", color: "var(--text-muted)", backgroundColor: "color-mix(in srgb, var(--border) 10%, var(--surface))" }}>
+                  <LearningText text="Exercise Foreign Language:" languageMode={languageMode} enabled={learningEnabled} />
+                </td>
+                <td className="px-2 py-1.5 border-t" colSpan={3} style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}>
+                  <LearningText text={settings.showExerciseForeignLanguage ? "Enabled" : "Disabled"} languageMode={languageMode} enabled={learningEnabled} />
                 </td>
               </tr>
             </tbody>
@@ -149,7 +173,7 @@ export default function SettingsPage() {
         </div>
 
         <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-          <PanelTitle text="Theme" />
+          <PanelTitle text="Theme" languageMode={languageMode} learningEnabled={learningEnabled} />
           <div className="grid gap-1.5 p-2 sm:grid-cols-2 lg:grid-cols-3" style={{ backgroundColor: "var(--surface)" }}>
             {THEME_OPTIONS.map((theme) => (
               <OptionButton
@@ -158,6 +182,8 @@ export default function SettingsPage() {
                 title={theme.label}
                 subtitle={theme.desc}
                 onClick={() => setThemeStyle(theme.value)}
+                languageMode={languageMode}
+                learningEnabled={learningEnabled}
               />
             ))}
           </div>
@@ -165,7 +191,7 @@ export default function SettingsPage() {
 
         <div className="grid gap-2 lg:grid-cols-2">
           <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-            <PanelTitle text="Date Format" />
+            <PanelTitle text="Date Format" languageMode={languageMode} learningEnabled={learningEnabled} />
             <div className="grid gap-1.5 p-2" style={{ backgroundColor: "var(--surface)" }}>
               {DATE_OPTIONS.map((option) => (
                 <OptionButton
@@ -174,33 +200,83 @@ export default function SettingsPage() {
                   title={option.label}
                   subtitle={option.sample}
                   onClick={() => updateSettings({ dateFormat: option.value })}
+                  languageMode={languageMode}
+                  learningEnabled={learningEnabled}
                 />
               ))}
             </div>
           </div>
 
           <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-            <PanelTitle text="Terminology" />
+            <PanelTitle text="Terminology" languageMode={languageMode} learningEnabled={learningEnabled} />
             <div className="grid gap-1.5 p-2" style={{ backgroundColor: "var(--surface)" }}>
               <OptionButton
                 active={settings.terminologyMode === "fantasy"}
                 title="Cultivation"
                 subtitle="Wuxia-themed labels"
                 onClick={() => updateSettings({ terminologyMode: "fantasy" })}
+                languageMode={languageMode}
+                learningEnabled={learningEnabled}
               />
               <OptionButton
                 active={settings.terminologyMode === "normal"}
                 title="Conventional"
                 subtitle="Standard fitness labels"
                 onClick={() => updateSettings({ terminologyMode: "normal" })}
+                languageMode={languageMode}
+                learningEnabled={learningEnabled}
               />
             </div>
           </div>
         </div>
 
+        <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
+          <PanelTitle text="Language" languageMode={languageMode} learningEnabled={learningEnabled} />
+          <div className="grid gap-1.5 p-2 sm:grid-cols-2" style={{ backgroundColor: "var(--surface)" }}>
+            <OptionButton
+              active={languageMode === "english"}
+              title="English"
+              subtitle="UI in English"
+              onClick={() => updateSettings({ languageMode: "english" })}
+              languageMode={languageMode}
+              learningEnabled={learningEnabled}
+            />
+            <OptionButton
+              active={languageMode === "vietnamese"}
+              title="Vietnamese"
+              subtitle="UI in Vietnamese"
+              onClick={() => updateSettings({ languageMode: "vietnamese" })}
+              languageMode={languageMode}
+              learningEnabled={learningEnabled}
+            />
+          </div>
+        </div>
+
+        <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
+          <PanelTitle text="Exercise Language" languageMode={languageMode} learningEnabled={learningEnabled} />
+          <div className="grid gap-1.5 p-2 sm:grid-cols-2" style={{ backgroundColor: "var(--surface)" }}>
+            <OptionButton
+              active={settings.showExerciseForeignLanguage}
+              title="Show Foreign Name"
+              subtitle="Display opposite exercise name in parentheses"
+              onClick={() => updateSettings({ showExerciseForeignLanguage: true })}
+              languageMode={languageMode}
+              learningEnabled={learningEnabled}
+            />
+            <OptionButton
+              active={!settings.showExerciseForeignLanguage}
+              title="Hide Foreign Name"
+              subtitle="Only show primary exercise name"
+              onClick={() => updateSettings({ showExerciseForeignLanguage: false })}
+              languageMode={languageMode}
+              learningEnabled={learningEnabled}
+            />
+          </div>
+        </div>
+
         <div className="grid gap-2 lg:grid-cols-2">
           <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-            <PanelTitle text="Weight Unit" />
+            <PanelTitle text="Weight Unit" languageMode={languageMode} learningEnabled={learningEnabled} />
             <div className="grid gap-1.5 p-2" style={{ backgroundColor: "var(--surface)" }}>
               {([
                 { value: "kg" as WeightUnitPref, title: "Kilograms (kg)" },
@@ -211,13 +287,15 @@ export default function SettingsPage() {
                   active={settings.defaultWeightUnit === option.value}
                   title={option.title}
                   onClick={() => updateSettings({ defaultWeightUnit: option.value })}
+                  languageMode={languageMode}
+                  learningEnabled={learningEnabled}
                 />
               ))}
             </div>
           </div>
 
           <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-            <PanelTitle text="Variation Labels" />
+            <PanelTitle text="Variation Labels" languageMode={languageMode} learningEnabled={learningEnabled} />
             <div className="grid gap-1.5 p-2" style={{ backgroundColor: "var(--surface)" }}>
               {([
                 { value: "abbreviation" as VariationDisplayMode, title: "Abbreviated", subtitle: "Short labels" },
@@ -229,6 +307,8 @@ export default function SettingsPage() {
                   title={option.title}
                   subtitle={option.subtitle}
                   onClick={() => updateSettings({ progressionVariationDisplay: option.value })}
+                  languageMode={languageMode}
+                  learningEnabled={learningEnabled}
                 />
               ))}
             </div>
@@ -236,7 +316,7 @@ export default function SettingsPage() {
         </div>
 
         <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-          <PanelTitle text="Actions" />
+          <PanelTitle text="Actions" languageMode={languageMode} learningEnabled={learningEnabled} />
           <div className="grid gap-1.5 p-2 sm:grid-cols-2" style={{ backgroundColor: "var(--surface)" }}>
             <button
               type="button"
@@ -248,7 +328,7 @@ export default function SettingsPage() {
                 color: "var(--text-primary)",
               }}
             >
-              Reset Display Settings
+              <LearningText text="Reset Display Settings" languageMode={languageMode} enabled={learningEnabled} />
             </button>
             <button
               type="button"
@@ -260,7 +340,7 @@ export default function SettingsPage() {
                 color: "var(--danger)",
               }}
             >
-              Logout
+              <LearningText text="Logout" languageMode={languageMode} enabled={learningEnabled} />
             </button>
           </div>
         </div>

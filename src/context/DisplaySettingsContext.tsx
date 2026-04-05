@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
+import type { LanguageMode } from "@/lib/language";
 
 // Display mode options for technique rendering (kept as exports for component prop types)
 export type TechniqueDisplayMode =
@@ -66,6 +67,10 @@ export interface DisplaySettings {
   progressionVariationDisplay: VariationDisplayMode;
   // Default weight unit preference
   defaultWeightUnit: WeightUnitPref;
+  // UI language mode
+  languageMode: LanguageMode;
+  // Show opposite-language exercise name alongside primary name
+  showExerciseForeignLanguage: boolean;
 }
 
 const DEFAULT_SETTINGS: DisplaySettings = {
@@ -73,6 +78,8 @@ const DEFAULT_SETTINGS: DisplaySettings = {
   terminologyMode: "normal",
   progressionVariationDisplay: "abbreviation",
   defaultWeightUnit: "kg",
+  languageMode: "english",
+  showExerciseForeignLanguage: true,
 };
 
 const STORAGE_KEY = "cultivateos-display-settings";
@@ -214,7 +221,16 @@ export function DisplaySettingsProvider({ children }: { children: ReactNode }) {
   }, [settings, remotePrefsReady, user?.id]);
 
   const updateSettings = useCallback((partial: Partial<DisplaySettings>) => {
-    setSettings(prev => ({ ...prev, ...partial }));
+    setSettings((prev) => {
+      const nextPartial = { ...partial };
+
+      // If UI language switches to Vietnamese, ensure foreign exercise names are visible.
+      if (nextPartial.languageMode === "vietnamese" && nextPartial.showExerciseForeignLanguage === undefined) {
+        nextPartial.showExerciseForeignLanguage = true;
+      }
+
+      return { ...prev, ...nextPartial };
+    });
   }, []);
 
   const resetSettings = useCallback(() => {

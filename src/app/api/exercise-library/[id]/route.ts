@@ -5,6 +5,7 @@ import {
 } from "@/lib/exercise-types";
 import { withAuth } from "@/lib/auth/middleware";
 import { getExerciseDbOptionsFromAppPrefs } from "@/lib/exercise-db-settings";
+import { resolveVietnameseValue } from "@/lib/auto-vietnamese";
 import {
   isPendingExerciseDescription,
   markPendingExerciseAsEdited,
@@ -233,10 +234,29 @@ export const PATCH = withAuth(async (req, { auth, params }) => {
               wuxiaName: variationName,
             })),
           });
+
+          const createdVariations = await tx.progressionVariation.findMany({
+            where: { exerciseId: id },
+            select: { id: true, name: true, description: true, difficulty: true },
+          });
+
+          if (createdVariations.length > 0) {
+            await tx.progressionVariationTranslation.createMany({
+              data: createdVariations.map((variation) => ({
+                id: variation.id,
+                englishName: variation.name,
+                vietnameseName: variation.name,
+                englishDescription: variation.description,
+                vietnameseDescription: variation.description,
+                englishDifficulty: variation.difficulty,
+                vietnameseDifficulty: variation.difficulty,
+              })),
+            });
+          }
         }
       }
 
-      return tx.progressionExercise.update({
+      const next = await tx.progressionExercise.update({
         where: { id },
         data: updateData,
         include: {
@@ -249,6 +269,67 @@ export const PATCH = withAuth(async (req, { auth, params }) => {
           },
         },
       });
+
+      await tx.progressionExerciseTranslation.upsert({
+        where: { id },
+        create: {
+          id,
+          englishName: String(updateData.name ?? existing.name),
+          vietnameseName: resolveVietnameseValue(
+            String(updateData.name ?? existing.name),
+            String(updateData.wuxiaName ?? (existing.wuxiaName || updateData.name || existing.name)),
+          ),
+          englishStory: String(updateData.story ?? existing.story),
+          vietnameseStory: resolveVietnameseValue(String(updateData.story ?? existing.story), null),
+          englishDifficulty: String(updateData.difficulty ?? existing.difficulty),
+          vietnameseDifficulty: resolveVietnameseValue(
+            String(updateData.difficulty ?? existing.difficulty),
+            String(updateData.wuxiaDifficulty ?? (existing.wuxiaDifficulty || updateData.difficulty || existing.difficulty)),
+          ),
+          englishType: String(updateData.type ?? existing.type),
+          vietnameseType: resolveVietnameseValue(
+            String(updateData.type ?? existing.type),
+            String(updateData.wuxiaType ?? (existing.wuxiaType || updateData.type || existing.type)),
+          ),
+        },
+        update: {
+          ...(updateData.name !== undefined ? { englishName: String(updateData.name) } : {}),
+          ...(updateData.wuxiaName !== undefined
+            ? {
+                vietnameseName: resolveVietnameseValue(
+                  String(updateData.name ?? existing.name),
+                  String(updateData.wuxiaName || updateData.name || existing.name),
+                ),
+              }
+            : {}),
+          ...(updateData.story !== undefined
+            ? {
+                englishStory: String(updateData.story),
+                vietnameseStory: resolveVietnameseValue(String(updateData.story), null),
+              }
+            : {}),
+          ...(updateData.difficulty !== undefined ? { englishDifficulty: String(updateData.difficulty) } : {}),
+          ...(updateData.wuxiaDifficulty !== undefined
+            ? {
+                vietnameseDifficulty: resolveVietnameseValue(
+                  String(updateData.difficulty ?? existing.difficulty),
+                  String(updateData.wuxiaDifficulty || updateData.difficulty || existing.difficulty),
+                ),
+              }
+            : {}),
+          ...(updateData.type !== undefined ? { englishType: String(updateData.type) } : {}),
+          ...(updateData.wuxiaType !== undefined
+            ? {
+                vietnameseType: resolveVietnameseValue(
+                  String(updateData.type ?? existing.type),
+                  String(updateData.wuxiaType || updateData.type || existing.type),
+                ),
+              }
+            : {}),
+        },
+      });
+
+      return next;
     });
 
     return NextResponse.json({ exercise: updated });

@@ -3,6 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { serializeDayAssignments } from "@/lib/constants";
 import { withAuth } from "@/lib/auth/middleware";
 import { canViewUserData } from "@/lib/friends";
+import {
+  applyProgressionExerciseTranslation,
+  getUserLanguageMode,
+} from "@/lib/exercise-translation-db";
+import { resolveVietnameseValue } from "@/lib/auto-vietnamese";
 
 // GET /api/progressions/[id] — get a shared progression exercise with selected user's progress
 export const GET = withAuth(async (request, { auth, params }) => {
@@ -24,11 +29,19 @@ export const GET = withAuth(async (request, { auth, params }) => {
       userId = targetUserId;
     }
 
+    const languageMode = await getUserLanguageMode(auth.userId);
+
     const exercise = await prisma.progressionExercise.findUnique({
       where: { id },
       include: {
-        tiers: { orderBy: { level: "asc" } },
-        variations: true,
+        translation: true,
+        tiers: {
+          include: { translation: true },
+          orderBy: { level: "asc" },
+        },
+        variations: {
+          include: { translation: true },
+        },
         modifiers: true,
         userProgress: {
           where: { userId },
@@ -43,7 +56,25 @@ export const GET = withAuth(async (request, { auth, params }) => {
       return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ exercise });
+    const { translation, ...baseExercise } = exercise;
+    const localizedExercise = applyProgressionExerciseTranslation(
+      baseExercise,
+      translation,
+      languageMode
+    );
+
+    const englishName = translation?.englishName || baseExercise.name;
+    const vietnameseName = translation?.vietnameseName || baseExercise.wuxiaName || baseExercise.name;
+
+    return NextResponse.json({
+      exercise: {
+        ...localizedExercise,
+        name: englishName,
+        wuxiaName: vietnameseName,
+        englishName,
+        vietnameseName,
+      },
+    });
   } catch (error) {
     console.error("Progression fetch error:", error);
     return NextResponse.json({ error: "Failed to fetch progression" }, { status: 500 });
@@ -145,7 +176,7 @@ export const PATCH = withAuth(async (request, { auth, params }) => {
       // Delete existing tiers and recreate
       await prisma.progressionTier.deleteMany({ where: { exerciseId: id } });
       for (const t of body.tiers) {
-        await prisma.progressionTier.create({
+        const createdTier = await prisma.progressionTier.create({
           data: {
             exerciseId: id,
             level: Number(t.level),
@@ -160,6 +191,18 @@ export const PATCH = withAuth(async (request, { auth, params }) => {
             targetRepsText: t.targetRepsText ? String(t.targetRepsText).trim().slice(0, 50) : "",
           },
         });
+
+        await prisma.progressionTierTranslation.create({
+          data: {
+            id: createdTier.id,
+            englishName: String(t.name || "").trim().slice(0, 200),
+            vietnameseName: t.wuxiaName ? String(t.wuxiaName).trim().slice(0, 300) : String(t.name || "").trim().slice(0, 200),
+            englishDescription: (t.description || "").toString().trim().slice(0, 1000),
+            vietnameseDescription: (t.description || "").toString().trim().slice(0, 1000),
+            englishDifficulty: (t.difficulty || "").toString().trim().slice(0, 100),
+            vietnameseDifficulty: (t.wuxiaDifficulty || t.difficulty || "").toString().trim().slice(0, 100),
+          },
+        });
       }
     }
 
@@ -167,7 +210,7 @@ export const PATCH = withAuth(async (request, { auth, params }) => {
     if (body.variations && Array.isArray(body.variations)) {
       await prisma.progressionVariation.deleteMany({ where: { exerciseId: id } });
       for (const v of body.variations) {
-        await prisma.progressionVariation.create({
+        const createdVariation = await prisma.progressionVariation.create({
           data: {
             exerciseId: id,
             name: String(v.name || "").trim().slice(0, 200),
@@ -176,6 +219,18 @@ export const PATCH = withAuth(async (request, { auth, params }) => {
             wuxiaDifficulty: (v.wuxiaDifficulty || v.difficulty || "").toString().trim().slice(0, 100),
             wuxiaType: (v.wuxiaType || "").toString().trim().slice(0, 100),
             description: (v.description || "").toString().trim().slice(0, 1000),
+          },
+        });
+
+        await prisma.progressionVariationTranslation.create({
+          data: {
+            id: createdVariation.id,
+            englishName: String(v.name || "").trim().slice(0, 200),
+            vietnameseName: v.wuxiaName ? String(v.wuxiaName).trim().slice(0, 300) : String(v.name || "").trim().slice(0, 200),
+            englishDescription: (v.description || "").toString().trim().slice(0, 1000),
+            vietnameseDescription: (v.description || "").toString().trim().slice(0, 1000),
+            englishDifficulty: (v.difficulty || "").toString().trim().slice(0, 100),
+            vietnameseDifficulty: (v.wuxiaDifficulty || v.difficulty || "").toString().trim().slice(0, 100),
           },
         });
       }
@@ -201,16 +256,83 @@ export const PATCH = withAuth(async (request, { auth, params }) => {
 
     if (Object.keys(data).length > 0) {
       await prisma.progressionExercise.update({ where: { id }, data });
+
+      await prisma.progressionExerciseTranslation.upsert({
+        where: { id },
+        create: {
+          id,
+          englishName: String(data.name ?? existing.name),
+          vietnameseName: resolveVietnameseValue(
+            String(data.name ?? existing.name),
+            String(data.wuxiaName ?? (existing.wuxiaName || data.name || existing.name)),
+          ),
+          englishStory: String(data.story ?? existing.story),
+          vietnameseStory: resolveVietnameseValue(String(data.story ?? existing.story), null),
+          englishDifficulty: String(data.difficulty ?? existing.difficulty),
+          vietnameseDifficulty: resolveVietnameseValue(
+            String(data.difficulty ?? existing.difficulty),
+            String(data.wuxiaDifficulty ?? (existing.wuxiaDifficulty || data.difficulty || existing.difficulty)),
+          ),
+          englishType: String(data.type ?? existing.type),
+          vietnameseType: resolveVietnameseValue(
+            String(data.type ?? existing.type),
+            String(data.wuxiaType ?? (existing.wuxiaType || data.type || existing.type)),
+          ),
+        },
+        update: {
+          ...(data.name !== undefined ? { englishName: String(data.name) } : {}),
+          ...(data.wuxiaName !== undefined
+            ? {
+                vietnameseName: resolveVietnameseValue(
+                  String(data.name ?? existing.name),
+                  String(data.wuxiaName || data.name || existing.name),
+                ),
+              }
+            : {}),
+          ...(data.story !== undefined
+            ? {
+                englishStory: String(data.story),
+                vietnameseStory: resolveVietnameseValue(String(data.story), null),
+              }
+            : {}),
+          ...(data.difficulty !== undefined ? { englishDifficulty: String(data.difficulty) } : {}),
+          ...(data.wuxiaDifficulty !== undefined
+            ? {
+                vietnameseDifficulty: resolveVietnameseValue(
+                  String(data.difficulty ?? existing.difficulty),
+                  String(data.wuxiaDifficulty || data.difficulty || existing.difficulty),
+                ),
+              }
+            : {}),
+          ...(data.type !== undefined ? { englishType: String(data.type) } : {}),
+          ...(data.wuxiaType !== undefined
+            ? {
+                vietnameseType: resolveVietnameseValue(
+                  String(data.type ?? existing.type),
+                  String(data.wuxiaType || data.type || existing.type),
+                ),
+              }
+            : {}),
+        },
+      });
     } else {
       await prisma.progressionExercise.findUnique({ where: { id } });
     }
 
     // Re-fetch with full includes
+    const languageMode = await getUserLanguageMode(auth.userId);
+
     const full = await prisma.progressionExercise.findUnique({
       where: { id },
       include: {
-        tiers: { orderBy: { level: "asc" } },
-        variations: true,
+        translation: true,
+        tiers: {
+          include: { translation: true },
+          orderBy: { level: "asc" },
+        },
+        variations: {
+          include: { translation: true },
+        },
         modifiers: true,
         userProgress: {
           where: { userId: auth.userId },
@@ -219,7 +341,18 @@ export const PATCH = withAuth(async (request, { auth, params }) => {
       },
     });
 
-    return NextResponse.json({ exercise: full });
+    if (!full) {
+      return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
+    }
+
+    const { translation, ...baseFull } = full;
+    const localizedExercise = applyProgressionExerciseTranslation(
+      baseFull,
+      translation,
+      languageMode
+    );
+
+    return NextResponse.json({ exercise: localizedExercise });
   } catch (error) {
     console.error("Progression update error:", error);
     return NextResponse.json(

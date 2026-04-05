@@ -4,6 +4,8 @@ import { t } from "@/lib/terminology";
 export interface ExerciseNameLike {
   name?: string | null;
   wuxiaName?: string | null;
+  englishName?: string | null;
+  vietnameseName?: string | null;
 }
 
 export interface ExerciseTypeLike {
@@ -38,12 +40,34 @@ function tokenVariants(token: string): string[] {
 
 export function getExerciseDisplayName(
   exercise: ExerciseNameLike,
-  terminologyMode: TerminologyMode
+  terminologyMode: TerminologyMode,
+  showForeignLanguage = true
 ): string {
-  if (terminologyMode === "normal") {
-    return exercise.name?.trim() || exercise.wuxiaName?.trim() || "Unknown Exercise";
-  }
-  return exercise.wuxiaName?.trim() || exercise.name?.trim() || "Unknown Technique";
+  const englishName = exercise.englishName?.trim() || "";
+  const vietnameseName = exercise.vietnameseName?.trim() || "";
+  const canonicalName = exercise.name?.trim() || "";
+  const canonicalForeignName = exercise.wuxiaName?.trim() || "";
+  const normalName = englishName || canonicalName || vietnameseName || canonicalForeignName;
+  const wuxiaName = vietnameseName || canonicalForeignName || englishName || canonicalName;
+
+  const primary = terminologyMode === "normal"
+    ? normalName || wuxiaName || "Unknown Exercise"
+    : wuxiaName || normalName || "Unknown Technique";
+
+  if (!showForeignLanguage) return primary;
+
+  const preferredSecondary = terminologyMode === "normal" ? wuxiaName : normalName;
+  const secondary = [
+    preferredSecondary,
+    ...(terminologyMode === "normal" ? [vietnameseName, englishName] : [englishName, vietnameseName]),
+  ].find((candidate) => {
+    const value = candidate?.trim();
+    return value && value.toLowerCase() !== primary.toLowerCase();
+  }) || "";
+
+  if (!secondary) return primary;
+
+  return `${primary} (${secondary})`;
 }
 
 /** Returns the type label to display based on the current terminology mode. */
@@ -87,7 +111,7 @@ export function getTypeColorKey(exercise: ExerciseTypeLike): string {
 }
 
 export function getExerciseSearchText(exercise: ExerciseNameLike): string {
-  return `${exercise.name || ""} ${exercise.wuxiaName || ""}`.toLowerCase().trim();
+  return `${exercise.name || ""} ${exercise.wuxiaName || ""} ${exercise.englishName || ""} ${exercise.vietnameseName || ""}`.toLowerCase().trim();
 }
 
 export function matchesLooseSearch(haystack: string, query: string): boolean {
@@ -121,21 +145,27 @@ export function matchesLooseSearchInFields(query: string, fields: Array<string |
 export function getExerciseNameTooltip(
   exercise: ExerciseNameLike,
   terminologyMode: TerminologyMode,
-  story?: string | null
+  story?: string | null,
+  showForeignLanguage = true
 ): string {
-  const normalName = exercise.name?.trim() || "";
-  const fantasyName = exercise.wuxiaName?.trim() || "";
+  const normalName = exercise.englishName?.trim() || exercise.name?.trim() || "";
+  const fantasyName = exercise.vietnameseName?.trim() || exercise.wuxiaName?.trim() || "";
   const conventionalName = normalName || fantasyName;
   const cultivationName = fantasyName || normalName;
 
   const lines: string[] = [];
 
-  if (terminologyMode === "normal") {
-    if (conventionalName) lines.push(`Conventional: ${conventionalName}`);
-    if (cultivationName) lines.push(`Cultivation: ${cultivationName}`);
+  if (showForeignLanguage) {
+    if (terminologyMode === "normal") {
+      if (conventionalName) lines.push(`Conventional: ${conventionalName}`);
+      if (cultivationName) lines.push(`Cultivation: ${cultivationName}`);
+    } else {
+      if (cultivationName) lines.push(`Cultivation: ${cultivationName}`);
+      if (conventionalName) lines.push(`Conventional: ${conventionalName}`);
+    }
   } else {
-    if (cultivationName) lines.push(`Cultivation: ${cultivationName}`);
-    if (conventionalName) lines.push(`Conventional: ${conventionalName}`);
+    const single = terminologyMode === "normal" ? conventionalName : cultivationName;
+    if (single) lines.push(single);
   }
 
   if (lines.length === 0) {

@@ -2,6 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import type { ProgressionExercise } from "@/app/dashboard/workout/types";
 import {
   parseCategoryTags,
@@ -27,6 +28,13 @@ import { getDifficultyColorClass, getDifficultyGlowStyleScaled } from "@/lib/dif
 import { getExerciseDisplayName, getTypeDisplayName, getDifficultyDisplayName, getTypeColorKey } from "@/lib/exercise-name";
 import type { UserPhysiqueSettings } from "@/lib/user-physique";
 import { useLatestCheckinWeight } from "@/hooks/useLatestCheckinWeight";
+
+type MobilePickerField = "modifier" | "band" | "variation";
+
+interface MobilePickerState {
+  field: MobilePickerField;
+  title: string;
+}
 
 export function SetLoggerPanel({
   queueItemId,
@@ -84,6 +92,7 @@ export function SetLoggerPanel({
   const [showTimerModal, setShowTimerModal] = useState(false);
   const [timerTarget, setTimerTarget] = useState<"hold" | "hold2" | "hold3">("hold");
   const [timerReps, setTimerReps] = useState("");
+  const [mobilePicker, setMobilePicker] = useState<MobilePickerState | null>(null);
   const [activeMobileSet, setActiveMobileSet] = useState<1 | 2 | 3>(1);
   const [focusedPrimarySetId, setFocusedPrimarySetId] = useState<1 | 2 | 3 | null>(null);
   const [expandedSetIds, setExpandedSetIds] = useState<Record<1 | 2 | 3, boolean>>({ 1: true, 2: false, 3: false });
@@ -112,7 +121,7 @@ export function SetLoggerPanel({
     { difficulty: currentDifficulty, wuxiaDifficulty: currentDifficulty },
     settings.terminologyMode
   ) || currentDifficulty;
-  const displayName = getExerciseDisplayName(exercise, settings.terminologyMode);
+  const displayName = getExerciseDisplayName(exercise, settings.terminologyMode, settings.showExerciseForeignLanguage);
   const typeKey = getTypeColorKey(exercise);
   const typeEmoji = typeKey === "Upper Heaven" ? "☁️"
     : typeKey === "Lower Realms" ? "🔥"
@@ -148,6 +157,69 @@ export function SetLoggerPanel({
 
     return Array.from(options).sort((a, b) => a.localeCompare(b));
   }, [exercise, exercise.variations, exercise.userProgress, selectedVariation]);
+
+  const selectedModifierLabel = useMemo(() => {
+    if (!selectedModifierKg) return "No added weight";
+    const parsed = Number(selectedModifierKg);
+    return Number.isFinite(parsed) ? formatModifierWeightLabel(parsed) : selectedModifierKg;
+  }, [selectedModifierKg]);
+
+  const selectedBandLabel = useMemo(() => {
+    if (!selectedResistanceBand) return "No resistance band";
+    const parsed = Number(selectedResistanceBand);
+    return Number.isFinite(parsed)
+      ? `Resistance band ${formatResistanceBandLabel(parsed)}`
+      : selectedResistanceBand;
+  }, [selectedResistanceBand]);
+
+  const selectedVariationLabel = useMemo(() => selectedVariation || "No variation", [selectedVariation]);
+
+  const mobilePickerOptions = useMemo(() => {
+    if (!mobilePicker) return [] as Array<{ value: string; label: string }>;
+
+    if (mobilePicker.field === "modifier") {
+      return [
+        { value: "", label: "No added weight" },
+        ...MODIFIER_WEIGHT_OPTIONS.map((kg) => ({ value: String(kg), label: formatModifierWeightLabel(kg) })),
+      ];
+    }
+
+    if (mobilePicker.field === "band") {
+      return [
+        { value: "", label: "No resistance band" },
+        ...RESISTANCE_BAND_OPTIONS.map((kg) => ({ value: String(kg), label: `Resistance band ${formatResistanceBandLabel(kg)}` })),
+      ];
+    }
+
+    return [
+      { value: "", label: "No variation" },
+      ...availableVariationOptions.map((variationName) => ({ value: variationName, label: variationName })),
+    ];
+  }, [mobilePicker, availableVariationOptions]);
+
+  const mobilePickerCurrentValue = useMemo(() => {
+    if (!mobilePicker) return "";
+    if (mobilePicker.field === "modifier") return selectedModifierKg;
+    if (mobilePicker.field === "band") return selectedResistanceBand;
+    return selectedVariation;
+  }, [mobilePicker, selectedModifierKg, selectedResistanceBand, selectedVariation]);
+
+  const applyMobilePickerValue = useCallback((field: MobilePickerField, value: string) => {
+    if (field === "modifier") {
+      setSelectedModifierKg(value);
+      setAutoPopulated((prev) => ({ ...prev, modifierKg: false }));
+      return;
+    }
+
+    if (field === "band") {
+      setSelectedResistanceBand(value);
+      setAutoPopulated((prev) => ({ ...prev, band: false }));
+      return;
+    }
+
+    setSelectedVariation(value);
+    setAutoPopulated((prev) => ({ ...prev, variation: false }));
+  }, []);
 
   const handleBackNavigation = useCallback(() => {
     if (onExit) {
@@ -634,18 +706,29 @@ export function SetLoggerPanel({
                         <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-mist-mid">
                           Added Weight{autoPopulated.modifierKg && <span className="text-gold/70 ml-0.5" title="Pre-filled from last session">*</span>}
                         </span>
-                        <select
-                          value={selectedModifierKg}
-                          onChange={(e) => { setSelectedModifierKg(e.target.value); setAutoPopulated(prev => ({ ...prev, modifierKg: false })); }}
-                          className={`w-full border border-ink-light/20 bg-ink-dark text-gold outline-none focus:border-gold/40 transition-colors cursor-pointer ${isMobile ? "rounded-xl px-3 py-3 text-sm" : "rounded-lg px-2.5 py-2 text-xs"}`}
-                        >
-                          <option value="">No added weight</option>
-                          {MODIFIER_WEIGHT_OPTIONS.map((kg) => (
-                            <option key={kg} value={String(kg)}>
-                              {formatModifierWeightLabel(kg)}
-                            </option>
-                          ))}
-                        </select>
+                        {isMobile ? (
+                          <button
+                            type="button"
+                            onClick={() => setMobilePicker({ field: "modifier", title: "Added Weight" })}
+                            className="flex w-full items-center justify-between rounded-xl border border-ink-light/20 bg-ink-dark px-3 py-3 text-sm text-gold"
+                          >
+                            <span className="truncate">{selectedModifierLabel}</span>
+                            <span className="ml-2 text-xs opacity-80">v</span>
+                          </button>
+                        ) : (
+                          <select
+                            value={selectedModifierKg}
+                            onChange={(e) => { setSelectedModifierKg(e.target.value); setAutoPopulated(prev => ({ ...prev, modifierKg: false })); }}
+                            className={`w-full border border-ink-light/20 bg-ink-dark text-gold outline-none focus:border-gold/40 transition-colors cursor-pointer ${isMobile ? "rounded-xl px-3 py-3 text-sm" : "rounded-lg px-2.5 py-2 text-xs"}`}
+                          >
+                            <option value="">No added weight</option>
+                            {MODIFIER_WEIGHT_OPTIONS.map((kg) => (
+                              <option key={kg} value={String(kg)}>
+                                {formatModifierWeightLabel(kg)}
+                              </option>
+                            ))}
+                          </select>
+                        )}
                       </label>
                     )}
                     {showResistanceBand && (
@@ -653,18 +736,29 @@ export function SetLoggerPanel({
                         <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-mist-mid">
                           Resistance band{autoPopulated.band && <span className="text-mountain-blue-glow/70 ml-0.5" title="Pre-filled from last session">*</span>}
                         </span>
-                        <select
-                          value={selectedResistanceBand}
-                          onChange={(e) => { setSelectedResistanceBand(e.target.value); setAutoPopulated(prev => ({ ...prev, band: false })); }}
-                          className={`w-full border border-ink-light/20 bg-ink-dark text-mountain-blue-glow outline-none focus:border-mountain-blue-glow/40 transition-colors cursor-pointer ${isMobile ? "rounded-xl px-3 py-3 text-sm" : "rounded-lg px-2.5 py-2 text-xs"}`}
-                        >
-                          <option value="">No resistance band</option>
-                          {RESISTANCE_BAND_OPTIONS.map((kg) => (
-                            <option key={kg} value={String(kg)}>
-                              Resistance band {formatResistanceBandLabel(kg)}
-                            </option>
-                          ))}
-                        </select>
+                        {isMobile ? (
+                          <button
+                            type="button"
+                            onClick={() => setMobilePicker({ field: "band", title: "Resistance band" })}
+                            className="flex w-full items-center justify-between rounded-xl border border-ink-light/20 bg-ink-dark px-3 py-3 text-sm text-mountain-blue-glow"
+                          >
+                            <span className="truncate">{selectedBandLabel}</span>
+                            <span className="ml-2 text-xs opacity-80">v</span>
+                          </button>
+                        ) : (
+                          <select
+                            value={selectedResistanceBand}
+                            onChange={(e) => { setSelectedResistanceBand(e.target.value); setAutoPopulated(prev => ({ ...prev, band: false })); }}
+                            className={`w-full border border-ink-light/20 bg-ink-dark text-mountain-blue-glow outline-none focus:border-mountain-blue-glow/40 transition-colors cursor-pointer ${isMobile ? "rounded-xl px-3 py-3 text-sm" : "rounded-lg px-2.5 py-2 text-xs"}`}
+                          >
+                            <option value="">No resistance band</option>
+                            {RESISTANCE_BAND_OPTIONS.map((kg) => (
+                              <option key={kg} value={String(kg)}>
+                                Resistance band {formatResistanceBandLabel(kg)}
+                              </option>
+                            ))}
+                          </select>
+                        )}
                       </label>
                     )}
                   </div>
@@ -674,18 +768,29 @@ export function SetLoggerPanel({
                     <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-mist-mid">
                       Variation{autoPopulated.variation && <span className="text-crimson-light/70 ml-0.5" title="Pre-filled from last session">*</span>}
                     </span>
-                    <select
-                      value={selectedVariation}
-                      onChange={(e) => { setSelectedVariation(e.target.value); setAutoPopulated(prev => ({ ...prev, variation: false })); }}
-                      className={`w-full border border-ink-light/20 bg-ink-dark text-crimson-light outline-none focus:border-crimson/40 transition-colors cursor-pointer ${isMobile ? "rounded-xl px-3 py-3 text-sm" : "rounded-lg px-2.5 py-2 text-xs"}`}
-                    >
-                      <option value="">No variation</option>
-                      {availableVariationOptions.map((variationName) => (
-                        <option key={variationName} value={variationName}>
-                          {variationName}
-                        </option>
-                      ))}
-                    </select>
+                    {isMobile ? (
+                      <button
+                        type="button"
+                        onClick={() => setMobilePicker({ field: "variation", title: "Variation" })}
+                        className="flex w-full items-center justify-between rounded-xl border border-ink-light/20 bg-ink-dark px-3 py-3 text-sm text-crimson-light"
+                      >
+                        <span className="truncate">{selectedVariationLabel}</span>
+                        <span className="ml-2 text-xs opacity-80">v</span>
+                      </button>
+                    ) : (
+                      <select
+                        value={selectedVariation}
+                        onChange={(e) => { setSelectedVariation(e.target.value); setAutoPopulated(prev => ({ ...prev, variation: false })); }}
+                        className={`w-full border border-ink-light/20 bg-ink-dark text-crimson-light outline-none focus:border-crimson/40 transition-colors cursor-pointer ${isMobile ? "rounded-xl px-3 py-3 text-sm" : "rounded-lg px-2.5 py-2 text-xs"}`}
+                      >
+                        <option value="">No variation</option>
+                        {availableVariationOptions.map((variationName) => (
+                          <option key={variationName} value={variationName}>
+                            {variationName}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </label>
                 )}
               </div>
@@ -1101,22 +1206,52 @@ export function SetLoggerPanel({
             {(showAddedWeight || showResistanceBand || availableVariationOptions.length > 0) && (
               <div className="flex flex-wrap gap-1.5">
                 {showAddedWeight && (
-                  <select value={selectedModifierKg} onChange={(e) => setSelectedModifierKg(e.target.value)} className="bg-ink-dark border border-ink-light/20 rounded-lg px-2 py-1.5 text-[10px] text-gold outline-none cursor-pointer">
-                    <option value="">+Wt: none</option>
-                    {MODIFIER_WEIGHT_OPTIONS.map((kg) => <option key={kg} value={String(kg)}>{formatModifierWeightLabel(kg)}</option>)}
-                  </select>
+                  isMobile ? (
+                    <button
+                      type="button"
+                      onClick={() => setMobilePicker({ field: "modifier", title: "Added Weight" })}
+                      className="bg-ink-dark border border-ink-light/20 rounded-lg px-2 py-1.5 text-[10px] text-gold"
+                    >
+                      {selectedModifierKg ? formatModifierWeightLabel(Number(selectedModifierKg)) : "+Wt: none"}
+                    </button>
+                  ) : (
+                    <select value={selectedModifierKg} onChange={(e) => setSelectedModifierKg(e.target.value)} className="bg-ink-dark border border-ink-light/20 rounded-lg px-2 py-1.5 text-[10px] text-gold outline-none cursor-pointer">
+                      <option value="">+Wt: none</option>
+                      {MODIFIER_WEIGHT_OPTIONS.map((kg) => <option key={kg} value={String(kg)}>{formatModifierWeightLabel(kg)}</option>)}
+                    </select>
+                  )
                 )}
                 {showResistanceBand && (
-                  <select value={selectedResistanceBand} onChange={(e) => setSelectedResistanceBand(e.target.value)} className="bg-ink-dark border border-ink-light/20 rounded-lg px-2 py-1.5 text-[10px] text-mountain-blue-glow outline-none cursor-pointer">
-                    <option value="">Band: none</option>
-                    {RESISTANCE_BAND_OPTIONS.map((kg) => <option key={kg} value={String(kg)}>{kg}kg</option>)}
-                  </select>
+                  isMobile ? (
+                    <button
+                      type="button"
+                      onClick={() => setMobilePicker({ field: "band", title: "Resistance band" })}
+                      className="bg-ink-dark border border-ink-light/20 rounded-lg px-2 py-1.5 text-[10px] text-mountain-blue-glow"
+                    >
+                      {selectedResistanceBand ? `Band: ${Number(selectedResistanceBand)}kg` : "Band: none"}
+                    </button>
+                  ) : (
+                    <select value={selectedResistanceBand} onChange={(e) => setSelectedResistanceBand(e.target.value)} className="bg-ink-dark border border-ink-light/20 rounded-lg px-2 py-1.5 text-[10px] text-mountain-blue-glow outline-none cursor-pointer">
+                      <option value="">Band: none</option>
+                      {RESISTANCE_BAND_OPTIONS.map((kg) => <option key={kg} value={String(kg)}>{kg}kg</option>)}
+                    </select>
+                  )
                 )}
                 {availableVariationOptions.length > 0 && (
-                  <select value={selectedVariation} onChange={(e) => setSelectedVariation(e.target.value)} className="bg-ink-dark border border-ink-light/20 rounded-lg px-2 py-1.5 text-[10px] text-crimson-light outline-none cursor-pointer">
-                    <option value="">Var: none</option>
-                    {availableVariationOptions.map((variationName) => <option key={variationName} value={variationName}>{variationName}</option>)}
-                  </select>
+                  isMobile ? (
+                    <button
+                      type="button"
+                      onClick={() => setMobilePicker({ field: "variation", title: "Variation" })}
+                      className="bg-ink-dark border border-ink-light/20 rounded-lg px-2 py-1.5 text-[10px] text-crimson-light"
+                    >
+                      {selectedVariation ? `Var: ${selectedVariation}` : "Var: none"}
+                    </button>
+                  ) : (
+                    <select value={selectedVariation} onChange={(e) => setSelectedVariation(e.target.value)} className="bg-ink-dark border border-ink-light/20 rounded-lg px-2 py-1.5 text-[10px] text-crimson-light outline-none cursor-pointer">
+                      <option value="">Var: none</option>
+                      {availableVariationOptions.map((variationName) => <option key={variationName} value={variationName}>{variationName}</option>)}
+                    </select>
+                  )
                 )}
               </div>
             )}
@@ -1525,6 +1660,69 @@ export function SetLoggerPanel({
               </div>
             </div>
           </div>
+        )}
+
+        {isMobile && mobilePicker && typeof document !== "undefined" && createPortal(
+          <AnimatePresence>
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[95] bg-black/70"
+                onClick={() => setMobilePicker(null)}
+              />
+              <motion.div
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 24 }}
+                className="fixed left-1/2 bottom-0 z-[96] max-h-[72vh] w-[min(82vw,32rem)] -translate-x-1/2 overflow-hidden rounded-none border"
+                style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)", boxShadow: "var(--shadow-elev-2)" }}
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="flex items-center justify-between border-b px-4 py-3" style={{ borderColor: "var(--border)" }}>
+                  <p className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--text-primary)" }}>
+                    {mobilePicker.title}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setMobilePicker(null)}
+                    className="rounded border px-2.5 py-1 text-[11px]"
+                    style={{ borderColor: "var(--border)", color: "var(--text-secondary)", backgroundColor: "var(--surface-hover)" }}
+                  >
+                    Close
+                  </button>
+                </div>
+                <div className="max-h-[calc(72vh-52px)] overflow-y-auto p-2">
+                  {mobilePickerOptions.map((option, index) => {
+                    const isActive = option.value === mobilePickerCurrentValue;
+                    return (
+                      <button
+                        key={`${mobilePicker.field}-${option.value || "empty"}-${index}`}
+                        type="button"
+                        onClick={() => {
+                          applyMobilePickerValue(mobilePicker.field, option.value);
+                          setMobilePicker(null);
+                        }}
+                        className="mb-1.5 flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-left text-sm"
+                        style={{
+                          borderColor: isActive ? "var(--accent)" : "var(--border)",
+                          backgroundColor: isActive
+                            ? "color-mix(in srgb, var(--accent) 16%, var(--surface))"
+                            : "var(--surface)",
+                          color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
+                        }}
+                      >
+                        <span className="truncate">{option.label}</span>
+                        <span className="ml-3 text-xs" style={{ color: isActive ? "var(--accent)" : "transparent" }}>●</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            </>
+          </AnimatePresence>,
+          document.body,
         )}
       </div>
     </motion.div>

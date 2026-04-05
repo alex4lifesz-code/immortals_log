@@ -169,7 +169,7 @@ export function TrainingGroundsSidebar({
         equipmentTags,
         assignedDays,
         isGym: isGymCategoryExercise(ex),
-        displayName: getExerciseDisplayName(ex, settings.terminologyMode),
+        displayName: getExerciseDisplayName(ex, settings.terminologyMode, settings.showExerciseForeignLanguage),
         primaryCategory: categoryTags[0] || "Uncategorised",
         logCount: logs.length,
         latestLogTs,
@@ -224,8 +224,8 @@ export function TrainingGroundsSidebar({
       [...filtered].sort((a, b) => {
         const aDerived = exerciseDerived.get(a.id);
         const bDerived = exerciseDerived.get(b.id);
-        const nameA = aDerived?.displayName ?? getExerciseDisplayName(a, settings.terminologyMode);
-        const nameB = bDerived?.displayName ?? getExerciseDisplayName(b, settings.terminologyMode);
+        const nameA = aDerived?.displayName ?? getExerciseDisplayName(a, settings.terminologyMode, settings.showExerciseForeignLanguage);
+        const nameB = bDerived?.displayName ?? getExerciseDisplayName(b, settings.terminologyMode, settings.showExerciseForeignLanguage);
 
         switch (sortMode) {
           case "a-z":
@@ -642,7 +642,7 @@ export function TrainingGroundsSidebar({
               const currentLevel = exercise.userProgress[0]?.currentLevel ?? 1;
               const effectiveLevel = levelDefaults[exercise.id] || autoLevelByExerciseId[exercise.id] || currentLevel;
               const typeColor = getTypeColor(getTypeColorKey(exercise));
-              const displayName = exerciseDerived.get(exercise.id)?.displayName ?? getExerciseDisplayName(exercise, settings.terminologyMode);
+              const displayName = exerciseDerived.get(exercise.id)?.displayName ?? getExerciseDisplayName(exercise, settings.terminologyMode, settings.showExerciseForeignLanguage);
               const glowStyle = {};
               const logCount = exerciseDerived.get(exercise.id)?.logCount ?? 0;
               const isSearchMatch = isSearchActive && (searchNameMatchById.get(exercise.id) ?? false);

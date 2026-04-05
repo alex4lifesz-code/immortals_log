@@ -78,6 +78,23 @@ model Exercise {
   targetGroup String?
   assignedDays String @default("") // Comma-separated list of days: "0,1,2" for Sun,Mon,Tue
   createdAt   DateTime @default(now())
+
+  translation ExerciseTranslation?
+}
+
+model ExerciseTranslation {
+  id                  String   @id
+  exercise            Exercise @relation(fields: [id], references: [id], onDelete: Cascade)
+  englishName         String
+  vietnameseName      String
+  englishStory        String?
+  vietnameseStory     String?
+  englishDifficulty   String?
+  vietnameseDifficulty String?
+  englishType         String?
+  vietnameseType      String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 }
 
 model CheckInNote {
@@ -128,8 +145,24 @@ model ProgressionExercise {
   variations ProgressionVariation[]
   modifiers  ProgressionModifier[]
   userProgress UserProgressionLevel[]
+  translation ProgressionExerciseTranslation?
 
   @@index([userId])
+}
+
+model ProgressionExerciseTranslation {
+  id                   String              @id
+  exercise             ProgressionExercise @relation(fields: [id], references: [id], onDelete: Cascade)
+  englishName          String
+  vietnameseName       String
+  englishStory         String?
+  vietnameseStory      String?
+  englishDifficulty    String?
+  vietnameseDifficulty String?
+  englishType          String?
+  vietnameseType       String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 }
 
 model ProgressionTier {
@@ -146,8 +179,22 @@ model ProgressionTier {
   targetHold    Int?                      // target hold time in seconds
   targetReps    Int?                      // target reps (numeric) if applicable
   targetRepsText String  @default("")    // target reps as string like "3-5" or "5-8"
+  translation   ProgressionTierTranslation?
 
   @@index([exerciseId])
+}
+
+model ProgressionTierTranslation {
+  id                   String          @id
+  tier                 ProgressionTier @relation(fields: [id], references: [id], onDelete: Cascade)
+  englishName          String
+  vietnameseName       String
+  englishDescription   String?
+  vietnameseDescription String?
+  englishDifficulty    String?
+  vietnameseDifficulty String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 }
 
 model ProgressionVariation {
@@ -160,8 +207,22 @@ model ProgressionVariation {
   wuxiaDifficulty String @default("")
   wuxiaType     String   @default("")
   description   String   @default("")
+  translation   ProgressionVariationTranslation?
 
   @@index([exerciseId])
+}
+
+model ProgressionVariationTranslation {
+  id                   String               @id
+  variation            ProgressionVariation @relation(fields: [id], references: [id], onDelete: Cascade)
+  englishName          String
+  vietnameseName       String
+  englishDescription   String?
+  vietnameseDescription String?
+  englishDifficulty    String?
+  vietnameseDifficulty String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 }
 
 model ProgressionModifier {

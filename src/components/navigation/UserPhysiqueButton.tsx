@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { GlowModal } from "@/components/ui/GlowCard";
 import GlowButton from "@/components/ui/GlowButton";
+import { t, tHint } from "@/lib/terminology";
 import { DEFAULT_USER_PHYSIQUE, loadUserPhysique, saveUserPhysique, syncWeightFromLatestCheckin, UserGender } from "@/lib/user-physique";
 
 interface UserPhysiqueButtonProps {
@@ -85,7 +86,7 @@ export default function UserPhysiqueButton({ userId, userName, className }: User
       <button
         onClick={handleOpen}
         className={className || "text-xs text-cloud-white font-medium truncate hover:text-jade-glow transition-colors"}
-        title="Open user physique settings"
+        title={tHint("Open user physique settings", "normal") ?? undefined}
       >
         {userName}
       </button>
@@ -93,16 +94,17 @@ export default function UserPhysiqueButton({ userId, userName, className }: User
       <GlowModal
         isOpen={open}
         onClose={() => setOpen(false)}
-        title="User Settings"
+        title={t("User Settings", "normal")}
+        titleHint={tHint("User Settings", "normal")}
         panelClassName="max-w-md"
       >
         <div className="space-y-4">
-          <p className="text-xs text-mist-light">
-            Used to auto-select gym progression tier from average set weight vs bodyweight percentage.
+          <p className="text-xs text-mist-light" title={tHint("Used to auto-select gym progression tier from average set weight vs bodyweight percentage.", "normal") ?? undefined}>
+            {t("Used to auto-select gym progression tier from average set weight vs bodyweight percentage.", "normal")}
           </p>
 
           <div className="space-y-1.5">
-            <label className="block text-[11px] text-mist-light uppercase tracking-wider">Gender</label>
+            <label className="block text-[11px] text-mist-light uppercase tracking-wider" title={tHint("Gender", "normal") ?? undefined}>{t("Gender", "normal")}</label>
             <div className="flex gap-2">
               <button
                 type="button"
@@ -113,7 +115,7 @@ export default function UserPhysiqueButton({ userId, userName, className }: User
                     : "border-ink-light bg-ink-dark text-mist-light hover:border-jade/30"
                 }`}
               >
-                ♂️ Male
+                ♂️ {t("Male", "normal")}
               </button>
               <button
                 type="button"
@@ -124,18 +126,18 @@ export default function UserPhysiqueButton({ userId, userName, className }: User
                     : "border-ink-light bg-ink-dark text-mist-light hover:border-jade/30"
                 }`}
               >
-                ♀️ Female
+                ♀️ {t("Female", "normal")}
               </button>
             </div>
-            <p className="text-[9px] text-mist-dark/70 italic">Gender affects weight standard calculations for your tier</p>
+            <p className="text-[9px] text-mist-dark/70 italic" title={tHint("Gender affects weight standard calculations for your tier", "normal") ?? undefined}>{t("Gender affects weight standard calculations for your tier", "normal")}</p>
           </div>
 
           <div className="space-y-1.5">
-            <label className="block text-[11px] text-mist-light uppercase tracking-wider">Bodyweight (kg)</label>
+            <label className="block text-[11px] text-mist-light uppercase tracking-wider" title={tHint("Bodyweight (kg)", "normal") ?? undefined}>{t("Bodyweight (kg)", "normal")}</label>
 
             {/* Sync Toggle */}
             <div className="flex items-center justify-between py-1.5">
-              <span className="text-[10px] text-mist-light/80">Sync with Check-In Weight</span>
+              <span className="text-[10px] text-mist-light/80" title={tHint("Sync with Check-In Weight", "normal") ?? undefined}>{t("Sync with Check-In Weight", "normal")}</span>
               <button
                 type="button"
                 role="switch"
@@ -156,10 +158,10 @@ export default function UserPhysiqueButton({ userId, userName, className }: User
             {syncEnabled && (
               <p className="text-[9px] text-jade-glow/70 italic">
                 {latestCheckinWeight
-                  ? "Automatically updated from check-ins"
+                  ? t("Automatically updated from check-ins", "normal")
                   : checkinWeightError
-                    ? checkinWeightError
-                    : "Loading check-in data…"
+                    ? t(checkinWeightError, "normal")
+                    : t("Loading check-in data...", "normal")
                 }
               </p>
             )}
@@ -172,31 +174,31 @@ export default function UserPhysiqueButton({ userId, userName, className }: User
                 value={bodyWeightKg}
                 onChange={(e) => { if (!syncEnabled) setBodyWeightKg(e.target.value); }}
                 readOnly={syncEnabled}
-                placeholder="e.g. 82.5"
+                placeholder={t("e.g. 82.5", "normal")}
                 className={`flex-1 bg-ink-dark border border-ink-light rounded-lg px-3 py-2 text-sm text-cloud-white placeholder:text-mist-dark outline-none focus:border-jade-glow/50 ${
                   syncEnabled ? 'opacity-70 cursor-not-allowed' : ''
                 }`}
               />
               {!syncEnabled && (
                 checkinWeightLoading ? (
-                  <span className="self-center text-[10px] text-mist-dark animate-pulse whitespace-nowrap">Loading…</span>
+                  <span className="self-center text-[10px] text-mist-dark animate-pulse whitespace-nowrap">{t("Loading...", "normal")}</span>
                 ) : latestCheckinWeight ? (
                   <button
                     type="button"
                     onClick={() => setBodyWeightKg(String(latestCheckinWeight.weight))}
                     className="whitespace-nowrap rounded-lg border border-jade/40 bg-jade-deep/20 px-2.5 py-2 text-[10px] font-semibold text-jade-light transition-all hover:bg-jade-deep/40 hover:border-jade-glow/60"
-                    title={`Use ${latestCheckinWeight.weight} kg from check-in`}
+                    title={tHint("Use Last Known Weight", "normal") ?? undefined}
                   >
-                    Use Last Known Weight
+                    {t("Use Last Known Weight", "normal")}
                   </button>
                 ) : checkinWeightError ? (
-                  <span className="self-center text-[10px] text-mist-dark/60 whitespace-nowrap">{checkinWeightError}</span>
+                  <span className="self-center text-[10px] text-mist-dark/60 whitespace-nowrap">{t(checkinWeightError, "normal")}</span>
                 ) : null
               )}
             </div>
             {latestCheckinWeight && (
               <p className="text-[10px] text-mist-dark">
-                Last check-in: {latestCheckinWeight.weight} kg ({new Date(latestCheckinWeight.date).toLocaleDateString()})
+                {t("Last check-in:", "normal")} {latestCheckinWeight.weight} kg ({new Date(latestCheckinWeight.date).toLocaleDateString()})
               </p>
             )}
           </div>

@@ -1,5 +1,7 @@
 "use client";
 
+import { t } from "@/lib/terminology";
+
 interface User {
   id: string;
   name: string;
@@ -36,7 +38,7 @@ export default function ChartUserFilter({
   return (
     <div className="flex items-center gap-1.5 flex-wrap">
       <span className="text-[11px] mr-1" style={{ color: "var(--text-muted)" }}>
-        Show:
+        {t("Show:", "normal")}
       </span>
       <button
         onClick={() => onSelectionChange([currentUserId])}
@@ -49,7 +51,7 @@ export default function ChartUserFilter({
           backgroundColor: isOnlyMe ? "rgba(0,255,128,0.08)" : "transparent",
         }}
       >
-        Just Me
+        {t("Just Me", "normal")}
       </button>
       {allUsers.length > 1 && (
         <button
@@ -63,7 +65,7 @@ export default function ChartUserFilter({
             backgroundColor: isAll ? "rgba(255,255,255,0.05)" : "transparent",
           }}
         >
-          All
+          {t("All", "normal")}
         </button>
       )}
       {allUsers

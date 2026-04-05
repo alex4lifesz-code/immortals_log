@@ -4,8 +4,11 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import { useIsMobile } from "@/context/AppContext";
+import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { api } from "@/lib/api-client";
+import { getExerciseDisplayName } from "@/lib/exercise-name";
 import { DASHBOARD_ROUTES } from "@/lib/navigation";
+import { t } from "@/lib/terminology";
 import type { ProgressionExercise, ProgressionLog } from "../workout/types";
 
 type TierStats = {
@@ -19,6 +22,9 @@ type TierStats = {
 type RankUpSkill = {
   id: string;
   name: string;
+  wuxiaName?: string;
+  englishName?: string;
+  vietnameseName?: string;
   tierNames: string[];
   tierStats: TierStats[];
   performed: number;
@@ -88,6 +94,7 @@ function formatDaysAgo(value: string | null): string {
 
 export default function RankUpPage() {
   const isMobile = useIsMobile();
+  const { settings } = useDisplaySettings();
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [skills, setSkills] = useState<RankUpSkill[]>([]);
@@ -146,6 +153,9 @@ export default function RankUpPage() {
             return {
               id: exercise.id,
               name: exercise.name,
+              wuxiaName: exercise.wuxiaName,
+              englishName: exercise.englishName,
+              vietnameseName: exercise.vietnameseName,
               tierNames: fallbackTierNames,
               tierStats,
               performed: logs.length,
@@ -190,7 +200,19 @@ export default function RankUpPage() {
       if (activityFilter === "stale" && (skill.performed === 0 || daysSinceLast <= 30)) return false;
       if (activityFilter === "never-attempted" && skill.performed > 0) return false;
       if (!q) return true;
-      return skill.name.toLowerCase().includes(q);
+      const displayName = getExerciseDisplayName(
+        {
+          name: skill.englishName || skill.name,
+          wuxiaName: skill.vietnameseName || skill.wuxiaName,
+          englishName: skill.englishName,
+          vietnameseName: skill.vietnameseName,
+        },
+        settings.terminologyMode,
+        settings.showExerciseForeignLanguage,
+      ).toLowerCase();
+      const canonicalName = (skill.englishName || skill.name || "").toLowerCase();
+      const altName = (skill.vietnameseName || skill.wuxiaName || "").toLowerCase();
+      return displayName.includes(q) || canonicalName.includes(q) || altName.includes(q);
     });
 
     list = [...list].sort((a, b) => {
@@ -204,24 +226,10 @@ export default function RankUpPage() {
     });
 
     return list;
-  }, [skills, search, activityFilter, sortBy, attemptedParentsOnly]);
+  }, [skills, search, activityFilter, sortBy, attemptedParentsOnly, settings.terminologyMode, settings.showExerciseForeignLanguage]);
 
   const toggleExpand = (id: string) => {
     setExpandedIds((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  const hasVisibleSkills = visibleSkills.length > 0;
-  const expandedVisibleCount = visibleSkills.filter((skill) => Boolean(expandedIds[skill.id])).length;
-  const hasAnyVisibleExpanded = expandedVisibleCount > 0;
-
-  const toggleAllVisible = () => {
-    setExpandedIds((prev) => {
-      const next = { ...prev };
-      for (const skill of visibleSkills) {
-        next[skill.id] = !hasAnyVisibleExpanded;
-      }
-      return next;
-    });
   };
 
   const controlClassName =
@@ -229,20 +237,20 @@ export default function RankUpPage() {
 
   return (
     <PageLayout
-      title="Rank Up"
-      subtitle="Simple progression overview for calisthenics skills"
+      title={t("Rank Up", "normal")}
+      subtitle={t("Simple progression overview for calisthenics skills", "normal")}
       mobileContentPaddingClass="p-2 pb-24"
     >
       <div className="nyaa-history-page space-y-2 px-0 py-2 sm:py-3">
         <div className="border rounded px-3 py-2" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--header-bg)" }}>
           <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
-            Skills: {stats.total} | Active (14d): {stats.active} | Sessions: {stats.totalSessions}
+            {t("Skills", "normal")}: {stats.total} | {t("Active (14d)", "normal")}: {stats.active} | {t("Sessions", "normal")}: {stats.totalSessions}
           </p>
         </div>
 
         <div className="border rounded overflow-hidden" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--surface)" }}>
           <div className="px-3 py-2 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
-            <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-secondary)" }}>Filters</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-secondary)" }}>{t("Filters", "normal")}</span>
           </div>
           <div className="grid gap-2 sm:grid-cols-3 p-2">
             <div className="relative">
@@ -256,7 +264,7 @@ export default function RankUpPage() {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search skill..."
+                placeholder={t("Search skill...", "normal")}
                 className={controlClassName}
                 style={{
                   borderColor: "var(--nyaa-table-grid)",
@@ -272,8 +280,8 @@ export default function RankUpPage() {
                   onClick={() => setSearch("")}
                   className="absolute inset-y-0 right-1 flex items-center justify-center px-1"
                   style={{ color: "var(--text-muted)" }}
-                  aria-label="Clear search"
-                  title="Clear"
+                  aria-label={t("Clear search", "normal")}
+                  title={t("Clear", "normal")}
                 >
                   <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="none" aria-hidden>
                     <path d="M5 5L15 15M15 5L5 15" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -291,12 +299,12 @@ export default function RankUpPage() {
                 color: "var(--text-primary)",
               }}
             >
-              <option value="all">All Skills</option>
-              <option value="active-7d">Active (7 days)</option>
-              <option value="active-14d">Active (14 days)</option>
-              <option value="active-30d">Active (30 days)</option>
-              <option value="stale">Stale (30+ days ago)</option>
-              <option value="never-attempted">Never Attempted</option>
+              <option value="all">{t("All Skills", "normal")}</option>
+              <option value="active-7d">{t("Active (7 days)", "normal")}</option>
+              <option value="active-14d">{t("Active (14 days)", "normal")}</option>
+              <option value="active-30d">{t("Active (30 days)", "normal")}</option>
+              <option value="stale">{t("Stale (30+ days ago)", "normal")}</option>
+              <option value="never-attempted">{t("Never Attempted", "normal")}</option>
             </select>
             <select
               value={sortBy}
@@ -308,11 +316,11 @@ export default function RankUpPage() {
                 color: "var(--text-primary)",
               }}
             >
-              <option value="recent">Sort: Recently trained</option>
-              <option value="performed">Sort: Most sessions</option>
-              <option value="least-sessions">Sort: Least sessions</option>
-              <option value="most-tiers">Sort: Most tiers</option>
-              <option value="name">Sort: Name (A-Z)</option>
+              <option value="recent">{t("Sort: Recently trained", "normal")}</option>
+              <option value="performed">{t("Sort: Most sessions", "normal")}</option>
+              <option value="least-sessions">{t("Sort: Least sessions", "normal")}</option>
+              <option value="most-tiers">{t("Sort: Most tiers", "normal")}</option>
+              <option value="name">{t("Sort: Name (A-Z)", "normal")}</option>
             </select>
             <button
               type="button"
@@ -326,22 +334,7 @@ export default function RankUpPage() {
                   : "var(--surface)",
               }}
             >
-              {attemptedParentsOnly ? "Showing: Attempted Exercises" : "Show Attempted Exercises Only"}
-            </button>
-            <button
-              type="button"
-              onClick={toggleAllVisible}
-              disabled={!hasVisibleSkills}
-              className="w-full rounded border px-2 py-1.5 text-xs transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{
-                borderColor: hasAnyVisibleExpanded ? "var(--accent)" : "var(--nyaa-table-grid)",
-                color: hasAnyVisibleExpanded ? "var(--accent)" : "var(--text-secondary)",
-                backgroundColor: hasAnyVisibleExpanded
-                  ? "color-mix(in srgb, var(--accent) 10%, var(--surface))"
-                  : "var(--surface)",
-              }}
-            >
-              {hasAnyVisibleExpanded ? "Collapse All" : "Open All"}
+              {attemptedParentsOnly ? t("Showing: Attempted Exercises", "normal") : t("Show Attempted Exercises Only", "normal")}
             </button>
           </div>
         </div>
@@ -354,19 +347,29 @@ export default function RankUpPage() {
 
         {loading ? (
           <div className="border rounded px-3 py-6 text-sm" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--surface)", color: "var(--text-secondary)" }}>
-            Loading rank-up data...
+            {t("Loading rank-up data...", "normal")}
           </div>
         ) : null}
 
         {!loading && visibleSkills.length === 0 ? (
           <div className="border rounded px-3 py-6 text-sm" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--surface)", color: "var(--text-secondary)" }}>
-            No skills found for the current filters.
+            {t("No skills found for the current filters.", "normal")}
           </div>
         ) : null}
 
         {!loading &&
           visibleSkills.map((skill) => {
             const isExpanded = Boolean(expandedIds[skill.id]);
+            const skillDisplayName = getExerciseDisplayName(
+              {
+                name: skill.englishName || skill.name,
+                wuxiaName: skill.vietnameseName || skill.wuxiaName,
+                englishName: skill.englishName,
+                vietnameseName: skill.vietnameseName,
+              },
+              settings.terminologyMode,
+              settings.showExerciseForeignLanguage,
+            );
             return (
               <div key={skill.id} className="border rounded overflow-hidden" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--surface)" }}>
                 <button
@@ -392,11 +395,15 @@ export default function RankUpPage() {
                         className="text-sm font-semibold transition-colors duration-150"
                         style={{ color: isExpanded ? "var(--link-hover)" : "var(--link)" }}
                       >
-                        {skill.name}
+                        {skillDisplayName}
                       </p>
                     </div>
                     <p className="text-[11px]" style={{ color: "var(--text-secondary)" }}>
-                      Sessions: {skill.performed} | Last: {formatDate(skill.lastLogAt)} | Tiers: {skill.tierNames.length}
+                      Sessions:{" "}
+                      <span style={{ color: skill.performed > 0 ? "var(--accent)" : "var(--text-secondary)", fontWeight: skill.performed > 0 ? 600 : 400 }}>
+                        {skill.performed}
+                      </span>
+                      {" "}| Last: {formatDate(skill.lastLogAt)} | Tiers: {skill.tierNames.length}
                     </p>
                   </div>
                 </button>
@@ -410,9 +417,10 @@ export default function RankUpPage() {
                         const trainKey = `train-${skill.id}-${index}`;
                         const attemptCount = stat?.attempts ?? 0;
                         const isZeroAttempt = attemptCount === 0;
-                        const rowTextColor = isZeroAttempt
-                          ? "color-mix(in srgb, var(--text-muted) 48%, var(--surface))"
-                          : "var(--text-primary)";
+                        const rowTextColor = "var(--text-primary)";
+                        const rowDetailTextColor = isZeroAttempt
+                          ? "color-mix(in srgb, var(--text-secondary) 78%, var(--surface) 22%)"
+                          : rowTextColor;
                         const rowBgColor = isZeroAttempt
                           ? "color-mix(in srgb, var(--surface) 88%, black)"
                           : "color-mix(in srgb, var(--surface) 96%, var(--border))";
@@ -432,7 +440,7 @@ export default function RankUpPage() {
                             }}
                           >
                             <div className="mb-1 text-sm font-semibold" style={{ color: rowTextColor }}>{tierName}</div>
-                            <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px]" style={{ color: rowTextColor }}>
+                            <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px]" style={{ color: rowDetailTextColor }}>
                               <span>Attempts: {attemptCount}</span>
                               <span>Best: {stat ? formatBest(stat) : "-"}</span>
                               <span>Best Reps: {stat?.bestReps != null ? `${stat.bestReps}` : "-"}</span>
@@ -481,21 +489,15 @@ export default function RankUpPage() {
                                   borderColor:
                                     hoveredActionKey === trainKey
                                       ? "var(--link-hover)"
-                                      : isZeroAttempt
-                                        ? "color-mix(in srgb, var(--text-muted) 14%, var(--border))"
-                                        : "var(--link)",
+                                      : "var(--link)",
                                   color:
                                     hoveredActionKey === trainKey
                                       ? "var(--link-hover)"
-                                      : isZeroAttempt
-                                        ? "color-mix(in srgb, var(--text-muted) 52%, var(--surface))"
-                                        : "var(--link)",
+                                      : "var(--link)",
                                   backgroundColor:
                                     hoveredActionKey === trainKey
                                       ? "color-mix(in srgb, var(--link) 16%, var(--surface))"
-                                      : isZeroAttempt
-                                        ? "color-mix(in srgb, var(--text-muted) 26%, var(--surface))"
-                                        : "color-mix(in srgb, var(--link) 7%, var(--surface))",
+                                      : "color-mix(in srgb, var(--link) 7%, var(--surface))",
                                 }}
                               >
                                 Train
@@ -529,9 +531,7 @@ export default function RankUpPage() {
                           const trainKey = `train-${skill.id}-${index}`;
                           const attemptCount = stat?.attempts ?? 0;
                           const isZeroAttempt = attemptCount === 0;
-                          const rowTextColor = isZeroAttempt
-                            ? "color-mix(in srgb, var(--text-muted) 48%, var(--surface))"
-                            : "var(--text-primary)";
+                          const rowTextColor = "var(--text-primary)";
                           const rowBgColor = isZeroAttempt
                             ? "color-mix(in srgb, var(--surface) 88%, black)"
                             : "transparent";
@@ -551,7 +551,7 @@ export default function RankUpPage() {
                                 opacity: 1,
                                 color: rowTextColor,
                                 backgroundColor: rowBgColor,
-                                filter: isZeroAttempt ? "saturate(0.78)" : "none",
+                                filter: "none",
                               }}
                             >
                               <td className="px-2 py-1.5" style={cellStyle}>{tierName}</td>
@@ -609,21 +609,15 @@ export default function RankUpPage() {
                                     borderColor:
                                       hoveredActionKey === trainKey
                                         ? "var(--link-hover)"
-                                        : isZeroAttempt
-                                          ? "color-mix(in srgb, var(--text-muted) 14%, var(--border))"
-                                          : "var(--link)",
+                                        : "var(--link)",
                                     color:
                                       hoveredActionKey === trainKey
                                         ? "var(--link-hover)"
-                                        : isZeroAttempt
-                                          ? "color-mix(in srgb, var(--text-muted) 52%, var(--surface))"
-                                          : "var(--link)",
+                                        : "var(--link)",
                                     backgroundColor:
                                       hoveredActionKey === trainKey
                                         ? "color-mix(in srgb, var(--link) 16%, var(--surface))"
-                                        : isZeroAttempt
-                                          ? "color-mix(in srgb, var(--text-muted) 26%, var(--surface))"
-                                          : "color-mix(in srgb, var(--link) 7%, var(--surface))",
+                                        : "color-mix(in srgb, var(--link) 7%, var(--surface))",
                                     boxShadow:
                                       hoveredActionKey === trainKey
                                         ? "0 0 0 1px color-mix(in srgb, var(--link) 45%, transparent)"

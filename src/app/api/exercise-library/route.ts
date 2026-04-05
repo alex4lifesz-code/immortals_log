@@ -5,6 +5,11 @@ import { ALL_DIFFICULTIES } from "@/lib/exercise-types";
 import { withAuth } from "@/lib/auth/middleware";
 import { getExerciseDbOptionsFromAppPrefs } from "@/lib/exercise-db-settings";
 import {
+  applyProgressionExerciseTranslation,
+  getUserLanguageMode,
+} from "@/lib/exercise-translation-db";
+import { resolveVietnameseValue } from "@/lib/auto-vietnamese";
+import {
   isDeletedExerciseDescription,
   isPendingExerciseEditedDescription,
   isPendingExerciseDescription,
@@ -184,12 +189,17 @@ function inferDifficulty(diff?: string): Difficulty | undefined {
 /** GET /api/exercise-library — Fetch shared exercise library */
 export const GET = withAuth(async (_req, { auth }) => {
   try {
+    const languageMode = await getUserLanguageMode(auth.userId);
     const dbExercises = await prisma.progressionExercise.findMany({
       include: {
+        translation: true,
         tiers: {
           select: {
             name: true,
             level: true,
+            description: true,
+            difficulty: true,
+            translation: true,
           },
           orderBy: { level: "asc" },
         },
@@ -197,6 +207,9 @@ export const GET = withAuth(async (_req, { auth }) => {
           select: {
             id: true,
             name: true,
+            description: true,
+            difficulty: true,
+            translation: true,
           },
           orderBy: { name: "asc" },
         },
@@ -208,7 +221,19 @@ export const GET = withAuth(async (_req, { auth }) => {
     const dbOptions = await getUserExerciseDbOptions(auth.userId);
 
     const visibleExercises = dbExercises.filter((exercise) => !isDeletedExerciseDescription(exercise.story));
-    const exercises: SimpleExercise[] = visibleExercises.map((exercise) => mapDbToSimpleExercise(exercise, dbOptions));
+    const exercises: SimpleExercise[] = visibleExercises.map((exercise) => {
+      const { translation, ...baseExercise } = exercise;
+      const localized = applyProgressionExerciseTranslation(baseExercise, translation, languageMode);
+      const mapped = mapDbToSimpleExercise(localized, dbOptions);
+      const englishName = translation?.englishName || baseExercise.name;
+      const vietnameseName = translation?.vietnameseName || baseExercise.wuxiaName || baseExercise.name;
+      return {
+        ...mapped,
+        name: englishName,
+        englishName,
+        vietnameseName,
+      };
+    });
 
     return NextResponse.json({ exercises });
   } catch (error) {
@@ -335,6 +360,7 @@ export const POST = withAuth(async (req, { auth }) => {
           : undefined,
       },
       include: {
+        translation: true,
         tiers: {
           select: {
             name: true,
@@ -362,6 +388,53 @@ export const POST = withAuth(async (req, { auth }) => {
         difficulty: difficulty ? String(difficulty).trim() : '',
       })),
     });
+
+    await prisma.progressionExerciseTranslation.create({
+      data: {
+        id: dbExercise.id,
+        englishName: trimmedName,
+        vietnameseName: resolveVietnameseValue(trimmedName, null),
+        englishStory: stripExerciseStatusMarkers(dbExercise.story) || null,
+        vietnameseStory: resolveVietnameseValue(stripExerciseStatusMarkers(dbExercise.story) || "", null),
+        englishDifficulty: difficulty ? String(difficulty).trim() : "",
+        vietnameseDifficulty: resolveVietnameseValue(difficulty ? String(difficulty).trim() : "", null),
+        englishType: resolvedType,
+        vietnameseType: resolveVietnameseValue(resolvedType, null),
+      },
+    });
+
+    const createdTiers = await prisma.progressionTier.findMany({
+      where: { exerciseId: dbExercise.id },
+      select: { id: true, name: true, description: true, difficulty: true },
+    });
+
+    if (createdTiers.length > 0) {
+      await prisma.progressionTierTranslation.createMany({
+        data: createdTiers.map((tier) => ({
+          id: tier.id,
+          englishName: tier.name,
+          vietnameseName: tier.name,
+          englishDescription: tier.description,
+          vietnameseDescription: tier.description,
+          englishDifficulty: tier.difficulty,
+          vietnameseDifficulty: tier.difficulty,
+        })),
+      });
+    }
+
+    if (dbExercise.variations.length > 0) {
+      await prisma.progressionVariationTranslation.createMany({
+        data: dbExercise.variations.map((variation) => ({
+          id: variation.id,
+          englishName: variation.name,
+          vietnameseName: variation.name,
+          englishDescription: null,
+          vietnameseDescription: null,
+          englishDifficulty: "",
+          vietnameseDifficulty: "",
+        })),
+      });
+    }
 
     // Create UserProgressionLevel so logging works
     await prisma.userProgressionLevel.create({

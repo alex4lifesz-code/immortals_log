@@ -7,7 +7,7 @@ import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
-import { t } from "@/lib/terminology";
+import { t, tHint } from "@/lib/terminology";
 import { ADMIN_NAV_IDS, ADMIN_NAV_IDS_ORDER, DASHBOARD_ROUTES, MAIN_NAV_IDS_ORDER, sortNavItemsByIdOrder } from "@/lib/navigation";
 
 function DesktopNavBar() {
@@ -126,7 +126,7 @@ function DesktopNavBar() {
                   }`}
                 >
                   <span className="text-[13px] leading-none">{item.icon}</span>
-                  <span>{t(item.label, terminologyMode)}</span>
+                  <span title={tHint(item.label, terminologyMode) ?? undefined}>{t(item.label, terminologyMode)}</span>
                 </button>
               );
             })}
@@ -145,7 +145,7 @@ function DesktopNavBar() {
               }`}
             >
               <span className="text-sm leading-none">☰</span>
-              <span>More</span>
+              <span>{t("More", "normal")}</span>
             </button>
 
             {menuOpen && (
@@ -165,14 +165,14 @@ function DesktopNavBar() {
                         }`}
                       >
                         <span className="text-[13px] leading-none">{item.icon}</span>
-                        <span>{t(item.label, terminologyMode)}</span>
+                        <span title={tHint(item.label, terminologyMode) ?? undefined}>{t(item.label, terminologyMode)}</span>
                       </button>
                     );
                   })}
 
                   {adminItems.length > 0 && (
                     <div className="pt-2 mt-1 border-t border-gold/25">
-                      <p className="px-2 pb-1 text-[10px] uppercase tracking-[0.14em] text-gold-dim">Admin</p>
+                      <p className="px-2 pb-1 text-[10px] uppercase tracking-[0.14em] text-gold-dim">{t("Admin", "normal")}</p>
                       {adminItems.map((item) => {
                         const isActive = pathname === item.path || pathname.startsWith(`${item.path}/`);
                         return (
@@ -187,7 +187,7 @@ function DesktopNavBar() {
                             }`}
                           >
                             <span className="text-[13px] leading-none">{item.icon}</span>
-                            <span>{t(item.label, terminologyMode)}</span>
+                            <span title={tHint(item.label, terminologyMode) ?? undefined}>{t(item.label, terminologyMode)}</span>
                           </button>
                         );
                       })}
@@ -211,7 +211,7 @@ function DesktopNavBar() {
 
           {isAdmin && (
             <span className="shrink-0 px-2 py-1 rounded-full border border-gold/40 text-[10px] uppercase tracking-wide text-gold-dim">
-              Admin
+              {t("Admin", "normal")}
             </span>
           )}
         </div>

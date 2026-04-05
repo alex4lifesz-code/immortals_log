@@ -8,8 +8,11 @@ import GlowInput from "@/components/ui/GlowInput";
 import { useAuth } from "@/context/AuthContext";
 import { CONFIG } from "@/lib/config";
 import ConnectivityBanner from "@/components/system/ConnectivityBanner";
+import type { LanguageMode } from "@/lib/language";
+import { translateEnglishToLanguage } from "@/lib/language";
 
 export default function LoginPage() {
+  const DISPLAY_SETTINGS_STORAGE_KEY = "cultivateos-display-settings";
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -18,6 +21,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [languageMode, setLanguageMode] = useState<LanguageMode>("english");
   const router = useRouter();
   const { login } = useAuth();
 
@@ -32,8 +36,34 @@ export default function LoginPage() {
           document.documentElement.classList.add(savedTheme);
         }
       }
+
+      const rawDisplaySettings = localStorage.getItem(DISPLAY_SETTINGS_STORAGE_KEY);
+      if (rawDisplaySettings) {
+        const parsed = JSON.parse(rawDisplaySettings) as { languageMode?: LanguageMode };
+        if (parsed.languageMode === "english" || parsed.languageMode === "vietnamese") {
+          setLanguageMode(parsed.languageMode);
+        }
+      }
     } catch {}
   }, []);
+
+  const persistLanguageMode = (mode: LanguageMode) => {
+    setLanguageMode(mode);
+    try {
+      const raw = localStorage.getItem(DISPLAY_SETTINGS_STORAGE_KEY);
+      const current = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
+      const next = {
+        ...current,
+        languageMode: mode,
+        ...(mode === "vietnamese" ? { showExerciseForeignLanguage: true } : {}),
+      };
+      localStorage.setItem(DISPLAY_SETTINGS_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // Ignore storage errors.
+    }
+  };
+
+  const lt = (englishText: string) => translateEnglishToLanguage(englishText, languageMode);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -166,8 +196,8 @@ export default function LoginPage() {
               transition={{ delay: 0.4 }}
             >
               <GlowInput
-                label="道号 · Dao Name"
-                placeholder="Enter your cultivator name"
+                label={`道号 · ${lt("Dao Name")}`}
+                placeholder={lt("Enter your cultivator name")}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
@@ -181,8 +211,8 @@ export default function LoginPage() {
                 exit={{ opacity: 0, height: 0 }}
               >
                 <GlowInput
-                  label="真名 · True Name"
-                  placeholder="Your display name"
+                  label={`真名 · ${lt("True Name")}`}
+                  placeholder={lt("Your display name")}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
@@ -197,12 +227,12 @@ export default function LoginPage() {
             >
               <div className="space-y-1">
                 <label className="block text-xs text-mist-light tracking-wider uppercase">
-                  密码 · Secret Art
+                  密码 · {lt("Secret Art")}
                 </label>
                 <div className="relative">
                   <input
                     type={showPassword ? "text" : "password"}
-                    placeholder="Enter your secret art"
+                    placeholder={lt("Enter your secret art")}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -213,7 +243,7 @@ export default function LoginPage() {
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-2.5 top-1/2 -translate-y-1/2 text-mist-dark hover:text-mist-light transition-colors"
                     tabIndex={-1}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-label={showPassword ? lt("Hide password") : lt("Show password")}
                   >
                     {showPassword ? (
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -247,7 +277,7 @@ export default function LoginPage() {
                     className="w-3.5 h-3.5 rounded border-ink-light bg-ink-dark accent-jade-glow cursor-pointer"
                   />
                   <label htmlFor="rememberMe" className="text-xs text-mist-mid cursor-pointer select-none">
-                    记住我 · Remember Me
+                    记住我 · {lt("Remember Me")}
                   </label>
                 </div>
               </motion.div>
@@ -278,11 +308,43 @@ export default function LoginPage() {
                 disabled={loading}
               >
                 {loading
-                  ? "Channeling Qi..."
+                  ? lt("Channeling Qi...")
                   : isRegister
-                  ? "Begin Cultivation 开始修炼"
-                  : "Enter the Sect 进入宗门"}
+                  ? `${lt("Begin Cultivation")} 开始修炼`
+                  : `${lt("Enter the Sect")} 进入宗门`}
               </GlowButton>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.64 }}
+              className="flex items-center justify-center gap-2"
+            >
+              <button
+                type="button"
+                onClick={() => persistLanguageMode("english")}
+                className="rounded border px-2 py-1 text-[10px]"
+                style={{
+                  borderColor: languageMode === "english" ? "var(--accent)" : "var(--border)",
+                  color: languageMode === "english" ? "var(--accent)" : "var(--text-secondary)",
+                  backgroundColor: "var(--surface)",
+                }}
+              >
+                English
+              </button>
+              <button
+                type="button"
+                onClick={() => persistLanguageMode("vietnamese")}
+                className="rounded border px-2 py-1 text-[10px]"
+                style={{
+                  borderColor: languageMode === "vietnamese" ? "var(--accent)" : "var(--border)",
+                  color: languageMode === "vietnamese" ? "var(--accent)" : "var(--text-secondary)",
+                  backgroundColor: "var(--surface)",
+                }}
+              >
+                Tiếng Việt
+              </button>
             </motion.div>
           </form>
 
@@ -301,8 +363,8 @@ export default function LoginPage() {
               className="text-xs text-mist-mid hover:text-jade-glow transition-colors"
             >
               {isRegister
-                ? "Already a cultivator? 已有账号 — Return to the sect"
-                : "New cultivator? 新弟子 — Join the sect"}
+                ? `${lt("Already a cultivator?")} 已有账号 — ${lt("Return to the sect")}`
+                : `${lt("New cultivator?")} 新弟子 — ${lt("Join the sect")}`}
             </button>
           </motion.div>
 
@@ -313,7 +375,7 @@ export default function LoginPage() {
             <div className="w-8 h-px bg-ink-light" />
           </div>
           <p className="text-center text-[10px] text-mist-dark mt-1">
-            Heaven rewards the diligent
+            {lt("Heaven rewards the diligent")}
           </p>
         </div>
       </motion.div>

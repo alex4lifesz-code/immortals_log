@@ -24,14 +24,27 @@ export const DELETE = withAuth(async (_req, { auth, params }) => {
 
     // Also cascade-delete matching ProgressionExercise(s) by name
     const allProgressions = await prisma.progressionExercise.findMany({
-      select: { id: true, name: true, wuxiaName: true },
+      select: {
+        id: true,
+        name: true,
+        wuxiaName: true,
+        translation: {
+          select: {
+            englishName: true,
+            vietnameseName: true,
+          },
+        },
+      },
     });
     const nameLower = existing.name.toLowerCase();
     const wuxiaNameLower = existing.wuxiaName?.toLowerCase();
     const matchingProgressions = allProgressions.filter((p) => {
       return (
         p.name.toLowerCase() === nameLower ||
-        (wuxiaNameLower && p.wuxiaName?.toLowerCase() === wuxiaNameLower)
+        (wuxiaNameLower && p.wuxiaName?.toLowerCase() === wuxiaNameLower) ||
+        p.translation?.englishName?.toLowerCase() === nameLower ||
+        (wuxiaNameLower &&
+          p.translation?.vietnameseName?.toLowerCase() === wuxiaNameLower)
       );
     });
 
@@ -153,6 +166,48 @@ export const PATCH = withAuth(async (req, { auth, params }) => {
     }
 
     const exercise = await prisma.exercise.update({ where: { id }, data });
+
+    if (data.name || data.wuxiaName !== undefined || data.story !== undefined || data.difficulty || data.type) {
+      const englishName = String(data.name ?? existing.name);
+      const vietnameseName =
+        data.wuxiaName !== undefined
+          ? String(data.wuxiaName || englishName)
+          : existing.wuxiaName || englishName;
+
+      await prisma.exerciseTranslation.upsert({
+        where: { id },
+        create: {
+          id,
+          englishName,
+          vietnameseName,
+          englishStory: String(data.story ?? existing.story ?? "") || null,
+          vietnameseStory: String(data.story ?? existing.story ?? "") || null,
+          englishDifficulty: String(data.difficulty ?? existing.difficulty),
+          vietnameseDifficulty: String(data.difficulty ?? existing.difficulty),
+          englishType: String(data.type ?? existing.type),
+          vietnameseType: String(data.type ?? existing.type),
+        },
+        update: {
+          englishName,
+          vietnameseName,
+          ...(data.story !== undefined
+            ? {
+                englishStory: String(data.story ?? "") || null,
+              }
+            : {}),
+          ...(data.difficulty
+            ? {
+                englishDifficulty: String(data.difficulty),
+              }
+            : {}),
+          ...(data.type
+            ? {
+                englishType: String(data.type),
+              }
+            : {}),
+        },
+      });
+    }
 
     // Sync name changes to matching ProgressionExercise
     if (data.name || data.wuxiaName !== undefined) {

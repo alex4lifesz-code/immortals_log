@@ -5,6 +5,27 @@
 
 export type TerminologyMode = "fantasy" | "normal";
 
+import {
+  type LanguageMode,
+  getLearningHintFromEnglish,
+  translateEnglishToLanguage,
+} from "@/lib/language";
+
+const DISPLAY_SETTINGS_STORAGE_KEY = "cultivateos-display-settings";
+
+function resolveLanguageMode(explicit?: LanguageMode): LanguageMode {
+  if (explicit) return explicit;
+  if (typeof window === "undefined") return "english";
+  try {
+    const raw = window.localStorage.getItem(DISPLAY_SETTINGS_STORAGE_KEY);
+    if (!raw) return "english";
+    const parsed = JSON.parse(raw) as { languageMode?: LanguageMode };
+    return parsed.languageMode === "vietnamese" ? "vietnamese" : "english";
+  } catch {
+    return "english";
+  }
+}
+
 // The terminology dictionary maps fantasy terms to their normal equivalents.
 // Keys are the fantasy terms (which are the defaults in the existing UI).
 const terminologyMap: Record<string, string> = {
@@ -214,14 +235,23 @@ const terminologyMap: Record<string, string> = {
  * In "fantasy" mode, returns the input unchanged (fantasy is the default).
  * In "normal" mode, looks up the normal equivalent.
  */
-export function t(text: string, mode: TerminologyMode): string {
+export function t(text: string, mode: TerminologyMode, languageMode?: LanguageMode): string {
   if (mode === "fantasy") return text;
-  return terminologyMap[text] ?? text;
+  const englishText = terminologyMap[text] ?? text;
+  return translateEnglishToLanguage(englishText, resolveLanguageMode(languageMode));
+}
+
+export function tHint(text: string, mode: TerminologyMode, languageMode?: LanguageMode): string | null {
+  const englishText = terminologyMap[text] ?? text;
+  if (mode === "fantasy") {
+    return englishText !== text ? englishText : null;
+  }
+  return getLearningHintFromEnglish(englishText, resolveLanguageMode(languageMode));
 }
 
 /**
  * Get the appropriate nav label for a given nav item based on terminology mode.
  */
-export function getNavLabel(fantasyLabel: string, mode: TerminologyMode): string {
-  return t(fantasyLabel, mode);
+export function getNavLabel(fantasyLabel: string, mode: TerminologyMode, languageMode?: LanguageMode): string {
+  return t(fantasyLabel, mode, languageMode);
 }

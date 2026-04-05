@@ -39,11 +39,18 @@ interface MemberStats {
   lastActiveAt: string;
 }
 
+interface ExerciseFeedGroup {
+  exerciseName: string;
+  logs: ExerciseLog[];
+  lastActiveAt: string;
+}
+
 interface MemberFeed {
   userId: string;
   userName: string;
   dateKey: string;
   logs: ExerciseLog[];
+  exerciseGroups: ExerciseFeedGroup[];
   stats: MemberStats;
 }
 
@@ -89,6 +96,8 @@ export default function DashboardNewsfeedPage() {
   });
   const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [expandedMemberGroups, setExpandedMemberGroups] = useState<Record<string, boolean>>({});
+  const [expandedExerciseGroups, setExpandedExerciseGroups] = useState<Record<string, boolean>>({});
   const observerTarget = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -193,6 +202,20 @@ export default function DashboardNewsfeedPage() {
     setDisplayCount(ITEMS_PER_PAGE); // Reset to first page when filter changes
   }, []);
 
+  const toggleMemberGroup = useCallback((memberKey: string) => {
+    setExpandedMemberGroups((prev) => ({
+      ...prev,
+      [memberKey]: !prev[memberKey],
+    }));
+  }, []);
+
+  const toggleExerciseGroup = useCallback((exerciseKey: string) => {
+    setExpandedExerciseGroups((prev) => ({
+      ...prev,
+      [exerciseKey]: !prev[exerciseKey],
+    }));
+  }, []);
+
   const allGroupedByMemberDay = useMemo<MemberFeed[]>(() => {
     // First filter the logs based on the selected category/muscle group
     const filteredLogs = selectedFilter === ""
@@ -228,6 +251,27 @@ export default function DashboardNewsfeedPage() {
           userName: logs[0]?.userName ?? "Unknown",
           dateKey,
           logs,
+          exerciseGroups: Object.entries(
+            logs.reduce<Record<string, ExerciseLog[]>>((acc, log) => {
+              if (!acc[log.exerciseName]) {
+                acc[log.exerciseName] = [];
+              }
+              acc[log.exerciseName].push(log);
+              return acc;
+            }, {})
+          )
+            .map(([exerciseName, groupedLogs]) => {
+              const sortedLogs = [...groupedLogs].sort(
+                (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+              );
+
+              return {
+                exerciseName,
+                logs: sortedLogs,
+                lastActiveAt: sortedLogs[0]?.createdAt ?? "",
+              };
+            })
+            .sort((a, b) => new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime()),
           stats: {
             lastActiveAt,
           },
@@ -318,105 +362,158 @@ export default function DashboardNewsfeedPage() {
             <>
               <div className="space-y-6 mt-8">
                 {groupedByMemberDay.map((member, memberIdx) => (
-                <motion.div
-                  key={`${member.userId}-${member.dateKey}`}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: memberIdx * 0.05 }}
-                  className="flex flex-col gap-3 rounded-lg border border-jade-glow/15 bg-ink-dark/40 p-3 sm:p-4"
-                >
-                  {/* Member header */}
-                  <div className="grid grid-cols-[40px_1fr_auto] gap-2 mb-3 items-center">
-                    <div className="w-10 h-10 rounded-full bg-jade-glow/20 border border-jade-glow/40 grid place-items-center">
-                      <span className="text-lg font-bold text-jade-light">
-                        {member.userName.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-cloud-white">{member.userName}</h3>
-                      <p className="text-xs text-mist-dark">
-                        {member.logs.length} recent {member.logs.length === 1 ? "entry" : "entries"} • active {timeAgo(member.stats.lastActiveAt)}
-                      </p>
-                    </div>
-                    <div className="justify-self-end rounded-full border border-jade-glow/25 bg-jade-glow/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-mist-mid">
-                      {formatDayHeader(member.dateKey)}
-                    </div>
-                  </div>
+                  <motion.div
+                    key={`${member.userId}-${member.dateKey}`}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: memberIdx * 0.05 }}
+                    className="flex flex-col gap-3 rounded-lg border border-jade-glow/15 bg-ink-dark/40 p-3 sm:p-4"
+                  >
+                    {(() => {
+                      const memberKey = `${member.userId}-${member.dateKey}`;
+                      const isMemberExpanded = Boolean(expandedMemberGroups[memberKey]);
 
-                  {/* Exercise logs for this member */}
-                  <div className="flex flex-col gap-2">
-                    {member.logs.map((log, logIdx) => (
-                      <motion.div
-                        key={log.id}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: memberIdx * 0.05 + (logIdx * 0.02) }}
-                        className="rounded-lg border border-jade-glow/20 p-3 sm:p-4 bg-ink-deep/40 hover:border-jade-glow/30 hover:bg-ink-deep/50 transition-all duration-200"
-                      >
-                        <div className="mb-2 flex items-center justify-between gap-3">
-                          <div className="flex min-w-0 items-center gap-2">
-                            <ExerciseImageBox className="h-9 w-9 sm:h-10 sm:w-10" compact />
-                            <h4 className="truncate font-semibold text-jade-light text-sm sm:text-base">
-                              {log.exerciseName}
-                            </h4>
-                          </div>
-                          <span className="shrink-0 text-xs text-mist-dark whitespace-nowrap">
-                            {timeAgo(log.createdAt)}
-                          </span>
-                        </div>
+                      return (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => toggleMemberGroup(memberKey)}
+                            className="w-full text-left"
+                            aria-expanded={isMemberExpanded}
+                          >
+                            <div className="grid grid-cols-[40px_1fr_auto] gap-2 items-center">
+                              <div className="w-10 h-10 rounded-full bg-jade-glow/20 border border-jade-glow/40 grid place-items-center">
+                                <span className="text-lg font-bold text-jade-light">
+                                  {member.userName.charAt(0).toUpperCase()}
+                                </span>
+                              </div>
+                              <div>
+                                <h3 className="font-semibold text-cloud-white">{member.userName}</h3>
+                                <p className="text-xs text-mist-dark">
+                                  {member.exerciseGroups.length} {member.exerciseGroups.length === 1 ? "exercise" : "exercises"} • {member.logs.length} {member.logs.length === 1 ? "entry" : "entries"} • active {timeAgo(member.stats.lastActiveAt)}
+                                </p>
+                              </div>
+                              <div className="justify-self-end flex flex-col items-end gap-1">
+                                <div className="rounded-full border border-jade-glow/25 bg-jade-glow/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-mist-mid">
+                                  {formatDayHeader(member.dateKey)}
+                                </div>
+                                <span className="text-[10px] text-jade-light/80">
+                                  {isMemberExpanded ? "Hide exercises" : "Show exercises"}
+                                </span>
+                              </div>
+                            </div>
+                          </button>
 
-                        {/* Sets display */}
-                        <div className="space-y-1.5 mb-2">
-                          {log.weight1 != null && log.reps1 != null && (
-                            <div className="flex items-center gap-2 text-[10px] sm:text-[11px]">
-                              <span className="inline-block px-1.5 py-0.5 rounded bg-jade-deep/20 text-jade-light font-medium text-[10px] sm:text-[11px]">
-                                Set 1
-                              </span>
-                              <span className="text-cloud-white">
-                                {formatSetValue(log.weight1, log.weight1 > 0 ? "weighted" : "bodyweight", weightUnit)} {log.weight1 > 0 ? (weightUnit === "kg" ? "Kg" : "Lbs") : "seconds"} × {log.reps1} Reps
-                              </span>
+                          {isMemberExpanded && (
+                            <div className="flex flex-col gap-2 pt-1">
+                              {member.exerciseGroups.map((exerciseGroup, exerciseIdx) => {
+                                const exerciseKey = `${memberKey}-${exerciseGroup.exerciseName}`;
+                                const isExerciseExpanded = Boolean(expandedExerciseGroups[exerciseKey]);
+
+                                return (
+                                  <motion.div
+                                    key={exerciseKey}
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: memberIdx * 0.05 + (exerciseIdx * 0.02) }}
+                                    className="rounded-lg border border-jade-glow/20 p-2.5 sm:p-3 bg-ink-deep/35"
+                                  >
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleExerciseGroup(exerciseKey)}
+                                      className="w-full text-left"
+                                      aria-expanded={isExerciseExpanded}
+                                    >
+                                      <div className="flex items-center justify-between gap-3">
+                                        <div className="flex min-w-0 items-center gap-2">
+                                          <ExerciseImageBox className="h-8 w-8 sm:h-9 sm:w-9" compact />
+                                          <div className="min-w-0">
+                                            <h4 className="truncate font-semibold text-jade-light text-sm sm:text-base">
+                                              {exerciseGroup.exerciseName}
+                                            </h4>
+                                            <p className="text-[10px] text-mist-dark">
+                                              {exerciseGroup.logs.length} {exerciseGroup.logs.length === 1 ? "entry" : "entries"} • latest {timeAgo(exerciseGroup.lastActiveAt)}
+                                            </p>
+                                          </div>
+                                        </div>
+                                        <span className="shrink-0 text-[10px] text-jade-light/80 whitespace-nowrap">
+                                          {isExerciseExpanded ? "Hide logs" : "Show logs"}
+                                        </span>
+                                      </div>
+                                    </button>
+
+                                    {isExerciseExpanded && (
+                                      <div className="mt-2 flex flex-col gap-2 pl-2 sm:pl-3 border-l border-jade-glow/20">
+                                        {exerciseGroup.logs.map((log) => (
+                                          <div
+                                            key={log.id}
+                                            className="rounded-lg border border-jade-glow/20 p-3 sm:p-4 bg-ink-deep/40 hover:border-jade-glow/30 hover:bg-ink-deep/50 transition-all duration-200"
+                                          >
+                                            <div className="mb-2 flex items-center justify-between gap-3">
+                                              <span className="text-xs text-jade-light font-semibold">Log Entry</span>
+                                              <span className="shrink-0 text-xs text-mist-dark whitespace-nowrap">
+                                                {timeAgo(log.createdAt)}
+                                              </span>
+                                            </div>
+
+                                            <div className="space-y-1.5 mb-2">
+                                              {log.weight1 != null && log.reps1 != null && (
+                                                <div className="flex items-center gap-2 text-[10px] sm:text-[11px]">
+                                                  <span className="inline-block px-1.5 py-0.5 rounded bg-jade-deep/20 text-jade-light font-medium text-[10px] sm:text-[11px]">
+                                                    Set 1
+                                                  </span>
+                                                  <span className="text-cloud-white">
+                                                    {formatSetValue(log.weight1, log.weight1 > 0 ? "weighted" : "bodyweight", weightUnit)} {log.weight1 > 0 ? (weightUnit === "kg" ? "Kg" : "Lbs") : "seconds"} × {log.reps1} Reps
+                                                  </span>
+                                                </div>
+                                              )}
+                                              {log.weight2 != null && log.reps2 != null && (
+                                                <div className="flex items-center gap-2 text-[10px] sm:text-[11px]">
+                                                  <span className="inline-block px-1.5 py-0.5 rounded bg-jade-deep/20 text-jade-light font-medium text-[10px] sm:text-[11px]">
+                                                    Set 2
+                                                  </span>
+                                                  <span className="text-cloud-white">
+                                                    {formatSetValue(log.weight2, log.weight2 > 0 ? "weighted" : "bodyweight", weightUnit)} {log.weight2 > 0 ? (weightUnit === "kg" ? "Kg" : "Lbs") : "seconds"} × {log.reps2} Reps
+                                                  </span>
+                                                </div>
+                                              )}
+                                              {log.weight3 != null && log.reps3 != null && (
+                                                <div className="flex items-center gap-2 text-[10px] sm:text-[11px]">
+                                                  <span className="inline-block px-1.5 py-0.5 rounded bg-jade-deep/20 text-jade-light font-medium text-[10px] sm:text-[11px]">
+                                                    Set 3
+                                                  </span>
+                                                  <span className="text-cloud-white">
+                                                    {formatSetValue(log.weight3, log.weight3 > 0 ? "weighted" : "bodyweight", weightUnit)} {log.weight3 > 0 ? (weightUnit === "kg" ? "Kg" : "Lbs") : "seconds"} × {log.reps3} Reps
+                                                  </span>
+                                                </div>
+                                              )}
+                                            </div>
+
+                                            {log.notes && (
+                                              <div className="text-[10px] sm:text-xs text-mist-light italic pt-2 border-t border-jade-glow/15 mb-2">
+                                                💭 "{log.notes}"
+                                              </div>
+                                            )}
+
+                                            <div className="flex items-center justify-between mt-2 pt-2 border-t border-jade-glow/15">
+                                              <span className="text-[10px] text-mist-dark">Level {log.level} • Sets {countLogSets(log)} • Volume {calculateLogVolume(log).toFixed(1)} {weightUnit}-reps</span>
+                                              {log.completed && (
+                                                <span className="text-jade-light font-semibold text-xs">✦ Completed</span>
+                                              )}
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </motion.div>
+                                );
+                              })}
                             </div>
                           )}
-                          {log.weight2 != null && log.reps2 != null && (
-                            <div className="flex items-center gap-2 text-[10px] sm:text-[11px]">
-                              <span className="inline-block px-1.5 py-0.5 rounded bg-jade-deep/20 text-jade-light font-medium text-[10px] sm:text-[11px]">
-                                Set 2
-                              </span>
-                              <span className="text-cloud-white">
-                                {formatSetValue(log.weight2, log.weight2 > 0 ? "weighted" : "bodyweight", weightUnit)} {log.weight2 > 0 ? (weightUnit === "kg" ? "Kg" : "Lbs") : "seconds"} × {log.reps2} Reps
-                              </span>
-                            </div>
-                          )}
-                          {log.weight3 != null && log.reps3 != null && (
-                            <div className="flex items-center gap-2 text-[10px] sm:text-[11px]">
-                              <span className="inline-block px-1.5 py-0.5 rounded bg-jade-deep/20 text-jade-light font-medium text-[10px] sm:text-[11px]">
-                                Set 3
-                              </span>
-                              <span className="text-cloud-white">
-                                {formatSetValue(log.weight3, log.weight3 > 0 ? "weighted" : "bodyweight", weightUnit)} {log.weight3 > 0 ? (weightUnit === "kg" ? "Kg" : "Lbs") : "seconds"} × {log.reps3} Reps
-                              </span>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Notes */}
-                        {log.notes && (
-                          <div className="text-[10px] sm:text-xs text-mist-light italic pt-2 border-t border-jade-glow/15 mb-2">
-                            💭 "{log.notes}"
-                          </div>
-                        )}
-
-                        {/* Level badge */}
-                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-jade-glow/15">
-                          <span className="text-[10px] text-mist-dark">Level {log.level} • Volume {calculateLogVolume(log).toFixed(1)} {weightUnit}-reps</span>
-                          {log.completed && (
-                            <span className="text-jade-light font-semibold text-xs">✦ Completed</span>
-                          )}
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                </motion.div>
+                        </>
+                      );
+                    })()}
+                  </motion.div>
               ))}
               </div>
 

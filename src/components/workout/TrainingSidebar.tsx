@@ -18,6 +18,7 @@ import {
   getDifficultyColorKey,
   getTypeColorKey,
 } from "@/lib/exercise-name";
+import { t, tHint } from "@/lib/terminology";
 
 interface Exercise {
   id: string;
@@ -87,8 +88,8 @@ function TechniqueCard({ exercise, isSelected, onSelect, delay, displayMode, com
   const difficultyColorClass = getDifficultyColorClass(getDifficultyColorKey(exercise));
   const typeColor = getTypeColor(getTypeColorKey(exercise));
   const { settings: dsSettings } = useDisplaySettings();
-  const displayName = getExerciseDisplayName(exercise, dsSettings.terminologyMode);
-  const exerciseTooltip = getExerciseNameTooltip(exercise, dsSettings.terminologyMode, exercise.story);
+  const displayName = getExerciseDisplayName(exercise, dsSettings.terminologyMode, dsSettings.showExerciseForeignLanguage);
+  const exerciseTooltip = getExerciseNameTooltip(exercise, dsSettings.terminologyMode, exercise.story, dsSettings.showExerciseForeignLanguage);
   const glowIntensity = DISPLAY_DEFAULTS.glowIntensitySidebar;
   const loreVisible = DISPLAY_DEFAULTS.sidebarLoreVisible;
   const glowStyle = getDifficultyGlowStyleScaled(getDifficultyColorKey(exercise), glowIntensity);
@@ -600,7 +601,8 @@ export default function TrainingSidebar({
               type="button"
               onClick={() => setSearchQuery("")}
               className="absolute right-2 top-1/2 -translate-y-1/2 text-[12px] font-semibold leading-none text-mist-dark hover:text-cloud-white transition-colors"
-              aria-label="Clear search"
+              aria-label={t("Clear search", "normal")}
+              title={tHint("Clear search", "normal") ?? undefined}
             >
               x
             </button>
@@ -609,15 +611,15 @@ export default function TrainingSidebar({
 
         {/* Sort selector */}
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-semibold text-mist-dark shrink-0">Sort</span>
+          <span className="text-[10px] font-semibold text-mist-dark shrink-0" title={tHint("Sort", "normal") ?? undefined}>{t("Sort", "normal")}</span>
           <select
             value={sortMode}
             onChange={(e) => setSortMode(e.target.value as SidebarSortMode)}
             className="w-full bg-ink-dark border border-ink-light/50 rounded-md px-2 py-1.5 text-[10px] text-cloud-white outline-none transition-colors duration-150 focus:border-ink-light/70"
           >
-            <option value="custom">Custom order</option>
-            <option value="recent">Most recent</option>
-            <option value="popular">Most popular</option>
+            <option value="custom" title={tHint("Custom order", "normal") ?? undefined}>{t("Custom order", "normal")}</option>
+            <option value="recent" title={tHint("Most recent", "normal") ?? undefined}>{t("Most recent", "normal")}</option>
+            <option value="popular" title={tHint("Most popular", "normal") ?? undefined}>{t("Most popular", "normal")}</option>
             <option value="name-asc">A-Z</option>
           </select>
         </div>

@@ -60,6 +60,7 @@ interface GlowModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
+  titleHint?: string | null;
   children: ReactNode;
   hideHeader?: boolean;
   panelClassName?: string;
@@ -71,6 +72,7 @@ export function GlowModal({
   isOpen,
   onClose,
   title,
+  titleHint = null,
   children,
   hideHeader = false,
   panelClassName = "",
@@ -126,7 +128,7 @@ export function GlowModal({
             >
               {!hideHeader && (
                 <div className="flex items-center justify-between p-4 border-b border-ink-light">
-                  <h2 className="text-sm text-jade-glow uppercase tracking-wider">
+                  <h2 className="text-sm text-jade-glow uppercase tracking-wider" title={titleHint ?? undefined}>
                     {title}
                   </h2>
                   <motion.button

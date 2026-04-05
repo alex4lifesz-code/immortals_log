@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { t } from "@/lib/terminology";
 import {
   ResponsiveContainer,
   BarChart,
@@ -83,7 +84,7 @@ export default function MonthlyComparisonChart({
   if (chartData.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-xs" style={{ color: "var(--text-muted)" }}>
-        No data yet
+        {t("No data yet", "normal")}
       </div>
     );
   }
@@ -92,10 +93,10 @@ export default function MonthlyComparisonChart({
     <div className="flex flex-col h-full gap-2">
       <div className="flex items-center justify-between px-1">
         <h4 className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-primary)" }}>
-          Monthly Comparison
+          {t("Monthly Comparison", "normal")}
         </h4>
         <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>
-          Check-in rate %
+          {t("Check-in rate %", "normal")}
         </span>
       </div>
       <div className="flex-1 min-h-0">
@@ -107,6 +108,7 @@ export default function MonthlyComparisonChart({
               tick={{ fontSize: 11, fill: "var(--text-muted)" }}
               tickLine={false}
               axisLine={{ stroke: "var(--border)" }}
+              tickFormatter={(v: string) => t(v, "normal")}
             />
             <YAxis
               domain={[0, 100]}

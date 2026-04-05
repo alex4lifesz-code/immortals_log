@@ -950,11 +950,7 @@ html.discord textarea:focus-visible {
 
 /* Rank-up inactive row override — must beat the !important above */
 .nyaa-layout .nyaa-history-page tbody tr.rank-up-inactive td {
-  color: color-mix(in srgb, var(--text-muted) 48%, var(--surface)) !important;
   background: color-mix(in srgb, var(--surface) 88%, black) !important;
-}
-.nyaa-layout .nyaa-history-page tbody tr.rank-up-inactive td a {
-  color: color-mix(in srgb, var(--text-muted) 40%, var(--surface)) !important;
 }
 
 .nyaa-layout .nyaa-history-page tbody td:first-child {

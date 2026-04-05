@@ -6,6 +6,7 @@ import { GlowModal } from "@/components/ui/GlowCard";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings, DISPLAY_DEFAULTS } from "@/context/DisplaySettingsContext";
 import { formatDateWithPreference } from "@/lib/constants";
+import { t, tHint } from "@/lib/terminology";
 
 interface ExerciseHistoryModalProps {
   exerciseId: string;
@@ -47,7 +48,7 @@ export default function ExerciseHistoryModal({ exerciseId, exerciseName, isOpen,
   }, [isOpen, exerciseId, user?.id]);
 
   return (
-    <GlowModal isOpen={isOpen} onClose={onClose} title={`Training History — ${exerciseName}`}>
+    <GlowModal isOpen={isOpen} onClose={onClose} title={`${t("Training History", "normal")} — ${exerciseName}`}>
       {loading ? (
         <div className="text-center py-6">
           <motion.div
@@ -55,19 +56,19 @@ export default function ExerciseHistoryModal({ exerciseId, exerciseName, isOpen,
             transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
             className="w-5 h-5 border-2 border-jade-glow border-t-transparent rounded-full mx-auto"
           />
-          <p className="text-xs text-mist-dark mt-2">Loading history...</p>
+          <p className="text-xs text-mist-dark mt-2" title={tHint("Loading history...", "normal") ?? undefined}>{t("Loading history...", "normal")}</p>
         </div>
       ) : historyData.length === 0 ? (
         <div className="text-center py-6">
           <div className="text-3xl mb-3 opacity-50">📜</div>
-          <p className="text-xs text-mist-dark">No training sessions recorded for this technique yet.</p>
+          <p className="text-xs text-mist-dark" title={tHint("No training sessions recorded for this technique yet.", "normal") ?? undefined}>{t("No training sessions recorded for this technique yet.", "normal")}</p>
         </div>
       ) : (
         <div className="max-h-[60vh] overflow-y-auto overflow-x-auto sidebar-scroll">
           <table className="w-full text-[11px] min-w-[400px]">
             <thead className="sticky top-0 bg-ink-deep">
               <tr className="border-b border-ink-light/40 text-mist-dark">
-                <th className="text-left py-1.5 px-1.5 font-semibold">Date</th>
+                <th className="text-left py-1.5 px-1.5 font-semibold" title={tHint("Date", "normal") ?? undefined}>{t("Date", "normal")}</th>
                 {(DISPLAY_DEFAULTS.columnOrderGrouped ? ["W1","W2","W3","R1","R2","R3"] : ["W1","R1","W2","R2","W3","R3"]).map(h => (
                   <th
                     key={h}
@@ -81,8 +82,8 @@ export default function ExerciseHistoryModal({ exerciseId, exerciseName, isOpen,
                     }
                   >{h}</th>
                 ))}
-                <th className="text-center py-1.5 px-1 font-semibold" style={{ color: 'var(--mountain-blue-glow)' }}>Hold</th>
-                <th className="text-left py-1.5 px-1.5 font-semibold">Notes</th>
+                <th className="text-center py-1.5 px-1 font-semibold" style={{ color: 'var(--mountain-blue-glow)' }} title={tHint("Hold", "normal") ?? undefined}>{t("Hold", "normal")}</th>
+                <th className="text-left py-1.5 px-1.5 font-semibold" title={tHint("Notes", "normal") ?? undefined}>{t("Notes", "normal")}</th>
               </tr>
             </thead>
             <tbody>

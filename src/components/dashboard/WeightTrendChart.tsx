@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { t } from "@/lib/terminology";
 import {
   ResponsiveContainer,
   LineChart,
@@ -90,7 +91,7 @@ export default function WeightTrendChart({
   if (chartData.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-xs" style={{ color: "var(--text-muted)" }}>
-        No weight data recorded
+        {t("No weight data recorded", "normal")}
       </div>
     );
   }
@@ -99,13 +100,13 @@ export default function WeightTrendChart({
     <div className="flex flex-col h-full gap-2">
       <div className="flex items-center justify-between px-1">
         <h4 className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-primary)" }}>
-          Weight Trend
+          {t("Weight Trend", "normal")}
         </h4>
         <div className="flex items-center gap-3 text-[11px]">
           {selectedUserIds.map((uid) =>
             avgWeights[uid] ? (
               <span key={uid} style={{ color: userColors[uid] || "var(--chart-secondary)" }}>
-                {selectedUserIds.length > 1 ? `${userNames[uid]}: ` : "Avg: "}
+                {selectedUserIds.length > 1 ? `${userNames[uid]}: ` : `${t("Avg:", "normal")} `}
                 <span className="font-semibold">{avgWeights[uid]} kg</span>
               </span>
             ) : null
@@ -140,7 +141,7 @@ export default function WeightTrendChart({
                 color: "var(--text-primary)",
               }}
               formatter={(value, name) => [`${value} kg`, userNames[name as string] || name]}
-              labelFormatter={(label) => `Date: ${label}`}
+              labelFormatter={(label) => `${t("Date:", "normal")} ${label}`}
             />
             {selectedUserIds.length > 1 && (
               <Legend

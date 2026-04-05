@@ -9,6 +9,7 @@ import { useIsMobile } from "@/context/AppContext";
 import { getTypeColor, formatDateWithPreference } from "@/lib/constants";
 import { api, ApiRequestError } from "@/lib/api-client";
 import { getExerciseDisplayName, getTypeDisplayName, getTypeColorKey } from "@/lib/exercise-name";
+import { t, tHint } from "@/lib/terminology";
 import { inferExerciseType, formatSetValue, formatSetReps, getColumnHeaders, kgToLbs, type ExerciseType } from "@/lib/unit-conversion";
 import { UserPhysiqueSettings } from "@/lib/user-physique";
 
@@ -60,18 +61,19 @@ function abbreviateVariantText(text: string): string {
 }
 
 function getCategoryTone(categoryLabel: "GYM" | "Yoga" | "Cardio" | "Cali"): { color: string; borderColor: string; backgroundColor: string } {
-  const color = categoryLabel === "GYM"
+  const baseColor = categoryLabel === "GYM"
     ? "var(--category-gym)"
     : categoryLabel === "Yoga"
       ? "var(--category-yoga)"
       : categoryLabel === "Cardio"
         ? "var(--category-cardio)"
         : "var(--category-cali)";
+  const color = `color-mix(in srgb, ${baseColor} 70%, var(--text-primary))`;
 
   return {
     color,
-    borderColor: `color-mix(in srgb, ${color} 55%, var(--border))`,
-    backgroundColor: `color-mix(in srgb, ${color} 13%, transparent)`,
+    borderColor: `color-mix(in srgb, ${baseColor} 56%, var(--border))`,
+    backgroundColor: `color-mix(in srgb, ${baseColor} 18%, var(--surface))`,
   };
 }
 
@@ -407,15 +409,15 @@ function UnifiedTrainingLogTable({
         };
       });
       await api.post<{ error?: string }>("/api/progressions/logs/update", { updates });
-      setSaveMessage({ type: "success", text: "Training logs updated successfully!" });
+      setSaveMessage({ type: "success", text: t("Training logs updated successfully!", "normal") });
       setIsEditMode(false);
       setEditingData({});
       onRefresh();
     } catch (err) {
       if (err instanceof ApiRequestError) {
-        setSaveMessage({ type: "error", text: err.message || "Failed to save changes" });
+        setSaveMessage({ type: "error", text: err.message || t("Failed to save changes", "normal") });
       } else {
-        setSaveMessage({ type: "error", text: "Network error — unable to save changes" });
+        setSaveMessage({ type: "error", text: t("Network error — unable to save changes", "normal") });
       }
     } finally {
       setIsSaving(false);
@@ -431,14 +433,14 @@ function UnifiedTrainingLogTable({
     setIsDeleting(true);
     try {
       await api.post("/api/progressions/logs/delete", { logId });
-      setSaveMessage({ type: "success", text: "Log record deleted successfully" });
+      setSaveMessage({ type: "success", text: t("Log record deleted successfully", "normal") });
       setDeleteConfirm(null);
       onRefresh();
     } catch (err) {
       if (err instanceof ApiRequestError) {
-        setSaveMessage({ type: "error", text: err.message || "Failed to delete record" });
+        setSaveMessage({ type: "error", text: err.message || t("Failed to delete record", "normal") });
       } else {
-        setSaveMessage({ type: "error", text: "Network error — unable to delete record" });
+        setSaveMessage({ type: "error", text: t("Network error — unable to delete record", "normal") });
       }
     } finally {
       setIsDeleting(false);
@@ -497,7 +499,7 @@ function UnifiedTrainingLogTable({
           {/* Edit header bar */}
             <div className="flex items-center justify-between px-3 py-2 border-b border-jade-glow/20">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-cloud-white">Training Log</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-cloud-white" title={tHint("Training Log", "normal") ?? undefined}>{t("Training Log", "normal")}</span>
                 {saveMessage && (
                   <motion.span
                     initial={{ opacity: 0 }}
@@ -512,10 +514,10 @@ function UnifiedTrainingLogTable({
                 {entries.length > 0 && isEditMode ? (
                   <>
                     <GlowButton variant="jade" size="sm" onClick={handleSaveChanges} disabled={isSaving}>
-                      {isSaving ? "Saving..." : "✓ Save"}
+                      {isSaving ? t("Saving...", "normal") : `✓ ${t("Save", "normal")}`}
                     </GlowButton>
                     <GlowButton variant="ghost" size="sm" onClick={handleCancel} disabled={isSaving}>
-                      ✕ Cancel
+                      ✕ {t("Cancel", "normal")}
                     </GlowButton>
                   </>
                 ) : entries.length > 0 ? (
@@ -523,10 +525,10 @@ function UnifiedTrainingLogTable({
                     onClick={handleEditModeToggle}
                     className="text-xs px-3 py-1 rounded border border-jade-glow/40 text-jade-light hover:bg-jade-deep/10 hover:scale-105 active:scale-95 transition-all duration-100"
                   >
-                    ✎ Edit
+                    ✎ {t("Edit", "normal")}
                   </button>
                 ) : (
-                  <span className="text-[11px] text-mist-dark">No logs yet</span>
+                  <span className="text-[11px] text-mist-dark">{t("No logs yet", "normal")}</span>
                 )}
               </div>
             </div>
@@ -546,16 +548,16 @@ function UnifiedTrainingLogTable({
               <tr className="border-b border-jade-glow/30 text-mist-dark">
                 {showDate && (
                   <th className={`${headerPadClass} px-1 sm:px-1.5 w-[6rem] min-w-[6rem] text-center ${headerTypographyClass}`}>
-                    Date
+                    <span title={tHint("Date", "normal") ?? undefined}>{t("Date", "normal")}</span>
                   </th>
                 )}
                 {showCategory && (
                   <th className={`${headerPadClass} px-0.5 sm:px-1 w-[5rem] min-w-[5rem] text-center ${headerTypographyClass}`}>
-                    Category
+                    <span title={tHint("Category", "normal") ?? undefined}>{t("Category", "normal")}</span>
                   </th>
                 )}
                 <th className={`${headerPadClass} px-1 sm:px-1.5 text-left ${headerTypographyClass}`}>
-                  Exercise
+                  <span title={tHint("Exercise", "normal") ?? undefined}>{t("Exercise", "normal")}</span>
                 </th>
                 {visibleDataIndices.map(({ idx }) => (
                   <th
@@ -578,12 +580,12 @@ function UnifiedTrainingLogTable({
                 )}
                 {showVariantColumnResponsive && (
                   <th className={`${headerPadClass} px-0.5 sm:px-1 w-[6.5rem] min-w-[6.5rem] text-center ${headerTypographyClass} text-mountain-blue-glow`}>
-                    Variant
+                    <span title={tHint("Variant", "normal") ?? undefined}>{t("Variant", "normal")}</span>
                   </th>
                 )}
                 {showNotesResponsive && (
                   <th className={`${headerPadClass} px-1 sm:px-1.5 w-[9rem] min-w-[9rem] text-center ${headerTypographyClass}`}>
-                    Notes
+                    <span title={tHint("Notes", "normal") ?? undefined}>{t("Notes", "normal")}</span>
                   </th>
                 )}
                 {showStandardWeightResponsive && (
@@ -605,7 +607,7 @@ function UnifiedTrainingLogTable({
               {entries.length === 0 ? (
                 <tr>
                   <td colSpan={emptyRowColSpan} className="py-6 text-center text-mist-mid text-sm">
-                    No training data logged yet. Select an exercise from the sidebar to log your first set.
+                    {t("No training data logged yet. Select an exercise from the sidebar to log your first set.", "normal")}
                   </td>
                 </tr>
               ) : (
@@ -631,7 +633,7 @@ function UnifiedTrainingLogTable({
                       ? ({ opacity: getBandSoftDimOpacity(activeBand) } as React.CSSProperties)
                       : undefined;
                     const entryDisplayName = ex
-                      ? stripBwPercentHint(getExerciseDisplayName(ex, settings.terminologyMode))
+                      ? stripBwPercentHint(getExerciseDisplayName(ex, settings.terminologyMode, settings.showExerciseForeignLanguage))
                       : stripBwPercentHint(entry.exerciseName);
                     const exerciseVariantOptions = (ex?.variations ?? []).map((v) => v.name).filter(Boolean);
                     const selectedVariantValue = editData?.variant ?? "";
@@ -875,7 +877,7 @@ function UnifiedTrainingLogTable({
                                 type="text"
                                 value={editData.notes ?? ""}
                                 onChange={(e) => handleEditChange(entry.logId, "notes", e.target.value || null)}
-                                placeholder="Add notes..."
+                                placeholder={t("Add notes...", "normal")}
                                 className="w-full min-w-[100px] bg-ink-deep border border-jade-glow/30 rounded px-2 py-1 text-cloud-white text-xs placeholder:text-mist-dark outline-none transition-all duration-200 focus:border-jade-glow focus:shadow-[var(--glow-subtle)]"
                               />
                             </td>
@@ -926,7 +928,7 @@ function UnifiedTrainingLogTable({
                               whileTap={{ scale: 0.9 }}
                               onClick={() => setDeleteConfirm({ logId: entry.logId, exerciseName: entryDisplayName })}
                               className="text-crimson-light hover:text-crimson-glow transition-colors text-lg"
-                              title="Delete this log record"
+                              title={t("Delete this log record", "normal")}
                               disabled={isDeleting}
                             >
                               ✕
@@ -966,11 +968,11 @@ function UnifiedTrainingLogTable({
                   style={{ boxShadow: "var(--danger-modal-glow)" }}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <h3 className="text-sm font-semibold text-crimson-light mb-3">Delete Training Record</h3>
+                  <h3 className="text-sm font-semibold text-crimson-light mb-3">{t("Delete Training Record", "normal")}</h3>
                   <p className="text-xs text-mist-light mb-5 leading-relaxed">
-                    Are you sure you want to permanently delete the log record for{" "}
+                    {t("Are you sure you want to permanently delete the log record for", "normal")}{" "}
                     <span className="text-cloud-white font-medium">{deleteConfirm.exerciseName}</span>? This action
-                    cannot be undone.
+                    {" "}{t("cannot be undone.", "normal")}
                   </p>
                   <div className="flex gap-3">
                     <motion.button
@@ -980,7 +982,7 @@ function UnifiedTrainingLogTable({
                       disabled={isDeleting}
                       className="flex-1 px-4 py-2 text-xs font-semibold rounded-lg bg-crimson-deep/30 border border-crimson/50 text-crimson-light hover:bg-crimson-deep/50 transition-all duration-200 disabled:opacity-50"
                     >
-                      {isDeleting ? "Deleting..." : "Delete Record"}
+                      {isDeleting ? t("Deleting...", "normal") : t("Delete Record", "normal")}
                     </motion.button>
                     <motion.button
                       whileHover={{ scale: 1.02 }}
@@ -989,7 +991,7 @@ function UnifiedTrainingLogTable({
                       disabled={isDeleting}
                       className="flex-1 px-4 py-2 text-xs font-semibold rounded-lg border border-ink-light text-mist-light hover:bg-ink-mid/30 transition-all duration-200 disabled:opacity-50"
                     >
-                      Cancel
+                      {t("Cancel", "normal")}
                     </motion.button>
                   </div>
                 </motion.div>
@@ -1027,9 +1029,9 @@ function UnifiedTrainingLogTable({
                       className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[360px] max-w-[92vw] bg-ink-deep border border-ink-light rounded-xl shadow-2xl p-4"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <h3 className="text-sm font-semibold text-cloud-white mb-3">Change Progression Tier</h3>
+                      <h3 className="text-sm font-semibold text-cloud-white mb-3">{t("Change Progression Tier", "normal")}</h3>
                       <p className="text-[11px] text-mist-light mb-3">
-                        {stripBwPercentHint(getExerciseDisplayName(ex, settings.terminologyMode))}
+                        {stripBwPercentHint(getExerciseDisplayName(ex, settings.terminologyMode, settings.showExerciseForeignLanguage))}
                       </p>
                       <div className="max-h-[280px] overflow-y-auto space-y-1 pr-1">
                         {tiers.map((t) => {
@@ -1044,7 +1046,7 @@ function UnifiedTrainingLogTable({
                               className={`w-full text-left px-2.5 py-2 rounded border transition-colors ${active ? "border-jade-glow/50 bg-jade-deep/20 text-jade-light" : "border-ink-light/40 bg-ink-mid/20 text-mist-light hover:border-jade-glow/35 hover:bg-jade-deep/10"}`}
                             >
                               <span className="text-[11px] font-semibold">
-                                {stripBwPercentHint(getExerciseDisplayName(t, settings.terminologyMode))}
+                                {stripBwPercentHint(getExerciseDisplayName(t, settings.terminologyMode, settings.showExerciseForeignLanguage))}
                               </span>
                             </button>
                           );
@@ -1055,7 +1057,7 @@ function UnifiedTrainingLogTable({
                           onClick={() => setLevelPicker(null)}
                           className="px-3 py-1.5 text-xs rounded border border-ink-light text-mist-light hover:bg-ink-mid/30"
                         >
-                          Close
+                          {t("Close", "normal")}
                         </button>
                       </div>
                     </motion.div>

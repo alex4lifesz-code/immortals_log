@@ -73,9 +73,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const existing = await prisma.user.findUnique({
-      where: { username: trimmedUsername },
-    });
+    const existingUsers = await prisma.$queryRaw<Array<{ id: string }>>`
+      SELECT id
+      FROM "User"
+      WHERE lower(username) = lower(${trimmedUsername})
+      LIMIT 1
+    `;
+    const existing = existingUsers[0] ?? null;
     if (existing) {
       return NextResponse.json(
         { error: "Dao name already taken" },

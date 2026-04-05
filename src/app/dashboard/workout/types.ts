@@ -60,6 +60,8 @@ export interface ProgressionExercise {
   id: string;
   name: string;
   wuxiaName: string;
+  englishName?: string;
+  vietnameseName?: string;
   difficulty: string;
   wuxiaDifficulty: string;
   type: string;

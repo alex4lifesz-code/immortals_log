@@ -36,9 +36,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const user = await prisma.user.findUnique({
-      where: { username: username.trim() },
-    });
+    const trimmedUsername = username.trim();
+    const users = await prisma.$queryRaw<
+      Array<{ id: string; username: string; password: string; name: string; role: string }>
+    >`
+      SELECT id, username, password, name, role
+      FROM "User"
+      WHERE lower(username) = lower(${trimmedUsername})
+      LIMIT 1
+    `;
+    const user = users[0] ?? null;
     if (!user) {
       return NextResponse.json(
         { error: "Cultivator not found in the sect records" },

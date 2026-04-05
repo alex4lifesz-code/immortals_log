@@ -7,7 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import Link from "next/link";
-import { t } from "@/lib/terminology";
+import { t, tHint } from "@/lib/terminology";
 import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
 import { loadUserPhysique } from "@/lib/user-physique";
 import { kgToLbs } from "@/lib/unit-conversion";
@@ -177,9 +177,10 @@ function NyaaTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount = 
     router.push(path);
   };
 
-  const NavLink = ({ href, label, isActive }: { href: string; label: string; isActive: boolean }) => (
+  const NavLink = ({ href, label, hint, isActive }: { href: string; label: string; hint?: string; isActive: boolean }) => (
     <Link
       href={href}
+      title={hint || undefined}
       className={`nyaa-nav-link px-2 py-1 text-xs transition-colors whitespace-nowrap ${
         isActive
           ? "nyaa-nav-link-active"
@@ -216,6 +217,7 @@ function NyaaTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount = 
                 <NavLink
                   href={item.path}
                   label={t(item.label, terminologyMode)}
+                  hint={tHint(item.label, terminologyMode) ?? undefined}
                   isActive={pathname === item.path}
                 />
               </span>
@@ -234,7 +236,7 @@ function NyaaTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount = 
                       moreMenuOpen ? "nyaa-nav-link-active" : "nyaa-nav-link-inactive"
                     }`}
                   >
-                    More ▾
+                    {t("More", "normal")} ▾
                   </button>
                   <AnimatePresence>
                     {moreMenuOpen && (
@@ -244,6 +246,11 @@ function NyaaTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount = 
                         exit={{ opacity: 0, y: -4 }}
                         transition={{ duration: 0.12 }}
                         className="nyaa-dropdown absolute left-0 mt-1 w-48 z-50"
+                        style={{
+                          maxHeight: "calc(100dvh - 7rem)",
+                          overflowY: "auto",
+                          WebkitOverflowScrolling: "touch",
+                        }}
                       >
                         {overflowNavItems.map((item) => (
                           <button
@@ -254,7 +261,7 @@ function NyaaTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount = 
                               pathname === item.path ? "nyaa-dropdown-item-active" : ""
                             }`}
                           >
-                            {t(item.label, terminologyMode)}
+                            <span title={tHint(item.label, terminologyMode) ?? undefined}>{t(item.label, terminologyMode)}</span>
                           </button>
                         ))}
                         {adminItems.length > 0 && (
@@ -269,7 +276,7 @@ function NyaaTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount = 
                                   pathname === item.path ? "nyaa-dropdown-item-active" : ""
                                 }`}
                               >
-                                {t(item.label, terminologyMode)}
+                                <span title={tHint(item.label, terminologyMode) ?? undefined}>{t(item.label, terminologyMode)}</span>
                               </button>
                             ))}
                           </>
@@ -373,7 +380,7 @@ function NyaaTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount = 
                           pathname === item.path ? "nyaa-dropdown-item-active" : ""
                         }`}
                       >
-                        {t(item.label, terminologyMode)}
+                        <span title={tHint(item.label, terminologyMode) ?? undefined}>{t(item.label, terminologyMode)}</span>
                       </button>
                     ))}
                     {adminItems.length > 0 && (
@@ -388,7 +395,7 @@ function NyaaTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount = 
                               pathname === item.path ? "nyaa-dropdown-item-active" : ""
                             }`}
                           >
-                            {t(item.label, terminologyMode)}
+                            <span title={tHint(item.label, terminologyMode) ?? undefined}>{t(item.label, terminologyMode)}</span>
                           </button>
                         ))}
                       </>
@@ -405,7 +412,7 @@ function NyaaTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount = 
                   }}
                   className="nyaa-dropdown-item nyaa-dropdown-item-danger block w-full text-left px-3 py-1.5 text-xs"
                 >
-                  Sign Out
+                  {t("Sign Out", "normal")}
                 </button>
               </motion.div>
             )}

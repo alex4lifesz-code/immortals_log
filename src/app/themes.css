@@ -1253,10 +1253,10 @@ html.mountain-mist {
 }
 
 html.calligraphy {
-  --category-cali: #d0d0d0;
+  --category-cali: #7fa36b;
   --category-gym: #d4a860;
-  --category-yoga: #8aa0b8;
-  --category-cardio: #b87070;
+  --category-yoga: #6f93bd;
+  --category-cardio: #bf6a6a;
   --label-progression: #b07090;
   --label-variant: #9bb0bb;
   --header-bg: color-mix(in srgb, var(--surface) 82%, var(--border));
@@ -1264,12 +1264,12 @@ html.calligraphy {
 }
 
 html.sakura {
-  --category-cali: #e8507a;
-  --category-gym: #d8a878;
-  --category-yoga: #8aa8c8;
-  --category-cardio: #d85a4a;
-  --label-progression: #c4b5fd;
-  --label-variant: #67e8f9;
+  --category-cali: #be185d;
+  --category-gym: #a16207;
+  --category-yoga: #1e40af;
+  --category-cardio: #b91c1c;
+  --label-progression: #7c3aed;
+  --label-variant: #0e7490;
   --header-bg: color-mix(in srgb, var(--surface) 86%, var(--border));
   --header-border: var(--nyaa-table-grid);
 }

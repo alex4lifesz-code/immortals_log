@@ -1,20 +1,34 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
+import {
+  applyExerciseTranslation,
+  getUserLanguageMode,
+} from "@/lib/exercise-translation-db";
+import { resolveVietnameseValue } from "@/lib/auto-vietnamese";
 
 const ARCHIVED_TARGET_GROUP = "__archived__";
 
-export const GET = withAuth(async () => {
+export const GET = withAuth(async (_req, { auth }) => {
   try {
+    const languageMode = await getUserLanguageMode(auth.userId);
     const exercises = await prisma.exercise.findMany({
       where: {
         NOT: {
           targetGroup: ARCHIVED_TARGET_GROUP,
         },
       },
+      include: {
+        translation: true,
+      },
       orderBy: { createdAt: "desc" },
     });
-    return NextResponse.json({ exercises });
+
+    const localizedExercises = exercises.map(({ translation, ...exercise }) =>
+      applyExerciseTranslation(exercise, translation, languageMode)
+    );
+
+    return NextResponse.json({ exercises: localizedExercises });
   } catch (error) {
     console.error("Exercises fetch error:", error);
     return NextResponse.json(
@@ -88,6 +102,28 @@ export const POST = withAuth(async (req, { auth }) => {
             targetGroup,
           },
         });
+
+    await prisma.exerciseTranslation.upsert({
+      where: { id: exercise.id },
+      create: {
+        id: exercise.id,
+        englishName: name,
+        vietnameseName: resolveVietnameseValue(name, wuxiaName || null),
+        englishStory: story || null,
+        vietnameseStory: story || null,
+        englishDifficulty: difficulty,
+        vietnameseDifficulty: resolveVietnameseValue(difficulty, null),
+        englishType: type,
+        vietnameseType: resolveVietnameseValue(type, null),
+      },
+      update: {
+        englishName: name,
+        vietnameseName: resolveVietnameseValue(name, wuxiaName || null),
+        englishStory: story || null,
+        englishDifficulty: difficulty,
+        englishType: type,
+      },
+    });
 
     return NextResponse.json({ exercise });
   } catch (error) {

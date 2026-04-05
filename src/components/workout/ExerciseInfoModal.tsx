@@ -45,7 +45,7 @@ export function ExerciseInfoModal({
     <GlowModal
       isOpen={isOpen}
       onClose={onClose}
-      title={getExerciseDisplayName(exercise, settings.terminologyMode)}
+      title={getExerciseDisplayName(exercise, settings.terminologyMode, settings.showExerciseForeignLanguage)}
       panelClassName="!max-w-3xl"
     >
       <div className="space-y-4">
@@ -54,7 +54,7 @@ export function ExerciseInfoModal({
             <div className="min-w-0 space-y-1.5">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xl">{getExerciseIcon(getTypeColorKey(exercise))}</span>
-                <h3 className="text-sm text-cloud-white font-semibold truncate">{getExerciseDisplayName(exercise, settings.terminologyMode)}</h3>
+                <h3 className="text-sm text-cloud-white font-semibold truncate">{getExerciseDisplayName(exercise, settings.terminologyMode, settings.showExerciseForeignLanguage)}</h3>
                 <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${diffColorClass} bg-ink-dark/50 border border-current/30`}>
                   {modalDiffDisplay}
                 </span>
@@ -143,7 +143,7 @@ export function ExerciseInfoModal({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className={`text-xs font-medium ${isCompleted ? "text-jade-light" : isCurrent ? "text-gold" : "text-cloud-white"}`}>
-                          {getExerciseDisplayName(exercise, settings.terminologyMode)}
+                          {getExerciseDisplayName(exercise, settings.terminologyMode, settings.showExerciseForeignLanguage)}
                         </span>
                         {(tier.difficulty || tier.wuxiaDifficulty) && (
                           <span className={`text-[9px] px-1.5 py-0 rounded-full ${getDifficultyColor(getDifficultyColorKey(tier))} bg-ink-dark/40 border border-current/15`}>
@@ -181,7 +181,7 @@ export function ExerciseInfoModal({
               {exercise.variations.map((v) => (
                 <div key={v.id} className="text-[11px] flex items-center gap-1.5 rounded-md border border-ink-light/30 bg-ink-dark/35 px-2 py-1.5">
                   <span className="text-mountain-blue-glow shrink-0">◇</span>
-                  <span className="text-cloud-white flex-1 min-w-0 truncate">{getExerciseDisplayName(v, settings.terminologyMode)}</span>
+                  <span className="text-cloud-white flex-1 min-w-0 truncate">{getExerciseDisplayName(v, settings.terminologyMode, settings.showExerciseForeignLanguage)}</span>
                   {v.difficulty && (
                     <span className={`text-[9px] px-1.5 py-0 rounded-full ${getDifficultyColor(getDifficultyColorKey(v))} bg-ink-dark/40 border border-current/15`}>
                       {getDifficultyDisplayName(v, settings.terminologyMode)}

@@ -51,7 +51,7 @@ function TechniqueRow({ exercise, onUpdateDayAssignments, focusedDay, isCompact 
   const [isUpdating, setIsUpdating] = useState(false);
   const [showTip, setShowTip] = useState(false);
   const { settings } = useDisplaySettings();
-  const displayName = getExerciseDisplayName(exercise, settings.terminologyMode);
+  const displayName = getExerciseDisplayName(exercise, settings.terminologyMode, settings.showExerciseForeignLanguage);
   const difficultyColorClass = getDifficultyColorClass(getDifficultyColorKey(exercise));
   const typeColor = getTypeColor(getTypeColorKey(exercise));
   const glowStyle = getDifficultyGlowStyle(getDifficultyColorKey(exercise));

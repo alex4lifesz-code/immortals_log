@@ -7,8 +7,10 @@ import Link from "next/link";
 import PageLayout from "@/components/layout/PageLayout";
 import { useAuth } from "@/context/AuthContext";
 import { useIsMobile } from "@/context/AppContext";
+import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import GlowButton from "@/components/ui/GlowButton";
 import { api } from "@/lib/api-client";
+import { getExerciseDisplayName } from "@/lib/exercise-name";
 import { getDefaultExerciseDbOptions, type ExerciseDbOptions } from "@/lib/exercise-db-settings";
 import type {
   SimpleExercise,
@@ -536,12 +538,14 @@ function OverviewTab({
   onAppend,
   onDeletePending,
   pendingActionId,
+  resolveExerciseName,
 }: {
   exercises: SimpleExercise[];
   onEdit: (exercise: SimpleExercise) => void;
   onAppend: (exercise: SimpleExercise) => Promise<void>;
   onDeletePending: (exercise: SimpleExercise) => Promise<void>;
   pendingActionId: string | null;
+  resolveExerciseName: (exercise: SimpleExercise) => string;
 }) {
   const byCat = useMemo(() => {
     const m: Record<string, number> = {};
@@ -637,7 +641,7 @@ function OverviewTab({
                 }}
               >
                 <span className="font-medium" title={exercise.isPendingEdited ? "Edited after submission" : undefined}>
-                  {exercise.isPendingEdited ? `* ${exercise.name}` : exercise.name}
+                  {exercise.isPendingEdited ? `* ${resolveExerciseName(exercise)}` : resolveExerciseName(exercise)}
                 </span>
                 <button
                   type="button"
@@ -682,12 +686,14 @@ function ExerciseVariantsModal({
   exercise,
   variants,
   onSave,
+  resolveExerciseName,
 }: {
   isOpen: boolean;
   onClose: () => void;
   exercise: SimpleExercise | null;
   variants: string[];
   onSave: (exerciseId: string, variants: string[]) => Promise<void>;
+  resolveExerciseName: (exercise: SimpleExercise) => string;
 }) {
   const [draft, setDraft] = useState<string[]>([]);
   const [newVariant, setNewVariant] = useState("");
@@ -726,7 +732,7 @@ function ExerciseVariantsModal({
     <GlowModal isOpen={isOpen} onClose={onClose} title="Exercise Variants" panelClassName="!max-w-lg">
       <div className="space-y-4">
         <div>
-          <p className="text-sm text-cloud-white font-medium">{exercise?.name ?? ""}</p>
+          <p className="text-sm text-cloud-white font-medium">{exercise ? resolveExerciseName(exercise) : ""}</p>
           <p className="text-[11px] text-mist-dark">Variants are managed per exercise and saved to the exercise library.</p>
         </div>
 
@@ -787,6 +793,7 @@ function ExercisesTab({
   onEditVariants,
   onDelete,
   onDuplicate,
+  resolveExerciseName,
 }: {
   exercises: SimpleExercise[];
   loading: boolean;
@@ -801,6 +808,7 @@ function ExercisesTab({
   onEditVariants: (ex: SimpleExercise) => void;
   onDelete: (ex: SimpleExercise) => void;
   onDuplicate: (ex: SimpleExercise) => void;
+  resolveExerciseName: (exercise: SimpleExercise) => string;
 }) {
   const isMobile = useIsMobile();
   type ExerciseSortColumn = "exercise" | "category" | "type" | "muscles" | "progression" | "variants" | "dateAdded";
@@ -835,15 +843,46 @@ function ExercisesTab({
   const [loadedViewPrefsKey, setLoadedViewPrefsKey] = useState(viewPrefsStorageKey);
 
   const filtered = useMemo(() => {
+    const normalizedQuery = search.trim().toLowerCase();
     return exercises.filter((ex) => {
-      if (search && !ex.name.toLowerCase().includes(search.toLowerCase())) return false;
+      if (normalizedQuery) {
+        const haystacks = [
+          ex.name,
+          resolveExerciseName(ex),
+          ex.englishName || "",
+          ex.vietnameseName || "",
+          ...(ex.progression ?? []),
+          ...((ex.variations ?? []).map((variation) => variation.name)),
+        ].map((value) => String(value || "").toLowerCase());
+
+        const hasMatch = haystacks.some((value) => value.includes(normalizedQuery));
+        if (!hasMatch) return false;
+      }
       if (catFilter && ex.category !== catFilter) return false;
       if (muscleFilter && !ex.muscleGroups.includes(muscleFilter)) return false;
       if (typeFilter && ex.exerciseType !== typeFilter) return false;
       if (customOnly && !ex.isCustom) return false;
       return true;
     });
-  }, [exercises, search, catFilter, muscleFilter, typeFilter, customOnly]);
+  }, [exercises, search, catFilter, muscleFilter, typeFilter, customOnly, resolveExerciseName]);
+
+  useEffect(() => {
+    if (exercises.length === 0) return;
+
+    const categories = new Set(exercises.map((ex) => ex.category));
+    const types = new Set(exercises.map((ex) => ex.exerciseType));
+    const muscles = new Set(exercises.flatMap((ex) => ex.muscleGroups));
+
+    if (catFilter && !categories.has(catFilter)) {
+      setCatFilter("");
+    }
+    if (typeFilter && !types.has(typeFilter)) {
+      setTypeFilter("");
+    }
+    if (muscleFilter && !muscles.has(muscleFilter)) {
+      setMuscleFilter("");
+    }
+  }, [exercises, catFilter, typeFilter, muscleFilter]);
 
   const sorted = useMemo(() => {
     if (!sortState) return filtered;
@@ -851,7 +890,7 @@ function ExercisesTab({
     const directionFactor = sortState.direction === "asc" ? 1 : -1;
 
     const getSortValue = (ex: SimpleExercise): string | number => {
-      if (sortState.columnId === "exercise") return ex.name.toLowerCase();
+      if (sortState.columnId === "exercise") return resolveExerciseName(ex).toLowerCase();
       if (sortState.columnId === "category") return ex.category.toLowerCase();
       if (sortState.columnId === "type") return ex.exerciseType.toLowerCase();
       if (sortState.columnId === "muscles") return ex.muscleGroups.join(", ").toLowerCase();
@@ -879,7 +918,7 @@ function ExercisesTab({
         return cmp * directionFactor;
       })
       .map((item) => item.ex);
-  }, [exerciseVariants, filtered, sortState]);
+  }, [exerciseVariants, filtered, sortState, resolveExerciseName]);
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / ITEMS_PER_PAGE));
   const paginated = sorted.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
@@ -1314,7 +1353,7 @@ function ExercisesTab({
                         </td>
                         <td className="px-1.5 py-1.5">
                           <div className="min-w-0">
-                            <div className="truncate font-medium" style={{ color: "var(--text-primary)" }}>{ex.name}</div>
+                            <div className="truncate font-medium" style={{ color: "var(--text-primary)" }}>{resolveExerciseName(ex)}</div>
                             <div className="flex items-center gap-1 pt-0.5">
                               <DifficultyBadge difficulty={ex.difficulty} />
                             </div>
@@ -1418,7 +1457,7 @@ function ExercisesTab({
       >
         <div className="space-y-3">
           <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
-            {quickEditExercise?.name}
+            {quickEditExercise ? resolveExerciseName(quickEditExercise) : ""}
           </p>
           {quickError && (
             <div className="rounded border px-2 py-1 text-xs" style={{ borderColor: "var(--danger)", color: "var(--danger)", backgroundColor: "color-mix(in srgb, var(--danger) 8%, transparent)" }}>
@@ -1618,7 +1657,21 @@ function ExercisesTab({
 
 export default function ExerciseDBPage() {
   const { user } = useAuth();
+  const { settings } = useDisplaySettings();
   const userId = user?.id;
+
+  const resolveExerciseName = useCallback((exercise: SimpleExercise) => {
+    return getExerciseDisplayName(
+      {
+        name: exercise.englishName || exercise.name,
+        wuxiaName: exercise.vietnameseName || "",
+        englishName: exercise.englishName,
+        vietnameseName: exercise.vietnameseName,
+      },
+      settings.terminologyMode,
+      settings.showExerciseForeignLanguage,
+    );
+  }, [settings.terminologyMode, settings.showExerciseForeignLanguage]);
 
   const [exercises, setExercises] = useState<SimpleExercise[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1846,7 +1899,7 @@ export default function ExerciseDBPage() {
     if (!userId) return;
     try {
       const created = await api.post<{ exercise?: SimpleExercise }>("/api/exercise-library", {
-        name: `${ex.name} (Copy)`, category: ex.category, exerciseType: ex.exerciseType,
+        name: `${ex.englishName || ex.name} (Copy)`, category: ex.category, exerciseType: ex.exerciseType,
         muscleGroups: ex.muscleGroups, equipment: ex.equipment || [],
         difficulty: ex.difficulty || "", description: ex.description || "",
         instructions: ex.instructions || [],
@@ -1892,7 +1945,7 @@ export default function ExerciseDBPage() {
   const handleDeletePendingExercise = useCallback(async (exercise: SimpleExercise) => {
     if (pendingActionId) return;
     const confirmed = typeof window !== "undefined"
-      ? window.confirm(`Delete pending exercise \"${exercise.name}\"? Existing log rows will remain as \"Deleted exercise\".`)
+      ? window.confirm(`Delete pending exercise \"${resolveExerciseName(exercise)}\"? Existing log rows will remain as \"Deleted exercise\".`)
       : true;
     if (!confirmed) return;
 
@@ -1930,6 +1983,7 @@ export default function ExerciseDBPage() {
             onAppend={handleAppendPendingExercise}
             onDeletePending={handleDeletePendingExercise}
             pendingActionId={pendingActionId}
+            resolveExerciseName={resolveExerciseName}
           />
 
           <ExercisesTab
@@ -1946,6 +2000,7 @@ export default function ExerciseDBPage() {
             onEditVariants={setVariantsTarget}
             onDelete={setDeleteTarget}
             onDuplicate={handleDuplicate}
+            resolveExerciseName={resolveExerciseName}
           />
         </div>
       </div>
@@ -1965,13 +2020,14 @@ export default function ExerciseDBPage() {
         exercise={variantsTarget}
         variants={variantsTarget ? (exerciseVariants[variantsTarget.id] ?? []) : []}
         onSave={handleExerciseVariantsSave}
+        resolveExerciseName={resolveExerciseName}
       />
 
       <DeleteModal
         isOpen={deleteTarget !== null}
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
-        name={deleteTarget?.name ?? ""}
+        name={deleteTarget ? resolveExerciseName(deleteTarget) : ""}
       />
     </PageLayout>
   );

@@ -102,7 +102,7 @@ export default function WorkoutHistoryDetailPage() {
 
   const displayName = useMemo(() => {
     if (!exercise) return "Workout";
-    return stripBwPercentHint(getExerciseDisplayName(exercise, settings.terminologyMode));
+    return stripBwPercentHint(getExerciseDisplayName(exercise, settings.terminologyMode, settings.showExerciseForeignLanguage));
   }, [exercise, settings.terminologyMode]);
 
   const totalLogs = filteredLogs.length;

@@ -7,10 +7,10 @@ import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { useRouter, usePathname } from "next/navigation";
 import { NavItem } from "@/lib/constants";
-import { t } from "@/lib/terminology";
+import { t, tHint } from "@/lib/terminology";
 import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
 
-const ADMIN_NAV_IDS = new Set(["admin", "checkin"]);
+const ADMIN_NAV_IDS = new Set(["admin", "checkin", "website-information"]);
 
 function LeftSidebar() {
   const { getSortedNavItems, isMobile, reorderNavItems } = useAppContext();
@@ -36,8 +36,8 @@ function LeftSidebar() {
       className="w-[222px] bg-ink-deep border-r border-ink-light flex flex-col py-4 shrink-0 overflow-y-auto scrollbar-hide"
     >
       <div className="px-4 mb-4 flex items-center justify-between">
-        <h2 className="text-xs text-mist-dark uppercase tracking-widest">Navigation</h2>
-        <span className="text-[9px] text-mist-dark/60 italic">drag to reorder</span>
+        <h2 className="text-xs text-mist-dark uppercase tracking-widest">{t("Navigation", "normal")}</h2>
+        <span className="text-[9px] text-mist-dark/60 italic">{t("Drag to reorder", "normal")}</span>
       </div>
 
       <Reorder.Group
@@ -75,7 +75,7 @@ function LeftSidebar() {
               }}
             >
               <span className="text-base select-none">{item.icon}</span>
-              <span className="flex-1 text-left select-none">{t(item.label, terminologyMode)}</span>
+              <span className="flex-1 text-left select-none" title={tHint(item.label, terminologyMode) ?? undefined}>{t(item.label, terminologyMode)}</span>
               {item.pinned && (
                 <span className="text-[10px] text-gold-dim">📌</span>
               )}
@@ -92,7 +92,7 @@ function LeftSidebar() {
 
         {adminItems.length > 0 && (
           <div className="pt-3 mt-3 border-t border-ink-light/70">
-            <p className="px-2 pb-2 text-[10px] uppercase tracking-widest text-gold-dim/80">Admin</p>
+            <p className="px-2 pb-2 text-[10px] uppercase tracking-widest text-gold-dim/80">{t("Admin", "normal")}</p>
             <div className="space-y-1">
               {adminItems.map((item) => {
                 const isActive = pathname === item.path || pathname.startsWith(`${item.path}/`);
@@ -107,7 +107,7 @@ function LeftSidebar() {
                     }`}
                   >
                     <span className="text-base select-none">{item.icon}</span>
-                    <span className="flex-1 text-left select-none">{t(item.label, terminologyMode)}</span>
+                    <span className="flex-1 text-left select-none" title={tHint(item.label, terminologyMode) ?? undefined}>{t(item.label, terminologyMode)}</span>
                     {isActive && <span className="w-1 h-4 rounded-full bg-gold/80" />}
                   </button>
                 );
@@ -133,10 +133,10 @@ function LeftSidebar() {
           className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-crimson-light/70 hover:text-crimson-light hover:bg-crimson-deep/20 border border-transparent hover:border-crimson/30 transition-all duration-200"
         >
           <span>🚪</span>
-          <span>Logout</span>
+          <span>{t("Logout", "normal")}</span>
         </button>
         <p className="text-[10px] text-mist-dark text-center">
-          The path of cultivation is long
+          {t("The path of cultivation is long", "normal")}
         </p>
       </div>
     </motion.aside>

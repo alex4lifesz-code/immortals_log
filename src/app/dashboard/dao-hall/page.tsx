@@ -19,6 +19,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { useIsMobile } from "@/context/AppContext";
 import { formatDateWithPreference } from "@/lib/constants";
+import { t } from "@/lib/terminology";
 import { syncWeightFromLatestCheckin } from "@/lib/user-physique";
 import { api } from "@/lib/api-client";
 import {
@@ -606,6 +607,17 @@ export default function DaoHallPage() {
     return names;
   }, [allUsers, user]);
 
+  const scopedCheckInTotalsByUser = useMemo(() => {
+    const totals = new Map<string, number>();
+    for (const row of filteredCheckInRows) {
+      for (const [userId, entry] of Object.entries(row.entries)) {
+        if (!entry.present) continue;
+        totals.set(userId, (totals.get(userId) ?? 0) + 1);
+      }
+    }
+    return totals;
+  }, [filteredCheckInRows]);
+
   const renderedCheckInRows = useMemo(() => {
     if (!user) return [];
 
@@ -622,6 +634,7 @@ export default function DaoHallPage() {
           name: userNameById.get(userId) || "Unknown",
           present: entry.present,
           weight: entry.weight,
+          totalCheckIns: scopedCheckInTotalsByUser.get(userId) ?? 0,
           comment: entry.comment?.trim() || "",
         }))
         .sort((a, b) => {
@@ -637,7 +650,7 @@ export default function DaoHallPage() {
         everyoneDetails,
       };
     });
-  }, [filteredCheckInRows, user, userNameById]);
+  }, [filteredCheckInRows, scopedCheckInTotalsByUser, user, userNameById]);
 
   const visibleRenderedCheckInRows = useMemo(
     () => renderedCheckInRows.slice(0, displayCount),
@@ -992,7 +1005,7 @@ export default function DaoHallPage() {
                     backgroundColor: chartsOpen ? "rgba(0,255,128,0.06)" : "transparent",
                   }}
                 >
-                  <span>{chartsOpen ? "Hide Charts" : "Show Charts"}</span>
+                  <span>{chartsOpen ? t("Hide Charts", "normal") : t("Show Charts", "normal")}</span>
                   <span
                     className="relative inline-flex h-4 w-8 items-center rounded-full transition-colors"
                     style={{
@@ -1063,7 +1076,7 @@ export default function DaoHallPage() {
           <div className="w-full border bg-ink-dark/20 p-4" style={{ borderColor: "var(--border)" }}>
             <div ref={sectRegisterRef} className="space-y-4">
               <div className="flex items-center justify-between gap-2">
-                <h3 className="text-lg font-bold text-jade-glow">My Cultivation View</h3>
+                <h3 className="text-lg font-bold text-jade-glow">{t("My Cultivation View", "normal")}</h3>
                 <div className="flex items-center gap-2">
                   {!isMobile && (
                     <button
@@ -1076,9 +1089,9 @@ export default function DaoHallPage() {
                         borderColor: cultivationViewOpen ? "color-mix(in srgb, var(--accent) 35%, var(--border))" : "var(--border)",
                         color: cultivationViewOpen ? "var(--accent)" : "var(--text-muted)",
                       }}
-                      title={cultivationViewOpen ? "Full-width table" : "Fit-to-screen table"}
+                      title={cultivationViewOpen ? t("Full-width table", "normal") : t("Fit-to-screen table", "normal")}
                     >
-                      <span>Open</span>
+                      <span>{t("Open", "normal")}</span>
                       <span
                         className="relative inline-flex h-4 w-8 items-center rounded-full transition-colors"
                         style={{
@@ -1106,7 +1119,7 @@ export default function DaoHallPage() {
                           : "text-mist-light hover:text-jade-light"
                       }`}
                     >
-                      All
+                      {t("All", "normal")}
                     </button>
                     <button
                       onClick={() => setCalendarScope("mine")}
@@ -1116,7 +1129,7 @@ export default function DaoHallPage() {
                           : "text-mist-light hover:text-jade-light"
                       }`}
                     >
-                      Mine
+                      {t("Mine", "normal")}
                     </button>
                     <button
                       onClick={() => setCalendarScope("friends")}
@@ -1126,7 +1139,7 @@ export default function DaoHallPage() {
                           : "text-mist-light hover:text-jade-light"
                       }`}
                     >
-                      Friends
+                      {t("Friends", "normal")}
                     </button>
                   </div>
                 </div>
@@ -1135,8 +1148,8 @@ export default function DaoHallPage() {
               {renderedCheckInRows.length === 0 ? (
                 <div className="flex flex-col items-center py-10 text-center border border-ink-light/40 bg-ink-mid/10">
                   <div className="text-2xl opacity-30 mb-2">🧭</div>
-                  <p className="text-xs text-mist-dark">No entries for this view</p>
-                  <p className="text-[10px] text-mist-dark/60 mt-1">Use the calendar above to check in and add notes</p>
+                  <p className="text-xs text-mist-dark">{t("No entries for this view", "normal")}</p>
+                  <p className="text-[10px] text-mist-dark/60 mt-1">{t("Use the calendar above to check in and add notes", "normal")}</p>
                 </div>
               ) : (
                 isMobile ? (
@@ -1152,7 +1165,7 @@ export default function DaoHallPage() {
                             <button
                               onClick={() => handleDayClick(date)}
                               className="text-xs font-medium text-mist-light hover:text-jade-glow transition-colors text-left"
-                              title="Open this day"
+                              title={t("Open this day", "normal")}
                             >
                               {formatDateWithPreference(date, dateFormat)}
                             </button>
@@ -1164,14 +1177,14 @@ export default function DaoHallPage() {
                               }`}
                             >
                               {calendarScope === "mine"
-                                ? (mine.present ? "✓ In" : "Not In")
-                                : `${presentCount} In`}
+                                ? (mine.present ? `✓ ${t("In", "normal")}` : t("Not In", "normal"))
+                                : `${presentCount} ${t("In", "normal")}`}
                             </span>
                           </div>
 
                           {calendarScope === "mine" ? (
                             <div className="flex items-center gap-4 text-[11px] text-mist-light">
-                              <span>Weight: <span className="text-cloud-white">{mineWeight}</span></span>
+                              <span>{t("Weight:", "normal")} <span className="text-cloud-white">{mineWeight}</span></span>
                               {mine.comment?.trim() && (
                                 <span className="truncate text-mist-light/80">{mine.comment.trim()}</span>
                               )}
@@ -1199,6 +1212,8 @@ export default function DaoHallPage() {
                                     {detail.weight && (
                                       <span className="text-mist-light/70">{detail.weight}kg</span>
                                     )}
+
+                                    <span className="text-mist-light/70">{detail.totalCheckIns} {t("In", "normal")}</span>
 
                                     {/* Comment (truncated) */}
                                     {detail.comment && (
@@ -1592,7 +1607,7 @@ export default function DaoHallPage() {
         </div>
       </GlowModal>
 
-      {typeof document !== "undefined" && createPortal(
+      {!isMobile && typeof document !== "undefined" && createPortal(
         <div className="fixed bottom-0 right-3 z-50">
           {statsTabOpen ? (
             <div

@@ -6,10 +6,10 @@ import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { useRouter, usePathname } from "next/navigation";
 import { memo, useCallback, useEffect, useRef } from "react";
-import { t } from "@/lib/terminology";
+import { t, tHint } from "@/lib/terminology";
 import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
 
-const ADMIN_NAV_IDS = new Set(["admin", "checkin"]);
+const ADMIN_NAV_IDS = new Set(["admin", "checkin", "website-information"]);
 
 function FloatingMobileSidebar() {
   const { getSortedNavItems, isMobile, mobileSidebarOpen, setMobileSidebarOpen } = useAppContext();
@@ -104,7 +104,7 @@ function FloatingMobileSidebar() {
             <div className="px-5 pb-4 border-b border-ink-light/50 flex items-center justify-between shrink-0">
               <div>
                 <h2 className="text-base text-jade-glow font-bold tracking-[0.12em] uppercase">
-                  ⚔ Navigation
+                  ⚔ {t("Navigation", "normal")}
                 </h2>
                 {user && (
                   <p className="text-xs text-mist-light mt-0.5 truncate">{user.name}</p>
@@ -123,10 +123,10 @@ function FloatingMobileSidebar() {
 
             {user && (
               <div className="mx-4 mt-3 mb-2 rounded-xl border border-jade-glow/20 bg-ink-mid/35 px-4 py-3">
-                <p className="text-[10px] uppercase tracking-[0.12em] text-mist-dark mb-1">Body Profile</p>
+                <p className="text-[10px] uppercase tracking-[0.12em] text-mist-dark mb-1">{t("Body Profile", "normal")}</p>
                 <UserPhysiqueButton
                   userId={user.id}
-                  userName="Update Weight & Gender"
+                  userName={t("Update Weight & Gender", "normal")}
                   className="text-sm font-semibold text-jade-light hover:text-jade-glow transition-colors"
                 />
               </div>
@@ -152,7 +152,7 @@ function FloatingMobileSidebar() {
                     style={{ WebkitTapHighlightColor: 'transparent' }}
                   >
                     <span className="text-xl flex-shrink-0 w-8 text-center">{item.icon}</span>
-                    <span className="flex-1 text-left font-medium">{t(item.label, terminologyMode)}</span>
+                    <span className="flex-1 text-left font-medium" title={tHint(item.label, terminologyMode) ?? undefined}>{t(item.label, terminologyMode)}</span>
                     {item.pinned && <span className="text-[10px] text-gold-dim flex-shrink-0">📌</span>}
                     {isActive && (
                       <div className="w-1.5 h-1.5 bg-jade-glow rounded-full flex-shrink-0" />
@@ -163,7 +163,7 @@ function FloatingMobileSidebar() {
 
               {adminItems.length > 0 && (
                 <div className="pt-3 mt-3 border-t border-ink-light/60">
-                  <p className="px-2 pb-2 text-[10px] uppercase tracking-[0.12em] text-gold-dim/85">Admin</p>
+                  <p className="px-2 pb-2 text-[10px] uppercase tracking-[0.12em] text-gold-dim/85">{t("Admin", "normal")}</p>
                   <div className="space-y-1.5">
                     {adminItems.map((item, index) => {
                       const isActive = pathname === item.path || pathname.startsWith(`${item.path}/`);
@@ -183,7 +183,7 @@ function FloatingMobileSidebar() {
                           style={{ WebkitTapHighlightColor: 'transparent' }}
                         >
                           <span className="text-xl flex-shrink-0 w-8 text-center">{item.icon}</span>
-                          <span className="flex-1 text-left font-medium">{t(item.label, terminologyMode)}</span>
+                          <span className="flex-1 text-left font-medium" title={tHint(item.label, terminologyMode) ?? undefined}>{t(item.label, terminologyMode)}</span>
                           {isActive && <div className="w-1.5 h-1.5 bg-gold rounded-full flex-shrink-0" />}
                         </motion.button>
                       );

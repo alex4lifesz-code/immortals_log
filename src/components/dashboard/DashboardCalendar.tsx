@@ -5,6 +5,7 @@ import { useState } from "react";
 import GlowButton from "@/components/ui/GlowButton";
 import { useIsMobile } from "@/context/AppContext";
 import { formatDateWithPreference } from "@/lib/constants";
+import { t } from "@/lib/terminology";
 
 export interface DashboardUser {
   id: string;
@@ -482,11 +483,11 @@ export function Calendar({
       <div className={`pt-3 border-t border-ink-light flex flex-wrap ${compactMode ? "gap-2 text-[10px]" : "gap-3 text-xs"}`}>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded border-2 border-jade-glow bg-jade-deep/30" />
-          <span className="text-mist-mid">Today</span>
+          <span className="text-mist-mid">{t("Today", "normal")}</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm font-bold text-jade-glow">✓</span>
-          <span className="text-mist-mid">Check-In</span>
+          <span className="text-mist-mid">{t("Check-In", "normal")}</span>
         </div>
         <div className="flex items-center gap-1">
           {allUsers.slice(0, compactMode ? 3 : 4).map((u) => (
@@ -499,7 +500,7 @@ export function Calendar({
               ✓
             </span>
           ))}
-          <span className="text-mist-mid ml-0.5">= cultivator</span>
+          <span className="text-mist-mid ml-0.5">= {t("cultivator", "normal")}</span>
         </div>
       </div>
     </div>

@@ -6,7 +6,7 @@ import { useIsMobile, useSortedNavItems } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { useRouter, usePathname } from "next/navigation";
-import { t } from "@/lib/terminology";
+import { t, tHint } from "@/lib/terminology";
 import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
 import { ADMIN_NAV_IDS, ADMIN_NAV_IDS_ORDER, MAIN_NAV_IDS_ORDER, sortNavItemsByIdOrder } from "@/lib/navigation";
 
@@ -59,7 +59,7 @@ function DesktopSidebar({ incomingFriendRequestCount = 0 }: { incomingFriendRequ
                   ? "border-jade-glow/35 bg-jade-deep/50"
                   : "border-ink-light/40 bg-ink-deep/65"
               }`}>{item.icon}</span>
-              <span className="flex-1 text-left text-[11px] font-semibold uppercase tracking-[0.1em] select-none">{t(item.label, terminologyMode)}</span>
+              <span className="flex-1 text-left text-[11px] font-semibold uppercase tracking-[0.1em] select-none" title={tHint(item.label, terminologyMode) ?? undefined}>{t(item.label, terminologyMode)}</span>
               {item.id === "friends" && incomingFriendRequestCount > 0 && (
                 <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-crimson-light text-void-black text-[10px] font-bold flex items-center justify-center">
                   {incomingFriendRequestCount > 99 ? "99+" : incomingFriendRequestCount}
@@ -81,7 +81,7 @@ function DesktopSidebar({ incomingFriendRequestCount = 0 }: { incomingFriendRequ
 
         {adminItems.length > 0 && (
           <div className="mt-4 rounded-xl border border-gold/35 bg-gold/5 p-1.5">
-            <p className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-gold-dim/90">Admin</p>
+            <p className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-gold-dim/90">{t("Admin", "normal")}</p>
             <div className="space-y-1.5">
               {adminItems.map((item) => {
                 const isActive = pathname === item.path || pathname.startsWith(`${item.path}/`);
@@ -100,7 +100,7 @@ function DesktopSidebar({ incomingFriendRequestCount = 0 }: { incomingFriendRequ
                         ? "border-gold/45 bg-gold-dim/22"
                         : "border-ink-light/40 bg-ink-deep/65"
                     }`}>{item.icon}</span>
-                    <span className="flex-1 text-left text-[11px] font-semibold uppercase tracking-[0.1em] select-none">{t(item.label, terminologyMode)}</span>
+                    <span className="flex-1 text-left text-[11px] font-semibold uppercase tracking-[0.1em] select-none" title={tHint(item.label, terminologyMode) ?? undefined}>{t(item.label, terminologyMode)}</span>
                     {isActive && <span className="h-6 w-1 rounded-full bg-gold/85" />}
                   </button>
                 );
@@ -126,10 +126,10 @@ function DesktopSidebar({ incomingFriendRequestCount = 0 }: { incomingFriendRequ
           className="w-full flex items-center gap-2 rounded-xl border border-transparent px-2.5 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-crimson-light/75 transition-all duration-200 hover:border-crimson/35 hover:bg-crimson-deep/20 hover:text-crimson-light"
         >
           <span>🚪</span>
-          <span>Logout</span>
+          <span>{t("Logout", "normal")}</span>
         </button>
         <p className="text-center text-[10px] text-mist-dark">
-          The path of cultivation is long
+          {t("The path of cultivation is long", "normal")}
         </p>
       </div>
       </div>

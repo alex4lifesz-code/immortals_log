@@ -22,6 +22,8 @@ export const ALL_EQUIPMENT: string[] = [
 export interface SimpleExercise {
   id: string;
   name: string;
+  englishName?: string;
+  vietnameseName?: string;
   category: TrainingCategory;
   exerciseType: SimpleExerciseType;
   muscleGroups: MuscleGroup[];

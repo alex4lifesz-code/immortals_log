@@ -4,8 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import PageLayout from "@/components/layout/PageLayout";
 import { useIsMobile } from "@/context/AppContext";
+import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import GlowButton from "@/components/ui/GlowButton";
 import { api } from "@/lib/api-client";
+import { getExerciseDisplayName } from "@/lib/exercise-name";
 import {
   getDefaultExerciseDbOptions,
   type ExerciseDbOptions,
@@ -23,6 +25,8 @@ type RenameState = {
 type ExerciseVariantRow = {
   id: string;
   name: string;
+  englishName?: string;
+  vietnameseName?: string;
   category: string;
   exerciseType: string;
   progression: string[];
@@ -409,6 +413,7 @@ function ExerciseRowLabelEditor({
 export default function ExerciseDbSettingsPage() {
   const router = useRouter();
   const isMobile = useIsMobile();
+  const { settings } = useDisplaySettings();
   const defaults = useMemo(() => getDefaultExerciseDbOptions(), []);
 
   const [categories, setCategories] = useState<string[]>(defaults.categories);
@@ -500,6 +505,19 @@ export default function ExerciseDbSettingsPage() {
     });
   }, [exerciseVariantRows, variantCategoryFilter, variantTypeFilter]);
 
+  const resolveRowDisplayName = useCallback((row: ExerciseVariantRow) => {
+    return getExerciseDisplayName(
+      {
+        name: row.englishName || row.name,
+        wuxiaName: row.vietnameseName || "",
+        englishName: row.englishName,
+        vietnameseName: row.vietnameseName,
+      },
+      settings.terminologyMode,
+      settings.showExerciseForeignLanguage,
+    );
+  }, [settings.terminologyMode, settings.showExerciseForeignLanguage]);
+
   const hasUnsavedChanges = useMemo(() => {
     const listEquals = (a: string[], b: string[]) => {
       if (a.length !== b.length) return false;
@@ -548,6 +566,8 @@ export default function ExerciseDbSettingsPage() {
           (exerciseData.exercises ?? []).map((exercise) => ({
             id: exercise.id,
             name: exercise.name,
+            englishName: exercise.englishName,
+            vietnameseName: exercise.vietnameseName,
             category: exercise.category,
             exerciseType: normalizeTypeLabel(exercise.exerciseType),
             progression: (exercise.progression ?? []).filter(Boolean),
@@ -774,7 +794,7 @@ export default function ExerciseDbSettingsPage() {
                             {row.exerciseType}
                           </span>
                         </div>
-                        <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>{row.name}</p>
+                        <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>{resolveRowDisplayName(row)}</p>
 
                         <div className="rounded border p-2" style={{ borderColor: "var(--border)" }}>
                           <p className="mb-1 text-[10px] font-semibold uppercase" style={{ color: "var(--text-secondary)" }}>Progression</p>
@@ -862,7 +882,7 @@ export default function ExerciseDbSettingsPage() {
                             </span>
                           </td>
                           <td className="px-3 py-2 align-top border-b" style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}>
-                            <div>{row.name}</div>
+                            <div>{resolveRowDisplayName(row)}</div>
                           </td>
                           <td className="px-3 py-2 align-top border-b" style={{ borderColor: "var(--border)", color: "var(--text-secondary)" }}>
                             <ExerciseRowLabelEditor

@@ -7,7 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import Link from "next/link";
-import { t } from "@/lib/terminology";
+import { t, tHint } from "@/lib/terminology";
 import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
 import { ADMIN_NAV_IDS, ADMIN_NAV_IDS_ORDER, DASHBOARD_ROUTES, MAIN_NAV_IDS_ORDER, sortNavItemsByIdOrder } from "@/lib/navigation";
 
@@ -80,7 +80,7 @@ function EternalTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount
             className="flex items-center gap-2 font-bold text-lg text-accent hover:text-accent-hover transition-colors"
           >
             <span className="text-2xl">⚔️</span>
-            <span className="hidden sm:inline">Immortal&apos;s Log</span>
+            <span className="hidden sm:inline">{t("Immortal’s Log", "normal")}</span>
           </motion.button>
 
           {/* Desktop Navigation */}
@@ -98,7 +98,7 @@ function EternalTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount
                         : "text-text-secondary hover:text-text-primary hover:bg-surface-hover"
                     }`}
                   >
-                    {t(item.label, terminologyMode)}
+                    <span title={tHint(item.label, terminologyMode) ?? undefined}>{t(item.label, terminologyMode)}</span>
                   </Link>
                 );
               })}
@@ -115,7 +115,7 @@ function EternalTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount
                       : "text-text-secondary hover:text-text-primary hover:bg-surface-hover"
                   }`}
                 >
-                  More
+                  {t("More", "normal")}
                 </button>
 
                 <AnimatePresence>
@@ -125,6 +125,11 @@ function EternalTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -8 }}
                       className="absolute right-0 mt-2 w-56 bg-surface border border-border rounded-lg shadow-lg"
+                      style={{
+                        maxHeight: "calc(100dvh - 7rem)",
+                        overflowY: "auto",
+                        WebkitOverflowScrolling: "touch",
+                      }}
                     >
                       <div className="p-1">
                         {secondaryItems.map((item) => {
@@ -140,7 +145,7 @@ function EternalTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount
                                   : "text-text-secondary hover:text-text-primary hover:bg-surface-hover"
                               }`}
                             >
-                              {t(item.label, terminologyMode)}
+                              <span title={tHint(item.label, terminologyMode) ?? undefined}>{t(item.label, terminologyMode)}</span>
                             </Link>
                           );
                         })}
@@ -160,7 +165,7 @@ function EternalTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount
                                       : "text-text-secondary hover:text-text-primary hover:bg-surface-hover"
                                   }`}
                                 >
-                                  {t(item.label, terminologyMode)}
+                                  <span title={tHint(item.label, terminologyMode) ?? undefined}>{t(item.label, terminologyMode)}</span>
                                 </Link>
                               );
                             })}
@@ -178,7 +183,7 @@ function EternalTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount
           <div className="flex items-center gap-3">
             {isAdmin && (
               <span className="hidden sm:inline px-2 py-1 rounded-full border border-accent/40 text-xs uppercase tracking-wide text-accent font-semibold">
-                Admin
+                {t("Admin", "normal")}
               </span>
             )}
 
@@ -224,7 +229,7 @@ function EternalTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount
                                   : "text-text-secondary hover:text-text-primary hover:bg-surface-hover"
                               }`}
                             >
-                              {t(item.label, terminologyMode)}
+                              <span title={tHint(item.label, terminologyMode) ?? undefined}>{t(item.label, terminologyMode)}</span>
                             </Link>
                           );
                         })}
@@ -243,7 +248,7 @@ function EternalTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount
                                       : "text-text-secondary hover:text-text-primary hover:bg-surface-hover"
                                   }`}
                                 >
-                                  {t(item.label, terminologyMode)}
+                                  <span title={tHint(item.label, terminologyMode) ?? undefined}>{t(item.label, terminologyMode)}</span>
                                 </Link>
                               );
                             })}
@@ -258,7 +263,7 @@ function EternalTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount
                       }}
                       className="w-full text-left px-4 py-2 text-sm text-danger hover:bg-danger/10 rounded-b-lg border-t border-border"
                     >
-                      Sign Out
+                      {t("Sign Out", "normal")}
                     </button>
                   </motion.div>
                 )}
