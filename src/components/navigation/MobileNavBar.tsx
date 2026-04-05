@@ -496,6 +496,7 @@ function MobileNavBar({ incomingFriendRequestCount = 0 }: { incomingFriendReques
 
         {/* ── Main Bottom Navigation Bar ── */}
         <nav
+          data-mobile-bottom-nav="true"
           className="relative bg-ink-deep/95 backdrop-blur-lg border-t border-jade-glow/8 flex items-end justify-around px-1 pb-1 safe-area-bottom"
         >
           {/* Glow accent line */}

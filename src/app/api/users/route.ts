@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { withAuth } from "@/lib/auth/middleware";
 import { validatePassword, validateUsername } from "@/lib/validation";
 import { CONFIG } from "@/lib/config";
+import { generateUniqueImmortalFriendCode } from "@/lib/friend-code";
 
 export const GET = withAuth(async (_request, { auth }) => {
   try {
@@ -116,6 +117,7 @@ export const POST = withAuth(async (request, { auth }) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, CONFIG.auth.bcryptRounds);
+    const friendCode = await generateUniqueImmortalFriendCode();
 
     const user = await prisma.user.create({
       data: {
@@ -123,6 +125,7 @@ export const POST = withAuth(async (request, { auth }) => {
         password: hashedPassword,
         name,
         role: "user",
+        friendCode,
       },
       select: {
         id: true,

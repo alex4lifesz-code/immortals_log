@@ -13,14 +13,26 @@ export default function MobileCollapsibleSection({ title, defaultOpen = false, c
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <section className="overflow-hidden rounded-xl border border-border bg-ink-deep">
+    <section className="mobile-card-polish overflow-hidden rounded-xl border border-border bg-ink-deep">
       <button className="flex min-h-12 w-full items-center justify-between px-4 py-3 text-left" onClick={() => setOpen((v) => !v)}>
         <span className="text-sm font-semibold text-cloud-white">{title}</span>
-        <span className="text-mist-light">{open ? "-" : "+"}</span>
+        <motion.span
+          className="text-mist-light"
+          animate={{ rotate: open ? 45 : 0, scale: open ? 1.08 : 1 }}
+          transition={{ type: "spring", stiffness: 360, damping: 24 }}
+        >
+          +
+        </motion.span>
       </button>
       <AnimatePresence initial={false}>
         {open && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="px-4 pb-4">
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
+            className="px-4 pb-4"
+          >
             {children}
           </motion.div>
         )}

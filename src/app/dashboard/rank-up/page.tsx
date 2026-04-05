@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import PageLayout from "@/components/layout/PageLayout";
 import { useIsMobile } from "@/context/AppContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
@@ -408,9 +409,17 @@ export default function RankUpPage() {
                   </div>
                 </button>
 
-                {isExpanded && (
-                  isMobile ? (
-                    <div className="space-y-2 p-2">
+                <AnimatePresence initial={false}>
+                  {isExpanded ? (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+                      style={{ overflow: "hidden" }}
+                    >
+                      {isMobile ? (
+                        <div className="space-y-2 p-2">
                       {skill.tierNames.map((tierName, index) => {
                         const stat = skill.tierStats[index];
                         const showKey = `show-${skill.id}-${index}`;
@@ -506,10 +515,10 @@ export default function RankUpPage() {
                           </div>
                         );
                       })}
-                    </div>
-                  ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
+                        </div>
+                      ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs">
                       <thead>
                         <tr>
                           <th className="px-2 py-1.5 text-left">Tier</th>
@@ -632,10 +641,12 @@ export default function RankUpPage() {
                           );
                         })}
                       </tbody>
-                    </table>
-                  </div>
-                  )
-                )}
+                        </table>
+                      </div>
+                      )}
+                    </motion.div>
+                  ) : null}
+                </AnimatePresence>
               </div>
             );
           })}

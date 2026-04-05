@@ -9,7 +9,7 @@ export default function MobileProfilePage() {
   return (
     <div>
       <MobileHeader title="Profile & Settings" />
-      <section className="space-y-4 p-4">
+      <section className="mobile-content-stack space-y-4 p-4">
         <MobileCard>
           <h2 className="text-base font-semibold text-cloud-white">Preferences</h2>
           <p className="mt-1 text-sm text-mist-light">Theme, handedness, and behaviour settings optimised for one-handed use.</p>

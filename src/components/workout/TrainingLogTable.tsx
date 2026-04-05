@@ -691,6 +691,7 @@ function TrainingLogTable({
   const [exerciseHighlightIndex, setExerciseHighlightIndex] = useState(-1);
   const [mobileTextPreview, setMobileTextPreview] = useState<{ label: string; value: string } | null>(null);
   const [mobileInputPicker, setMobileInputPicker] = useState<MobileInputPickerState | null>(null);
+  const [mobilePickerCanScrollDown, setMobilePickerCanScrollDown] = useState(false);
   const modifierWheelScrollRef = useRef<HTMLDivElement | null>(null);
   const exerciseSearchWrapRef = useRef<HTMLDivElement | null>(null);
   const exerciseInputRef = useRef<HTMLInputElement | null>(null);
@@ -858,7 +859,11 @@ function TrainingLogTable({
 
       // Keep the table body inside the viewport so the card bottom remains visible.
       const rect = el.getBoundingClientRect();
-      const bottomGap = isMobile ? 10 : 14;
+      const mobileBottomNav = isMobile
+        ? document.querySelector<HTMLElement>("[data-mobile-bottom-nav='true']")
+        : null;
+      const navHeight = mobileBottomNav ? Math.ceil(mobileBottomNav.getBoundingClientRect().height) : 0;
+      const bottomGap = isMobile ? Math.max(8, navHeight + 6) : 14;
       const minHeight = isMobile ? 220 : 260;
       const available = Math.floor(window.innerHeight - rect.top - bottomGap);
       setTableViewportHeight(Math.max(minHeight, available));
@@ -1475,6 +1480,33 @@ function TrainingLogTable({
       window.clearTimeout(timeoutId);
     };
   }, [mobileInputPicker, mobileInputPickerOptions, mobileInputPickerCurrentValue]);
+
+  useEffect(() => {
+    if (!mobileInputPicker) {
+      setMobilePickerCanScrollDown(false);
+      return;
+    }
+    const scroller = modifierWheelScrollRef.current;
+    if (!scroller) return;
+
+    const updateScrollHints = () => {
+      const canScrollDown = scroller.scrollTop + scroller.clientHeight < scroller.scrollHeight - 4;
+      setMobilePickerCanScrollDown(canScrollDown);
+    };
+
+    updateScrollHints();
+    const rafId = window.requestAnimationFrame(updateScrollHints);
+    const timeoutId = window.setTimeout(updateScrollHints, 120);
+    scroller.addEventListener("scroll", updateScrollHints, { passive: true });
+    window.addEventListener("resize", updateScrollHints);
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      window.clearTimeout(timeoutId);
+      scroller.removeEventListener("scroll", updateScrollHints);
+      window.removeEventListener("resize", updateScrollHints);
+    };
+  }, [mobileInputPicker, mobileInputPickerOptions]);
 
   useEffect(() => {
     if (!selectedInputExercise) return;
@@ -4217,7 +4249,7 @@ function TrainingLogTable({
           type="button"
           aria-label={t("Open training log input", "normal")}
           onClick={() => router.push(`/dashboard/train/input/${Date.now()}`)}
-          className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+5rem)] right-4 z-[70] h-14 w-14 rounded-full border text-3xl leading-none shadow-lg transition-transform duration-150 active:scale-95"
+          className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+4rem)] right-4 z-[70] h-14 w-14 rounded-full border text-3xl leading-none shadow-lg transition-transform duration-150 active:scale-95"
           style={{
             borderColor: "var(--accent)",
             color: "var(--cloud-white)",
@@ -4344,10 +4376,10 @@ function TrainingLogTable({
                   onClick={() => setMobileInputPicker(null)}
                 />
                 <motion.div
-                  initial={{ opacity: 0, y: 24 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 24 }}
-                  className="fixed left-1/2 bottom-0 z-[96] max-h-[72vh] w-[min(82vw,32rem)] -translate-x-1/2 overflow-hidden rounded-none border"
+                  initial={{ opacity: 0, y: 16, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 16, scale: 0.98 }}
+                  className="fixed left-1/2 top-1/2 z-[96] max-h-[72vh] w-[min(82vw,30rem)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-none border"
                   style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)", boxShadow: "var(--shadow-elev-2)" }}
                   onClick={(event) => event.stopPropagation()}
                 >
@@ -4365,9 +4397,9 @@ function TrainingLogTable({
                     </button>
                   </div>
 
-                  <div className="relative p-2">
+                  <div className="relative px-3 pb-3 pt-2">
                     <div
-                      className="pointer-events-none absolute left-2 right-2 top-1/2 h-11 -translate-y-1/2 border"
+                      className="pointer-events-none absolute left-3 right-3 top-1/2 h-11 -translate-y-1/2 border"
                       style={{ borderColor: "var(--accent)", backgroundColor: "color-mix(in srgb, var(--accent) 10%, transparent)" }}
                     />
                     <div
@@ -4404,6 +4436,26 @@ function TrainingLogTable({
                         );
                       })}
                     </div>
+                    {mobilePickerCanScrollDown && (
+                      <>
+                        <div
+                          className="pointer-events-none absolute bottom-3 left-3 right-3 h-10"
+                          style={{
+                            background: "linear-gradient(to bottom, color-mix(in srgb, var(--surface) 0%, transparent), color-mix(in srgb, var(--surface) 92%, transparent))",
+                          }}
+                        />
+                        <motion.div
+                          className="pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2"
+                          animate={{ y: [0, 4, 0], opacity: [0.65, 1, 0.65] }}
+                          transition={{ duration: 1.15, ease: "easeInOut", repeat: Infinity }}
+                          style={{ color: "var(--text-secondary)" }}
+                        >
+                          <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden>
+                            <path d="M5 8l5 5 5-5" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </motion.div>
+                      </>
+                    )}
                   </div>
                 </motion.div>
               </>

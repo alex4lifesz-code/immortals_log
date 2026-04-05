@@ -361,14 +361,16 @@ export default function FriendsPage() {
                 <input
                   type="text"
                   value={friendCodeInput}
-                  onChange={(event) => setFriendCodeInput(event.target.value)}
-                  placeholder="Enter friend's ID"
+                  onChange={(event) => setFriendCodeInput(event.target.value.toLowerCase())}
+                  placeholder="Enter friend's ID (e.g. immortal1234)"
                   className="flex-1 bg-ink-deep border border-ink-light rounded px-2.5 py-1.5 text-xs text-cloud-white placeholder-mist-dark outline-none focus:border-jade-glow transition-colors"
                 />
                 <GlowButton variant="jade" size="sm" disabled={working} onClick={sendFriendRequest}>
                   Send Request
                 </GlowButton>
               </div>
+
+              <p className="text-[10px] text-mist-dark">Friend IDs now use the format immortal + 4 digits.</p>
 
               {addFriendMessage && (
                 <p className="text-xs text-mist-light">{addFriendMessage}</p>

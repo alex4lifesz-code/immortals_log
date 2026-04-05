@@ -2,11 +2,21 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 import { FRIEND_STATUS, getAcceptedFriendIds, getFriendRequestBetweenUsers, isMissingFriendSchemaError } from "@/lib/friends";
+import { generateUniqueImmortalFriendCode, isImmortalFriendCode, normalizeFriendCode } from "@/lib/friend-code";
+
+const IMMORTAL_FRIEND_CODE_FORMAT_EXAMPLE = "immortal1234";
 
 function sanitizeAction(action: unknown): "accept" | "reject" {
   return action === "accept" ? "accept" : "reject";
 }
 
+function isUniqueConstraintError(error: unknown): boolean {
+  const maybeCode = typeof error === "object" && error !== null && "code" in error
+    ? (error as { code?: unknown }).code
+    : undefined;
+
+  return maybeCode === "P2002";
+}
 async function getShareableIdentity(userId: string) {
   try {
     const current = await prisma.user.findUnique({
@@ -18,17 +28,39 @@ async function getShareableIdentity(userId: string) {
       return { id: userId, friendCode: userId };
     }
 
-    if (current.friendCode && current.friendCode.trim().length > 0) {
-      return { id: current.id, friendCode: current.friendCode };
+    const normalizedCurrentFriendCode = normalizeFriendCode(current.friendCode);
+    if (isImmortalFriendCode(normalizedCurrentFriendCode)) {
+      if (current.friendCode !== normalizedCurrentFriendCode) {
+        const normalized = await prisma.user.update({
+          where: { id: userId },
+          data: { friendCode: normalizedCurrentFriendCode },
+          select: { id: true, friendCode: true },
+        });
+        return { id: normalized.id, friendCode: normalized.friendCode || normalizedCurrentFriendCode };
+      }
+
+      return { id: current.id, friendCode: normalizedCurrentFriendCode };
     }
 
-    const updated = await prisma.user.update({
-      where: { id: userId },
-      data: { friendCode: userId },
-      select: { id: true, friendCode: true },
-    });
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      const nextFriendCode = await generateUniqueImmortalFriendCode();
+      try {
+        const updated = await prisma.user.update({
+          where: { id: userId },
+          data: { friendCode: nextFriendCode },
+          select: { id: true, friendCode: true },
+        });
 
-    return { id: updated.id, friendCode: updated.friendCode || updated.id };
+        return { id: updated.id, friendCode: updated.friendCode || nextFriendCode };
+      } catch (error) {
+        if (isUniqueConstraintError(error)) {
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    throw new Error("Unable to assign a unique friend code");
   } catch (error) {
     if (isMissingFriendSchemaError(error)) {
       return { id: userId, friendCode: userId };
@@ -38,13 +70,15 @@ async function getShareableIdentity(userId: string) {
 }
 
 async function findTargetUserId(identifier: string) {
+  const normalizedIdentifier = normalizeFriendCode(identifier);
+  if (!isImmortalFriendCode(normalizedIdentifier)) {
+    return null;
+  }
+
   try {
     const user = await prisma.user.findFirst({
       where: {
-        OR: [
-          { friendCode: identifier },
-          { id: identifier },
-        ],
+        friendCode: normalizedIdentifier,
       },
       select: { id: true },
     });
@@ -132,10 +166,17 @@ export const GET = withAuth(async (_request, { auth }) => {
 export const POST = withAuth(async (request, { auth }) => {
   try {
     const { toUserId, friendCode } = await request.json();
-    const normalizedFriendCode = typeof friendCode === "string" ? friendCode.trim() : "";
+    const normalizedFriendCode = normalizeFriendCode(friendCode);
 
     if ((!toUserId || typeof toUserId !== "string") && !normalizedFriendCode) {
       return NextResponse.json({ error: "friendCode is required" }, { status: 400 });
+    }
+
+    if (!toUserId && normalizedFriendCode && !isImmortalFriendCode(normalizedFriendCode)) {
+      return NextResponse.json(
+        { error: `Friend ID format is invalid. Use ${IMMORTAL_FRIEND_CODE_FORMAT_EXAMPLE}.` },
+        { status: 400 },
+      );
     }
 
     let targetUserId = typeof toUserId === "string" ? toUserId : "";

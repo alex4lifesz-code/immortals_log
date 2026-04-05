@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import PageLayout from "@/components/layout/PageLayout";
 import { useAppContext } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
@@ -33,21 +34,26 @@ const DATE_OPTIONS: Array<{ value: DateFormatOption; label: string; sample: stri
   { value: "dd-mmm-yy", label: "DD-MMM-YY", sample: "24-Feb-26" },
 ];
 
-function PanelTitle({ text, languageMode, learningEnabled }: { text: string; languageMode: LanguageMode; learningEnabled: boolean }) {
-  return (
-    <div
-      className="px-3 py-2 border-b"
-      style={{
-        borderColor: "var(--nyaa-table-grid)",
-        backgroundColor: "var(--nyaa-table-head-bg)",
-      }}
-    >
-      <p className="text-xs font-bold" style={{ color: "var(--nyaa-table-head-text)" }}>
-        <LearningText text={text} languageMode={languageMode} enabled={learningEnabled} />
-      </p>
-    </div>
-  );
-}
+type SettingsSectionKey =
+  | "summary"
+  | "theme"
+  | "dateFormat"
+  | "terminology"
+  | "language"
+  | "exerciseLanguage"
+  | "weightUnit"
+  | "variationLabels";
+
+const DEFAULT_SECTION_STATE: Record<SettingsSectionKey, boolean> = {
+  summary: false,
+  theme: false,
+  dateFormat: false,
+  terminology: false,
+  language: false,
+  exerciseLanguage: false,
+  weightUnit: false,
+  variationLabels: false,
+};
 
 function OptionButton({
   active,
@@ -87,6 +93,64 @@ function OptionButton({
   );
 }
 
+function CollapsiblePanel({
+  sectionKey,
+  title,
+  open,
+  onToggle,
+  languageMode,
+  learningEnabled,
+  children,
+}: {
+  sectionKey: SettingsSectionKey;
+  title: string;
+  open: boolean;
+  onToggle: (sectionKey: SettingsSectionKey) => void;
+  languageMode: LanguageMode;
+  learningEnabled: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
+      <button
+        type="button"
+        onClick={() => onToggle(sectionKey)}
+        className="w-full text-left"
+        aria-expanded={open}
+      >
+        <div
+          className="px-3 py-2 border-b flex items-center justify-between"
+          style={{
+            borderColor: "var(--nyaa-table-grid)",
+            backgroundColor: "var(--nyaa-table-head-bg)",
+          }}
+        >
+          <p className="text-xs font-bold" style={{ color: "var(--nyaa-table-head-text)" }}>
+            <LearningText text={title} languageMode={languageMode} enabled={learningEnabled} />
+          </p>
+          <span className="text-xs font-bold" style={{ color: "var(--nyaa-table-head-text)" }}>
+            {open ? "-" : "+"}
+          </span>
+        </div>
+      </button>
+
+      <AnimatePresence initial={false}>
+        {open ? (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+            style={{ overflow: "hidden" }}
+          >
+            {children}
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const { logout, user } = useAuth();
   const { themeStyle, setThemeStyle } = useAppContext();
@@ -96,6 +160,43 @@ export default function SettingsPage() {
     () => THEME_OPTIONS.find((theme) => theme.value === themeStyle)?.label ?? themeStyle,
     [themeStyle],
   );
+  const [openSections, setOpenSections] = useState(DEFAULT_SECTION_STATE);
+  const [exerciseLanguageAutoSelectedNotice, setExerciseLanguageAutoSelectedNotice] = useState("");
+
+  const toggleSection = (sectionKey: SettingsSectionKey) => {
+    setOpenSections((prev) => ({
+      ...prev,
+      [sectionKey]: !prev[sectionKey],
+    }));
+  };
+
+  const handleLanguageModeChange = (nextLanguageMode: LanguageMode) => {
+    if (nextLanguageMode === "vietnamese") {
+      const shouldAutoEnableExerciseLanguage = !settings.showExerciseForeignLanguage;
+
+      updateSettings({
+        languageMode: "vietnamese",
+        showExerciseForeignLanguage: true,
+      });
+
+      setOpenSections((prev) => ({
+        ...prev,
+        exerciseLanguage: true,
+      }));
+
+      setExerciseLanguageAutoSelectedNotice(
+        shouldAutoEnableExerciseLanguage
+          ? "Exercise language was auto-selected for Vietnamese UI."
+          : "Exercise language remains enabled for Vietnamese UI.",
+      );
+
+      return;
+    }
+
+    updateSettings({ languageMode: nextLanguageMode });
+    setExerciseLanguageAutoSelectedNotice("");
+  };
+
   const languageMode = settings.languageMode ?? "english";
   const learningEnabled = settings.terminologyMode === "normal";
 
@@ -106,8 +207,14 @@ export default function SettingsPage() {
       mobileContentPaddingClass="p-2 pb-24"
     >
       <div className="nyaa-history-page space-y-2 px-0 py-2 sm:py-3">
-        <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-          <PanelTitle text="Settings Summary" languageMode={languageMode} learningEnabled={learningEnabled} />
+        <CollapsiblePanel
+          sectionKey="summary"
+          title="Settings Summary"
+          open={openSections.summary}
+          onToggle={toggleSection}
+          languageMode={languageMode}
+          learningEnabled={learningEnabled}
+        >
           <table className="w-full text-[11px] border-collapse" style={{ backgroundColor: "var(--surface)" }}>
             <tbody>
               <tr>
@@ -170,10 +277,16 @@ export default function SettingsPage() {
               </tr>
             </tbody>
           </table>
-        </div>
+        </CollapsiblePanel>
 
-        <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-          <PanelTitle text="Theme" languageMode={languageMode} learningEnabled={learningEnabled} />
+        <CollapsiblePanel
+          sectionKey="theme"
+          title="Theme"
+          open={openSections.theme}
+          onToggle={toggleSection}
+          languageMode={languageMode}
+          learningEnabled={learningEnabled}
+        >
           <div className="grid gap-1.5 p-2 sm:grid-cols-2 lg:grid-cols-3" style={{ backgroundColor: "var(--surface)" }}>
             {THEME_OPTIONS.map((theme) => (
               <OptionButton
@@ -187,11 +300,17 @@ export default function SettingsPage() {
               />
             ))}
           </div>
-        </div>
+        </CollapsiblePanel>
 
         <div className="grid gap-2 lg:grid-cols-2">
-          <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-            <PanelTitle text="Date Format" languageMode={languageMode} learningEnabled={learningEnabled} />
+          <CollapsiblePanel
+            sectionKey="dateFormat"
+            title="Date Format"
+            open={openSections.dateFormat}
+            onToggle={toggleSection}
+            languageMode={languageMode}
+            learningEnabled={learningEnabled}
+          >
             <div className="grid gap-1.5 p-2" style={{ backgroundColor: "var(--surface)" }}>
               {DATE_OPTIONS.map((option) => (
                 <OptionButton
@@ -205,10 +324,16 @@ export default function SettingsPage() {
                 />
               ))}
             </div>
-          </div>
+          </CollapsiblePanel>
 
-          <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-            <PanelTitle text="Terminology" languageMode={languageMode} learningEnabled={learningEnabled} />
+          <CollapsiblePanel
+            sectionKey="terminology"
+            title="Terminology"
+            open={openSections.terminology}
+            onToggle={toggleSection}
+            languageMode={languageMode}
+            learningEnabled={learningEnabled}
+          >
             <div className="grid gap-1.5 p-2" style={{ backgroundColor: "var(--surface)" }}>
               <OptionButton
                 active={settings.terminologyMode === "fantasy"}
@@ -227,17 +352,23 @@ export default function SettingsPage() {
                 learningEnabled={learningEnabled}
               />
             </div>
-          </div>
+          </CollapsiblePanel>
         </div>
 
-        <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-          <PanelTitle text="Language" languageMode={languageMode} learningEnabled={learningEnabled} />
+        <CollapsiblePanel
+          sectionKey="language"
+          title="Language"
+          open={openSections.language}
+          onToggle={toggleSection}
+          languageMode={languageMode}
+          learningEnabled={learningEnabled}
+        >
           <div className="grid gap-1.5 p-2 sm:grid-cols-2" style={{ backgroundColor: "var(--surface)" }}>
             <OptionButton
               active={languageMode === "english"}
               title="English"
               subtitle="UI in English"
-              onClick={() => updateSettings({ languageMode: "english" })}
+              onClick={() => handleLanguageModeChange("english")}
               languageMode={languageMode}
               learningEnabled={learningEnabled}
             />
@@ -245,15 +376,21 @@ export default function SettingsPage() {
               active={languageMode === "vietnamese"}
               title="Vietnamese"
               subtitle="UI in Vietnamese"
-              onClick={() => updateSettings({ languageMode: "vietnamese" })}
+              onClick={() => handleLanguageModeChange("vietnamese")}
               languageMode={languageMode}
               learningEnabled={learningEnabled}
             />
           </div>
-        </div>
+        </CollapsiblePanel>
 
-        <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-          <PanelTitle text="Exercise Language" languageMode={languageMode} learningEnabled={learningEnabled} />
+        <CollapsiblePanel
+          sectionKey="exerciseLanguage"
+          title="Exercise Language"
+          open={openSections.exerciseLanguage}
+          onToggle={toggleSection}
+          languageMode={languageMode}
+          learningEnabled={learningEnabled}
+        >
           <div className="grid gap-1.5 p-2 sm:grid-cols-2" style={{ backgroundColor: "var(--surface)" }}>
             <OptionButton
               active={settings.showExerciseForeignLanguage}
@@ -272,11 +409,25 @@ export default function SettingsPage() {
               learningEnabled={learningEnabled}
             />
           </div>
-        </div>
+          {exerciseLanguageAutoSelectedNotice ? (
+            <p
+              className="px-2 pb-2 text-[11px]"
+              style={{ color: "var(--accent)" }}
+            >
+              <LearningText text={exerciseLanguageAutoSelectedNotice} languageMode={languageMode} enabled={learningEnabled} />
+            </p>
+          ) : null}
+        </CollapsiblePanel>
 
         <div className="grid gap-2 lg:grid-cols-2">
-          <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-            <PanelTitle text="Weight Unit" languageMode={languageMode} learningEnabled={learningEnabled} />
+          <CollapsiblePanel
+            sectionKey="weightUnit"
+            title="Weight Unit"
+            open={openSections.weightUnit}
+            onToggle={toggleSection}
+            languageMode={languageMode}
+            learningEnabled={learningEnabled}
+          >
             <div className="grid gap-1.5 p-2" style={{ backgroundColor: "var(--surface)" }}>
               {([
                 { value: "kg" as WeightUnitPref, title: "Kilograms (kg)" },
@@ -292,10 +443,16 @@ export default function SettingsPage() {
                 />
               ))}
             </div>
-          </div>
+          </CollapsiblePanel>
 
-          <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-            <PanelTitle text="Variation Labels" languageMode={languageMode} learningEnabled={learningEnabled} />
+          <CollapsiblePanel
+            sectionKey="variationLabels"
+            title="Variation Labels"
+            open={openSections.variationLabels}
+            onToggle={toggleSection}
+            languageMode={languageMode}
+            learningEnabled={learningEnabled}
+          >
             <div className="grid gap-1.5 p-2" style={{ backgroundColor: "var(--surface)" }}>
               {([
                 { value: "abbreviation" as VariationDisplayMode, title: "Abbreviated", subtitle: "Short labels" },
@@ -312,11 +469,21 @@ export default function SettingsPage() {
                 />
               ))}
             </div>
-          </div>
+          </CollapsiblePanel>
         </div>
 
         <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-          <PanelTitle text="Actions" languageMode={languageMode} learningEnabled={learningEnabled} />
+          <div
+            className="px-3 py-2 border-b"
+            style={{
+              borderColor: "var(--nyaa-table-grid)",
+              backgroundColor: "var(--nyaa-table-head-bg)",
+            }}
+          >
+            <p className="text-xs font-bold" style={{ color: "var(--nyaa-table-head-text)" }}>
+              <LearningText text="Actions" languageMode={languageMode} enabled={learningEnabled} />
+            </p>
+          </div>
           <div className="grid gap-1.5 p-2 sm:grid-cols-2" style={{ backgroundColor: "var(--surface)" }}>
             <button
               type="button"

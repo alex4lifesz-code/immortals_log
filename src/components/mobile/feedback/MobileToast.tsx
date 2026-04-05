@@ -20,9 +20,10 @@ export default function MobileToast({ open, message, tone = "neutral" }: MobileT
     <AnimatePresence>
       {open && (
         <motion.div
-          initial={{ y: 14, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 10, opacity: 0 }}
+          initial={{ y: 16, opacity: 0, scale: 0.98 }}
+          animate={{ y: 0, opacity: 1, scale: 1 }}
+          exit={{ y: 12, opacity: 0, scale: 0.98 }}
+          transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
           className={`fixed bottom-24 left-1/2 z-[70] w-[88%] -translate-x-1/2 rounded-xl border bg-ink-dark/95 px-4 py-3 text-sm shadow-[0_10px_30px_rgba(0,0,0,0.35)] ${toneClass}`}
         >
           {message}

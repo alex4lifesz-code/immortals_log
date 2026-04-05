@@ -35,7 +35,7 @@ export default function MobileTrainingPage() {
   return (
     <div>
       <MobileHeader title="Training Grounds" />
-      <section className="space-y-3 p-4">
+      <section className="mobile-content-stack space-y-3 p-4">
         <MobileCard>
           <h2 className="text-base font-semibold text-cloud-white">Technique List</h2>
           <p className="mt-1 text-sm text-mist-light">Swipe right to mark complete, swipe left for secondary actions.</p>

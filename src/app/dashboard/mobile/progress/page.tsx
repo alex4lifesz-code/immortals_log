@@ -43,7 +43,7 @@ export default function MobileProgressPage() {
   return (
     <div>
       <MobileHeader title="Progress" />
-      <section className="space-y-4 p-4">
+      <section className="mobile-content-stack space-y-4 p-4">
         <MobileSegmentedControl
           value={range}
           onChange={setRange}

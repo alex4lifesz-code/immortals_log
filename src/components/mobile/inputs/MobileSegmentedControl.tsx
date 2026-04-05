@@ -14,7 +14,7 @@ interface MobileSegmentedControlProps<T extends string> {
 export default function MobileSegmentedControl<T extends string>({ value, options, onChange }: MobileSegmentedControlProps<T>) {
   return (
     <div
-      className="grid gap-2 rounded-xl border border-border bg-ink-dark p-1"
+      className="mobile-card-polish grid gap-2 rounded-xl border border-border bg-ink-dark p-1"
       style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
     >
       {options.map((option) => {
@@ -23,7 +23,7 @@ export default function MobileSegmentedControl<T extends string>({ value, option
           <button
             key={option.value}
             onClick={() => onChange(option.value)}
-            className={`min-h-12 rounded-lg px-3 text-sm font-medium transition-colors ${active ? "bg-jade text-cloud-white" : "text-mist-light"}`}
+            className={`mobile-tab-polish min-h-12 rounded-lg border px-3 text-sm font-medium transition-colors ${active ? "is-active border-jade-glow bg-jade text-cloud-white" : "border-transparent text-mist-light"}`}
           >
             {option.label}
           </button>

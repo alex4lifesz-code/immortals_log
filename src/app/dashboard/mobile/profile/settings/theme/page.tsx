@@ -8,7 +8,7 @@ export default function MobileThemeSettingsPage() {
   return (
     <div>
       <MobileHeader title="Theme Styles" />
-      <section className="space-y-4 p-4">
+      <section className="mobile-content-stack space-y-4 p-4">
         <MobileCard>
           <h2 className="text-base font-semibold text-cloud-white">Choose Theme</h2>
           <p className="mt-1 text-sm text-mist-light">Reuses shared theme preference and sync logic from AppContext.</p>

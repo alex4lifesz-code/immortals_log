@@ -659,6 +659,25 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
+/* Keep native calendar icons readable across dark/light theme variants. */
+input[type="date"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="week"] {
+  padding-inline-end: 2rem;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="month"]::-webkit-calendar-picker-indicator,
+input[type="week"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.96;
+  filter:
+    drop-shadow(0 0 1px color-mix(in srgb, var(--text-primary) 82%, transparent))
+    drop-shadow(0 0 1px color-mix(in srgb, var(--surface) 90%, transparent));
+}
+
 /* ===== Mobile Safe Area & Responsive Utilities ===== */
 
 .safe-area-shell {

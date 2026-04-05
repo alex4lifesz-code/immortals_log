@@ -60,7 +60,7 @@ export default function MobileDashboardPage() {
   return (
     <div>
       <MobileHeader title="Cultivation Dashboard" />
-      <section className="space-y-4 p-4">
+      <section className="mobile-content-stack space-y-4 p-4">
         {loading ? (
           <MobileLoadingSkeleton />
         ) : (

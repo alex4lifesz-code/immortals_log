@@ -133,9 +133,9 @@ export default function HistoryPage() {
     <PageLayout
       title="Train"
       subtitle={subtitle}
-      mobileContentPaddingClass="p-2 pb-24"
+      mobileContentPaddingClass="p-2 pb-2"
     >
-      <div className="nyaa-history-page space-y-2 px-0 py-2 sm:py-3">
+      <div className="nyaa-history-page min-h-0 space-y-2 px-0 py-2 sm:py-3">
         {loading ? (
           <div className="rounded-lg border p-6 text-center text-sm" style={{ borderColor: "var(--border)", color: "var(--text-muted)", background: "var(--surface)" }}>
             Loading history...

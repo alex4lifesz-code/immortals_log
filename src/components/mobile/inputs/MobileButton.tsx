@@ -32,8 +32,10 @@ export default function MobileButton({
 
   return (
     <motion.button
+      whileHover={{ scale: 1.01 }}
       whileTap={{ scale: 0.95 }}
-      className={`min-h-12 rounded-xl border px-4 py-3 text-sm font-semibold transition-colors ${variantClass} ${className}`}
+      transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+      className={`mobile-card-polish min-h-12 rounded-xl border px-4 py-3 text-sm font-semibold transition-colors ${variantClass} ${className}`}
       {...(props as any)}
     >
       {children}

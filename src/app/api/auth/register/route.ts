@@ -6,6 +6,7 @@ import { registerLimiter } from "@/lib/auth/rate-limiters";
 import { getClientIdentifier } from "@/lib/rate-limit";
 import { validatePassword, validateUsername } from "@/lib/validation";
 import { CONFIG } from "@/lib/config";
+import { generateUniqueImmortalFriendCode } from "@/lib/friend-code";
 
 export async function POST(req: NextRequest) {
   try {
@@ -95,6 +96,7 @@ export async function POST(req: NextRequest) {
     // Check if this is the first user — assign admin role
     const userCount = await prisma.user.count();
     const role = userCount === 0 ? "admin" : "user";
+    const friendCode = await generateUniqueImmortalFriendCode();
 
     const user = await prisma.user.create({
       data: {
@@ -102,6 +104,7 @@ export async function POST(req: NextRequest) {
         password: hashedPassword,
         name: trimmedName,
         role,
+        friendCode,
       },
     });
 
