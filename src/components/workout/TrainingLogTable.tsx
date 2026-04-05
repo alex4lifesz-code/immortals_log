@@ -583,6 +583,7 @@ function TrainingLogTable({
   onRefresh,
   userId,
   historyTargetUserId,
+  historyTargetUserName,
   hideInputSection,
   disableExerciseLinks,
   prefillExerciseId,
@@ -598,6 +599,7 @@ function TrainingLogTable({
   onRefresh: () => void;
   userId: string;
   historyTargetUserId?: string;
+  historyTargetUserName?: string;
   hideInputSection?: boolean;
   disableExerciseLinks?: boolean;
   prefillExerciseId?: string | null;
@@ -659,6 +661,9 @@ function TrainingLogTable({
   const isViewingAnotherUser = Boolean(historyTargetUserId && historyTargetUserId !== userId);
   const canEditTrainingLogs = !isViewingAnotherUser;
   const shouldDisableInputSection = Boolean(hideInputSection) || isViewingAnotherUser;
+  const trainingLogTitle = isViewingAnotherUser && historyTargetUserName?.trim().length
+    ? `${historyTargetUserName.trim()} ${t("Training Log", "normal")}`
+    : t("Training Log", "normal");
   const tableModeStorageKey = `training-log-table-mode:${resolvedUserId}`;
   const workoutInputStorageKey = `training-log-workout-input:${resolvedUserId}`;
   const sortStorageKey = `${TRAINING_LOG_SORT_STORAGE_KEY_PREFIX}:${resolvedUserId}`;
@@ -2244,7 +2249,7 @@ function TrainingLogTable({
   return (
     <>
       <div className="w-full">
-        {isViewingAnotherUser && (
+        {!isMobile && isViewingAnotherUser && (
           <div
             className="mb-4 w-full rounded-2xl border px-4 py-3"
             style={{
@@ -3303,7 +3308,7 @@ function TrainingLogTable({
           {/* Edit header bar */}
             <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-primary)" }} title={tHint("Training Log", "normal") ?? undefined}>{t("Training Log", "normal")}</span>
+                  <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-primary)" }} title={tHint("Training Log", "normal") ?? undefined}>{trainingLogTitle}</span>
                 {saveMessage && (
                   <motion.span
                     initial={{ opacity: 0 }}
@@ -3395,7 +3400,7 @@ function TrainingLogTable({
                     {t("Reset Headers", "normal")}
                   </GlowButton>
                 )}
-                {!isMobile && entries.length > 0 && canEditTrainingLogs ? (
+                {!isMobile && entries.length > 0 && canEditTrainingLogs && (
                   <button
                     type="button"
                     role="switch"
@@ -3434,8 +3439,6 @@ function TrainingLogTable({
                       />
                     </span>
                   </button>
-                ) : (
-                  <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>{t("No logs yet", "normal")}</span>
                 )}
               </div>
             </div>

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import PageLayout from "@/components/layout/PageLayout";
 import { useIsMobile } from "@/context/AppContext";
@@ -36,6 +37,12 @@ type RankUpSkill = {
 type ProgressionsResponse = { exercises: ProgressionExercise[] };
 type ActivityFilter = "all" | "active-7d" | "active-14d" | "active-30d" | "stale" | "never-attempted";
 type SortBy = "recent" | "performed" | "least-sessions" | "name" | "most-tiers";
+type MobileFilterPickerField = "activity" | "sort";
+
+interface MobileFilterPickerState {
+  field: MobileFilterPickerField;
+  title: string;
+}
 
 function isCalisthenicsCategory(category: string | null | undefined): boolean {
   const lower = String(category || "").trim().toLowerCase();
@@ -102,9 +109,29 @@ export default function RankUpPage() {
   const [search, setSearch] = useState("");
   const [activityFilter, setActivityFilter] = useState<ActivityFilter>("all");
   const [sortBy, setSortBy] = useState<SortBy>("recent");
+  const [mobileFilterPicker, setMobileFilterPicker] = useState<MobileFilterPickerState | null>(null);
+  const [mobileFilterCanScrollDown, setMobileFilterCanScrollDown] = useState(false);
+  const mobileFilterWheelScrollRef = useRef<HTMLDivElement | null>(null);
   const [attemptedParentsOnly, setAttemptedParentsOnly] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
   const [hoveredActionKey, setHoveredActionKey] = useState<string | null>(null);
+
+  const activityFilterOptions: Array<{ value: ActivityFilter; label: string }> = [
+    { value: "all", label: t("All Skills", "normal") },
+    { value: "active-7d", label: t("Active (7 days)", "normal") },
+    { value: "active-14d", label: t("Active (14 days)", "normal") },
+    { value: "active-30d", label: t("Active (30 days)", "normal") },
+    { value: "stale", label: t("Stale (30+ days ago)", "normal") },
+    { value: "never-attempted", label: t("Never Attempted", "normal") },
+  ];
+
+  const sortByOptions: Array<{ value: SortBy; label: string }> = [
+    { value: "recent", label: t("Sort: Recently trained", "normal") },
+    { value: "performed", label: t("Sort: Most sessions", "normal") },
+    { value: "least-sessions", label: t("Sort: Least sessions", "normal") },
+    { value: "most-tiers", label: t("Sort: Most tiers", "normal") },
+    { value: "name", label: t("Sort: Name (A-Z)", "normal") },
+  ];
 
   useEffect(() => {
     const loadSkills = async () => {
@@ -233,6 +260,74 @@ export default function RankUpPage() {
     setExpandedIds((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  const mobileFilterPickerOptions = useMemo(() => {
+    if (!mobileFilterPicker) return [] as Array<{ value: string; label: string }>;
+    if (mobileFilterPicker.field === "activity") {
+      return activityFilterOptions.map((option) => ({ value: option.value, label: option.label }));
+    }
+    return sortByOptions.map((option) => ({ value: option.value, label: option.label }));
+  }, [mobileFilterPicker, activityFilterOptions, sortByOptions]);
+
+  const mobileFilterPickerCurrentValue = useMemo(() => {
+    if (!mobileFilterPicker) return "";
+    return mobileFilterPicker.field === "activity" ? activityFilter : sortBy;
+  }, [mobileFilterPicker, activityFilter, sortBy]);
+
+  useEffect(() => {
+    if (!mobileFilterPicker) return;
+    const scroller = mobileFilterWheelScrollRef.current;
+    if (!scroller) return;
+
+    const itemHeight = 44;
+    const viewportHeight = 224;
+    const sidePadding = (viewportHeight - itemHeight) / 2;
+    const selectedIndex = Math.max(
+      0,
+      mobileFilterPickerOptions.findIndex((option) => option.value === mobileFilterPickerCurrentValue),
+    );
+    const targetTop = selectedIndex * itemHeight - sidePadding;
+
+    const applyScrollPosition = () => {
+      scroller.scrollTop = Math.max(0, targetTop);
+    };
+
+    applyScrollPosition();
+    const rafId = window.requestAnimationFrame(applyScrollPosition);
+    const timeoutId = window.setTimeout(applyScrollPosition, 120);
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [mobileFilterPicker, mobileFilterPickerOptions, mobileFilterPickerCurrentValue]);
+
+  useEffect(() => {
+    if (!mobileFilterPicker) {
+      setMobileFilterCanScrollDown(false);
+      return;
+    }
+    const scroller = mobileFilterWheelScrollRef.current;
+    if (!scroller) return;
+
+    const updateScrollHints = () => {
+      const canScrollDown = scroller.scrollTop + scroller.clientHeight < scroller.scrollHeight - 4;
+      setMobileFilterCanScrollDown(canScrollDown);
+    };
+
+    updateScrollHints();
+    const rafId = window.requestAnimationFrame(updateScrollHints);
+    const timeoutId = window.setTimeout(updateScrollHints, 120);
+    scroller.addEventListener("scroll", updateScrollHints, { passive: true });
+    window.addEventListener("resize", updateScrollHints);
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      window.clearTimeout(timeoutId);
+      scroller.removeEventListener("scroll", updateScrollHints);
+      window.removeEventListener("resize", updateScrollHints);
+    };
+  }, [mobileFilterPicker, mobileFilterPickerOptions]);
+
   const controlClassName =
     "w-full border rounded px-2 py-1.5 text-xs outline-none transition-all duration-150";
 
@@ -290,39 +385,72 @@ export default function RankUpPage() {
                 </button>
               )}
             </div>
-            <select
-              value={activityFilter}
-              onChange={(e) => setActivityFilter(e.target.value as ActivityFilter)}
-              className={controlClassName}
-              style={{
-                borderColor: "var(--nyaa-table-grid)",
-                backgroundColor: "var(--surface)",
-                color: "var(--text-primary)",
-              }}
-            >
-              <option value="all">{t("All Skills", "normal")}</option>
-              <option value="active-7d">{t("Active (7 days)", "normal")}</option>
-              <option value="active-14d">{t("Active (14 days)", "normal")}</option>
-              <option value="active-30d">{t("Active (30 days)", "normal")}</option>
-              <option value="stale">{t("Stale (30+ days ago)", "normal")}</option>
-              <option value="never-attempted">{t("Never Attempted", "normal")}</option>
-            </select>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortBy)}
-              className={controlClassName}
-              style={{
-                borderColor: "var(--nyaa-table-grid)",
-                backgroundColor: "var(--surface)",
-                color: "var(--text-primary)",
-              }}
-            >
-              <option value="recent">{t("Sort: Recently trained", "normal")}</option>
-              <option value="performed">{t("Sort: Most sessions", "normal")}</option>
-              <option value="least-sessions">{t("Sort: Least sessions", "normal")}</option>
-              <option value="most-tiers">{t("Sort: Most tiers", "normal")}</option>
-              <option value="name">{t("Sort: Name (A-Z)", "normal")}</option>
-            </select>
+            {isMobile ? (
+              <button
+                type="button"
+                onClick={() => setMobileFilterPicker({ field: "activity", title: t("Activity", "normal") })}
+                className={`${controlClassName} flex items-center justify-between`}
+                style={{
+                  borderColor: "var(--nyaa-table-grid)",
+                  backgroundColor: "var(--surface)",
+                  color: "var(--text-primary)",
+                }}
+                aria-label={t("Activity filter", "normal")}
+              >
+                <span>
+                  {activityFilterOptions.find((option) => option.value === activityFilter)?.label ?? t("All Skills", "normal")}
+                </span>
+                <span aria-hidden>▾</span>
+              </button>
+            ) : (
+              <select
+                value={activityFilter}
+                onChange={(e) => setActivityFilter(e.target.value as ActivityFilter)}
+                className={controlClassName}
+                style={{
+                  borderColor: "var(--nyaa-table-grid)",
+                  backgroundColor: "var(--surface)",
+                  color: "var(--text-primary)",
+                }}
+              >
+                {activityFilterOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            )}
+            {isMobile ? (
+              <button
+                type="button"
+                onClick={() => setMobileFilterPicker({ field: "sort", title: t("Sort", "normal") })}
+                className={`${controlClassName} flex items-center justify-between`}
+                style={{
+                  borderColor: "var(--nyaa-table-grid)",
+                  backgroundColor: "var(--surface)",
+                  color: "var(--text-primary)",
+                }}
+                aria-label={t("Sort filter", "normal")}
+              >
+                <span>
+                  {sortByOptions.find((option) => option.value === sortBy)?.label ?? t("Sort: Recently trained", "normal")}
+                </span>
+                <span aria-hidden>▾</span>
+              </button>
+            ) : (
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as SortBy)}
+                className={controlClassName}
+                style={{
+                  borderColor: "var(--nyaa-table-grid)",
+                  backgroundColor: "var(--surface)",
+                  color: "var(--text-primary)",
+                }}
+              >
+                {sortByOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            )}
             <button
               type="button"
               onClick={() => setAttemptedParentsOnly((prev) => !prev)}
@@ -650,6 +778,107 @@ export default function RankUpPage() {
               </div>
             );
           })}
+
+        {isMobile && typeof document !== "undefined" &&
+          createPortal(
+            <AnimatePresence>
+              {mobileFilterPicker && (
+                <>
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-[95] bg-black/65"
+                    onClick={() => setMobileFilterPicker(null)}
+                  />
+                  <motion.div
+                    initial={{ opacity: 0, y: 16, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 16, scale: 0.98 }}
+                    className="fixed left-1/2 top-1/2 z-[96] max-h-[72vh] w-[min(82vw,30rem)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-none border"
+                    style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)", boxShadow: "var(--shadow-elev-2)" }}
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <div className="flex items-center justify-between border-b px-4 py-3" style={{ borderColor: "var(--border)" }}>
+                      <p className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--text-primary)" }}>
+                        {mobileFilterPicker.title}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setMobileFilterPicker(null)}
+                        className="rounded border px-2.5 py-1 text-[11px]"
+                        style={{ borderColor: "var(--border)", color: "var(--text-secondary)", backgroundColor: "var(--surface-hover)" }}
+                      >
+                        {t("Close", "normal")}
+                      </button>
+                    </div>
+
+                    <div className="relative px-3 pb-3 pt-2">
+                      <div
+                        className="pointer-events-none absolute left-3 right-3 top-1/2 h-11 -translate-y-1/2 border"
+                        style={{ borderColor: "var(--accent)", backgroundColor: "color-mix(in srgb, var(--accent) 10%, transparent)" }}
+                      />
+                      <div
+                        ref={mobileFilterWheelScrollRef}
+                        className="h-56 overflow-y-auto snap-y snap-mandatory"
+                        style={{
+                          paddingTop: "90px",
+                          paddingBottom: "90px",
+                          scrollbarWidth: "none",
+                        }}
+                      >
+                        {mobileFilterPickerOptions.map((option) => {
+                          const isActive = option.value === mobileFilterPickerCurrentValue;
+                          return (
+                            <button
+                              key={`${mobileFilterPicker.field}-wheel-${option.value}`}
+                              type="button"
+                              onClick={() => {
+                                if (mobileFilterPicker.field === "activity") {
+                                  setActivityFilter(option.value as ActivityFilter);
+                                } else {
+                                  setSortBy(option.value as SortBy);
+                                }
+                                setMobileFilterPicker(null);
+                              }}
+                              className="flex h-11 w-full snap-center items-center justify-center text-sm"
+                              style={{
+                                color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
+                                fontWeight: isActive ? 700 : 500,
+                              }}
+                            >
+                              {option.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {mobileFilterCanScrollDown && (
+                        <>
+                          <div
+                            className="pointer-events-none absolute bottom-3 left-3 right-3 h-10"
+                            style={{
+                              background: "linear-gradient(to bottom, color-mix(in srgb, var(--surface) 0%, transparent), color-mix(in srgb, var(--surface) 92%, transparent))",
+                            }}
+                          />
+                          <motion.div
+                            className="pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2"
+                            animate={{ y: [0, 4, 0], opacity: [0.65, 1, 0.65] }}
+                            transition={{ duration: 1.15, ease: "easeInOut", repeat: Infinity }}
+                            style={{ color: "var(--text-secondary)" }}
+                          >
+                            <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden>
+                              <path d="M5 8l5 5 5-5" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </motion.div>
+                        </>
+                      )}
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>,
+            document.body,
+          )}
       </div>
     </PageLayout>
   );

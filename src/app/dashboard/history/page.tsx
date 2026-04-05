@@ -118,6 +118,13 @@ export default function HistoryPage() {
     return [selfEntry, ...others];
   }, [user?.name, user?.username, userId, visibleUsers]);
 
+  const targetUserDisplayName = useMemo(() => {
+    if (!targetUserId) return undefined;
+    const target = orderedVisibleUsers.find((u) => u.id === targetUserId);
+    if (!target) return undefined;
+    return (target.name || target.username || "").trim() || undefined;
+  }, [orderedVisibleUsers, targetUserId]);
+
   const handleUserScopeChange = (nextUserId: string) => {
     const params = new URLSearchParams(searchParams.toString());
     if (!nextUserId || nextUserId === userId) {
@@ -174,6 +181,7 @@ export default function HistoryPage() {
                 onRefresh={fetchExercises}
                 userId={userId}
                 historyTargetUserId={targetUserId || undefined}
+                historyTargetUserName={targetUserDisplayName}
                 prefillExerciseId={prefillExerciseId}
                 prefillExerciseName={prefillExerciseName}
                 prefillProgression={prefillProgression}
