@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { apiSuccess, ApiErrors } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 import { importLimiter } from "@/lib/auth/rate-limiters";
@@ -157,10 +157,7 @@ export const POST = withAuth(async (request, { auth }) => {
     const clientId = getClientIdentifier(request);
     const rateLimitResult = importLimiter.check(clientId);
     if (!rateLimitResult.allowed) {
-      return NextResponse.json(
-        { error: "Too many import requests. Please try again later." },
-        { status: 429 }
-      );
+      return ApiErrors.rateLimited("Too many import requests. Please try again later.");
     }
 
     const body = await request.json() as {
@@ -174,11 +171,11 @@ export const POST = withAuth(async (request, { auth }) => {
 
     const logs = body.logs;
     if (!Array.isArray(logs)) {
-      return NextResponse.json({ error: "logs must be an array" }, { status: 400 });
+      return ApiErrors.badRequest("logs must be an array");
     }
 
     if (logs.length > 10000) {
-      return NextResponse.json({ error: "Maximum 10,000 logs per import" }, { status: 400 });
+      return ApiErrors.badRequest("Maximum 10,000 logs per import");
     }
 
     const replaceExisting = body.replaceExisting !== false;
@@ -188,11 +185,11 @@ export const POST = withAuth(async (request, { auth }) => {
       await prisma.progressionLog.deleteMany({
         where: { userProgression: { userId } },
       });
-      return NextResponse.json({ success: true, imported: 0, skipped: 0, replaced: true });
+      return apiSuccess({ success: true, imported: 0, skipped: 0, replaced: true });
     }
 
     if (logs.length === 0) {
-      return NextResponse.json({ error: "logs must be a non-empty array" }, { status: 400 });
+      return ApiErrors.badRequest("logs must be a non-empty array");
     }
 
     const exercises = await prisma.progressionExercise.findMany({
@@ -582,7 +579,7 @@ export const POST = withAuth(async (request, { auth }) => {
       });
     }
 
-    return NextResponse.json({
+    return apiSuccess({
       success: true,
       imported,
       skipped,
@@ -594,6 +591,6 @@ export const POST = withAuth(async (request, { auth }) => {
     });
   } catch (error) {
     console.error("Progression log import error:", error);
-    return NextResponse.json({ error: "Failed to import progression logs" }, { status: 500 });
+    return ApiErrors.internal("Failed to import progression logs");
   }
 });

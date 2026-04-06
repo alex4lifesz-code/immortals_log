@@ -40,6 +40,9 @@ export default function TrainingLogHistoryPage() {
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const { settings } = useDisplaySettings();
+  const displayTerminologyMode = !settings.showExerciseForeignLanguage && settings.languageMode === "english"
+    ? "normal"
+    : settings.terminologyMode;
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -150,11 +153,11 @@ export default function TrainingLogHistoryPage() {
       .map((exercise) => ({
         id: exercise.id,
         label: stripBwPercentHint(
-          getExerciseDisplayName(exercise, settings.terminologyMode, settings.showExerciseForeignLanguage),
+          getExerciseDisplayName(exercise, displayTerminologyMode, settings.showExerciseForeignLanguage),
         ),
       }))
       .sort((a, b) => a.label.localeCompare(b.label));
-  }, [exercises, settings.showExerciseForeignLanguage, settings.terminologyMode]);
+  }, [displayTerminologyMode, exercises, settings.showExerciseForeignLanguage]);
 
   const activeCategoryLabel = useMemo(() => {
     if (filters.category === "all") return "All categories";
@@ -199,7 +202,7 @@ export default function TrainingLogHistoryPage() {
         if (isDeletedExerciseDescription(exercise.story)) return null;
 
         const displayName = stripBwPercentHint(
-          getExerciseDisplayName(exercise, settings.terminologyMode, settings.showExerciseForeignLanguage),
+          getExerciseDisplayName(exercise, displayTerminologyMode, settings.showExerciseForeignLanguage),
         );
         const searchHaystack = [
           displayName,
@@ -237,7 +240,7 @@ export default function TrainingLogHistoryPage() {
         };
       })
       .filter((exercise): exercise is ProgressionExercise => exercise != null);
-  }, [exercises, filters, settings.showExerciseForeignLanguage, settings.terminologyMode]);
+  }, [displayTerminologyMode, exercises, filters, settings.showExerciseForeignLanguage]);
 
   const visibleLogCount = useMemo(() => {
     return filteredExercises.reduce((sum, exercise) => {

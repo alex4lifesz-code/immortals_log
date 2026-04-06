@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { apiSuccess, ApiErrors } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 import type { Theme } from "@/lib/config";
@@ -31,19 +31,16 @@ export const GET = withAuth(async (_req, { auth }) => {
       where: { userId },
     });
     if (!existing) {
-      return NextResponse.json({ appPrefs: null, displaySettings: null });
+      return apiSuccess({ appPrefs: null, displaySettings: null });
     }
 
     const appPrefs = parseJsonObject(existing.pinnedNavItems);
     const displaySettings = parseJsonObject(existing.hiddenNavItems);
 
-    return NextResponse.json({ appPrefs, displaySettings });
+    return apiSuccess({ appPrefs, displaySettings });
   } catch (error) {
     console.error("Preferences fetch error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch preferences" },
-      { status: 500 }
-    );
+    return ApiErrors.internal("Failed to fetch preferences");
   }
 });
 
@@ -95,12 +92,9 @@ export const PUT = withAuth(async (req, { auth }) => {
       },
     });
 
-    return NextResponse.json({ success: true });
+    return apiSuccess({ success: true });
   } catch (error) {
     console.error("Preferences save error:", error);
-    return NextResponse.json(
-      { error: "Failed to save preferences" },
-      { status: 500 }
-    );
+    return ApiErrors.internal("Failed to save preferences");
   }
 });

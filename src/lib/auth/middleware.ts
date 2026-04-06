@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { getAuthFromRequest } from "./index";
 import type { AuthContext } from "./types";
 import { AuthError } from "./types";
+import { ApiErrors } from "@/lib/api";
 
 type RouteParams = Record<string, string | string[]>;
 
@@ -54,10 +55,7 @@ export function withAuth(handler: AuthenticatedHandler) {
     try {
       const auth = await getAuthFromRequest(request);
       if (!auth) {
-        return NextResponse.json(
-          { error: "Authentication required", code: "UNAUTHORIZED" },
-          { status: 401 }
-        );
+        return ApiErrors.unauthorized();
       }
 
       const params = routeContext?.params
@@ -69,16 +67,10 @@ export function withAuth(handler: AuthenticatedHandler) {
       return await handler(request, { auth, params });
     } catch (error) {
       if (error instanceof AuthError) {
-        return NextResponse.json(
-          { error: error.message, code: error.code },
-          { status: error.statusCode }
-        );
+        return ApiErrors.unauthorized(error.message);
       }
       console.error("Unhandled error in authenticated route:", error);
-      return NextResponse.json(
-        { error: "Internal server error", code: "INTERNAL_ERROR" },
-        { status: 500 }
-      );
+      return ApiErrors.internal();
     }
   };
 }
@@ -98,10 +90,7 @@ export function withAuth(handler: AuthenticatedHandler) {
 export function withAdmin(handler: AuthenticatedHandler) {
   return withAuth(async (request, context) => {
     if (context.auth.role !== "admin") {
-      return NextResponse.json(
-        { error: "Admin access required", code: "FORBIDDEN" },
-        { status: 403 }
-      );
+      return ApiErrors.forbidden("Admin access required");
     }
     return handler(request, context);
   });
@@ -140,16 +129,10 @@ export function withOptionalAuth(handler: OptionalAuthHandler) {
       return await handler(request, { auth, params });
     } catch (error) {
       if (error instanceof AuthError) {
-        return NextResponse.json(
-          { error: error.message, code: error.code },
-          { status: error.statusCode }
-        );
+        return ApiErrors.unauthorized(error.message);
       }
       console.error("Unhandled error in route:", error);
-      return NextResponse.json(
-        { error: "Internal server error", code: "INTERNAL_ERROR" },
-        { status: 500 }
-      );
+      return ApiErrors.internal();
     }
   };
 }

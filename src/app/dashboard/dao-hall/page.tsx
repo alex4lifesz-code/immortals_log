@@ -23,6 +23,7 @@ import { formatDateWithPreference } from "@/lib/constants";
 import { t } from "@/lib/terminology";
 import { syncWeightFromLatestCheckin } from "@/lib/user-physique";
 import { api } from "@/lib/api-client";
+import GettingStartedCard from "@/components/getting-started/GettingStartedCard";
 import {
   DashboardSidebar,
   Calendar,
@@ -908,6 +909,9 @@ export default function DaoHallPage() {
         <PageSkeleton statCards={4} wideBlock rows={3} />
       ) : (
         <div className="space-y-6 px-0 py-2 sm:py-3">
+          {/* Getting Started checklist for new users */}
+          <GettingStartedCard />
+
           {/* Upcoming Notes */}
           {scopedFutureNotes.length > 0 && (
             <GlowCard glow="gold" hoverable={false}>

@@ -86,16 +86,29 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "An error occurred");
+        const msg = typeof data.error === "string" ? data.error : data.error?.message ?? "An error occurred";
+        setError(msg);
         return;
       }
 
       // Set user in auth context (cookie is set by server)
-      if (data.user) {
-        login(data.user);
+      // API returns { success, data: { user } } via apiSuccess wrapper
+      const userData = data.data?.user ?? data.user;
+      if (userData) {
+        login(userData);
       }
 
-      router.push("/dashboard");
+      // New registrations go to onboarding, logins go to dashboard
+      if (isRegister) {
+        router.push("/onboarding");
+      } else {
+        // Existing users who haven't completed onboarding also redirect
+        if (userData && !userData.onboardingCompleted && !userData.onboardingSkipped) {
+          router.push("/onboarding");
+        } else {
+          router.push("/dashboard");
+        }
+      }
     } catch {
       setError("Cannot connect to server/database. If using the Android APK, ensure the app URL is reachable and WireGuard or Tailscale VPN is connected.");
     } finally {

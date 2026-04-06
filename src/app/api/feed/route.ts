@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { apiSuccess, ApiErrors } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 import { getVisibleSocialUserIds, normalizeScope } from "@/lib/friends";
@@ -72,9 +72,9 @@ export const GET = withAuth(async (_request, { auth }) => {
       })),
     }));
 
-    return NextResponse.json({ exercises: enrichedExercises });
+    return apiSuccess({ exercises: enrichedExercises });
   } catch (error) {
     console.error("Feed fetch error:", error);
-    return NextResponse.json({ error: "Failed to fetch feed" }, { status: 500 });
+    return ApiErrors.internal("Failed to fetch feed");
   }
 });

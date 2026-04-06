@@ -69,6 +69,7 @@ const EN_TO_VI_MAP: Record<string, string> = {
   "Check-In": "Điểm danh",
   "Workouts": "Bài tập",
   "Rank Up": "Thăng hạng",
+  "Completionist": "Hoàn thành tất cả",
   "Train": "Tập luyện",
   "Friends": "Bạn bè",
   "Exercise Library": "Thư viện bài tập",

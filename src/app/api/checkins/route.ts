@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth, withAdmin } from "@/lib/auth/middleware";
 import { getAcceptedFriendIds, getVisibleSocialUserIds, normalizeScope } from "@/lib/friends";
+import { apiSuccess, ApiErrors } from "@/lib/api";
 
 export const GET = withAuth(async (request, { auth }) => {
   try {
@@ -36,7 +36,7 @@ export const GET = withAuth(async (request, { auth }) => {
     });
 
     if (auth.role === "admin") {
-      return NextResponse.json({ checkins });
+      return apiSuccess({ checkins });
     }
 
     let friendIds: string[] = [];
@@ -54,10 +54,10 @@ export const GET = withAuth(async (request, { auth }) => {
       return { ...checkin, comment: null };
     });
 
-    return NextResponse.json({ checkins: safeCheckins });
+    return apiSuccess({ checkins: safeCheckins });
   } catch (error) {
     console.error("CheckIn fetch error:", error);
-    return NextResponse.json({ error: "Failed to fetch check-ins" }, { status: 500 });
+    return ApiErrors.internal("Failed to fetch check-ins");
   }
 });
 
@@ -66,26 +66,17 @@ export const POST = withAuth(async (request, { auth }) => {
     const { date, entries } = await request.json();
 
     if (!date || !entries || typeof entries !== "object" || Array.isArray(entries)) {
-      return NextResponse.json(
-        { error: "Date and entries object are required" },
-        { status: 400 }
-      );
+      return ApiErrors.badRequest("Date and entries object are required");
     }
 
     // Validate date format
     if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}/.test(date)) {
-      return NextResponse.json(
-        { error: "Invalid date format" },
-        { status: 400 }
-      );
+      return ApiErrors.badRequest("Invalid date format");
     }
 
     const dateObj = new Date(date);
     if (isNaN(dateObj.getTime())) {
-      return NextResponse.json(
-        { error: "Invalid date" },
-        { status: 400 }
-      );
+      return ApiErrors.badRequest("Invalid date");
     }
 
     // Non-admin users can only modify their own entries
@@ -93,10 +84,7 @@ export const POST = withAuth(async (request, { auth }) => {
       const entryUserIds = Object.keys(entries);
       const unauthorisedIds = entryUserIds.filter(id => id !== auth.userId);
       if (unauthorisedIds.length > 0) {
-        return NextResponse.json(
-          { error: "You can only modify your own check-in entries" },
-          { status: 403 }
-        );
+        return ApiErrors.forbidden("You can only modify your own check-in entries");
       }
     }
 
@@ -126,13 +114,10 @@ export const POST = withAuth(async (request, { auth }) => {
     );
 
     await Promise.all(operations);
-    return NextResponse.json({ success: true });
+    return apiSuccess({ saved: true });
   } catch (error) {
     console.error("CheckIn save error:", error);
-    return NextResponse.json(
-      { error: "Failed to save check-ins" },
-      { status: 500 }
-    );
+    return ApiErrors.internal("Failed to save check-ins");
   }
 });
 
@@ -143,39 +128,28 @@ export const DELETE = withAdmin(async (request) => {
 
     if (date) {
       if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-        return NextResponse.json(
-          { error: "Invalid date format" },
-          { status: 400 }
-        );
+        return ApiErrors.badRequest("Invalid date format");
       }
       const dateObj = new Date(date + "T00:00:00.000Z");
       if (isNaN(dateObj.getTime())) {
-        return NextResponse.json(
-          { error: "Invalid date" },
-          { status: 400 }
-        );
+        return ApiErrors.badRequest("Invalid date");
       }
       // Also delete notes for this date
       await prisma.checkInNote.deleteMany({ where: { date } });
       const result = await prisma.checkIn.deleteMany({ where: { date: dateObj } });
-      return NextResponse.json({
-        success: true,
+      return apiSuccess({
         message: `Removed ${result.count} check-in record(s) for ${date}`,
         count: result.count,
       });
     }
 
     const result = await prisma.checkIn.deleteMany({});
-    return NextResponse.json({
-      success: true,
+    return apiSuccess({
       message: `Removed ${result.count} check-in record(s)`,
       count: result.count,
     });
   } catch (error) {
     console.error("CheckIn delete error:", error);
-    return NextResponse.json(
-      { error: "Failed to remove check-in records" },
-      { status: 500 }
-    );
+    return ApiErrors.internal("Failed to remove check-in records");
   }
 });

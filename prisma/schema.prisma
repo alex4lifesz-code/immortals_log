@@ -16,14 +16,50 @@ model User {
   password  String
   name      String
   role      String   @default("user")
+  onboardingCompleted Boolean @default(false)
+  onboardingSkipped   Boolean @default(false)
+  onboardingStep      Int     @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   checkIns     CheckIn[]
   settings     UserSettings?
+  profile      UserProfile?
   checkInNotes CheckInNote[]
   sentFriendRequests     FriendRequest[] @relation("FriendRequestSender")
   receivedFriendRequests FriendRequest[] @relation("FriendRequestReceiver")
+}
+
+model UserProfile {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fitnessBackground   String?  // 'new' | 'beginner' | 'intermediate' | 'advanced'
+  primaryGoal         String?  // 'strength' | 'skills' | 'consistency' | 'compete'
+  trainingDaysPerWeek Int?
+  assessmentAnswers   String?  // JSON string with benchmark exercise responses
+  recommendedTier     String?
+  currentTier         String?
+  publicProfile       Boolean  @default(false)
+  displayName         String?
+  gettingStartedDismissed Boolean @default(false)
+  gettingStartedTasks     String  @default("{}") // JSON string tracking completed tasks
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model FriendSuggestion {
+  id          String   @id @default(cuid())
+  userId      String
+  suggestedId String
+  reason      String   // 'same_tier' | 'similar_goals' | 'active_recently'
+  dismissed   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([suggestedId])
 }
 
 model FriendRequest {

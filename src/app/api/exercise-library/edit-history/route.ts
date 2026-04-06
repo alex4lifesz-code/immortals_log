@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { apiSuccess, ApiErrors } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 
@@ -115,10 +115,10 @@ export const GET = withAuth(async () => {
       }
     }
 
-    return NextResponse.json({ history, lastEditedById });
+    return apiSuccess({ history, lastEditedById });
   } catch (error) {
     console.error("Exercise edit history fetch error:", error);
-    return NextResponse.json({ error: "Failed to fetch edit history" }, { status: 500 });
+    return ApiErrors.internal("Failed to fetch edit history");
   }
 });
 
@@ -134,7 +134,7 @@ export const POST = withAuth(async (req, { auth }) => {
     const afterValue = String(body.afterValue || "").trim().slice(0, 500);
 
     if (!exerciseId || !exerciseName || !field) {
-      return NextResponse.json({ error: "exerciseId, exerciseName, and field are required" }, { status: 400 });
+      return ApiErrors.badRequest("exerciseId, exerciseName, and field are required");
     }
 
     const user = await prisma.user.findUnique({
@@ -162,7 +162,7 @@ export const POST = withAuth(async (req, { auth }) => {
       editedAt,
     );
 
-    return NextResponse.json({
+    return apiSuccess({
       entry: {
         id,
         exerciseId,
@@ -176,6 +176,6 @@ export const POST = withAuth(async (req, { auth }) => {
     });
   } catch (error) {
     console.error("Exercise edit history write error:", error);
-    return NextResponse.json({ error: "Failed to save edit history" }, { status: 500 });
+    return ApiErrors.internal("Failed to save edit history");
   }
 });

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { apiSuccess, ApiErrors } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 import {
@@ -44,10 +44,10 @@ export const GET = withAuth(async (_request, { auth }) => {
       };
     });
 
-    return NextResponse.json({ exercises: localizedExercises });
+    return apiSuccess({ exercises: localizedExercises });
   } catch (error) {
     console.error("Progressions fetch error:", error);
-    return NextResponse.json({ error: "Failed to fetch progressions" }, { status: 500 });
+    return ApiErrors.internal("Failed to fetch progressions");
   }
 });
 
@@ -57,9 +57,9 @@ export const DELETE = withAuth(async (_request, { auth }) => {
     // Delete user progression levels (logs cascade)
     await prisma.userProgressionLevel.deleteMany({ where: { userId: auth.userId } });
 
-    return NextResponse.json({ success: true });
+    return apiSuccess({ success: true });
   } catch (error) {
     console.error("Progressions delete error:", error);
-    return NextResponse.json({ error: "Failed to delete progressions" }, { status: 500 });
+    return ApiErrors.internal("Failed to delete progressions");
   }
 });

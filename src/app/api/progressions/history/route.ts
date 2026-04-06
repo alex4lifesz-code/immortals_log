@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { apiSuccess, ApiErrors } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 import { canViewUserData } from "@/lib/friends";
@@ -58,7 +58,7 @@ export const GET = withAuth(async (request, { auth }) => {
         targetUserId,
       });
       if (!canViewTarget) {
-        return NextResponse.json({ error: "Not allowed to view this user's history" }, { status: 403 });
+        return ApiErrors.forbidden("Not allowed to view this user's history");
       }
       userId = targetUserId;
     }
@@ -170,9 +170,9 @@ export const GET = withAuth(async (request, { auth }) => {
     const last = exercises[exercises.length - 1];
     const nextCursor = hasMore && last ? encodeExerciseCursor(last.createdAt, last.id) : null;
 
-    return NextResponse.json({ exercises, logLimit, exerciseLimit, nextCursor, userId });
+    return apiSuccess({ exercises, logLimit, exerciseLimit, nextCursor, userId });
   } catch (error) {
     console.error("Progressions history fetch error:", error);
-    return NextResponse.json({ error: "Failed to fetch progression history" }, { status: 500 });
+    return ApiErrors.internal("Failed to fetch progression history");
   }
 });

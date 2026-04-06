@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { apiSuccess, ApiErrors } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { serializeDayAssignments } from "@/lib/constants";
 import { withAuth } from "@/lib/auth/middleware";
@@ -24,7 +24,7 @@ export const GET = withAuth(async (request, { auth, params }) => {
         targetUserId,
       });
       if (!canViewTarget) {
-        return NextResponse.json({ error: "Not allowed to view this user's progression" }, { status: 403 });
+        return ApiErrors.forbidden("Not allowed to view this user's progression");
       }
       userId = targetUserId;
     }
@@ -53,7 +53,7 @@ export const GET = withAuth(async (request, { auth, params }) => {
     });
 
     if (!exercise) {
-      return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
+      return ApiErrors.notFound("Exercise not found");
     }
 
     const { translation, ...baseExercise } = exercise;
@@ -66,7 +66,7 @@ export const GET = withAuth(async (request, { auth, params }) => {
     const englishName = translation?.englishName || baseExercise.name;
     const vietnameseName = translation?.vietnameseName || baseExercise.wuxiaName || baseExercise.name;
 
-    return NextResponse.json({
+    return apiSuccess({
       exercise: {
         ...localizedExercise,
         name: englishName,
@@ -77,7 +77,7 @@ export const GET = withAuth(async (request, { auth, params }) => {
     });
   } catch (error) {
     console.error("Progression fetch error:", error);
-    return NextResponse.json({ error: "Failed to fetch progression" }, { status: 500 });
+    return ApiErrors.internal("Failed to fetch progression");
   }
 });
 
@@ -91,15 +91,15 @@ export const DELETE = withAuth(async (_request, { auth, params }) => {
     });
 
     if (!exercise) {
-      return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
+      return ApiErrors.notFound("Exercise not found");
     }
 
     await prisma.progressionExercise.delete({ where: { id } });
 
-    return NextResponse.json({ success: true });
+    return apiSuccess({ success: true });
   } catch (error) {
     console.error("Progression delete error:", error);
-    return NextResponse.json({ error: "Failed to delete progression" }, { status: 500 });
+    return ApiErrors.internal("Failed to delete progression");
   }
 });
 
@@ -113,7 +113,7 @@ export const PATCH = withAuth(async (request, { auth, params }) => {
       where: { id },
     });
     if (!existing) {
-      return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
+      return ApiErrors.notFound("Exercise not found");
     }
 
     const data: Record<string, unknown> = {};
@@ -163,12 +163,12 @@ export const PATCH = withAuth(async (request, { auth, params }) => {
       });
       const duplicate = allProgs.find(p => p.id !== id && p.name.toLowerCase() === String(data.name).toLowerCase());
       if (duplicate) {
-        return NextResponse.json({ error: `A progression exercise named "${data.name}" already exists` }, { status: 409 });
+        return ApiErrors.conflict(`A progression exercise named "${data.name}" already exists`);
       }
     }
 
     if (Object.keys(data).length === 0 && !body.tiers) {
-      return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
+      return ApiErrors.badRequest("No valid fields to update");
     }
 
     // Update tiers if provided
@@ -342,7 +342,7 @@ export const PATCH = withAuth(async (request, { auth, params }) => {
     });
 
     if (!full) {
-      return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
+      return ApiErrors.notFound("Exercise not found");
     }
 
     const { translation, ...baseFull } = full;
@@ -352,12 +352,9 @@ export const PATCH = withAuth(async (request, { auth, params }) => {
       languageMode
     );
 
-    return NextResponse.json({ exercise: localizedExercise });
+    return apiSuccess({ exercise: localizedExercise });
   } catch (error) {
     console.error("Progression update error:", error);
-    return NextResponse.json(
-      { error: "Failed to update progression exercise" },
-      { status: 500 }
-    );
+    return ApiErrors.internal("Failed to update progression exercise");
   }
 });

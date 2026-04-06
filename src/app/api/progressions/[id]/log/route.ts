@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { apiSuccess, ApiErrors } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 import { isDeletedExerciseDescription } from "@/lib/pending-exercises";
@@ -12,7 +12,7 @@ export const POST = withAuth(async (request, { auth, params }) => {
 
     const level = Number(body.level);
     if (!level || level < 1) {
-      return NextResponse.json({ error: "level must be a positive number" }, { status: 400 });
+      return ApiErrors.badRequest("level must be a positive number");
     }
 
     // Allow logging for any library exercise id; create user progress on first log.
@@ -24,10 +24,10 @@ export const POST = withAuth(async (request, { auth, params }) => {
       },
     });
     if (!exercise) {
-      return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
+      return ApiErrors.notFound("Exercise not found");
     }
     if (isDeletedExerciseDescription(exercise.story)) {
-      return NextResponse.json({ error: "Exercise is unavailable" }, { status: 404 });
+      return ApiErrors.notFound("Exercise is unavailable");
     }
 
     let userProgress = await prisma.userProgressionLevel.findUnique({
@@ -73,10 +73,10 @@ export const POST = withAuth(async (request, { auth, params }) => {
       });
     }
 
-    return NextResponse.json({ log });
+    return apiSuccess({ log });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("Progression log error:", message, error);
-    return NextResponse.json({ error: message || "Failed to log progression" }, { status: 500 });
+    return ApiErrors.internal(message || "Failed to log progression");
   }
 });

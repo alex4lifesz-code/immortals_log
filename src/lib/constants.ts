@@ -13,7 +13,7 @@ export interface NavItem {
 export const defaultNavItems: NavItem[] = [
   { id: "dashboard", label: NAV_LABELS.dashboard, icon: "⛩️", path: DASHBOARD_ROUTES.overview, pinned: false, visible: true },
   { id: "newsfeed", label: NAV_LABELS.newsfeed, icon: "🌿", path: DASHBOARD_ROUTES.community, pinned: false, visible: true },
-  { id: "rank-up", label: NAV_LABELS["rank-up"], icon: "⬆️", path: DASHBOARD_ROUTES.rankUp, pinned: false, visible: true },
+  { id: "rank-up", label: NAV_LABELS["rank-up"], icon: "🏆", path: DASHBOARD_ROUTES.rankUp, pinned: false, visible: true },
   { id: "history", label: NAV_LABELS.history, icon: "📜", path: DASHBOARD_ROUTES.workoutHistory, pinned: false, visible: true },
   { id: "training-log-history", label: NAV_LABELS["training-log-history"], icon: "🕘", path: DASHBOARD_ROUTES.trainingLogHistory, pinned: false, visible: true },
   { id: "checkin", label: NAV_LABELS.checkin, icon: "📋", path: DASHBOARD_ROUTES.attendance, pinned: false, visible: true },

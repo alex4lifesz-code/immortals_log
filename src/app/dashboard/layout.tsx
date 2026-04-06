@@ -56,7 +56,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { isLoading, isAuthenticated } = useAuth();
+  const { isLoading, isAuthenticated, user } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -64,6 +64,13 @@ export default function DashboardLayout({
       router.replace("/");
     }
   }, [isLoading, isAuthenticated, router]);
+
+  // Redirect to onboarding if not completed
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && user && !user.onboardingCompleted && !user.onboardingSkipped) {
+      router.replace("/onboarding");
+    }
+  }, [isLoading, isAuthenticated, user, router]);
 
   if (isLoading) {
     return (

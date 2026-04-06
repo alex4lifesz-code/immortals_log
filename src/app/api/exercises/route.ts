@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { apiSuccess, ApiErrors } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 import {
@@ -28,23 +28,17 @@ export const GET = withAuth(async (_req, { auth }) => {
       applyExerciseTranslation(exercise, translation, languageMode)
     );
 
-    return NextResponse.json({ exercises: localizedExercises });
+    return apiSuccess({ exercises: localizedExercises });
   } catch (error) {
     console.error("Exercises fetch error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch exercises" },
-      { status: 500 }
-    );
+    return ApiErrors.internal("Failed to fetch exercises");
   }
 });
 
 export const POST = withAuth(async (req, { auth }) => {
   try {
     if (auth.role !== "admin") {
-      return NextResponse.json(
-        { error: "Admin privileges required" },
-        { status: 403 }
-      );
+      return ApiErrors.forbidden("Admin privileges required");
     }
 
     const body = await req.json();
@@ -66,10 +60,7 @@ export const POST = withAuth(async (req, { auth }) => {
       : undefined;
 
     if (!name || !difficulty || !type) {
-      return NextResponse.json(
-        { error: "Name, difficulty, and type are required" },
-        { status: 400 }
-      );
+      return ApiErrors.badRequest("Name, difficulty, and type are required");
     }
 
     // SQLite doesn't support mode:"insensitive", so fetch candidates and filter in JS
@@ -125,23 +116,17 @@ export const POST = withAuth(async (req, { auth }) => {
       },
     });
 
-    return NextResponse.json({ exercise });
+    return apiSuccess({ exercise });
   } catch (error) {
     console.error("Exercise create error:", error);
-    return NextResponse.json(
-      { error: "Failed to create exercise" },
-      { status: 500 }
-    );
+    return ApiErrors.internal("Failed to create exercise");
   }
 });
 
 export const DELETE = withAuth(async (_req, { auth }) => {
   try {
     if (auth.role !== "admin") {
-      return NextResponse.json(
-        { error: "Admin privileges required" },
-        { status: 403 }
-      );
+      return ApiErrors.forbidden("Admin privileges required");
     }
 
     const deleteResult = await prisma.exercise.deleteMany({
@@ -152,16 +137,13 @@ export const DELETE = withAuth(async (_req, { auth }) => {
       },
     });
 
-    return NextResponse.json({
+    return apiSuccess({
       message: `Library purged. ${deleteResult.count} technique(s) deleted.`,
       deleted: deleteResult.count,
       archived: 0,
     });
   } catch (error) {
     console.error("Exercise bulk delete error:", error);
-    return NextResponse.json(
-      { error: "Failed to remove techniques" },
-      { status: 500 }
-    );
+    return ApiErrors.internal("Failed to remove techniques");
   }
 });

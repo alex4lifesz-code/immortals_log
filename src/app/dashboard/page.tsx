@@ -12,6 +12,7 @@ import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { api } from "@/lib/api-client";
 import { formatDateWithPreference } from "@/lib/constants";
 import { formatSetValue } from "@/lib/unit-conversion";
+import { EmptyFeed } from "@/components/empty-states";
 
 interface UserProfile {
   id: string;
@@ -352,17 +353,19 @@ export default function DashboardNewsfeedPage() {
 
           {/* Community feed */}
           {allGroupedByMemberDay.length === 0 ? (
-            <GlowCard glow="none" hoverable={false} className="mt-8">
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="text-4xl mb-4 opacity-40">🏛️</div>
-                <h3 className="text-sm text-jade-glow uppercase tracking-wider mb-2">The Hall is Silent</h3>
-                <p className="text-sm text-mist-light max-w-sm">
-                  {selectedFilter !== ""
-                    ? `No activity found for the selected ${filterMode === "category" ? "category" : "muscle group"}.`
-                    : "Your fellow cultivators haven't logged any exercises yet. Once they do, their recent activity will appear here."}
-                </p>
-              </div>
-            </GlowCard>
+            selectedFilter !== "" ? (
+              <GlowCard glow="none" hoverable={false} className="mt-8">
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="text-4xl mb-4 opacity-40">🏛️</div>
+                  <h3 className="text-sm text-jade-glow uppercase tracking-wider mb-2">The Hall is Silent</h3>
+                  <p className="text-sm text-mist-light max-w-sm">
+                    {`No activity found for the selected ${filterMode === "category" ? "category" : "muscle group"}.`}
+                  </p>
+                </div>
+              </GlowCard>
+            ) : (
+              <EmptyFeed />
+            )
           ) : (
             <>
               <div className="space-y-6 mt-6 sm:mt-8">

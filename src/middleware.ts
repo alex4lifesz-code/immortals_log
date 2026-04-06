@@ -1,201 +1,13 @@
-// src/middleware.ts — Next.js edge middleware for authentication
+// src/middleware.ts — Next.js edge middleware entry point
+//
+// All logic is decomposed into composable functions under src/middleware/.
+// This file simply delegates to the pipeline composer.
 
-import { NextResponse, type NextRequest } from "next/server";
-import { jwtVerify } from "jose";
-import { DASHBOARD_ROUTES } from "@/lib/navigation";
-
-const COOKIE_NAME = "auth-token";
-
-// Routes that do NOT require authentication
-const PUBLIC_API_ROUTES = new Set([
-  "/api/auth/login",
-  "/api/auth/register",
-  "/api/health",
-]);
-
-// API routes that need auth
-const API_PREFIX = "/api/";
-// Dashboard pages that need auth
-const DASHBOARD_PREFIX = DASHBOARD_ROUTES.root;
-const ADMIN_ONLY_DASHBOARD_ROUTES = [DASHBOARD_ROUTES.attendance, DASHBOARD_ROUTES.checkinLegacy, DASHBOARD_ROUTES.websiteInformation];
-
-function parseBooleanEnv(value: string | undefined): boolean | null {
-  if (!value) return null;
-  const normalized = value.trim().toLowerCase();
-  if (normalized === "true" || normalized === "1" || normalized === "yes") {
-    return true;
-  }
-  if (normalized === "false" || normalized === "0" || normalized === "no") {
-    return false;
-  }
-  return null;
-}
-
-function shouldUseSecureCookie(request: NextRequest): boolean {
-  const explicit = parseBooleanEnv(process.env.COOKIE_SECURE);
-  if (explicit !== null) {
-    return explicit;
-  }
-
-  const forwardedProto = request.headers
-    .get("x-forwarded-proto")
-    ?.split(",")[0]
-    .trim()
-    .toLowerCase();
-
-  if (forwardedProto === "https") {
-    return true;
-  }
-  if (forwardedProto === "http") {
-    return false;
-  }
-
-  const protocol = request.nextUrl.protocol;
-  if (protocol) {
-    return protocol === "https:";
-  }
-
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL;
-  if (appUrl) {
-    try {
-      return new URL(appUrl).protocol === "https:";
-    } catch {
-      // Invalid URL should not crash middleware.
-    }
-  }
-
-  return process.env.NODE_ENV === "production";
-}
-
-function getJwtSecret(): Uint8Array {
-  const secret = process.env.JWT_SECRET;
-  if (!secret) {
-    throw new Error("JWT_SECRET environment variable is required");
-  }
-  return new TextEncoder().encode(secret);
-}
+import type { NextRequest } from "next/server";
+import { runMiddleware } from "./middleware/pipeline";
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  // Skip public API routes
-  if (PUBLIC_API_ROUTES.has(pathname)) {
-    return NextResponse.next();
-  }
-
-  const isApiRoute = pathname.startsWith(API_PREFIX);
-  const isDashboardRoute = pathname.startsWith(DASHBOARD_PREFIX);
-
-  // Canonical dashboard route migration redirects (preserve query string).
-  if (isDashboardRoute) {
-    let canonicalPath: string | null = null;
-
-    if (pathname === "/dashboard/overview" || pathname.startsWith("/dashboard/overview/")) {
-      canonicalPath = DASHBOARD_ROUTES.overview;
-    } else if (pathname === "/dashboard/main" || pathname.startsWith("/dashboard/main/")) {
-      canonicalPath = DASHBOARD_ROUTES.overview;
-    } else if (pathname === "/dashboard/workout-history" || pathname.startsWith("/dashboard/workout-history/")) {
-      canonicalPath = pathname.replace("/dashboard/workout-history", DASHBOARD_ROUTES.workoutHistory);
-    }
-
-    if (canonicalPath && canonicalPath !== pathname) {
-      const canonicalUrl = request.nextUrl.clone();
-      canonicalUrl.pathname = canonicalPath;
-      return NextResponse.redirect(canonicalUrl);
-    }
-  }
-
-  // Only process API and dashboard routes
-  if (!isApiRoute && !isDashboardRoute) {
-    return NextResponse.next();
-  }
-
-  // Get auth token from cookie
-  const token = request.cookies.get(COOKIE_NAME)?.value;
-
-  if (!token) {
-    if (isApiRoute) {
-      return NextResponse.json(
-        { error: "Authentication required", code: "UNAUTHORIZED" },
-        { status: 401 }
-      );
-    }
-    // Redirect to login for dashboard pages
-    const loginUrl = new URL("/", request.url);
-    loginUrl.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  // Verify token
-  try {
-    const { payload } = await jwtVerify(token, getJwtSecret());
-
-    if (!payload.userId || !payload.role) {
-      throw new Error("Invalid token payload");
-    }
-
-    // Route-level role guard for admin-only dashboard pages.
-    if (
-      isDashboardRoute &&
-      ADMIN_ONLY_DASHBOARD_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`)) &&
-      payload.role !== "admin"
-    ) {
-      const dashboardUrl = new URL(DASHBOARD_ROUTES.overview, request.url);
-      return NextResponse.redirect(dashboardUrl);
-    }
-
-    // Token is valid — check if it should be refreshed (sliding window)
-    const exp = payload.exp as number;
-    const now = Math.floor(Date.now() / 1000);
-    const timeUntilExpiry = exp - now;
-    const totalLifetime = exp - (payload.iat as number);
-
-    // Refresh if less than 25% of lifetime remaining
-    if (timeUntilExpiry < totalLifetime * 0.25 && timeUntilExpiry > 0) {
-      const response = NextResponse.next();
-      // Re-sign the token with a fresh expiration
-      const { SignJWT } = await import("jose");
-      const newToken = await new SignJWT({
-        userId: payload.userId,
-        username: payload.username,
-        name: payload.name,
-        role: payload.role,
-      })
-        .setProtectedHeader({ alg: "HS256" })
-        .setIssuedAt()
-        .setExpirationTime(`${totalLifetime}s`)
-        .sign(getJwtSecret());
-
-      const isSecure = shouldUseSecureCookie(request);
-      const cookieParts = [
-        `${COOKIE_NAME}=${newToken}`,
-        `Path=/`,
-        `HttpOnly`,
-        `SameSite=Lax`,
-        `Max-Age=${totalLifetime}`,
-      ];
-      if (isSecure) cookieParts.push("Secure");
-
-      response.headers.append("Set-Cookie", cookieParts.join("; "));
-      return response;
-    }
-
-    return NextResponse.next();
-  } catch {
-    // Token is invalid or expired
-    if (isApiRoute) {
-      return NextResponse.json(
-        { error: "Invalid or expired token", code: "INVALID_TOKEN" },
-        { status: 401 }
-      );
-    }
-    // Redirect to login, clearing the bad cookie
-    const loginUrl = new URL("/", request.url);
-    loginUrl.searchParams.set("redirect", pathname);
-    const response = NextResponse.redirect(loginUrl);
-    response.cookies.delete(COOKIE_NAME);
-    return response;
-  }
+  return runMiddleware(request);
 }
 
 export const config = {
@@ -204,5 +16,8 @@ export const config = {
     "/api/:path*",
     // Match all dashboard routes
     "/dashboard/:path*",
+    // Match onboarding routes (auth-protected)
+    "/onboarding/:path*",
+    "/onboarding",
   ],
 };

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { apiSuccess, ApiErrors } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import type { SimpleExercise, TrainingCategory, SimpleExerciseType, MuscleGroup, Difficulty } from "@/lib/exercise-types";
 import { ALL_DIFFICULTIES } from "@/lib/exercise-types";
@@ -235,13 +235,10 @@ export const GET = withAuth(async (_req, { auth }) => {
       };
     });
 
-    return NextResponse.json({ exercises });
+    return apiSuccess({ exercises });
   } catch (error) {
     console.error("Exercise library fetch error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch exercises" },
-      { status: 500 }
-    );
+    return ApiErrors.internal("Failed to fetch exercises");
   }
 });
 
@@ -267,32 +264,32 @@ export const POST = withAuth(async (req, { auth }) => {
 
     const trimmedName = String(name || "").trim().slice(0, 200);
     if (!trimmedName || trimmedName.length < 2) {
-      return NextResponse.json({ error: "Name must be at least 2 characters" }, { status: 400 });
+      return ApiErrors.badRequest("Name must be at least 2 characters");
     }
 
     const resolvedCategory = resolveOption(String(category || ""), dbOptions.categories);
     if (!resolvedCategory) {
-      return NextResponse.json({ error: "Invalid category" }, { status: 400 });
+      return ApiErrors.badRequest("Invalid category");
     }
 
     const resolvedType = resolveOption(String(exerciseType || ""), dbOptions.types);
     if (!resolvedType) {
-      return NextResponse.json({ error: "Invalid exercise type" }, { status: 400 });
+      return ApiErrors.badRequest("Invalid exercise type");
     }
 
     if (!Array.isArray(muscleGroups) || muscleGroups.length === 0) {
-      return NextResponse.json({ error: "At least one muscle group is required" }, { status: 400 });
+      return ApiErrors.badRequest("At least one muscle group is required");
     }
 
     const normalizedMuscles = muscleGroups
       .map((mg: unknown) => resolveOption(String(mg || ""), dbOptions.muscles))
       .filter(Boolean) as string[];
     if (normalizedMuscles.length !== muscleGroups.length) {
-      return NextResponse.json({ error: "One or more muscle groups are invalid" }, { status: 400 });
+      return ApiErrors.badRequest("One or more muscle groups are invalid");
     }
 
     if (difficulty && !ALL_DIFFICULTIES.includes(difficulty)) {
-      return NextResponse.json({ error: "Invalid difficulty" }, { status: 400 });
+      return ApiErrors.badRequest("Invalid difficulty");
     }
 
     const normalizedVariations = Array.isArray(variations)
@@ -310,7 +307,7 @@ export const POST = withAuth(async (req, { auth }) => {
       : [];
 
     if (normalizedProgression === null) {
-      return NextResponse.json({ error: "Invalid progression payload" }, { status: 400 });
+      return ApiErrors.badRequest("Invalid progression payload");
     }
 
     const progressionStages = normalizedProgression.length > 0 ? normalizedProgression : [trimmedName];
@@ -321,7 +318,7 @@ export const POST = withAuth(async (req, { auth }) => {
     });
     const duplicate = existing.find(ex => ex.name.toLowerCase() === trimmedName.toLowerCase());
     if (duplicate) {
-      return NextResponse.json({ error: "An exercise with this name already exists" }, { status: 409 });
+      return ApiErrors.conflict("An exercise with this name already exists");
     }
 
     // Map category to DB format
@@ -447,12 +444,9 @@ export const POST = withAuth(async (req, { auth }) => {
 
     const exercise = mapDbToSimpleExercise(dbExercise, dbOptions);
 
-    return NextResponse.json({ exercise }, { status: 201 });
+    return apiSuccess({ exercise }, undefined, { status: 201 });
   } catch (error) {
     console.error("Exercise create error:", error);
-    return NextResponse.json(
-      { error: "Failed to create exercise" },
-      { status: 500 }
-    );
+    return ApiErrors.internal("Failed to create exercise");
   }
 });

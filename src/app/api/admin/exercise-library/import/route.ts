@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { apiSuccess, ApiErrors } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { withAdmin } from "@/lib/auth/middleware";
 
@@ -81,11 +81,11 @@ export const POST = withAdmin(async (request, { auth }) => {
     // Validate target user exists
     const destUser = await prisma.user.findUnique({ where: { id: destUserId } });
     if (!destUser) {
-      return NextResponse.json({ error: "Target user not found" }, { status: 404 });
+      return ApiErrors.notFound("Target user not found");
     }
 
     if (!Array.isArray(exercises) || exercises.length === 0) {
-      return NextResponse.json({ error: "exercises array is required and must not be empty" }, { status: 400 });
+      return ApiErrors.badRequest("exercises array is required and must not be empty");
     }
 
     // Fetch existing exercise names for the target user
@@ -237,7 +237,7 @@ export const POST = withAdmin(async (request, { auth }) => {
       }
     }
 
-    return NextResponse.json({
+    return apiSuccess({
       message: `Import complete: ${created} created, ${skipped} skipped${errors.length > 0 ? `, ${errors.length} errors` : ""}.`,
       created,
       skipped,
@@ -245,6 +245,6 @@ export const POST = withAdmin(async (request, { auth }) => {
     });
   } catch (error) {
     console.error("Exercise library import error:", error);
-    return NextResponse.json({ error: "Failed to import exercise library" }, { status: 500 });
+    return ApiErrors.internal("Failed to import exercise library");
   }
 });

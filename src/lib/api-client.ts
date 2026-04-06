@@ -1,4 +1,8 @@
 // src/lib/api-client.ts — Shared fetch wrapper for client-side API calls
+//
+// Transparently unwraps standardized API envelope responses:
+// Success: { success: true, data: T } → returns T
+// Error:   { success: false, error: { code, message, details? } } → throws ApiRequestError
 
 type RequestMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -7,18 +11,12 @@ interface ApiRequestOptions {
   cache?: RequestCache;
 }
 
-interface ApiErrorResponse {
-  error: string;
-  code?: string;
-  details?: Record<string, unknown>;
-}
-
 export class ApiRequestError extends Error {
   constructor(
     public status: number,
     message: string,
     public code?: string,
-    public details?: Record<string, unknown>,
+    public details?: unknown,
   ) {
     super(message);
     this.name = "ApiRequestError";
@@ -46,21 +44,39 @@ async function request<T>(
   const res = await fetch(url, init);
 
   if (!res.ok) {
-    let errorData: ApiErrorResponse = { error: `Request failed (${res.status})` };
+    let errorMessage = `Request failed (${res.status})`;
+    let errorCode: string | undefined;
+    let errorDetails: unknown;
+
     try {
-      errorData = await res.json();
+      const json = await res.json();
+      // New envelope format: { success: false, error: { code, message, details? } }
+      if (json.success === false && json.error) {
+        errorMessage = json.error.message || errorMessage;
+        errorCode = json.error.code;
+        errorDetails = json.error.details;
+      } else {
+        // Legacy format: { error: string, code?: string }
+        errorMessage = json.error || errorMessage;
+        errorCode = json.code;
+        errorDetails = json.details;
+      }
     } catch {
       // Response body not JSON — use default message
     }
-    throw new ApiRequestError(
-      res.status,
-      errorData.error || `Request failed (${res.status})`,
-      errorData.code,
-      errorData.details,
-    );
+
+    throw new ApiRequestError(res.status, errorMessage, errorCode, errorDetails);
   }
 
-  return res.json() as Promise<T>;
+  const json = await res.json();
+
+  // Unwrap standardized envelope: { success: true, data: T } → T
+  if (json && json.success === true && "data" in json) {
+    return json.data as T;
+  }
+
+  // Legacy endpoints that haven't been migrated yet return raw shape
+  return json as T;
 }
 
 export const api = {

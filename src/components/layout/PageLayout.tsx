@@ -179,7 +179,7 @@ function PageLayout({
         >
           <div className={`${contentContainerClass} ${isMobile ? "" : "rounded-2xl"}`}>
             {subtitle && (
-              <p className="text-xs text-mist-dark mb-4 italic">{subtitle}</p>
+              <p className="text-xs text-mist-dark mb-3 italic">{subtitle}</p>
             )}
             {children}
           </div>

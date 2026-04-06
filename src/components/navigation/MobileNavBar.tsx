@@ -33,9 +33,8 @@ const NAV_ICON_MAP: Record<string, ReactNode> = {
   ),
   [DASHBOARD_ROUTES.rankUp]: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 20V6" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6 12l6-6 6 6" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M5 20h14" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4" />
+      <circle cx="12" cy="12" r="9" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   ),
   [DASHBOARD_ROUTES.workoutHistory]: (

@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
+import { apiSuccess, ApiErrors } from "@/lib/api";
 
 export const GET = withAuth(async (_request, { auth }) => {
   try {
@@ -14,12 +14,12 @@ export const GET = withAuth(async (_request, { auth }) => {
     });
 
     if (!latest || latest.weight == null) {
-      return NextResponse.json({ weight: null, date: null });
+      return apiSuccess({ weight: null, date: null });
     }
 
-    return NextResponse.json({ weight: latest.weight, date: latest.date });
+    return apiSuccess({ weight: latest.weight, date: latest.date });
   } catch (error) {
     console.error("Latest weight fetch error:", error);
-    return NextResponse.json({ error: "Failed to fetch latest weight" }, { status: 500 });
+    return ApiErrors.internal("Failed to fetch latest weight");
   }
 });

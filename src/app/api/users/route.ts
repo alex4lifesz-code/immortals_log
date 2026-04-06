@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { apiSuccess, ApiErrors } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { withAuth } from "@/lib/auth/middleware";
@@ -10,10 +10,7 @@ export const GET = withAuth(async (_request, { auth }) => {
   try {
     // Only admins can list all users
     if (auth.role !== "admin") {
-      return NextResponse.json(
-        { error: "Admin access required", code: "FORBIDDEN" },
-        { status: 403 }
-      );
+      return ApiErrors.forbidden("Admin access required");
     }
 
     const [users, progressionLevels] = await Promise.all([
@@ -61,23 +58,17 @@ export const GET = withAuth(async (_request, { auth }) => {
       };
     });
 
-    return NextResponse.json({ users: enrichedUsers });
+    return apiSuccess({ users: enrichedUsers });
   } catch (error) {
     console.error("Users fetch error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch users" },
-      { status: 500 }
-    );
+    return ApiErrors.internal("Failed to fetch users");
   }
 });
 
 export const POST = withAuth(async (request, { auth }) => {
   try {
     if (auth.role !== "admin") {
-      return NextResponse.json(
-        { error: "Admin access required", code: "FORBIDDEN" },
-        { status: 403 }
-      );
+      return ApiErrors.forbidden("Admin access required");
     }
 
     const body = await request.json();
@@ -86,34 +77,22 @@ export const POST = withAuth(async (request, { auth }) => {
     const name = typeof body?.name === "string" ? body.name.trim().slice(0, 100) : "";
 
     if (!username || !password || !name) {
-      return NextResponse.json(
-        { error: "Username, password, and display name are required" },
-        { status: 400 }
-      );
+      return ApiErrors.badRequest("Username, password, and display name are required");
     }
 
     const usernameValidation = validateUsername(username);
     if (!usernameValidation.valid) {
-      return NextResponse.json(
-        { error: usernameValidation.errors.join(". ") },
-        { status: 400 }
-      );
+      return ApiErrors.validationError(usernameValidation.errors.join(". "));
     }
 
     const passwordValidation = validatePassword(password);
     if (!passwordValidation.valid) {
-      return NextResponse.json(
-        { error: passwordValidation.errors.join(". ") },
-        { status: 400 }
-      );
+      return ApiErrors.validationError(passwordValidation.errors.join(". "));
     }
 
     const existing = await prisma.user.findUnique({ where: { username } });
     if (existing) {
-      return NextResponse.json(
-        { error: "Dao name already taken" },
-        { status: 409 }
-      );
+      return ApiErrors.conflict("Dao name already taken");
     }
 
     const hashedPassword = await bcrypt.hash(password, CONFIG.auth.bcryptRounds);
@@ -136,12 +115,9 @@ export const POST = withAuth(async (request, { auth }) => {
       },
     });
 
-    return NextResponse.json({ user }, { status: 201 });
+    return apiSuccess({ user }, undefined, { status: 201 });
   } catch (error) {
     console.error("User create error:", error);
-    return NextResponse.json(
-      { error: "Failed to create user" },
-      { status: 500 }
-    );
+    return ApiErrors.internal("Failed to create user");
   }
 });

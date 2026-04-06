@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { apiSuccess, ApiErrors } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 import { FRIEND_STATUS, getAcceptedFriendIds, getFriendRequestBetweenUsers, isMissingFriendSchemaError } from "@/lib/friends";
@@ -151,7 +151,7 @@ export const GET = withAuth(async (_request, { auth }) => {
       }
     }
 
-    return NextResponse.json({
+    return apiSuccess({
       me,
       friends,
       incomingRequests: incoming,
@@ -159,7 +159,7 @@ export const GET = withAuth(async (_request, { auth }) => {
     });
   } catch (error) {
     console.error("Friends fetch error:", error);
-    return NextResponse.json({ error: "Failed to fetch friends" }, { status: 500 });
+    return ApiErrors.internal("Failed to fetch friends");
   }
 });
 
@@ -169,14 +169,11 @@ export const POST = withAuth(async (request, { auth }) => {
     const normalizedFriendCode = normalizeFriendCode(friendCode);
 
     if ((!toUserId || typeof toUserId !== "string") && !normalizedFriendCode) {
-      return NextResponse.json({ error: "friendCode is required" }, { status: 400 });
+      return ApiErrors.badRequest("friendCode is required");
     }
 
     if (!toUserId && normalizedFriendCode && !isImmortalFriendCode(normalizedFriendCode)) {
-      return NextResponse.json(
-        { error: `Friend ID format is invalid. Use ${IMMORTAL_FRIEND_CODE_FORMAT_EXAMPLE}.` },
-        { status: 400 },
-      );
+      return ApiErrors.badRequest(`Friend ID format is invalid. Use ${IMMORTAL_FRIEND_CODE_FORMAT_EXAMPLE}.`);
     }
 
     let targetUserId = typeof toUserId === "string" ? toUserId : "";
@@ -184,27 +181,27 @@ export const POST = withAuth(async (request, { auth }) => {
     if (!targetUserId && normalizedFriendCode) {
       targetUserId = await findTargetUserId(normalizedFriendCode) || "";
       if (!targetUserId) {
-        return NextResponse.json({ error: "No user found for that friend ID" }, { status: 404 });
+        return ApiErrors.notFound("No user found for that friend ID");
       }
     }
 
     if (targetUserId === auth.userId) {
-      return NextResponse.json({ error: "You cannot send a request to yourself" }, { status: 400 });
+      return ApiErrors.badRequest("You cannot send a request to yourself");
     }
 
     const target = await prisma.user.findUnique({ where: { id: targetUserId }, select: { id: true } });
     if (!target) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return ApiErrors.notFound("User not found");
     }
 
     const existing = await getFriendRequestBetweenUsers(auth.userId, targetUserId);
     if (existing) {
       if (existing.status === FRIEND_STATUS.ACCEPTED) {
-        return NextResponse.json({ error: "You are already friends" }, { status: 409 });
+        return ApiErrors.conflict("You are already friends");
       }
 
       if (existing.status === FRIEND_STATUS.PENDING) {
-        return NextResponse.json({ error: "A pending request already exists" }, { status: 409 });
+        return ApiErrors.conflict("A pending request already exists");
       }
 
       const updated = await prisma.friendRequest.update({
@@ -222,7 +219,7 @@ export const POST = withAuth(async (request, { auth }) => {
         },
       });
 
-      return NextResponse.json({ request: updated, resent: true });
+      return apiSuccess({ request: updated, resent: true });
     }
 
     const created = await prisma.friendRequest.create({
@@ -237,10 +234,10 @@ export const POST = withAuth(async (request, { auth }) => {
       },
     });
 
-    return NextResponse.json({ request: created, resent: false });
+    return apiSuccess({ request: created, resent: false });
   } catch (error) {
     console.error("Friend request create error:", error);
-    return NextResponse.json({ error: "Failed to send request" }, { status: 500 });
+    return ApiErrors.internal("Failed to send request");
   }
 });
 
@@ -249,20 +246,20 @@ export const PATCH = withAuth(async (request, { auth }) => {
     const { requestId, action } = await request.json();
 
     if (!requestId || typeof requestId !== "string") {
-      return NextResponse.json({ error: "requestId is required" }, { status: 400 });
+      return ApiErrors.badRequest("requestId is required");
     }
 
     const requestRow = await prisma.friendRequest.findUnique({ where: { id: requestId } });
     if (!requestRow) {
-      return NextResponse.json({ error: "Request not found" }, { status: 404 });
+      return ApiErrors.notFound("Request not found");
     }
 
     if (requestRow.receiverId !== auth.userId) {
-      return NextResponse.json({ error: "Only the receiver can respond" }, { status: 403 });
+      return ApiErrors.forbidden("Only the receiver can respond");
     }
 
     if (requestRow.status !== FRIEND_STATUS.PENDING) {
-      return NextResponse.json({ error: "Request is not pending" }, { status: 409 });
+      return ApiErrors.conflict("Request is not pending");
     }
 
     const normalizedAction = sanitizeAction(action);
@@ -280,10 +277,10 @@ export const PATCH = withAuth(async (request, { auth }) => {
       },
     });
 
-    return NextResponse.json({ request: updated });
+    return apiSuccess({ request: updated });
   } catch (error) {
     console.error("Friend request response error:", error);
-    return NextResponse.json({ error: "Failed to respond to request" }, { status: 500 });
+    return ApiErrors.internal("Failed to respond to request");
   }
 });
 
@@ -296,12 +293,12 @@ export const DELETE = withAuth(async (request, { auth }) => {
     if (requestId) {
       const row = await prisma.friendRequest.findUnique({ where: { id: requestId } });
       if (!row) {
-        return NextResponse.json({ error: "Request not found" }, { status: 404 });
+        return ApiErrors.notFound("Request not found");
       }
 
       const isParticipant = row.requesterId === auth.userId || row.receiverId === auth.userId;
       if (!isParticipant) {
-        return NextResponse.json({ error: "Not allowed" }, { status: 403 });
+        return ApiErrors.forbidden("Not allowed");
       }
 
       if (row.status === FRIEND_STATUS.ACCEPTED) {
@@ -313,16 +310,16 @@ export const DELETE = withAuth(async (request, { auth }) => {
         });
       }
 
-      return NextResponse.json({ success: true });
+      return apiSuccess({ success: true });
     }
 
     if (!friendUserId) {
-      return NextResponse.json({ error: "requestId or friendUserId is required" }, { status: 400 });
+      return ApiErrors.badRequest("requestId or friendUserId is required");
     }
 
     const relation = await getFriendRequestBetweenUsers(auth.userId, friendUserId);
     if (!relation) {
-      return NextResponse.json({ error: "Friend relationship not found" }, { status: 404 });
+      return ApiErrors.notFound("Friend relationship not found");
     }
 
     if (relation.status === FRIEND_STATUS.ACCEPTED) {
@@ -334,9 +331,9 @@ export const DELETE = withAuth(async (request, { auth }) => {
       });
     }
 
-    return NextResponse.json({ success: true });
+    return apiSuccess({ success: true });
   } catch (error) {
     console.error("Friend request delete error:", error);
-    return NextResponse.json({ error: "Failed to cancel/remove relationship" }, { status: 500 });
+    return ApiErrors.internal("Failed to cancel/remove relationship");
   }
 });

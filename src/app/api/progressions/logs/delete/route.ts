@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { apiSuccess, ApiErrors } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 
@@ -7,7 +7,7 @@ export const POST = withAuth(async (request, { auth }) => {
     const { logId } = await request.json();
 
     if (!logId || typeof logId !== "string") {
-      return NextResponse.json({ error: "logId is required" }, { status: 400 });
+      return ApiErrors.badRequest("logId is required");
     }
 
     // Find the log and verify ownership
@@ -17,18 +17,18 @@ export const POST = withAuth(async (request, { auth }) => {
     });
 
     if (!log) {
-      return NextResponse.json({ error: "Log record not found" }, { status: 404 });
+      return ApiErrors.notFound("Log record not found");
     }
 
     if (log.userProgression.userId !== auth.userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+      return ApiErrors.forbidden("Unauthorized");
     }
 
     await prisma.progressionLog.delete({ where: { id: logId } });
 
-    return NextResponse.json({ success: true, message: "Log record deleted successfully" });
+    return apiSuccess({ success: true, message: "Log record deleted successfully" });
   } catch (error) {
     console.error("Progression log delete error:", error);
-    return NextResponse.json({ error: "Failed to delete log record" }, { status: 500 });
+    return ApiErrors.internal("Failed to delete log record");
   }
 });

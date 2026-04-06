@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { createToken, setAuthCookie } from "@/lib/auth";
 import { loginLimiter } from "@/lib/auth/rate-limiters";
 import { getClientIdentifier } from "@/lib/rate-limit";
+import { apiSuccess, ApiErrors } from "@/lib/api";
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,13 +12,9 @@ export async function POST(req: NextRequest) {
     const clientId = getClientIdentifier(req);
     const rateCheck = loginLimiter.check(clientId);
     if (!rateCheck.allowed) {
-      return NextResponse.json(
-        {
-          error: "Too many login attempts. Please try again later.",
-          code: "RATE_LIMITED",
-          retryAfter: rateCheck.resetAt.toISOString(),
-        },
-        { status: 429 }
+      return ApiErrors.rateLimited(
+        "Too many login attempts. Please try again later.",
+        rateCheck.resetAt.toISOString()
       );
     }
 
@@ -30,35 +27,26 @@ export async function POST(req: NextRequest) {
       typeof username !== "string" ||
       typeof password !== "string"
     ) {
-      return NextResponse.json(
-        { error: "Dao name and secret art are required" },
-        { status: 400 }
-      );
+      return ApiErrors.badRequest("Dao name and secret art are required");
     }
 
     const trimmedUsername = username.trim();
     const users = await prisma.$queryRaw<
-      Array<{ id: string; username: string; password: string; name: string; role: string }>
+      Array<{ id: string; username: string; password: string; name: string; role: string; onboardingCompleted: number; onboardingSkipped: number }>
     >`
-      SELECT id, username, password, name, role
+      SELECT id, username, password, name, role, onboardingCompleted, onboardingSkipped
       FROM "User"
       WHERE lower(username) = lower(${trimmedUsername})
       LIMIT 1
     `;
     const user = users[0] ?? null;
     if (!user) {
-      return NextResponse.json(
-        { error: "Cultivator not found in the sect records" },
-        { status: 404 }
-      );
+      return ApiErrors.notFound("Cultivator not found in the sect records");
     }
 
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
-      return NextResponse.json(
-        { error: "Incorrect secret art" },
-        { status: 401 }
-      );
+      return ApiErrors.unauthorized("Incorrect secret art");
     }
 
     // Generate JWT and set cookie
@@ -67,12 +55,14 @@ export async function POST(req: NextRequest) {
       !!rememberMe
     );
 
-    const response = NextResponse.json({
+    const response = apiSuccess({
       user: {
         id: user.id,
         username: user.username,
         name: user.name,
         role: user.role,
+        onboardingCompleted: !!user.onboardingCompleted,
+        onboardingSkipped: !!user.onboardingSkipped,
       },
     });
 
@@ -84,9 +74,6 @@ export async function POST(req: NextRequest) {
     return response;
   } catch (error) {
     console.error("Login error:", error);
-    return NextResponse.json(
-      { error: "Authentication failed" },
-      { status: 500 }
-    );
+    return ApiErrors.internal("Authentication failed");
   }
 }

@@ -159,7 +159,7 @@ export default function HistoryPage() {
       subtitle={subtitle}
       mobileContentPaddingClass="p-2 pb-2"
     >
-      <div className="nyaa-history-page space-y-6 px-0 py-2 sm:py-3">
+      <div className="nyaa-history-page space-y-4 px-0">
         {loading ? (
           <GlowCard glow="jade" hoverable={false}>
             <p className="text-sm text-mist-dark text-center py-4">Loading history...</p>
@@ -212,7 +212,7 @@ export default function HistoryPage() {
               </div>
             </GlowCard>
 
-            <div className="nyaa-history-table-shell space-y-4">
+            <div className="nyaa-history-table-shell">
               <MemoTrainingLogTable
                 exercises={exercises}
                 physique={physique}

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { apiSuccess, ApiErrors } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 
@@ -10,7 +10,7 @@ export const PUT = withAuth(async (request, { auth, params }) => {
     const currentLevel = body.currentLevel;
 
     if (typeof currentLevel !== "number" || currentLevel < 1) {
-      return NextResponse.json({ error: "currentLevel must be a positive number" }, { status: 400 });
+      return ApiErrors.badRequest("currentLevel must be a positive number");
     }
 
     // Verify the exercise exists in shared library
@@ -18,7 +18,7 @@ export const PUT = withAuth(async (request, { auth, params }) => {
       where: { id },
     });
     if (!exercise) {
-      return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
+      return ApiErrors.notFound("Exercise not found");
     }
 
     const userId = auth.userId;
@@ -28,9 +28,9 @@ export const PUT = withAuth(async (request, { auth, params }) => {
       create: { userId, exerciseId: id, currentLevel },
     });
 
-    return NextResponse.json({ progress });
+    return apiSuccess({ progress });
   } catch (error) {
     console.error("Level update error:", error);
-    return NextResponse.json({ error: "Failed to update level" }, { status: 500 });
+    return ApiErrors.internal("Failed to update level");
   }
 });

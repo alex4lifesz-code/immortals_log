@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 import { getVisibleSocialUserIds, normalizeScope } from "@/lib/friends";
+import { apiSuccess, ApiErrors } from "@/lib/api";
 
 // GET /api/checkins/notes?date=YYYY-MM-DD  — fetch current user's notes for a date (or all if no date)
 // GET /api/checkins/notes?future=true — fetch notes for dates beyond today
@@ -44,13 +44,10 @@ export const GET = withAuth(async (request, { auth }) => {
       orderBy: [{ pinned: "desc" }, { updatedAt: "desc" }],
     });
 
-    return NextResponse.json({ notes });
+    return apiSuccess({ notes });
   } catch (error) {
     console.error("CheckInNote fetch error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch notes" },
-      { status: 500 }
-    );
+    return ApiErrors.internal("Failed to fetch notes");
   }
 });
 
@@ -61,18 +58,12 @@ export const POST = withAuth(async (request, { auth }) => {
     const userId = auth.userId;
 
     if (!date || !content?.trim()) {
-      return NextResponse.json(
-        { error: "Date and content are required" },
-        { status: 400 }
-      );
+      return ApiErrors.badRequest("Date and content are required");
     }
 
     // Validate date format
     if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      return NextResponse.json(
-        { error: "Invalid date format (expected YYYY-MM-DD)" },
-        { status: 400 }
-      );
+      return ApiErrors.badRequest("Invalid date format (expected YYYY-MM-DD)");
     }
 
     const trimmedContent = String(content).trim().slice(0, 2000);
@@ -100,13 +91,10 @@ export const POST = withAuth(async (request, { auth }) => {
           },
         });
 
-    return NextResponse.json({ note, updated: Boolean(existing) });
+    return apiSuccess({ note, updated: Boolean(existing) });
   } catch (error) {
     console.error("CheckInNote create error:", error);
-    return NextResponse.json(
-      { error: "Failed to create note" },
-      { status: 500 }
-    );
+    return ApiErrors.internal("Failed to create note");
   }
 });
 
@@ -116,10 +104,7 @@ export const PATCH = withAuth(async (request, { auth }) => {
     const { noteId, pinned } = await request.json();
 
     if (!noteId) {
-      return NextResponse.json(
-        { error: "noteId is required" },
-        { status: 400 }
-      );
+      return ApiErrors.badRequest("noteId is required");
     }
 
     // Verify ownership
@@ -128,10 +113,7 @@ export const PATCH = withAuth(async (request, { auth }) => {
     });
 
     if (!existing || existing.userId !== auth.userId) {
-      return NextResponse.json(
-        { error: "Note not found or not owned by user" },
-        { status: 403 }
-      );
+      return ApiErrors.forbidden("Note not found or not owned by user");
     }
 
     const note = await prisma.checkInNote.update({
@@ -142,13 +124,10 @@ export const PATCH = withAuth(async (request, { auth }) => {
       },
     });
 
-    return NextResponse.json({ note });
+    return apiSuccess({ note });
   } catch (error) {
     console.error("CheckInNote pin error:", error);
-    return NextResponse.json(
-      { error: "Failed to update note" },
-      { status: 500 }
-    );
+    return ApiErrors.internal("Failed to update note");
   }
 });
 
@@ -158,10 +137,7 @@ export const DELETE = withAuth(async (request, { auth }) => {
     const { noteId } = await request.json();
 
     if (!noteId) {
-      return NextResponse.json(
-        { error: "noteId is required" },
-        { status: 400 }
-      );
+      return ApiErrors.badRequest("noteId is required");
     }
 
     // Verify ownership
@@ -170,20 +146,14 @@ export const DELETE = withAuth(async (request, { auth }) => {
     });
 
     if (!existing || existing.userId !== auth.userId) {
-      return NextResponse.json(
-        { error: "Note not found or not owned by user" },
-        { status: 403 }
-      );
+      return ApiErrors.forbidden("Note not found or not owned by user");
     }
 
     await prisma.checkInNote.delete({ where: { id: noteId } });
 
-    return NextResponse.json({ success: true });
+    return apiSuccess({ deleted: true });
   } catch (error) {
     console.error("CheckInNote delete error:", error);
-    return NextResponse.json(
-      { error: "Failed to delete note" },
-      { status: 500 }
-    );
+    return ApiErrors.internal("Failed to delete note");
   }
 });

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { apiSuccess, ApiErrors } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 
@@ -26,26 +26,23 @@ export const POST = withAuth(async (request, { auth }) => {
     const userId = auth.userId;
 
     if (!updates || !Array.isArray(updates) || updates.length === 0) {
-      return NextResponse.json(
-        { error: "Updates array is required and must not be empty" },
-        { status: 400 }
-      );
+      return ApiErrors.badRequest("Updates array is required and must not be empty");
     }
 
     for (const update of updates) {
       if (!update.id) {
-        return NextResponse.json({ error: "Log ID is required for all updates" }, { status: 400 });
+        return ApiErrors.badRequest("Log ID is required for all updates");
       }
 
       if (update.exerciseId != null && typeof update.exerciseId !== "string") {
-        return NextResponse.json({ error: "exerciseId must be a string when provided" }, { status: 400 });
+        return ApiErrors.badRequest("exerciseId must be a string when provided");
       }
 
       // Validate weight ranges
       for (const field of ["weight1", "weight2", "weight3"] as const) {
         const val = update[field];
         if (val !== null && val !== undefined && (val < 0 || val > 10000)) {
-          return NextResponse.json({ error: `${field} must be between 0 and 10000` }, { status: 400 });
+          return ApiErrors.badRequest(`${field} must be between 0 and 10000`);
         }
       }
 
@@ -53,7 +50,7 @@ export const POST = withAuth(async (request, { auth }) => {
       for (const field of ["reps1", "reps2", "reps3"] as const) {
         const val = update[field];
         if (val !== null && val !== undefined && (val < 0 || val > 500)) {
-          return NextResponse.json({ error: `${field} must be between 0 and 500` }, { status: 400 });
+          return ApiErrors.badRequest(`${field} must be between 0 and 500`);
         }
       }
 
@@ -61,13 +58,13 @@ export const POST = withAuth(async (request, { auth }) => {
       for (const field of ["holdTime", "holdTime2", "holdTime3"] as const) {
         const val = update[field];
         if (val !== null && val !== undefined && (val < 0 || val > 9999)) {
-          return NextResponse.json({ error: `${field} must be between 0 and 9999` }, { status: 400 });
+          return ApiErrors.badRequest(`${field} must be between 0 and 9999`);
         }
       }
 
       if (update.level !== null && update.level !== undefined) {
         if (!Number.isFinite(update.level) || update.level < 1 || update.level > 999) {
-          return NextResponse.json({ error: "level must be between 1 and 999" }, { status: 400 });
+          return ApiErrors.badRequest("level must be between 1 and 999");
         }
       }
     }
@@ -86,7 +83,7 @@ export const POST = withAuth(async (request, { auth }) => {
         select: { id: true },
       });
       if (foundExercises.length !== requestedExerciseIds.length) {
-        return NextResponse.json({ error: "One or more selected exercises were not found" }, { status: 400 });
+        return ApiErrors.badRequest("One or more selected exercises were not found");
       }
     }
 
@@ -98,12 +95,12 @@ export const POST = withAuth(async (request, { auth }) => {
     });
 
     if (logs.length !== logIds.length) {
-      return NextResponse.json({ error: "One or more log records not found" }, { status: 404 });
+      return ApiErrors.notFound("One or more log records not found");
     }
 
     for (const log of logs) {
       if (log.userProgression.userId !== userId) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+        return ApiErrors.forbidden("Unauthorized");
       }
     }
 
@@ -153,9 +150,9 @@ export const POST = withAuth(async (request, { auth }) => {
 
     await Promise.all(updatePromises);
 
-    return NextResponse.json({ success: true, message: "Progression logs updated successfully" });
+    return apiSuccess({ success: true, message: "Progression logs updated successfully" });
   } catch (error) {
     console.error("Progression log update error:", error);
-    return NextResponse.json({ error: "Failed to update progression logs" }, { status: 500 });
+    return ApiErrors.internal("Failed to update progression logs");
   }
 });

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { createToken, setAuthCookie } from "@/lib/auth";
@@ -7,6 +7,7 @@ import { getClientIdentifier } from "@/lib/rate-limit";
 import { validatePassword, validateUsername } from "@/lib/validation";
 import { CONFIG } from "@/lib/config";
 import { generateUniqueImmortalFriendCode } from "@/lib/friend-code";
+import { apiSuccess, ApiErrors } from "@/lib/api";
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,23 +15,16 @@ export async function POST(req: NextRequest) {
     const clientId = getClientIdentifier(req);
     const rateCheck = registerLimiter.check(clientId);
     if (!rateCheck.allowed) {
-      return NextResponse.json(
-        {
-          error: "Too many registration attempts. Please try again later.",
-          code: "RATE_LIMITED",
-          retryAfter: rateCheck.resetAt.toISOString(),
-        },
-        { status: 429 }
+      return ApiErrors.rateLimited(
+        "Too many registration attempts. Please try again later.",
+        rateCheck.resetAt.toISOString()
       );
     }
 
     const { username, password, name } = await req.json();
 
     if (!username || !password || !name) {
-      return NextResponse.json(
-        { error: "All fields are required" },
-        { status: 400 }
-      );
+      return ApiErrors.badRequest("All fields are required");
     }
 
     // Validate types
@@ -39,10 +33,7 @@ export async function POST(req: NextRequest) {
       typeof password !== "string" ||
       typeof name !== "string"
     ) {
-      return NextResponse.json(
-        { error: "Invalid field types" },
-        { status: 400 }
-      );
+      return ApiErrors.badRequest("Invalid field types");
     }
 
     const trimmedUsername = username.trim();
@@ -51,27 +42,18 @@ export async function POST(req: NextRequest) {
     // Validate username
     const usernameValidation = validateUsername(trimmedUsername);
     if (!usernameValidation.valid) {
-      return NextResponse.json(
-        { error: usernameValidation.errors.join(". ") },
-        { status: 400 }
-      );
+      return ApiErrors.validationError(usernameValidation.errors.join(". "));
     }
 
     // Validate password with complexity requirements
     const passwordValidation = validatePassword(password);
     if (!passwordValidation.valid) {
-      return NextResponse.json(
-        { error: passwordValidation.errors.join(". ") },
-        { status: 400 }
-      );
+      return ApiErrors.validationError(passwordValidation.errors.join(". "));
     }
 
     // Validate display name
     if (trimmedName.length < 1 || trimmedName.length > 100) {
-      return NextResponse.json(
-        { error: "Display name must be between 1 and 100 characters" },
-        { status: 400 }
-      );
+      return ApiErrors.validationError("Display name must be between 1 and 100 characters");
     }
 
     const existingUsers = await prisma.$queryRaw<Array<{ id: string }>>`
@@ -82,10 +64,7 @@ export async function POST(req: NextRequest) {
     `;
     const existing = existingUsers[0] ?? null;
     if (existing) {
-      return NextResponse.json(
-        { error: "Dao name already taken" },
-        { status: 409 }
-      );
+      return ApiErrors.conflict("Dao name already taken");
     }
 
     const hashedPassword = await bcrypt.hash(
@@ -114,7 +93,7 @@ export async function POST(req: NextRequest) {
       false
     );
 
-    const response = NextResponse.json({
+    const response = apiSuccess({
       user: {
         id: user.id,
         username: user.username,
@@ -128,9 +107,6 @@ export async function POST(req: NextRequest) {
     return response;
   } catch (error) {
     console.error("Register error:", error);
-    return NextResponse.json(
-      { error: "Registration failed" },
-      { status: 500 }
-    );
+    return ApiErrors.internal("Registration failed");
   }
 }

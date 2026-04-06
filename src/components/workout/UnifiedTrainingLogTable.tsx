@@ -248,6 +248,9 @@ function UnifiedTrainingLogTable({
     [allEntries, selectedLogFilter, isSelectedGymExercise]
   );
   const { settings } = useDisplaySettings();
+  const displayTerminologyMode = !settings.showExerciseForeignLanguage && settings.languageMode === "english"
+    ? "normal"
+    : settings.terminologyMode;
   const isMobile = useIsMobile();
 
   const [isEditMode, setIsEditMode] = useState(false);
@@ -633,7 +636,7 @@ function UnifiedTrainingLogTable({
                       ? ({ opacity: getBandSoftDimOpacity(activeBand) } as React.CSSProperties)
                       : undefined;
                     const entryDisplayName = ex
-                      ? stripBwPercentHint(getExerciseDisplayName(ex, settings.terminologyMode, settings.showExerciseForeignLanguage))
+                      ? stripBwPercentHint(getExerciseDisplayName(ex, displayTerminologyMode, settings.showExerciseForeignLanguage))
                       : stripBwPercentHint(entry.exerciseName);
                     const exerciseVariantOptions = (ex?.variations ?? []).map((v) => v.name).filter(Boolean);
                     const selectedVariantValue = editData?.variant ?? "";
@@ -1031,7 +1034,7 @@ function UnifiedTrainingLogTable({
                     >
                       <h3 className="text-sm font-semibold text-cloud-white mb-3">{t("Change Progression Tier", "normal")}</h3>
                       <p className="text-[11px] text-mist-light mb-3">
-                        {stripBwPercentHint(getExerciseDisplayName(ex, settings.terminologyMode, settings.showExerciseForeignLanguage))}
+                        {stripBwPercentHint(getExerciseDisplayName(ex, displayTerminologyMode, settings.showExerciseForeignLanguage))}
                       </p>
                       <div className="max-h-[280px] overflow-y-auto space-y-1 pr-1">
                         {tiers.map((t) => {
@@ -1046,7 +1049,7 @@ function UnifiedTrainingLogTable({
                               className={`w-full text-left px-2.5 py-2 rounded border transition-colors ${active ? "border-jade-glow/50 bg-jade-deep/20 text-jade-light" : "border-ink-light/40 bg-ink-mid/20 text-mist-light hover:border-jade-glow/35 hover:bg-jade-deep/10"}`}
                             >
                               <span className="text-[11px] font-semibold">
-                                {stripBwPercentHint(getExerciseDisplayName(t, settings.terminologyMode, settings.showExerciseForeignLanguage))}
+                                {stripBwPercentHint(getExerciseDisplayName(t, displayTerminologyMode, settings.showExerciseForeignLanguage))}
                               </span>
                             </button>
                           );

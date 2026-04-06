@@ -8,6 +8,9 @@ type User = {
   username: string;
   name: string;
   role: string;
+  onboardingCompleted?: boolean;
+  onboardingSkipped?: boolean;
+  onboardingStep?: number;
 };
 
 interface AuthContextType {

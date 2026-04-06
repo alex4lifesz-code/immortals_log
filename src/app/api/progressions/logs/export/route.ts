@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { apiSuccess, ApiErrors } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 import { canViewUserData } from "@/lib/friends";
@@ -18,7 +18,7 @@ export const GET = withAuth(async (request, { auth }) => {
         targetUserId,
       });
       if (!canViewTarget) {
-        return NextResponse.json({ error: "Not allowed to export this user" }, { status: 403 });
+        return ApiErrors.forbidden("Not allowed to export this user");
       }
       userId = targetUserId;
     }
@@ -67,9 +67,9 @@ export const GET = withAuth(async (request, { auth }) => {
       })),
     };
 
-    return NextResponse.json(payload);
+    return apiSuccess(payload);
   } catch (error) {
     console.error("Progression log export error:", error);
-    return NextResponse.json({ error: "Failed to export progression logs" }, { status: 500 });
+    return ApiErrors.internal("Failed to export progression logs");
   }
 });

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { apiSuccess, ApiErrors } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import {
   ALL_DIFFICULTIES,
@@ -74,10 +74,7 @@ export const PATCH = withAuth(async (req, { auth, params }) => {
       where: { id },
     });
     if (!existing) {
-      return NextResponse.json(
-        { error: "Exercise not found" },
-        { status: 404 }
-      );
+      return ApiErrors.notFound("Exercise not found");
     }
 
     const dbOptions = await getUserExerciseDbOptions(auth.userId);
@@ -88,10 +85,7 @@ export const PATCH = withAuth(async (req, { auth, params }) => {
     if (name !== undefined) {
       const trimmedName = String(name).trim().slice(0, 200);
       if (trimmedName.length < 2) {
-        return NextResponse.json(
-          { error: "Name must be at least 2 characters" },
-          { status: 400 }
-        );
+        return ApiErrors.badRequest("Name must be at least 2 characters");
       }
       const allUserExercises = await prisma.progressionExercise.findMany({
         select: { id: true, name: true },
@@ -101,10 +95,7 @@ export const PATCH = withAuth(async (req, { auth, params }) => {
           ex.id !== id && ex.name.toLowerCase() === trimmedName.toLowerCase()
       );
       if (duplicate) {
-        return NextResponse.json(
-          { error: "An exercise with this name already exists" },
-          { status: 409 }
-        );
+        return ApiErrors.conflict("An exercise with this name already exists");
       }
       updateData.name = trimmedName;
       updateData.wuxiaName = trimmedName;
@@ -113,10 +104,7 @@ export const PATCH = withAuth(async (req, { auth, params }) => {
     if (category !== undefined) {
       const resolvedCategory = resolveOption(String(category || ""), dbOptions.categories);
       if (!resolvedCategory) {
-        return NextResponse.json(
-          { error: "Invalid category" },
-          { status: 400 }
-        );
+        return ApiErrors.badRequest("Invalid category");
       }
       updateData.category = resolvedCategory;
     }
@@ -124,10 +112,7 @@ export const PATCH = withAuth(async (req, { auth, params }) => {
     if (exerciseType !== undefined) {
       const resolvedType = resolveOption(String(exerciseType || ""), dbOptions.types);
       if (!resolvedType) {
-        return NextResponse.json(
-          { error: "Invalid exercise type" },
-          { status: 400 }
-        );
+        return ApiErrors.badRequest("Invalid exercise type");
       }
       const normalizedType = normalizeTypeForFlags(resolvedType);
       updateData.bodyweight =
@@ -137,19 +122,13 @@ export const PATCH = withAuth(async (req, { auth, params }) => {
 
     if (muscleGroups !== undefined) {
       if (!Array.isArray(muscleGroups) || muscleGroups.length === 0) {
-        return NextResponse.json(
-          { error: "At least one muscle group required" },
-          { status: 400 }
-        );
+        return ApiErrors.badRequest("At least one muscle group required");
       }
       const normalizedMuscles = muscleGroups
         .map((mg) => resolveOption(String(mg || ""), dbOptions.muscles))
         .filter(Boolean) as string[];
       if (normalizedMuscles.length !== muscleGroups.length) {
-        return NextResponse.json(
-          { error: "One or more muscle groups are invalid" },
-          { status: 400 }
-        );
+        return ApiErrors.badRequest("One or more muscle groups are invalid");
       }
       updateData.primaryMuscles = normalizedMuscles.join(", ");
     }
@@ -162,10 +141,7 @@ export const PATCH = withAuth(async (req, { auth, params }) => {
 
     if (difficulty !== undefined) {
       if (difficulty && !ALL_DIFFICULTIES.includes(difficulty)) {
-        return NextResponse.json(
-          { error: "Invalid difficulty" },
-          { status: 400 }
-        );
+        return ApiErrors.badRequest("Invalid difficulty");
       }
       updateData.difficulty = difficulty ? String(difficulty).trim() : "";
       updateData.wuxiaDifficulty = difficulty ? String(difficulty).trim() : "";
@@ -196,17 +172,11 @@ export const PATCH = withAuth(async (req, { auth, params }) => {
       : undefined;
 
     if (normalizedVariations === null) {
-      return NextResponse.json(
-        { error: "Invalid variations payload" },
-        { status: 400 }
-      );
+      return ApiErrors.badRequest("Invalid variations payload");
     }
 
     if (normalizedProgression === null) {
-      return NextResponse.json(
-        { error: "Invalid progression payload" },
-        { status: 400 }
-      );
+      return ApiErrors.badRequest("Invalid progression payload");
     }
 
     if (normalizedProgression !== undefined) {
@@ -332,13 +302,10 @@ export const PATCH = withAuth(async (req, { auth, params }) => {
       return next;
     });
 
-    return NextResponse.json({ exercise: updated });
+    return apiSuccess({ exercise: updated });
   } catch (error) {
     console.error("Exercise update error:", error);
-    return NextResponse.json(
-      { error: "Failed to update exercise" },
-      { status: 500 }
-    );
+    return ApiErrors.internal("Failed to update exercise");
   }
 });
 
@@ -351,20 +318,14 @@ export const DELETE = withAuth(async (_req, { auth, params }) => {
       where: { id },
     });
     if (!existing) {
-      return NextResponse.json(
-        { error: "Exercise not found" },
-        { status: 404 }
-      );
+      return ApiErrors.notFound("Exercise not found");
     }
 
     await prisma.progressionExercise.delete({ where: { id } });
 
-    return NextResponse.json({ message: "Exercise deleted" });
+    return apiSuccess({ message: "Exercise deleted" });
   } catch (error) {
     console.error("Exercise delete error:", error);
-    return NextResponse.json(
-      { error: "Failed to delete exercise" },
-      { status: 500 }
-    );
+    return ApiErrors.internal("Failed to delete exercise");
   }
 });

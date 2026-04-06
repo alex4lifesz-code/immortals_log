@@ -146,6 +146,10 @@ interface ExerciseHistoryEntry {
 interface ExerciseHistoryResponse {
   history?: ExerciseHistoryEntry[];
   nextCursor?: string | null;
+  data?: {
+    history?: ExerciseHistoryEntry[];
+    nextCursor?: string | null;
+  };
 }
 
 type MobileInputPickerField = "level" | "variant" | "modifierKg";
@@ -622,17 +626,20 @@ function TrainingLogTable({
   const exerciseLookup = useMemo(() => new Map(exercises.map((exercise) => [exercise.id, exercise])), [exercises]);
   const { settings } = useDisplaySettings();
   const isMobile = useIsMobile();
+  const displayTerminologyMode = !settings.showExerciseForeignLanguage && settings.languageMode === "english"
+    ? "normal"
+    : settings.terminologyMode;
   const exerciseMetaById = useMemo(() => {
     const map = new Map<string, { displayName: string; categoryLabel: string; variationOptions: string[] }>();
     for (const exercise of exercises) {
       map.set(exercise.id, {
-        displayName: stripBwPercentHint(getExerciseDisplayName(exercise, settings.terminologyMode, settings.showExerciseForeignLanguage)),
+        displayName: stripBwPercentHint(getExerciseDisplayName(exercise, displayTerminologyMode, settings.showExerciseForeignLanguage)),
         categoryLabel: getExerciseCategoryLabel(exercise),
         variationOptions: (exercise.variations ?? []).map((variant) => variant.name).filter(Boolean),
       });
     }
     return map;
-  }, [exercises, settings.terminologyMode]);
+  }, [displayTerminologyMode, exercises, settings.showExerciseForeignLanguage]);
 
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingData, setEditingData] = useState<Record<string, {
@@ -1101,7 +1108,7 @@ function TrainingLogTable({
       }
       if (sortState.columnId === "exercise") {
         const entryDisplayName = ex
-          ? stripBwPercentHint(getExerciseDisplayName(ex, settings.terminologyMode, settings.showExerciseForeignLanguage))
+          ? stripBwPercentHint(getExerciseDisplayName(ex, displayTerminologyMode, settings.showExerciseForeignLanguage))
           : stripBwPercentHint(entry.exerciseName);
         return entryDisplayName.toLowerCase();
       }
@@ -1155,7 +1162,7 @@ function TrainingLogTable({
         return textCmp * directionFactor;
       })
       .map((item) => item.entry);
-  }, [allEntries, sortState, exerciseLookup, settings.terminologyMode, physique.bodyWeightKg, headerTypes, columnGrouped]);
+  }, [allEntries, sortState, exerciseLookup, displayTerminologyMode, physique.bodyWeightKg, headerTypes, columnGrouped, settings.showExerciseForeignLanguage]);
 
   useEffect(() => {
     if (!isEditMode) return;
@@ -1276,9 +1283,9 @@ function TrainingLogTable({
   const sortedExerciseOptions = useMemo(
     () => sortedExercises.map((exercise) => ({
       id: exercise.id,
-      label: exerciseMetaById.get(exercise.id)?.displayName ?? stripBwPercentHint(getExerciseDisplayName(exercise, settings.terminologyMode, settings.showExerciseForeignLanguage)),
+      label: exerciseMetaById.get(exercise.id)?.displayName ?? stripBwPercentHint(getExerciseDisplayName(exercise, displayTerminologyMode, settings.showExerciseForeignLanguage)),
     })),
-    [exerciseMetaById, settings.terminologyMode, sortedExercises],
+    [exerciseMetaById, displayTerminologyMode, settings.showExerciseForeignLanguage, sortedExercises],
   );
 
   const sortedProgressionTiersByExerciseId = useMemo(() => {
@@ -1580,14 +1587,15 @@ function TrainingLogTable({
       throw new Error("Failed to fetch exercise history page");
     }
     const data = (await response.json()) as ExerciseHistoryResponse;
+    const payload = data.data ?? data;
     return {
-      history: Array.isArray(data.history) ? data.history : [],
-      nextCursor: typeof data.nextCursor === "string" ? data.nextCursor : null,
+      history: Array.isArray(payload.history) ? payload.history : [],
+      nextCursor: typeof payload.nextCursor === "string" ? payload.nextCursor : null,
     };
   }, [historyTargetUserId]);
 
   useEffect(() => {
-    if (inputMode === "new" || !userId || !selectedInputExercise?.id) {
+    if (inputMode === "new" || !selectedInputExercise?.id) {
       setHistoryData([]);
       setHistoryLoading(false);
       setHistoryLoadingMore(false);
@@ -1622,7 +1630,7 @@ function TrainingLogTable({
     return () => {
       cancelled = true;
     };
-  }, [fetchExerciseHistoryPage, inputMode, selectedInputExercise?.id, userId]);
+  }, [fetchExerciseHistoryPage, inputMode, selectedInputExercise?.id]);
 
   const handleLoadMoreHistory = useCallback(async () => {
     const selectedExerciseId = selectedInputExercise?.id;
@@ -1659,8 +1667,8 @@ function TrainingLogTable({
       setExerciseSearchTerm("");
       return;
     }
-    setExerciseSearchTerm(stripBwPercentHint(getExerciseDisplayName(selectedExercise, settings.terminologyMode, settings.showExerciseForeignLanguage)));
-  }, [inputMode, workoutInput.exerciseId, exerciseLookup, settings.terminologyMode]);
+    setExerciseSearchTerm(stripBwPercentHint(getExerciseDisplayName(selectedExercise, displayTerminologyMode, settings.showExerciseForeignLanguage)));
+  }, [inputMode, workoutInput.exerciseId, exerciseLookup, displayTerminologyMode, settings.showExerciseForeignLanguage]);
 
   useEffect(() => {
     const normalizedName = (prefillExerciseName || "").trim().toLowerCase();
@@ -1681,7 +1689,7 @@ function TrainingLogTable({
       resolvedExerciseId = prefillExerciseId;
     } else if (normalizedName) {
       const match = exercises.find((exercise) => {
-        const displayName = stripBwPercentHint(getExerciseDisplayName(exercise, settings.terminologyMode, settings.showExerciseForeignLanguage)).trim().toLowerCase();
+        const displayName = stripBwPercentHint(getExerciseDisplayName(exercise, displayTerminologyMode, settings.showExerciseForeignLanguage)).trim().toLowerCase();
         const canonicalName = (exercise.name || "").trim().toLowerCase();
         return displayName === normalizedName || canonicalName === normalizedName;
       });
@@ -1705,7 +1713,7 @@ function TrainingLogTable({
     setExerciseDropdownOpen(false);
     setExerciseHighlightIndex(-1);
     appliedPrefillRef.current = prefillKey;
-  }, [exerciseLookup, exercises, prefillExerciseId, prefillExerciseName, prefillProgression, prefillVariant, settings.terminologyMode]);
+  }, [exerciseLookup, exercises, prefillExerciseId, prefillExerciseName, prefillProgression, prefillVariant, displayTerminologyMode, settings.showExerciseForeignLanguage]);
 
   useEffect(() => {
     const onPointerDown = (event: MouseEvent) => {
@@ -2238,10 +2246,10 @@ function TrainingLogTable({
 
   const headerTypographyClass = "font-semibold text-[10px] sm:text-[11px] uppercase tracking-[0.08em] text-jade-glow";
   const headerPadClass = effectiveCompact ? "py-1.5" : "py-2";
-  const cellPadTight = effectiveCompact ? "px-0.5 py-1" : "px-0.5 py-1.5";
-  const cellPadStandard = effectiveCompact ? "px-1 py-1" : "px-1 py-1.5";
-  const cellPadWide = effectiveCompact ? "px-1 py-1" : "px-1.5 py-1.5";
-  const cellPadExercise = effectiveCompact ? "px-1 py-1" : "px-1.5 py-1.5";
+  const cellPadTight = effectiveCompact ? "px-1 py-1" : "px-1 py-1.5";
+  const cellPadStandard = effectiveCompact ? "px-1 py-1" : "px-1.5 py-1.5";
+  const cellPadWide = effectiveCompact ? "px-1.5 py-1" : "px-1.5 py-1.5";
+  const cellPadExercise = effectiveCompact ? "px-1.5 py-1" : "px-1.5 py-1.5";
   const segmentedToggleButtonClass = "rounded px-2 py-1 text-[11px] font-semibold transition-all duration-150";
   const toolbarButtonClass = "inline-flex items-center gap-2 rounded-md border px-2 py-1 text-[11px] font-semibold transition-all duration-150 hover:scale-[1.02] active:scale-[0.98]";
   const panelIconButtonClass = "inline-flex h-6 w-6 items-center justify-center rounded border text-xs font-bold transition-colors hover:bg-ink-mid/35";
@@ -2497,7 +2505,7 @@ function TrainingLogTable({
                                 onBlur={() => {
                                   const selected = exerciseLookup.get(workoutInput.exerciseId);
                                   if (selected && exerciseSearchTerm.trim() === "") {
-                                    setExerciseSearchTerm(exerciseMetaById.get(selected.id)?.displayName ?? stripBwPercentHint(getExerciseDisplayName(selected, settings.terminologyMode, settings.showExerciseForeignLanguage)));
+                                    setExerciseSearchTerm(exerciseMetaById.get(selected.id)?.displayName ?? stripBwPercentHint(getExerciseDisplayName(selected, displayTerminologyMode, settings.showExerciseForeignLanguage)));
                                   }
                                 }}
                                 onKeyDown={(event) => {
@@ -2506,7 +2514,7 @@ function TrainingLogTable({
                                     const selected = exerciseLookup.get(workoutInput.exerciseId);
                                     setExerciseSearchTerm(
                                       selected
-                                        ? exerciseMetaById.get(selected.id)?.displayName ?? stripBwPercentHint(getExerciseDisplayName(selected, settings.terminologyMode, settings.showExerciseForeignLanguage))
+                                        ? exerciseMetaById.get(selected.id)?.displayName ?? stripBwPercentHint(getExerciseDisplayName(selected, displayTerminologyMode, settings.showExerciseForeignLanguage))
                                         : "",
                                     );
                                     setExerciseDropdownOpen(false);
@@ -2843,7 +2851,7 @@ function TrainingLogTable({
                       // Restore the selected exercise name if the user didn't pick a new one
                       const selected = exerciseLookup.get(workoutInput.exerciseId);
                       if (selected && exerciseSearchTerm.trim() === "") {
-                        setExerciseSearchTerm(exerciseMetaById.get(selected.id)?.displayName ?? stripBwPercentHint(getExerciseDisplayName(selected, settings.terminologyMode, settings.showExerciseForeignLanguage)));
+                        setExerciseSearchTerm(exerciseMetaById.get(selected.id)?.displayName ?? stripBwPercentHint(getExerciseDisplayName(selected, displayTerminologyMode, settings.showExerciseForeignLanguage)));
                       }
                     }}
                     onKeyDown={(event) => {
@@ -2852,7 +2860,7 @@ function TrainingLogTable({
                         const selected = exerciseLookup.get(workoutInput.exerciseId);
                         setExerciseSearchTerm(
                           selected
-                            ? exerciseMetaById.get(selected.id)?.displayName ?? stripBwPercentHint(getExerciseDisplayName(selected, settings.terminologyMode, settings.showExerciseForeignLanguage))
+                            ? exerciseMetaById.get(selected.id)?.displayName ?? stripBwPercentHint(getExerciseDisplayName(selected, displayTerminologyMode, settings.showExerciseForeignLanguage))
                             : "",
                         );
                         setExerciseDropdownOpen(false);
@@ -3470,7 +3478,7 @@ function TrainingLogTable({
                   const ex = exerciseLookup.get(entry.exerciseId);
                   const exerciseMeta = ex ? exerciseMetaById.get(ex.id) : undefined;
                   const entryDisplayName = ex
-                    ? (exerciseMeta?.displayName ?? stripBwPercentHint(getExerciseDisplayName(ex, settings.terminologyMode, settings.showExerciseForeignLanguage)))
+                    ? (exerciseMeta?.displayName ?? stripBwPercentHint(getExerciseDisplayName(ex, displayTerminologyMode, settings.showExerciseForeignLanguage)))
                     : stripBwPercentHint(entry.exerciseName);
                   const typeLabel = exerciseMeta?.categoryLabel ?? getExerciseCategoryLabel(ex);
                   const formattedEntryDate = formattedDateByLogId.get(entry.logId) ?? formatDate(entry.date, dateFormat);
@@ -3601,70 +3609,70 @@ function TrainingLogTable({
 
                   if (columnId === "date") {
                     return (
-                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-1 sm:px-1.5 w-[6rem] min-w-[6rem] text-center`}>
+                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-1.5 w-[5.5rem] min-w-[5.5rem] text-center`}>
                         {renderHeaderLabel("Date")}
                       </th>
                     );
                   }
                   if (columnId === "category") {
                     return (
-                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-0.5 sm:px-1 w-[5rem] min-w-[5rem] text-center`}>
+                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-1.5 w-[5.5rem] min-w-[5.5rem] text-center`}>
                         {renderHeaderLabel("Category")}
                       </th>
                     );
                   }
                   if (columnId === "exercise") {
                     return (
-                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-1 sm:px-1.5 w-[9rem] min-w-[9rem] text-left`}>
+                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-1.5 w-[8rem] min-w-[8rem] text-left`}>
                         {renderHeaderLabel("Exercise")}
                       </th>
                     );
                   }
                   if (columnId === "progression") {
                     return (
-                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-1 sm:px-1.5 w-[7.5rem] min-w-[7.5rem] text-left`}>
+                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-1.5 w-[7.5rem] min-w-[7.5rem] text-left`}>
                         {renderHeaderLabel("Progression")}
                       </th>
                     );
                   }
                   if (columnId === "modifier") {
                     return (
-                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-0.5 sm:px-1 w-[4.5rem] min-w-[4.5rem] text-center text-gold`}>
+                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-1 w-[4.5rem] min-w-[4.5rem] text-center text-gold`}>
                         {renderHeaderLabel("Mod")}
                       </th>
                     );
                   }
                   if (columnId === "band") {
                     return (
-                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-0.5 sm:px-1 w-[5rem] min-w-[5rem] text-center text-mountain-blue-glow`}>
+                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-1 w-[5rem] min-w-[5rem] text-center text-mountain-blue-glow`}>
                         {renderHeaderLabel("Band")}
                       </th>
                     );
                   }
                   if (columnId === "variant") {
                     return (
-                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-0.5 sm:px-1 w-[9rem] min-w-[9rem] text-left text-mountain-blue-glow`}>
+                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-1.5 w-[8rem] min-w-[8rem] text-left text-mountain-blue-glow`}>
                         {renderHeaderLabel("Variant")}
                       </th>
                     );
                   }
                   if (columnId === "notes") {
                     return (
-                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-1 sm:px-1.5 w-[9rem] min-w-[9rem] text-center`}>
+                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-1.5 w-[8rem] min-w-[8rem] text-center`}>
                         {renderHeaderLabel("Notes")}
                       </th>
                     );
                   }
                   if (columnId === "next") {
                     return (
-                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-0.5 sm:px-1 w-[4rem] min-w-[4rem] text-center text-difficulty-green`}>
+                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-1 w-[4rem] min-w-[4rem] text-center text-difficulty-green`}>
                         {renderHeaderLabel("Next")}
                       </th>
                     );
                   }
                   if (columnId === "avg") {
                     return (
-                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-0.5 sm:px-1 w-[4rem] min-w-[4rem] text-center text-difficulty-cyan`}>
+                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-1 w-[4rem] min-w-[4rem] text-center text-difficulty-cyan`}>
                         {renderHeaderLabel("Avg")}
                       </th>
                     );
@@ -3691,7 +3699,7 @@ function TrainingLogTable({
                     <th
                       key={sharedKey}
                       {...sharedProps}
-                      className={`${sharedProps.className} px-0.5 sm:px-1 w-[3.25rem] min-w-[3.25rem] text-center tabular-nums`}
+                      className={`${sharedProps.className} px-1 w-[3.25rem] min-w-[3.25rem] text-center tabular-nums`}
                       style={{
                         ...(sharedProps.style ?? {}),
                         ...(columnColors ? { color: headerTypes[dataIdx] === "value" ? "var(--col-weight)" : "var(--col-reps)" } : {}),
@@ -3732,7 +3740,7 @@ function TrainingLogTable({
                       ? parseModifierDisplayToSignedKg(editData.modifier)
                       : parseModifierDisplayToSignedKg(entry.modifier);
                     const entryDisplayName = ex
-                      ? (exerciseMeta?.displayName ?? stripBwPercentHint(getExerciseDisplayName(ex, settings.terminologyMode, settings.showExerciseForeignLanguage)))
+                      ? (exerciseMeta?.displayName ?? stripBwPercentHint(getExerciseDisplayName(ex, displayTerminologyMode, settings.showExerciseForeignLanguage)))
                       : stripBwPercentHint(entry.exerciseName);
                     const exerciseVariantOptions = exerciseMeta?.variationOptions ?? [];
                     const selectedVariantValue = editData?.variant ?? "";
@@ -3811,7 +3819,7 @@ function TrainingLogTable({
 
                           if (columnId === "category") {
                             return (
-                              <td key={`${entry.logId}-category`} className={`${cellPadTight} w-[5rem] min-w-[5rem] text-center align-middle`}>
+                              <td key={`${entry.logId}-category`} className={`${cellPadStandard} w-[5.5rem] min-w-[5.5rem] text-center align-middle`}>
                                 <span
                                   className="inline-block px-2 py-1 border rounded text-[10px] leading-none font-semibold"
                                   style={{
@@ -3830,8 +3838,8 @@ function TrainingLogTable({
                             return (
                               <td
                                 key={`${entry.logId}-exercise`}
-                                className={`${cellPadExercise} align-middle whitespace-nowrap overflow-hidden text-ellipsis transition-colors`}
-                                style={{ minWidth: "120px", maxWidth: "9rem" }}
+                                className={`${cellPadStandard} align-middle whitespace-nowrap overflow-hidden text-ellipsis transition-colors`}
+                                style={{ minWidth: "120px", maxWidth: "8rem" }}
                               >
                                 {isRowEditing && editData ? (
                                   <select
@@ -3979,7 +3987,7 @@ function TrainingLogTable({
                             ) : (
                               <td
                                 key={`${entry.logId}-progression`}
-                                className={`${cellPadWide} w-[7.5rem] min-w-[7.5rem] text-left text-xs align-middle`}
+                                className={`${cellPadStandard} w-[7.5rem] min-w-[7.5rem] text-left text-xs align-middle`}
                                 title={progressionLabel}
                                 style={{ color: "var(--text-secondary)" }}
                               >
@@ -4031,7 +4039,7 @@ function TrainingLogTable({
 
                           if (columnId === "variant") {
                             return isRowEditing && editData ? (
-                              <td key={`${entry.logId}-variant`} className="w-[9rem] min-w-[9rem] overflow-hidden px-1 py-1.5 text-left align-middle [contain:paint]">
+                              <td key={`${entry.logId}-variant`} className="w-[8rem] min-w-[8rem] overflow-hidden px-1.5 py-1.5 text-left align-middle [contain:paint]">
                                 <select
                                   value={editData.variant ?? ""}
                                   onChange={(e) => handleEditChange(entry.logId, "variant", e.target.value || null)}
@@ -4054,7 +4062,7 @@ function TrainingLogTable({
                             ) : (
                               <td
                                 key={`${entry.logId}-variant`}
-                                className={`${cellPadStandard} w-[9rem] min-w-[9rem] text-left text-mountain-blue-glow text-xs align-middle`}
+                                className={`${cellPadStandard} w-[8rem] min-w-[8rem] text-left text-mountain-blue-glow text-xs align-middle`}
                                 title={entry.variant || ""}
                               >
                                 <span className="block whitespace-normal break-words leading-tight">
@@ -4066,7 +4074,7 @@ function TrainingLogTable({
 
                           if (columnId === "notes") {
                             return isRowEditing && editData ? (
-                              <td key={`${entry.logId}-notes`} className="w-[9rem] min-w-[9rem] overflow-hidden px-1.5 py-1.5 align-middle [contain:paint]">
+                              <td key={`${entry.logId}-notes`} className="w-[8rem] min-w-[8rem] overflow-hidden px-1.5 py-1.5 align-middle [contain:paint]">
                                 <input
                                   type="text"
                                   value={editData.notes ?? ""}
@@ -4084,7 +4092,7 @@ function TrainingLogTable({
                             ) : (
                               <td
                                 key={`${entry.logId}-notes`}
-                                className={`${cellPadWide} w-[9rem] min-w-[9rem] text-mist-light text-xs align-middle`}
+                                className={`${cellPadStandard} w-[8rem] min-w-[8rem] text-mist-light text-xs align-middle`}
                                 title={entry.notes || ""}
                               >
                                 <div className="flex items-center gap-1 overflow-hidden">
@@ -4311,7 +4319,7 @@ function TrainingLogTable({
                 const ex = exerciseLookup.get(entry.exerciseId);
                 const exerciseMeta = ex ? exerciseMetaById.get(ex.id) : undefined;
                 const entryDisplayName = ex
-                  ? (exerciseMeta?.displayName ?? stripBwPercentHint(getExerciseDisplayName(ex, settings.terminologyMode, settings.showExerciseForeignLanguage)))
+                  ? (exerciseMeta?.displayName ?? stripBwPercentHint(getExerciseDisplayName(ex, displayTerminologyMode, settings.showExerciseForeignLanguage)))
                   : stripBwPercentHint(entry.exerciseName);
                 const typeLabel = exerciseMeta?.categoryLabel ?? getExerciseCategoryLabel(ex);
                 const formattedEntryDate = formattedDateByLogId.get(entry.logId) ?? formatDate(entry.date, dateFormat);
@@ -4579,7 +4587,7 @@ function TrainingLogTable({
                     </p>
                     <p className="text-[11px] truncate" style={{ color: "var(--text-secondary)" }}>
                       {selectedInputExercise
-                        ? stripBwPercentHint(getExerciseDisplayName(selectedInputExercise, settings.terminologyMode, settings.showExerciseForeignLanguage))
+                        ? stripBwPercentHint(getExerciseDisplayName(selectedInputExercise, displayTerminologyMode, settings.showExerciseForeignLanguage))
                         : t("Select an exercise in Training Log Input", "normal")}
                     </p>
                   </div>
@@ -4831,3 +4839,4 @@ function TrainingLogTable({
 const MemoTrainingLogTable = memo(TrainingLogTable);
 export { TrainingLogTable, MemoTrainingLogTable };
 export type { UnifiedFlatLogEntry };
+

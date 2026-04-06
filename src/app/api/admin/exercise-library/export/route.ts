@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ApiErrors } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { withAdmin } from "@/lib/auth/middleware";
 
@@ -102,6 +103,6 @@ export const GET = withAdmin(async (request, { auth }) => {
     });
   } catch (error) {
     console.error("Exercise library export error:", error);
-    return NextResponse.json({ error: "Failed to export exercise library" }, { status: 500 });
+    return ApiErrors.internal("Failed to export exercise library");
   }
 });

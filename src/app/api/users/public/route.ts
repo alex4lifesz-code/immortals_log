@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { apiSuccess, ApiErrors } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 import { getVisibleSocialUserIds, normalizeScope } from "@/lib/friends";
@@ -59,9 +59,9 @@ export const GET = withAuth(async (request, { auth }) => {
       };
     });
 
-    return NextResponse.json({ users });
+    return apiSuccess({ users });
   } catch (error) {
     console.error("Public users fetch error:", error);
-    return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 });
+    return ApiErrors.internal("Failed to fetch users");
   }
 });

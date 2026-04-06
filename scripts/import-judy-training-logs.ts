@@ -244,7 +244,16 @@ const RAW_TSV = `Date	Judy-Exercise	W1	R1	W2	R2	W3	R3	Notes
 29-Mar-26	Cable Tricep Pushdowns	12.5	10	15	10	17.5	10	
 29-Mar-26	Chest Press (Machine)	12	10	12	10	12	10	
 29-Mar-26	DB Lateral Raises	6	10	6	10	6	10	
-29-Mar-26	EB Upright Row	10	10	10	10	10	10	`;
+29-Mar-26	EB Upright Row	10	10	10	10	10	10	
+3-Apr-26	DB Shoulder Press	10	10	12	8	14	6	
+3-Apr-26	DB Lateral Raises	5	12	5	12	5	12	
+3-Apr-26	Front Raises	4	12	4	12	4	12	
+3-Apr-26	Cable Face Pulls	13.75	10	16.25	10	18.75	8	
+3-Apr-26	1-Arm Cable Tricep Pushdowns	1.25	8	3.75	8	3.75	8	
+3-Apr-26	Cable Tricep Pushdowns	13.75	12	15	10	17.5	10	V Grip
+3-Apr-26	Cable Tricep Pushdowns	13.75	12	13.75	12	13.75	12	Rope
+3-Apr-26	Treadmill							10 Minutes
+3-Apr-26	Row							5 Minutes`;
 
 function createPrismaClient() {
   const databaseUrl = process.env.DATABASE_URL || "file:./dev.db";
@@ -363,7 +372,7 @@ function inferMapping(sourceExercise: string, notes: string): Inference | null {
   if (name.includes("cable rear delt")) return { canonicalExercise: "Rear delt fly", variantHint: "Cable" };
   if (name.includes("rear delt fly")) return { canonicalExercise: "Rear delt fly" };
 
-  if (name.includes("hamstring curl")) return { canonicalExercise: "Hamstring curl" };
+  if (name.includes("hamstring curl")) return { canonicalExercise: "Leg curl", variantHint: "Hamstring" };
 
   if (name.includes("bb squat")) return { canonicalExercise: "Squat", progressionHint: "Barbell" };
   if (name.includes("pendulum squat")) return { canonicalExercise: "Squat", variantHint: "Pendulum" };
@@ -392,7 +401,7 @@ function inferMapping(sourceExercise: string, notes: string): Inference | null {
   if (name.includes("b stance rdl")) return { canonicalExercise: "Deadlift", progressionHint: "Romanian", variantHint: "B Stance" };
   if (name.includes("romanian deadlift")) return { canonicalExercise: "Deadlift", progressionHint: "Romanian" };
 
-  if (name.includes("cable kickback")) return { canonicalExercise: "Cable kickback", variantHint: "Single leg" };
+  if (name.includes("cable kickback")) return { canonicalExercise: "Glute kickback", variantHint: "Cable" };
 
   if (name.includes("eb upright row") || name.includes("upright row")) return { canonicalExercise: "Upright row", progressionHint: "EZ Bar" };
 
@@ -408,9 +417,13 @@ function inferMapping(sourceExercise: string, notes: string): Inference | null {
   }
 
   if (name === "bike") {
-    if (note.includes("steady")) return { canonicalExercise: "Bike", variantHint: "Steady state" };
-    if (note.includes("interval")) return { canonicalExercise: "Bike", variantHint: "Intervals" };
-    return { canonicalExercise: "Bike" };
+    if (note.includes("steady")) return { canonicalExercise: "Stationary bike", variantHint: "Steady state" };
+    if (note.includes("interval")) return { canonicalExercise: "Stationary bike", variantHint: "Intervals" };
+    return { canonicalExercise: "Stationary bike" };
+  }
+
+  if (name === "row" && (!note || note.includes("minute") || note.includes("km"))) {
+    return { canonicalExercise: "Rowing machine" };
   }
 
   return null;

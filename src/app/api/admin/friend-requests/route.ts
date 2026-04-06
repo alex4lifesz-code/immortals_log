@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { apiSuccess, ApiErrors } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { withAdmin } from "@/lib/auth/middleware";
 import { FRIEND_STATUS } from "@/lib/friends";
@@ -18,10 +18,10 @@ export const GET = withAdmin(async (request) => {
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json({ requests });
+    return apiSuccess({ requests });
   } catch (error) {
     console.error("Admin friend requests fetch error:", error);
-    return NextResponse.json({ error: "Failed to fetch friend requests" }, { status: 500 });
+    return ApiErrors.internal("Failed to fetch friend requests");
   }
 });
 
@@ -30,16 +30,16 @@ export const PATCH = withAdmin(async (request) => {
     const { requestId, status } = await request.json();
 
     if (!requestId || typeof requestId !== "string") {
-      return NextResponse.json({ error: "requestId is required" }, { status: 400 });
+      return ApiErrors.badRequest("requestId is required");
     }
 
     if (status !== FRIEND_STATUS.ACCEPTED && status !== FRIEND_STATUS.REJECTED && status !== FRIEND_STATUS.CANCELLED) {
-      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+      return ApiErrors.badRequest("Invalid status");
     }
 
     const existing = await prisma.friendRequest.findUnique({ where: { id: requestId } });
     if (!existing) {
-      return NextResponse.json({ error: "Request not found" }, { status: 404 });
+      return ApiErrors.notFound("Request not found");
     }
 
     const updated = await prisma.friendRequest.update({
@@ -54,9 +54,9 @@ export const PATCH = withAdmin(async (request) => {
       },
     });
 
-    return NextResponse.json({ request: updated });
+    return apiSuccess({ request: updated });
   } catch (error) {
     console.error("Admin friend request update error:", error);
-    return NextResponse.json({ error: "Failed to update request" }, { status: 500 });
+    return ApiErrors.internal("Failed to update request");
   }
 });

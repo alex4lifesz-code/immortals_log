@@ -5,6 +5,28 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@libsql/client", "@prisma/adapter-libsql"],
   async redirects() {
     return [
+      // Legacy dashboard route redirects (moved from middleware.ts)
+      {
+        source: "/dashboard/overview",
+        destination: "/dashboard/check-in",
+        permanent: false,
+      },
+      {
+        source: "/dashboard/overview/:path*",
+        destination: "/dashboard/check-in",
+        permanent: false,
+      },
+      {
+        source: "/dashboard/main",
+        destination: "/dashboard/check-in",
+        permanent: false,
+      },
+      {
+        source: "/dashboard/main/:path*",
+        destination: "/dashboard/check-in",
+        permanent: false,
+      },
+      // Existing exercise library redirects
       {
         source: "/dashboard/exercise-library",
         destination: "/dashboard/exercise-db",

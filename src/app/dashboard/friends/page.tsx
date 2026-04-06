@@ -7,6 +7,7 @@ import GlowButton from "@/components/ui/GlowButton";
 import { api } from "@/lib/api-client";
 import { formatDateWithPreference } from "@/lib/constants";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
+import { EmptyFriends } from "@/components/empty-states";
 
 interface BasicUser {
   id: string;
@@ -212,7 +213,9 @@ export default function FriendsPage() {
               <span className="text-xs text-mist-dark">{data.friends.length} connected</span>
             </div>
             {data.friends.length === 0 ? (
-              <p className="text-sm text-mist-dark">No friends yet. Send requests below to start sharing data.</p>
+              <EmptyFriends
+                friendCode={data.me?.friendCode ?? undefined}
+              />
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">

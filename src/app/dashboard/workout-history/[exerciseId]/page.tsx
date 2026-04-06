@@ -29,6 +29,9 @@ export default function WorkoutHistoryDetailPage() {
   const source = searchParams.get("from") || "";
   const fromHistoryPage = source === "history";
   const { settings } = useDisplaySettings();
+  const displayTerminologyMode = !settings.showExerciseForeignLanguage && settings.languageMode === "english"
+    ? "normal"
+    : settings.terminologyMode;
   const isMobile = useIsMobile();
   const { user } = useAuth();
   const userId = user?.id ?? "";
@@ -105,8 +108,8 @@ export default function WorkoutHistoryDetailPage() {
 
   const displayName = useMemo(() => {
     if (!exercise) return "Workout";
-    return stripBwPercentHint(getExerciseDisplayName(exercise, settings.terminologyMode, settings.showExerciseForeignLanguage));
-  }, [exercise, settings.terminologyMode]);
+    return stripBwPercentHint(getExerciseDisplayName(exercise, displayTerminologyMode, settings.showExerciseForeignLanguage));
+  }, [displayTerminologyMode, exercise, settings.showExerciseForeignLanguage]);
 
   const totalLogs = filteredLogs.length;
   const completedLogs = useMemo(() => {

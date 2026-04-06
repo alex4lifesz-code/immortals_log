@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { apiSuccess, ApiErrors } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { serializeDayAssignments } from "@/lib/constants";
 import { withAuth } from "@/lib/auth/middleware";
@@ -6,20 +6,14 @@ import { withAuth } from "@/lib/auth/middleware";
 export const DELETE = withAuth(async (_req, { auth, params }) => {
   try {
     if (auth.role !== "admin") {
-      return NextResponse.json(
-        { error: "Admin privileges required" },
-        { status: 403 }
-      );
+      return ApiErrors.forbidden("Admin privileges required");
     }
 
     const id = params.id as string;
     const existing = await prisma.exercise.findUnique({ where: { id } });
 
     if (!existing) {
-      return NextResponse.json(
-        { error: "Exercise not found" },
-        { status: 404 }
-      );
+      return ApiErrors.notFound("Exercise not found");
     }
 
     // Also cascade-delete matching ProgressionExercise(s) by name
@@ -59,27 +53,21 @@ export const DELETE = withAuth(async (_req, { auth, params }) => {
     }
 
     await prisma.exercise.delete({ where: { id } });
-    return NextResponse.json({
+    return apiSuccess({
       success: true,
       archived: false,
       progressionsRemoved: matchingProgressions.length,
     });
   } catch (error) {
     console.error("Exercise delete error:", error);
-    return NextResponse.json(
-      { error: "Failed to delete exercise" },
-      { status: 500 }
-    );
+    return ApiErrors.internal("Failed to delete exercise");
   }
 });
 
 export const PATCH = withAuth(async (req, { auth, params }) => {
   try {
     if (auth.role !== "admin") {
-      return NextResponse.json(
-        { error: "Admin privileges required" },
-        { status: 403 }
-      );
+      return ApiErrors.forbidden("Admin privileges required");
     }
 
     const id = params.id as string;
@@ -87,10 +75,7 @@ export const PATCH = withAuth(async (req, { auth, params }) => {
 
     const existing = await prisma.exercise.findUnique({ where: { id } });
     if (!existing) {
-      return NextResponse.json(
-        { error: "Exercise not found" },
-        { status: 404 }
-      );
+      return ApiErrors.notFound("Exercise not found");
     }
 
     const data: Record<string, unknown> = {};
@@ -98,10 +83,7 @@ export const PATCH = withAuth(async (req, { auth, params }) => {
     if (body.name !== undefined) {
       const name = String(body.name).trim().slice(0, 200);
       if (!name)
-        return NextResponse.json(
-          { error: "Name cannot be empty" },
-          { status: 400 }
-        );
+        return ApiErrors.badRequest("Name cannot be empty");
       const allExercises = await prisma.exercise.findMany({
         select: { id: true, name: true },
       });
@@ -109,10 +91,7 @@ export const PATCH = withAuth(async (req, { auth, params }) => {
         (e) => e.id !== id && e.name.toLowerCase() === name.toLowerCase()
       );
       if (duplicate)
-        return NextResponse.json(
-          { error: `An exercise named "${name}" already exists` },
-          { status: 409 }
-        );
+        return ApiErrors.conflict(`An exercise named "${name}" already exists`);
       data.name = name;
     }
 
@@ -125,10 +104,7 @@ export const PATCH = withAuth(async (req, { auth, params }) => {
     if (body.difficulty !== undefined) {
       const difficulty = String(body.difficulty).trim().slice(0, 100);
       if (!difficulty) {
-        return NextResponse.json(
-          { error: "Difficulty cannot be empty" },
-          { status: 400 }
-        );
+        return ApiErrors.badRequest("Difficulty cannot be empty");
       }
       data.difficulty = difficulty;
     }
@@ -159,10 +135,7 @@ export const PATCH = withAuth(async (req, { auth, params }) => {
     }
 
     if (Object.keys(data).length === 0) {
-      return NextResponse.json(
-        { error: "No valid fields to update" },
-        { status: 400 }
-      );
+      return ApiErrors.badRequest("No valid fields to update");
     }
 
     const exercise = await prisma.exercise.update({ where: { id }, data });
@@ -232,12 +205,9 @@ export const PATCH = withAuth(async (req, { auth, params }) => {
       }
     }
 
-    return NextResponse.json({ exercise });
+    return apiSuccess({ exercise });
   } catch (error) {
     console.error("Exercise update error:", error);
-    return NextResponse.json(
-      { error: "Failed to update exercise" },
-      { status: 500 }
-    );
+    return ApiErrors.internal("Failed to update exercise");
   }
 });

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { apiSuccess, ApiErrors } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 import {
@@ -154,10 +154,10 @@ export const GET = withAuth(async (_req, { auth }) => {
       }
     }
 
-    return NextResponse.json({ options });
+    return apiSuccess({ options });
   } catch (error) {
     console.error("Exercise DB settings fetch error:", error);
-    return NextResponse.json({ options: getDefaultExerciseDbOptions() });
+    return apiSuccess({ options: getDefaultExerciseDbOptions() });
   }
 });
 
@@ -167,7 +167,7 @@ export const PUT = withAuth(async (req, { auth }) => {
     const incoming = body?.options as ExerciseDbOptions | undefined;
     const renamePayload = (body?.renames ?? {}) as RenamePayload;
     if (!incoming || typeof incoming !== "object") {
-      return NextResponse.json({ error: "Invalid settings payload" }, { status: 400 });
+      return ApiErrors.badRequest("Invalid settings payload");
     }
 
     const renames: Required<RenamePayload> = {
@@ -202,9 +202,9 @@ export const PUT = withAuth(async (req, { auth }) => {
 
     await applyRenamePropagation(auth.userId, renames);
 
-    return NextResponse.json({ success: true, options });
+    return apiSuccess({ success: true, options });
   } catch (error) {
     console.error("Exercise DB settings save error:", error);
-    return NextResponse.json({ error: "Failed to save settings" }, { status: 500 });
+    return ApiErrors.internal("Failed to save settings");
   }
 });

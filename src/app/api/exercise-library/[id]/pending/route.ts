@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { apiSuccess, ApiErrors } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 import {
@@ -14,7 +14,7 @@ export const POST = withAuth(async (request, { params }) => {
     const action = String(body?.action || "").trim().toLowerCase();
 
     if (action !== "append" && action !== "delete") {
-      return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+      return ApiErrors.badRequest("Invalid action");
     }
 
     const existing = await prisma.progressionExercise.findUnique({
@@ -27,11 +27,11 @@ export const POST = withAuth(async (request, { params }) => {
     });
 
     if (!existing) {
-      return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
+      return ApiErrors.notFound("Exercise not found");
     }
 
     if (!isPendingExerciseDescription(existing.story)) {
-      return NextResponse.json({ error: "Exercise is not pending" }, { status: 409 });
+      return ApiErrors.conflict("Exercise is not pending");
     }
 
     if (action === "append") {
@@ -43,7 +43,7 @@ export const POST = withAuth(async (request, { params }) => {
         select: { id: true, name: true },
       });
 
-      return NextResponse.json({ success: true, exercise: updated });
+      return apiSuccess({ success: true, exercise: updated });
     }
 
     const updated = await prisma.$transaction(async (tx) => {
@@ -66,9 +66,9 @@ export const POST = withAuth(async (request, { params }) => {
       });
     });
 
-    return NextResponse.json({ success: true, exercise: updated });
+    return apiSuccess({ success: true, exercise: updated });
   } catch (error) {
     console.error("Pending exercise action error:", error);
-    return NextResponse.json({ error: "Failed to process pending exercise action" }, { status: 500 });
+    return ApiErrors.internal("Failed to process pending exercise action");
   }
 });
