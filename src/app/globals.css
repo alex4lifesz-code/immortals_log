@@ -929,11 +929,40 @@ html.discord textarea:focus-visible {
 .nyaa-layout .nyaa-history-page {
   max-width: 1220px;
   margin: 0 auto;
+  --border: color-mix(in srgb, var(--ink-light) 30%, transparent);
+  --nyaa-table-grid: color-mix(in srgb, var(--ink-light) 30%, transparent);
+}
+
+/* Training log input section: make inputs visually distinct and clickable */
+.nyaa-input-section input:not([type="hidden"]):not([aria-hidden="true"]),
+.nyaa-input-section select,
+.nyaa-input-section button.flex:not([class*="GlowButton"]) {
+  --_input-border: color-mix(in srgb, var(--jade-glow) 30%, var(--ink-light));
+  --_input-bg: var(--ink-dark);
+}
+
+.nyaa-input-section .rounded-xl input,
+.nyaa-input-section .rounded-xl select,
+.nyaa-input-section .rounded-xl button[style*="border"] {
+  background-color: var(--ink-dark) !important;
+  border-color: color-mix(in srgb, var(--jade-glow) 30%, var(--ink-light)) !important;
+}
+
+.nyaa-input-section .rounded-xl input:focus,
+.nyaa-input-section .rounded-xl select:focus {
+  border-color: var(--jade-glow) !important;
+  box-shadow: 0 0 0 1px rgba(58, 143, 143, 0.25) !important;
+}
+
+.nyaa-input-section .rounded-xl input:disabled,
+.nyaa-input-section .rounded-xl select:disabled,
+.nyaa-input-section .rounded-xl button:disabled {
+  background-color: color-mix(in srgb, var(--border) 14%, var(--surface)) !important;
+  opacity: 0.6 !important;
 }
 
 .nyaa-layout .nyaa-history-page .nyaa-history-table-shell .rounded-2xl {
-  border-radius: 2px !important;
-  box-shadow: none !important;
+  border-radius: 1rem !important;
   border: 1px solid var(--nyaa-table-grid, var(--border)) !important;
 }
 

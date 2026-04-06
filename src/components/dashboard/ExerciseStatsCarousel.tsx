@@ -136,16 +136,16 @@ export default function ExerciseStatsCarousel({
   };
 
   return (
-    <div className="-mx-3 -mt-3 md:-mx-2 md:-mt-2 flex flex-col bg-ink-deep border-b border-jade-glow/10">
+    <div className="flex flex-col bg-transparent">
       {/* Filter toggle */}
-      <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 sm:flex-nowrap">
-        <div className="inline-flex items-center rounded-lg border border-ink-light/60 bg-ink-dark/40 p-0.5">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between px-4 py-3">
+        <div className="inline-flex items-center rounded-lg border border-ink-light/30 bg-ink-dark/40 p-0.5">
           <button
             onClick={() => onScopeChange("friends")}
             className={`px-2.5 py-1 text-xs rounded transition-all ${
               scope === "friends"
-                ? "bg-jade-deep/25 border border-jade-glow/35 text-jade-light"
-                : "text-mist-light hover:text-jade-light"
+                ? "bg-ink-dark border border-jade-glow/45 text-jade-glow"
+                : "text-mist-light hover:text-jade-glow"
             }`}
           >
             Friends
@@ -154,23 +154,23 @@ export default function ExerciseStatsCarousel({
             onClick={() => onScopeChange("community")}
             className={`px-2.5 py-1 text-xs rounded transition-all ${
               scope === "community"
-                ? "bg-jade-deep/25 border border-jade-glow/35 text-jade-light"
-                : "text-mist-light hover:text-jade-light"
+                ? "bg-ink-dark border border-jade-glow/45 text-jade-glow"
+                : "text-mist-light hover:text-jade-glow"
             }`}
           >
             Community
           </button>
         </div>
 
-        <div className="inline-flex items-center rounded-lg border border-ink-light/60 bg-ink-dark/40 p-0.5">
+        <div className="inline-flex items-center rounded-lg border border-ink-light/30 bg-ink-dark/40 p-0.5">
           {["category", "muscle-group"].map((mode) => (
             <button
               key={mode}
               onClick={() => handleFilterModeChange(mode as FilterMode)}
               className={`px-2.5 py-1 text-xs rounded transition-all ${
                 filterMode === mode
-                  ? "bg-jade-deep/25 border border-jade-glow/35 text-jade-light"
-                  : "text-mist-light hover:text-jade-light"
+                  ? "bg-ink-dark border border-jade-glow/45 text-jade-glow"
+                  : "text-mist-light hover:text-jade-glow"
               }`}
             >
               {mode === "category" ? "Category" : "Muscle"}
@@ -180,12 +180,12 @@ export default function ExerciseStatsCarousel({
       </div>
 
       {/* Carousel - no rounded corners on container */}
-      <div className="relative px-3">
+      <div className="relative px-4">
         {/* Left gradient overlay */}
-        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-ink-deep to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-transparent to-transparent" />
         
         {/* Right gradient overlay */}
-        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-ink-deep to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-transparent to-transparent" />
 
         {/* Scroll hint buttons */}
         {railCanScroll && railCanScrollLeft && (
@@ -233,7 +233,7 @@ export default function ExerciseStatsCarousel({
           className="overflow-x-auto scrollbar-hide pb-1.5 scroll-smooth"
           style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: "contain", touchAction: "pan-x" }}
         >
-          <div className="flex min-w-max gap-2 px-1.5 snap-x snap-mandatory [scroll-padding-inline:.5rem]">
+          <div className="flex min-w-max gap-2.5 px-1.5 snap-x snap-mandatory [scroll-padding-inline:.5rem]">
             {/* All filter button */}
             <motion.button
               initial={{ opacity: 0, x: 20 }}
@@ -241,11 +241,11 @@ export default function ExerciseStatsCarousel({
               onClick={() => handleFilterSelect("")}
               className={`snap-start flex h-20 min-w-[140px] max-w-[140px] flex-col items-center justify-center rounded-lg border transition-all duration-200 ${
                 selectedFilter === ""
-                  ? "border-jade-glow/40 bg-jade-glow/10"
-                  : "border-jade-glow/15 bg-ink-dark/40 hover:border-jade-glow/25"
+                  ? "border-jade-glow/45 bg-ink-dark"
+                  : "border-ink-light/30 bg-ink-dark/40 hover:border-ink-light/50"
               }`}
             >
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-jade-light">All</span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-jade-glow">All</span>
               <span className="mt-1 text-[11px] text-mist-light">{communityLogsWithoutUser.length}</span>
             </motion.button>
 
@@ -266,8 +266,8 @@ export default function ExerciseStatsCarousel({
                   onClick={() => handleFilterSelect(option)}
                   className={`snap-start flex h-20 min-w-[140px] max-w-[140px] flex-col items-center justify-center rounded-lg border transition-all duration-200 ${
                     selectedFilter === option
-                      ? "border-jade-glow/40 bg-jade-glow/10"
-                      : "border-jade-glow/15 bg-ink-dark/40 hover:border-jade-glow/25"
+                      ? "border-jade-glow/45 bg-ink-dark"
+                      : "border-ink-light/30 bg-ink-dark/40 hover:border-ink-light/50"
                   }`}
                 >
                   <span className="line-clamp-1 text-center text-[10px] font-semibold uppercase tracking-wide text-cloud-white px-1">

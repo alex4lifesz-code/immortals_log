@@ -272,16 +272,16 @@ function CalendarDay({ date, checkedInUsers, isToday, isPast, hasNote, hasFuture
     <motion.div
       whileHover={compact ? undefined : { scale: 1.05 }}
       onClick={onClick}
-      className={`aspect-square flex flex-col items-center justify-center transition-all relative cursor-pointer ${
+      className={`aspect-square flex flex-col items-center justify-center transition-all relative cursor-pointer rounded-lg ${
         isToday
           ? "border-2 border-jade-glow bg-jade-deep/42 hover:bg-jade-deep/55"
           : hasFutureNote
-          ? "border border-jade/45 bg-jade-deep/30 hover:bg-jade-deep/38"
+          ? "border border-jade-glow/45 bg-jade-deep/30 hover:bg-jade-deep/38"
           : hasCheckIns
-          ? "border border-jade/35 bg-jade-deep/24 hover:bg-jade-deep/32"
+          ? "border border-jade-glow/35 bg-jade-deep/24 hover:bg-jade-deep/32"
           : isPast
-          ? "border border-ink-light/40 bg-ink-dark/35 hover:bg-ink-dark/50"
-          : "border border-ink-light/60 bg-jade-deep/18 hover:bg-jade-deep/24"
+          ? "border border-ink-light/30 bg-ink-dark/35 hover:bg-ink-dark/50"
+          : "border border-ink-light/30 bg-ink-dark/20 hover:bg-ink-dark/40"
       }`}
     >
       <div className="text-center">
@@ -359,11 +359,13 @@ export function Calendar({
 
   return (
     <div
-      className={`${compactMode ? "p-2.5" : "p-4"} space-y-3 min-w-0 overflow-hidden border bg-ink-dark/20`}
-      style={{ borderColor: "var(--border)" }}
+      className={`${compactMode ? "p-2.5" : "p-4"} space-y-3 min-w-0 overflow-hidden surface-panel`}
+      style={{
+        boxShadow: "var(--shadow-elev-1), 0 0 0 1px rgba(58,143,143,0.22) inset",
+      }}
     >
       <div className={`flex ${compactMode ? "flex-wrap gap-2" : "items-center justify-between"}`}>
-        <h3 className={`${compactMode ? "text-sm" : "text-lg"} font-bold text-cloud-white`}>
+        <h3 className={`${compactMode ? "text-sm" : "text-sm"} text-jade-glow uppercase tracking-wider`}>
           {currentMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
         </h3>
         <div className="flex gap-1.5 ml-auto">
@@ -394,7 +396,7 @@ export function Calendar({
 
       <div className={`grid grid-cols-7 ${compactMode ? "gap-1 mb-1" : "gap-2 mb-2"}`}>
         {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-          <div key={day} className={`text-center ${compactMode ? "text-[10px]" : "text-xs"} text-mist-dark uppercase font-semibold`}>
+          <div key={day} className={`text-center ${compactMode ? "text-[10px]" : "text-xs"} text-jade-glow uppercase font-semibold tracking-wider`}>
             {compactMode ? day[0] : day}
           </div>
         ))}
@@ -431,7 +433,7 @@ export function Calendar({
       </div>
 
       {upcomingNotes && upcomingNotes.length > 0 && (
-        <div className="pt-3 border-t border-ink-light/70 space-y-2.5">
+        <div className="pt-3 border-t border-ink-light/30 space-y-2.5">
           <div className="flex items-center gap-2">
             <h4 className={`${compactMode ? "text-[11px]" : "text-xs"} text-gold-glow uppercase tracking-wide font-semibold`}>Upcoming Notes</h4>
             {!!upcomingNotes?.length && (
@@ -480,7 +482,7 @@ export function Calendar({
         </div>
       )}
 
-      <div className={`pt-3 border-t border-ink-light flex flex-wrap ${compactMode ? "gap-2 text-[10px]" : "gap-3 text-xs"}`}>
+      <div className={`pt-3 border-t border-ink-light/30 flex flex-wrap ${compactMode ? "gap-2 text-[10px]" : "gap-3 text-xs"}`}>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded border-2 border-jade-glow bg-jade-deep/30" />
           <span className="text-mist-mid">{t("Today", "normal")}</span>

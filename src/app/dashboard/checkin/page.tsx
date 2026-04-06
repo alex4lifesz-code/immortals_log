@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import GlowButton from "@/components/ui/GlowButton";
 import PageSkeleton from "@/components/ui/PageSkeleton";
-import { GlowModal } from "@/components/ui/GlowCard";
+import GlowCard, { GlowModal } from "@/components/ui/GlowCard";
 import { useAuth } from "@/context/AuthContext";
 import { useIsMobile } from "@/context/AppContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
@@ -487,7 +487,7 @@ export default function CheckInPage() {
       {loading ? (
         <PageSkeleton statCards={2} wideBlock rows={5} />
       ) : (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-6">
           {dayNotes.length > 0 && (
             <div className="flex flex-wrap items-start gap-4">
               {/* Cultivation Journal — personal day notes */}
@@ -498,11 +498,8 @@ export default function CheckInPage() {
                   transition={{ duration: 0.25 }}
                   className="min-w-[280px] flex-1"
                 >
-                  <div
-                    className="h-full border border-ink-light rounded-lg p-4"
-                    style={{ background: "var(--surface-gradient-strong)" }}
-                  >
-                    <h3 className="text-xs text-gold-glow uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <GlowCard glow="gold" hoverable={false}>
+                    <h3 className="text-sm text-gold-glow uppercase tracking-wider mb-3 flex items-center gap-2">
                       📝 Cultivation Journal
                     </h3>
                     <div className="space-y-2 max-h-48 overflow-y-auto">
@@ -545,7 +542,7 @@ export default function CheckInPage() {
                         </motion.div>
                       ))}
                     </div>
-                  </div>
+                  </GlowCard>
                 </motion.div>
               )}
 
@@ -554,11 +551,8 @@ export default function CheckInPage() {
 
           {/* Sect Member Statistics (separate from the table) */}
           {users.length > 0 && (
-            <div
-              className="rounded-xl border border-ink-light/40 p-4"
-              style={{ background: "var(--surface-gradient-strong)" }}
-            >
-              <h3 className="mb-3 flex items-center gap-2 text-xs uppercase tracking-wider text-gold-glow">
+            <GlowCard glow="jade" hoverable={false}>
+              <h3 className="mb-3 flex items-center gap-2 text-sm uppercase tracking-wider text-jade-glow">
                 Sect Member Statistics
               </h3>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
@@ -646,13 +640,10 @@ export default function CheckInPage() {
                 })()
               ))}
               </div>
-            </div>
+            </GlowCard>
           )}
 
-          <div
-            className="flex w-full flex-col gap-4 rounded-xl border border-ink-light/40 p-4"
-            style={{ background: "var(--surface-gradient-strong)" }}
-          >
+          <GlowCard glow="jade" hoverable={false}>
             <div className="overflow-x-auto w-full">
               {/* Toolbar */}
               <div className="mb-4 rounded-lg border border-ink-light/35 bg-ink-mid/15 p-2.5 sm:p-3 space-y-2.5">
@@ -697,7 +688,7 @@ export default function CheckInPage() {
               <div style={{ minWidth: checkinGridMinWidth }}>
                 {/* Grid header */}
                 <div
-                  className="grid gap-0 text-[10px] sm:text-[11px] normal-case sm:uppercase tracking-normal sm:tracking-wide font-semibold text-mist-dark border-b border-jade-glow/30 pb-2 mb-1"
+                  className="grid gap-0 text-[10px] sm:text-[11px] normal-case sm:uppercase tracking-normal sm:tracking-wide font-semibold text-jade-glow border-b border-ink-light pb-2 mb-1"
                   style={{ gridTemplateColumns: checkinGridTemplateColumns }}
                 >
                   <div className="px-1">Date</div>
@@ -920,7 +911,7 @@ export default function CheckInPage() {
                 </div>
               )}
             </div>
-          </div>
+          </GlowCard>
         </div>
       )}
       

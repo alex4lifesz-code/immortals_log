@@ -3,15 +3,21 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import PageLayout from "@/components/layout/PageLayout";
+import GlowCard, { GlowModal } from "@/components/ui/GlowCard";
+import GlowButton from "@/components/ui/GlowButton";
+import { GlowSelect } from "@/components/ui/GlowInput";
 import { MemoTrainingLogTable } from "@/components/workout/TrainingLogTable";
+import { useIsMobile } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api-client";
+import { DASHBOARD_ROUTES } from "@/lib/navigation";
 import { DEFAULT_USER_PHYSIQUE, loadUserPhysique } from "@/lib/user-physique";
 import type { UserPhysiqueSettings } from "@/lib/user-physique";
 import type { ProgressionExercise } from "../workout/types";
 
 export default function HistoryPage() {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -21,6 +27,7 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true);
   const [physique, setPhysique] = useState<UserPhysiqueSettings>(DEFAULT_USER_PHYSIQUE);
   const [visibleUsers, setVisibleUsers] = useState<Array<{ id: string; name: string; username: string }>>([]);
+  const [mobileUserPickerOpen, setMobileUserPickerOpen] = useState(false);
 
   const userId = user?.id ?? "";
   const targetUserId = searchParams.get("targetUserId") || "";
@@ -125,6 +132,12 @@ export default function HistoryPage() {
     return (target.name || target.username || "").trim() || undefined;
   }, [orderedVisibleUsers, targetUserId]);
 
+  const activeUserLabel = useMemo(() => {
+    const activeUser = orderedVisibleUsers.find((u) => u.id === activeUserId || (!activeUserId && u.id === userId));
+    if (activeUser) return activeUser.name || activeUser.username || "Me";
+    return user?.name || user?.username || "Me";
+  }, [activeUserId, orderedVisibleUsers, user?.name, user?.username, userId]);
+
   const handleUserScopeChange = (nextUserId: string) => {
     const params = new URLSearchParams(searchParams.toString());
     if (!nextUserId || nextUserId === userId) {
@@ -136,45 +149,70 @@ export default function HistoryPage() {
     router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
   };
 
+  useEffect(() => {
+    setMobileUserPickerOpen(false);
+  }, [activeUserId]);
+
   return (
     <PageLayout
       title="Train"
       subtitle={subtitle}
       mobileContentPaddingClass="p-2 pb-2"
     >
-      <div className="nyaa-history-page min-h-0 space-y-2 px-0 py-2 sm:py-3">
+      <div className="nyaa-history-page space-y-6 px-0 py-2 sm:py-3">
         {loading ? (
-          <div className="rounded-lg border p-6 text-center text-sm" style={{ borderColor: "var(--border)", color: "var(--text-muted)", background: "var(--surface)" }}>
-            Loading history...
-          </div>
+          <GlowCard glow="jade" hoverable={false}>
+            <p className="text-sm text-mist-dark text-center py-4">Loading history...</p>
+          </GlowCard>
         ) : (
           <>
-            <div className="rounded-lg border p-3" style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)" }}>
-              <div className="flex flex-wrap items-center gap-2">
-                <label htmlFor="history-user-scope" className="text-xs font-medium" style={{ color: "var(--text-secondary)" }}>
-                  View user
-                </label>
-                <select
-                  id="history-user-scope"
-                  value={activeUserId || userId}
-                  onChange={(event) => handleUserScopeChange(event.target.value)}
-                  className="rounded border px-2 py-1 text-xs outline-none"
-                  style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)", color: "var(--text-primary)" }}
+            <GlowCard glow="jade" hoverable={false}>
+              <h3 className="text-sm text-jade-glow uppercase tracking-wider mb-3">User Scope</h3>
+              <div className="flex flex-wrap items-center gap-3">
+                {isMobile ? (
+                  <GlowButton
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setMobileUserPickerOpen(true)}
+                    className="min-w-[160px] flex items-center justify-between"
+                    aria-label="Pick user"
+                  >
+                    <span className="truncate">{activeUserLabel}</span>
+                    <span className="ml-2 text-xs text-mist-dark">▾</span>
+                  </GlowButton>
+                ) : (
+                  <GlowSelect
+                    label="View user"
+                    glowColor="jade"
+                    value={activeUserId || userId}
+                    onChange={(event) => handleUserScopeChange(event.target.value)}
+                    options={
+                      orderedVisibleUsers.length === 0
+                        ? [{ value: userId, label: user?.name || "Me" }]
+                        : orderedVisibleUsers.map((u) => ({
+                            value: u.id,
+                            label: u.id === userId ? `* ${u.name || u.username}` : (u.name || u.username),
+                          }))
+                    }
+                    className="!w-auto min-w-[180px]"
+                  />
+                )}
+                <GlowButton
+                  variant="jade"
+                  size="sm"
+                  onClick={() => {
+                    const href = targetUserId
+                      ? `${DASHBOARD_ROUTES.trainingLogHistory}?targetUserId=${encodeURIComponent(targetUserId)}`
+                      : DASHBOARD_ROUTES.trainingLogHistory;
+                    router.push(href);
+                  }}
                 >
-                  {orderedVisibleUsers.length === 0 ? (
-                    <option value={userId}>{user?.name || "Me"}</option>
-                  ) : (
-                    orderedVisibleUsers.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.id === userId ? `* ${u.name || u.username}` : (u.name || u.username)}
-                      </option>
-                    ))
-                  )}
-                </select>
+                  Open history page
+                </GlowButton>
               </div>
-            </div>
+            </GlowCard>
 
-            <div className="nyaa-history-table-shell">
+            <div className="nyaa-history-table-shell space-y-4">
               <MemoTrainingLogTable
                 exercises={exercises}
                 physique={physique}
@@ -191,6 +229,43 @@ export default function HistoryPage() {
           </>
         )}
       </div>
+      <GlowModal
+        isOpen={isMobile && mobileUserPickerOpen}
+        onClose={() => setMobileUserPickerOpen(false)}
+        title="View user"
+        contentClassName="!p-0"
+      >
+        <div className="relative px-3 pb-3 pt-2">
+          <div
+            className="pointer-events-none absolute left-3 right-3 top-1/2 h-11 -translate-y-1/2 border border-jade-glow/40 bg-jade-glow/10 rounded-lg"
+          />
+          <div
+            className="h-56 overflow-y-auto snap-y snap-mandatory"
+            style={{ paddingTop: "90px", paddingBottom: "90px", scrollbarWidth: "none" }}
+          >
+            {(orderedVisibleUsers.length === 0
+              ? [{ id: userId, name: user?.name || "Me", username: user?.username || "" }]
+              : orderedVisibleUsers
+            ).map((u) => {
+              const isActive = u.id === (activeUserId || userId);
+              const displayName = u.name || u.username || "Unknown";
+              return (
+                <button
+                  key={`mobile-user-option-${u.id}`}
+                  type="button"
+                  onClick={() => {
+                    handleUserScopeChange(u.id);
+                    setMobileUserPickerOpen(false);
+                  }}
+                  className={`flex h-11 w-full snap-center items-center justify-center text-sm rounded-lg transition-colors ${isActive ? "text-cloud-white font-bold bg-jade-glow/10" : "text-mist-dark font-medium hover:text-cloud-white hover:bg-ink-mid"}`}
+                >
+                  {displayName}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </GlowModal>
     </PageLayout>
   );
 }

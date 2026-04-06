@@ -49,6 +49,12 @@ function NyaaTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount = 
   // Keep top bar tighter so utility sections (e.g. Exercise Library, Friends) live under More.
   const visibleNavItems = useMemo(() => mainItems.slice(0, isMobile ? 0 : 3), [mainItems, isMobile]);
   const overflowNavItems = useMemo(() => mainItems.slice(isMobile ? 0 : 3), [mainItems, isMobile]);
+  const overflowMenuItems = useMemo(() => {
+    const historyItem = mainItems.find((item) => item.id === "history");
+    if (!historyItem) return overflowNavItems;
+    if (overflowNavItems.some((item) => item.id === "history")) return overflowNavItems;
+    return [historyItem, ...overflowNavItems];
+  }, [mainItems, overflowNavItems]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -223,7 +229,7 @@ function NyaaTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount = 
               </span>
             ))}
 
-            {(overflowNavItems.length > 0 || adminItems.length > 0) && (
+            {(overflowMenuItems.length > 0 || adminItems.length > 0) && (
               <span className="flex items-center">
                 <span className="nyaa-nav-sep" aria-hidden />
                 <div className="relative" ref={moreMenuRef}>
@@ -252,7 +258,7 @@ function NyaaTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount = 
                           WebkitOverflowScrolling: "touch",
                         }}
                       >
-                        {overflowNavItems.map((item) => (
+                        {overflowMenuItems.map((item) => (
                           <button
                             key={item.id}
                             type="button"
@@ -364,7 +370,7 @@ function NyaaTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount = 
                 <UserPhysiqueButton
                   userId={user?.id || ""}
                   userName={user?.name || ""}
-                  className="nyaa-dropdown-item block w-full text-left px-3 py-1.5 text-xs"
+                  className="nyaa-dropdown-item block min-h-[44px] w-full text-left px-3 py-2 text-sm"
                 />
 
                 {/* Mobile: show all nav items in user menu */}
@@ -376,7 +382,7 @@ function NyaaTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount = 
                         key={item.id}
                         type="button"
                         onClick={() => navigateAndCloseUserMenu(item.path)}
-                        className={`nyaa-dropdown-item block w-full text-left px-3 py-1.5 text-xs transition-colors ${
+                        className={`nyaa-dropdown-item block min-h-[44px] w-full text-left px-3 py-2 text-sm transition-colors ${
                           pathname === item.path ? "nyaa-dropdown-item-active" : ""
                         }`}
                       >
@@ -391,7 +397,7 @@ function NyaaTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount = 
                             key={item.id}
                             type="button"
                             onClick={() => navigateAndCloseUserMenu(item.path)}
-                            className={`nyaa-dropdown-item block w-full text-left px-3 py-1.5 text-xs transition-colors ${
+                            className={`nyaa-dropdown-item block min-h-[44px] w-full text-left px-3 py-2 text-sm transition-colors ${
                               pathname === item.path ? "nyaa-dropdown-item-active" : ""
                             }`}
                           >
@@ -410,7 +416,7 @@ function NyaaTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount = 
                     setUserMenuOpen(false);
                     logout();
                   }}
-                  className="nyaa-dropdown-item nyaa-dropdown-item-danger block w-full text-left px-3 py-1.5 text-xs"
+                  className="nyaa-dropdown-item nyaa-dropdown-item-danger block min-h-[44px] w-full text-left px-3 py-2 text-sm"
                 >
                   {t("Sign Out", "normal")}
                 </button>

@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import GlowButton from "@/components/ui/GlowButton";
+import MobileFocusOverlay, { MobileFocusTrigger } from "@/components/ui/MobileFocusOverlay";
 import { useDisplaySettings, DEFAULT_UNIFIED_VISIBLE_COLUMNS, DISPLAY_DEFAULTS } from "@/context/DisplaySettingsContext";
 import { useIsMobile } from "@/context/AppContext";
 import { formatDateWithPreference } from "@/lib/constants";
@@ -584,6 +585,7 @@ function TrainingLogTable({
   userId,
   historyTargetUserId,
   historyTargetUserName,
+  trainingLogTitleOverride,
   hideInputSection,
   disableExerciseLinks,
   prefillExerciseId,
@@ -593,6 +595,8 @@ function TrainingLogTable({
   forceMobileInputOpen,
   forceDesktopTableOnMobile,
   forceSimpleViewOnly,
+  forceAverageSummaryOnMobile,
+  exerciseDetailSource,
 }: {
   exercises: ProgressionExercise[];
   physique: UserPhysiqueSettings;
@@ -600,6 +604,7 @@ function TrainingLogTable({
   userId: string;
   historyTargetUserId?: string;
   historyTargetUserName?: string;
+  trainingLogTitleOverride?: string;
   hideInputSection?: boolean;
   disableExerciseLinks?: boolean;
   prefillExerciseId?: string | null;
@@ -609,6 +614,8 @@ function TrainingLogTable({
   forceMobileInputOpen?: boolean;
   forceDesktopTableOnMobile?: boolean;
   forceSimpleViewOnly?: boolean;
+  forceAverageSummaryOnMobile?: boolean;
+  exerciseDetailSource?: "train" | "history";
 }) {
   const router = useRouter();
   const allEntries = useMemo(() => flattenLogsUnified(exercises), [exercises]);
@@ -645,7 +652,6 @@ function TrainingLogTable({
   const [hoveredEditLogId, setHoveredEditLogId] = useState<string | null>(null);
   const tableScrollRef = useRef<HTMLDivElement | null>(null);
   const tableScrollRafRef = useRef<number | null>(null);
-  const openModeMetricsRafRef = useRef<number | null>(null);
   const tableDragStateRef = useRef<{ active: boolean; startX: number; startScrollLeft: number; pointerId: number | null }>({
     active: false,
     startX: 0,
@@ -655,15 +661,17 @@ function TrainingLogTable({
   const suppressTableClickRef = useRef(false);
   const [tableScrollTop, setTableScrollTop] = useState(0);
   const [tableViewportHeight, setTableViewportHeight] = useState(560);
-  const [openModeVirtualMetrics, setOpenModeVirtualMetrics] = useState({ scrollTop: 0, viewportHeight: 560 });
   const [isTableDragging, setIsTableDragging] = useState(false);
   const resolvedUserId = userId && userId.trim().length > 0 ? userId : "anonymous";
   const isViewingAnotherUser = Boolean(historyTargetUserId && historyTargetUserId !== userId);
   const canEditTrainingLogs = !isViewingAnotherUser;
   const shouldDisableInputSection = Boolean(hideInputSection) || isViewingAnotherUser;
-  const trainingLogTitle = isViewingAnotherUser && historyTargetUserName?.trim().length
+  const defaultTrainingLogTitle = isViewingAnotherUser && historyTargetUserName?.trim().length
     ? `${historyTargetUserName.trim()} ${t("Training Log", "normal")}`
     : t("Training Log", "normal");
+  const trainingLogTitle = trainingLogTitleOverride?.trim().length
+    ? trainingLogTitleOverride.trim()
+    : defaultTrainingLogTitle;
   const tableModeStorageKey = `training-log-table-mode:${resolvedUserId}`;
   const workoutInputStorageKey = `training-log-workout-input:${resolvedUserId}`;
   const sortStorageKey = `${TRAINING_LOG_SORT_STORAGE_KEY_PREFIX}:${resolvedUserId}`;
@@ -700,6 +708,7 @@ function TrainingLogTable({
   const modifierWheelScrollRef = useRef<HTMLDivElement | null>(null);
   const exerciseSearchWrapRef = useRef<HTMLDivElement | null>(null);
   const exerciseInputRef = useRef<HTMLInputElement | null>(null);
+  const desktopDateInputRef = useRef<HTMLInputElement | null>(null);
   const exerciseDropdownListRef = useRef<HTMLDivElement | null>(null);
 
   const openExerciseHistoryFromMobileCard = useCallback((entry: UnifiedFlatLogEntry) => {
@@ -707,10 +716,13 @@ function TrainingLogTable({
     if (historyTargetUserId) {
       query.set("targetUserId", historyTargetUserId);
     }
+    if (exerciseDetailSource) {
+      query.set("from", exerciseDetailSource);
+    }
     const basePath = `${DASHBOARD_ROUTES.root}/workout-history/${encodeURIComponent(entry.exerciseId)}`;
     const href = query.toString() ? `${basePath}?${query.toString()}` : basePath;
     router.push(href);
-  }, [historyTargetUserId, router]);
+  }, [exerciseDetailSource, historyTargetUserId, router]);
   const [exerciseDropdownRect, setExerciseDropdownRect] = useState<{ top: number; left: number; width: number } | null>(null);
   const appliedPrefillRef = useRef<string | null>(null);
   const [inputMode, setInputMode] = useState<"existing" | "new">("existing");
@@ -720,6 +732,7 @@ function TrainingLogTable({
   const [dateInputDraft, setDateInputDraft] = useState("");
   const [activeDesktopInputCell, setActiveDesktopInputCell] = useState<string | null>(null);
   const [mobileInputOpen, setMobileInputOpen] = useState(Boolean(forceMobileInputOpen));
+  const [trainingLogFocusMode, setTrainingLogFocusMode] = useState(false);
 
   useEffect(() => {
     if (isEditMode) {
@@ -792,9 +805,6 @@ function TrainingLogTable({
       if (tableScrollRafRef.current != null) {
         window.cancelAnimationFrame(tableScrollRafRef.current);
       }
-      if (openModeMetricsRafRef.current != null) {
-        window.cancelAnimationFrame(openModeMetricsRafRef.current);
-      }
     };
   }, []);
 
@@ -817,6 +827,10 @@ function TrainingLogTable({
   }, [dateFormat]);
   const weightUnit = settings.defaultWeightUnit ?? "kg";
   const effectiveSimpleView = forceSimpleViewOnly ? true : isSimpleView;
+  const useMobileAverageSummary = isMobile
+    && Boolean(forceDesktopTableOnMobile)
+    && Boolean(forceSimpleViewOnly)
+    && Boolean(forceAverageSummaryOnMobile);
   const visibleColumnKeys = DEFAULT_UNIFIED_VISIBLE_COLUMNS;
   const visibleColumnSet = useMemo(() => new Set(visibleColumnKeys), [visibleColumnKeys]);
   const showDate = visibleColumnSet.has("date");
@@ -908,10 +922,25 @@ function TrainingLogTable({
 
   // Filter data columns by visibility
   const visibleDataIndices = useMemo(() => {
-    return headerKeys
+    const base = headerKeys
       .map((key, idx) => ({ key, idx }))
       .filter(({ key }) => visibleColumnSet.has(key as import("@/context/DisplaySettingsContext").UnifiedVisibleColumnKey));
-  }, [headerKeys, visibleColumnSet]);
+
+    if (!useMobileAverageSummary) return base;
+
+    const firstValue = base.find((item) => headerTypes[item.idx] === "value");
+    const firstReps = base.find((item) => headerTypes[item.idx] === "reps");
+    return [firstValue, firstReps].filter((item): item is { key: string; idx: number } => Boolean(item));
+  }, [headerKeys, headerTypes, useMobileAverageSummary, visibleColumnSet]);
+
+  const summaryValueDataIdx = useMemo(
+    () => visibleDataIndices.find((item) => headerTypes[item.idx] === "value")?.idx ?? null,
+    [headerTypes, visibleDataIndices],
+  );
+  const summaryRepsDataIdx = useMemo(
+    () => visibleDataIndices.find((item) => headerTypes[item.idx] === "reps")?.idx ?? null,
+    [headerTypes, visibleDataIndices],
+  );
 
   const defaultColumnOrder = useMemo(() => {
     const cols: string[] = [];
@@ -1166,46 +1195,14 @@ function TrainingLogTable({
     return () => window.cancelAnimationFrame(frame);
   }, [isEditMode, selectedEditLogId]);
 
-  useEffect(() => {
-    if (isMobile || fitToScreenMode || entries.length <= 40) return;
-
-    const syncOpenModeVirtualMetrics = () => {
-      const el = tableScrollRef.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      const scrollTop = Math.max(0, -rect.top);
-      const viewportHeight = Math.max(VIRTUAL_ROW_HEIGHT, window.innerHeight);
-      setOpenModeVirtualMetrics((prev) => (
-        prev.scrollTop === scrollTop && prev.viewportHeight === viewportHeight
-          ? prev
-          : { scrollTop, viewportHeight }
-      ));
-    };
-
-    const scheduleOpenModeMetricSync = () => {
-      if (openModeMetricsRafRef.current != null) return;
-      openModeMetricsRafRef.current = window.requestAnimationFrame(() => {
-        openModeMetricsRafRef.current = null;
-        syncOpenModeVirtualMetrics();
-      });
-    };
-
-    scheduleOpenModeMetricSync();
-    window.addEventListener("scroll", scheduleOpenModeMetricSync, { passive: true });
-    window.addEventListener("resize", scheduleOpenModeMetricSync);
-    return () => {
-      window.removeEventListener("scroll", scheduleOpenModeMetricSync);
-      window.removeEventListener("resize", scheduleOpenModeMetricSync);
-      if (openModeMetricsRafRef.current != null) {
-        window.cancelAnimationFrame(openModeMetricsRafRef.current);
-        openModeMetricsRafRef.current = null;
-      }
-    };
-  }, [VIRTUAL_ROW_HEIGHT, entries.length, fitToScreenMode, isMobile]);
+  const isOpenedTableMode = !fitToScreenMode;
+  const effectiveViewportHeight = isOpenedTableMode
+    ? Math.min(entries.length, 30) * VIRTUAL_ROW_HEIGHT + 48
+    : tableViewportHeight;
 
   const shouldVirtualizeTable = !isMobile && entries.length > 40;
-  const virtualScrollTop = fitToScreenMode ? tableScrollTop : openModeVirtualMetrics.scrollTop;
-  const virtualViewportHeight = fitToScreenMode ? tableViewportHeight : openModeVirtualMetrics.viewportHeight;
+  const virtualScrollTop = tableScrollTop;
+  const virtualViewportHeight = effectiveViewportHeight;
   const virtualWindow = useMemo(() => {
     const total = entries.length;
     if (!shouldVirtualizeTable) {
@@ -1229,7 +1226,6 @@ function TrainingLogTable({
     };
   }, [entries, shouldVirtualizeTable, virtualScrollTop, virtualViewportHeight, VIRTUAL_ROW_HEIGHT]);
 
-  const isOpenedTableMode = !fitToScreenMode;
   const tableEntries = shouldVirtualizeTable ? virtualWindow.visibleEntries : entries;
 
   const tableMinWidth = useMemo(() => {
@@ -1547,7 +1543,7 @@ function TrainingLogTable({
   const desktopValueHeaderPrefix = isTimedInput ? "T" : "W";
   const setValuePlaceholder = isTimedInput ? "secs" : (inputWeightUnit === "lbs" ? "lbs" : "kgs");
   const trainingLogHeaderTextColor = "var(--gold)";
-  const inputSectionHeaderTextColor = "var(--mist-pale)";
+  const inputSectionHeaderTextColor = "var(--jade-glow)";
   const inputProgressionTone = getSimpleLabelTone("progression");
   const inputVariantTone = getSimpleLabelTone("variant");
   const desktopInputSetColumns = columnGrouped
@@ -1919,6 +1915,22 @@ function TrainingLogTable({
     }
   };
 
+  const openDesktopDatePicker = useCallback(() => {
+    const input = desktopDateInputRef.current;
+    if (!input) return;
+    input.focus({ preventScroll: true });
+    const pickerInput = input as HTMLInputElement & { showPicker?: () => void };
+    if (typeof pickerInput.showPicker === "function") {
+      try {
+        pickerInput.showPicker();
+        return;
+      } catch {
+        // Some environments block programmatic picker opening.
+      }
+    }
+    input.click();
+  }, []);
+
   const handleWorkoutExerciseSelection = (exerciseId: string) => {
     const selectedExercise = exerciseLookup.get(exerciseId);
     const nextLevel = String(selectedExercise?.userProgress?.[0]?.currentLevel ?? 1);
@@ -2224,7 +2236,7 @@ function TrainingLogTable({
     setMobileInputOpen(false);
   };
 
-  const headerTypographyClass = "font-medium text-[10px] sm:text-[11px] uppercase tracking-[0.08em]";
+  const headerTypographyClass = "font-semibold text-[10px] sm:text-[11px] uppercase tracking-[0.08em] text-jade-glow";
   const headerPadClass = effectiveCompact ? "py-1.5" : "py-2";
   const cellPadTight = effectiveCompact ? "px-0.5 py-1" : "px-0.5 py-1.5";
   const cellPadStandard = effectiveCompact ? "px-1 py-1" : "px-1 py-1.5";
@@ -2233,9 +2245,9 @@ function TrainingLogTable({
   const segmentedToggleButtonClass = "rounded px-2 py-1 text-[11px] font-semibold transition-all duration-150";
   const toolbarButtonClass = "inline-flex items-center gap-2 rounded-md border px-2 py-1 text-[11px] font-semibold transition-all duration-150 hover:scale-[1.02] active:scale-[0.98]";
   const panelIconButtonClass = "inline-flex h-6 w-6 items-center justify-center rounded border text-xs font-bold transition-colors hover:bg-ink-mid/35";
-  const mobileFieldRowClass = "w-full min-w-0 max-w-[760px] mx-auto flex items-center gap-1.5 px-2 sm:px-4";
-  const mobileFieldLabelClass = "text-[11px] font-medium w-12 sm:w-20 shrink-0 text-left";
-  const inputModeOptionButtonClass = `w-full min-h-9 appearance-none rounded-md border px-3 py-2 text-center font-semibold leading-tight whitespace-nowrap transition-all duration-150 ${isMobile ? "text-sm" : "text-xs"}`;
+  const mobileFieldRowClass = "w-full min-w-0 max-w-[760px] mx-auto flex items-center gap-2 px-2.5 sm:px-4";
+  const mobileFieldLabelClass = "text-xs font-medium w-12 sm:w-20 shrink-0 text-left text-mist-dark uppercase";
+  const inputModeOptionButtonClass = `w-full min-h-9 appearance-none rounded-md border px-3 py-2 text-center font-semibold leading-tight whitespace-nowrap transition-[transform,box-shadow,border-color,background-color,color] duration-150 hover:scale-[1.005] active:scale-[0.985] ${isMobile ? "text-sm" : "text-xs"}`;
   const selectCaretStyle = {
     appearance: "none" as const,
     backgroundImage: "url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23b5bac1' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.7' d='M6 8l4 4 4-4'/%3e%3c/svg%3e\")",
@@ -2273,18 +2285,13 @@ function TrainingLogTable({
         )}
         {shouldRenderInputSection && (
           <div
-            className={`w-full rounded-2xl relative overflow-hidden min-w-0 mb-4`}
-            style={{
-              borderColor: "var(--nyaa-table-grid)",
-              border: "1px solid",
-              backgroundColor: "var(--header-bg)",
-            }}
+            className="w-full rounded-2xl relative overflow-hidden min-w-0 mb-6 nyaa-input-section surface-panel surface-panel-strong"
           >
             <div
-              className={`flex flex-wrap items-center justify-between gap-2 px-3 py-2 border-b min-w-0 ${isMobile ? "relative pr-20" : ""}`}
-              style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}
+              className={`flex flex-wrap items-center justify-between gap-2.5 px-3 py-2.5 border-b min-w-0 ${isMobile ? "relative pr-20" : ""}`}
+              style={{ borderColor: "color-mix(in srgb, var(--jade-glow) 25%, var(--border))", backgroundColor: "color-mix(in srgb, var(--jade-glow) 6%, var(--nyaa-table-head-bg))" }}
             >
-              <span className="text-[11px] font-semibold uppercase tracking-wide shrink-0" style={{ color: "var(--text-primary)" }} title={tHint("Training Log Input", "normal") ?? undefined}>
+              <span className="text-[11px] font-semibold uppercase tracking-wide shrink-0" style={{ color: "var(--jade-glow)" }} title={tHint("Training Log Input", "normal") ?? undefined}>
                 {t("Training Log Input", "normal")}
               </span>
               <div className="flex flex-wrap items-center gap-2 min-w-0">
@@ -2431,36 +2438,36 @@ function TrainingLogTable({
                       </tr>
                     </thead>
                     <tbody>
-                      <tr style={{ backgroundColor: "var(--surface)" }}>
-                        <td className="p-0.5" style={{ borderRight: "1px solid var(--nyaa-table-grid)" }}>
-                          {activeDesktopInputCell === "date" ? (
+                      <tr style={{ backgroundColor: "var(--ink-dark)" }}>
+                        <td
+                          className="p-0.5"
+                          style={{ borderRight: "1px solid var(--nyaa-table-grid)" }}
+                          onClick={openDesktopDatePicker}
+                        >
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={openDesktopDatePicker}
+                              className="w-full h-7 rounded border px-1.5 text-left text-[11px] appearance-none cursor-pointer hover:border-jade-glow/50 transition-colors"
+                              style={{ borderColor: "color-mix(in srgb, var(--jade-glow) 30%, var(--border))", backgroundColor: "var(--ink-dark)", color: "var(--text-primary)" }}
+                            >
+                              {workoutInputDateDisplay || ""}
+                            </button>
                             <input
+                              ref={desktopDateInputRef}
                               type="date"
                               value={workoutInput.date}
-                              autoFocus
-                              onBlur={() => {
-                                setActiveDesktopInputCell(null);
-                              }}
-                              onKeyDown={handleDesktopInputCellKeyDown}
                               onChange={(event) =>
                                 setWorkoutInput((prev) => ({
                                   ...prev,
                                   date: event.target.value,
                                 }))
                               }
-                              className="w-full h-7 rounded outline-none px-1.5 text-[11px]"
-                              style={{ backgroundColor: "var(--surface)", borderColor: "var(--nyaa-table-grid)", border: "1px solid", color: "var(--text-primary)" }}
+                              className="absolute inset-0 h-full w-full opacity-0 pointer-events-none"
+                              tabIndex={-1}
+                              aria-hidden="true"
                             />
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => setActiveDesktopInputCell("date")}
-                              className="w-full h-7 rounded border px-1.5 text-left text-[11px] appearance-none"
-                              style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--surface)", color: "var(--text-primary)" }}
-                            >
-                              {workoutInputDateDisplay || ""}
-                            </button>
-                          )}
+                          </div>
                         </td>
                         <td className="p-0.5" style={{ borderRight: "1px solid var(--nyaa-table-grid)" }}>
                           {inputMode === "existing" ? (
@@ -2540,7 +2547,7 @@ function TrainingLogTable({
                                 }}
                                 placeholder=""
                                 className="w-full h-7 rounded pl-6 pr-6 text-[11px] outline-none"
-                                style={{ backgroundColor: "var(--surface)", border: "none", boxShadow: "none", color: "var(--text-primary)", textShadow: "none" }}
+                                style={{ backgroundColor: "var(--ink-dark)", border: "1px solid color-mix(in srgb, var(--jade-glow) 30%, var(--border))", boxShadow: "none", color: "var(--text-primary)", textShadow: "none" }}
                               />
                               {exerciseSearchTerm.trim() !== "" && (
                                 <button
@@ -2573,14 +2580,14 @@ function TrainingLogTable({
                                 onChange={(event) => handleWorkoutInputChange("newExerciseName", event.target.value)}
                                 placeholder=""
                                 className="w-full h-7 rounded px-1.5 text-[11px] outline-none"
-                                style={{ backgroundColor: "var(--surface)", border: "none", boxShadow: "none", color: "var(--text-primary)", textShadow: "none" }}
+                                style={{ backgroundColor: "var(--ink-dark)", border: "1px solid color-mix(in srgb, var(--jade-glow) 30%, var(--border))", boxShadow: "none", color: "var(--text-primary)", textShadow: "none" }}
                               />
                             ) : (
                               <button
                                 type="button"
                                 onClick={() => setActiveDesktopInputCell("newExerciseName")}
-                                className="w-full h-7 rounded border px-1.5 text-left text-[11px] appearance-none"
-                                style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--surface)", color: "var(--text-primary)" }}
+                                className="w-full h-7 rounded border px-1.5 text-left text-[11px] appearance-none cursor-pointer hover:border-jade-glow/50 transition-colors"
+                                style={{ borderColor: "color-mix(in srgb, var(--jade-glow) 30%, var(--border))", backgroundColor: "var(--ink-dark)", color: "var(--text-primary)" }}
                               >
                                 {workoutInput.newExerciseName || ""}
                               </button>
@@ -2593,10 +2600,10 @@ function TrainingLogTable({
                               value={workoutInput.level}
                               onChange={(event) => handleWorkoutInputChange("level", event.target.value)}
                               disabled={!hasSelectedInputExercise}
-                              className="w-full h-7 rounded px-1.5 text-[11px] outline-none"
+                              className="w-full h-7 rounded px-1.5 text-[11px] outline-none hover:border-jade-glow/50 transition-colors"
                               style={{
-                                backgroundColor: !hasSelectedInputExercise ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
-                                borderColor: "var(--nyaa-table-grid)",
+                                backgroundColor: !hasSelectedInputExercise ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--ink-dark)",
+                                borderColor: "color-mix(in srgb, var(--jade-glow) 30%, var(--border))",
                                 borderWidth: "1px",
                                 borderStyle: "solid",
                                 color: !hasSelectedInputExercise ? "var(--text-secondary)" : "var(--text-primary)",
@@ -2616,10 +2623,10 @@ function TrainingLogTable({
                               value={workoutInput.variant}
                               onChange={(event) => handleWorkoutInputChange("variant", event.target.value)}
                               disabled={!hasSelectedInputExercise}
-                              className="w-full h-7 rounded px-1.5 text-[11px] outline-none"
+                              className="w-full h-7 rounded px-1.5 text-[11px] outline-none hover:border-jade-glow/50 transition-colors"
                               style={{
-                                backgroundColor: !hasSelectedInputExercise ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
-                                borderColor: "var(--nyaa-table-grid)",
+                                backgroundColor: !hasSelectedInputExercise ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--ink-dark)",
+                                borderColor: "color-mix(in srgb, var(--jade-glow) 30%, var(--border))",
                                 borderWidth: "1px",
                                 borderStyle: "solid",
                                 color: !hasSelectedInputExercise ? "var(--text-secondary)" : "var(--text-primary)",
@@ -2654,8 +2661,8 @@ function TrainingLogTable({
                                   disabled={!canSubmitWorkoutInput}
                                   className={`w-full h-7 rounded px-1.5 text-[11px] outline-none ${isValueField ? "text-center" : ""}`}
                                   style={{
-                                    backgroundColor: !canSubmitWorkoutInput ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
-                                    borderColor: "var(--nyaa-table-grid)",
+                                    backgroundColor: !canSubmitWorkoutInput ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--ink-dark)",
+                                    borderColor: "color-mix(in srgb, var(--jade-glow) 40%, var(--border))",
                                     border: "1px solid",
                                     color: !canSubmitWorkoutInput ? "var(--text-secondary)" : "var(--text-primary)",
                                     opacity: !canSubmitWorkoutInput ? 0.6 : 1,
@@ -2667,10 +2674,10 @@ function TrainingLogTable({
                                   type="button"
                                   onClick={() => canSubmitWorkoutInput && setActiveDesktopInputCell(key)}
                                   disabled={!canSubmitWorkoutInput}
-                                  className={`w-full h-7 rounded border px-1.5 text-[11px] appearance-none ${isValueField ? "text-center" : "text-left"}`}
+                                  className={`w-full h-7 rounded border px-1.5 text-[11px] appearance-none cursor-pointer hover:border-jade-glow/50 transition-colors ${isValueField ? "text-center" : "text-left"}`}
                                   style={{
-                                    borderColor: "var(--nyaa-table-grid)",
-                                    backgroundColor: !canSubmitWorkoutInput ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
+                                    borderColor: "color-mix(in srgb, var(--jade-glow) 30%, var(--border))",
+                                    backgroundColor: !canSubmitWorkoutInput ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--ink-dark)",
                                     color: !canSubmitWorkoutInput
                                       ? "var(--text-secondary)"
                                       : (isValueField && !hasCellValue ? "color-mix(in srgb, var(--text-secondary) 82%, var(--surface))" : "var(--text-primary)"),
@@ -2690,10 +2697,10 @@ function TrainingLogTable({
                               value={workoutInput.modifierKg}
                               onChange={(event) => handleWorkoutInputChange("modifierKg", event.target.value)}
                               disabled={!hasSelectedInputExercise}
-                              className="w-full h-7 rounded px-1.5 text-[11px] outline-none"
+                              className="w-full h-7 rounded px-1.5 text-[11px] outline-none hover:border-jade-glow/50 transition-colors"
                               style={{
-                                backgroundColor: !hasSelectedInputExercise ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
-                                borderColor: "var(--nyaa-table-grid)",
+                                backgroundColor: !hasSelectedInputExercise ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--ink-dark)",
+                                borderColor: "color-mix(in srgb, var(--jade-glow) 30%, var(--border))",
                                 borderWidth: "1px",
                                 borderStyle: "solid",
                                 color: !hasSelectedInputExercise ? "var(--text-secondary)" : "var(--text-primary)",
@@ -2725,8 +2732,8 @@ function TrainingLogTable({
                               style={{
                                 backgroundColor: inputMode === "existing" && !hasSelectedInputExercise
                                   ? "color-mix(in srgb, var(--border) 14%, var(--surface))"
-                                  : "var(--surface)",
-                                borderColor: "var(--nyaa-table-grid)",
+                                  : "var(--ink-dark)",
+                                borderColor: "color-mix(in srgb, var(--jade-glow) 30%, var(--border))",
                                 border: "1px solid",
                                 color: inputMode === "existing" && !hasSelectedInputExercise ? "var(--text-secondary)" : "var(--text-primary)",
                                 opacity: inputMode === "existing" && !hasSelectedInputExercise ? 0.6 : 1,
@@ -2738,12 +2745,12 @@ function TrainingLogTable({
                               type="button"
                               onClick={() => !(inputMode === "existing" && !hasSelectedInputExercise) && setActiveDesktopInputCell("notes")}
                               disabled={inputMode === "existing" && !hasSelectedInputExercise}
-                              className="w-full h-7 rounded border px-1.5 text-left text-[11px] appearance-none"
+                              className="w-full h-7 rounded border px-1.5 text-left text-[11px] appearance-none cursor-pointer hover:border-jade-glow/50 transition-colors"
                               style={{
-                                borderColor: "var(--nyaa-table-grid)",
+                                borderColor: "color-mix(in srgb, var(--jade-glow) 30%, var(--border))",
                                 backgroundColor: inputMode === "existing" && !hasSelectedInputExercise
                                   ? "color-mix(in srgb, var(--border) 14%, var(--surface))"
-                                  : "var(--surface)",
+                                  : "var(--ink-dark)",
                                 color: inputMode === "existing" && !hasSelectedInputExercise ? "var(--text-secondary)" : "var(--text-primary)",
                                 opacity: inputMode === "existing" && !hasSelectedInputExercise ? 0.6 : 1,
                                 cursor: inputMode === "existing" && !hasSelectedInputExercise ? "not-allowed" : "text",
@@ -2782,18 +2789,16 @@ function TrainingLogTable({
               <div className={isMobile ? "grid grid-cols-1 gap-3" : "grid grid-cols-[repeat(28,minmax(0,1fr))] items-end gap-x-3 gap-y-2"}>
               <div className="mx-auto w-full max-w-[760px] space-y-4 px-2 sm:px-3">
               <div
-                className="flex flex-col gap-2 rounded-xl border px-2 py-2 pb-3"
+                className="surface-panel flex flex-col gap-2 p-4"
                 style={{
-                  backgroundColor: "color-mix(in srgb, var(--surface) 92%, transparent)",
-                  borderColor: "color-mix(in srgb, var(--border) 78%, var(--accent) 22%)",
-                  boxShadow: "0 6px 16px color-mix(in srgb, var(--ink-deep) 12%, transparent)",
+                  boxShadow: "var(--shadow-elev-1), 0 0 0 1px rgba(58,143,143,0.22) inset",
                 }}
               >
-                <p className="px-4 text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--text-secondary)" }}>
+                <p className="text-xs text-jade-glow uppercase tracking-wider mb-1">
                   Exercise Details
                 </p>
               <div className={isMobile ? mobileFieldRowClass : "col-span-2 flex flex-col gap-1"}>
-                <label className={isMobile ? mobileFieldLabelClass : "hidden"} style={{ color: "var(--text-secondary)" }}>{t("Date", "normal")}</label>
+                <label className={isMobile ? mobileFieldLabelClass : "hidden"}>{t("Date", "normal")}</label>
                 <input
                   type="date"
                   value={workoutInput.date}
@@ -2803,14 +2808,14 @@ function TrainingLogTable({
                       date: event.target.value,
                     }))
                   }
-                  className={`rounded outline-none ${isMobile ? "flex-1 px-3 py-2 text-sm" : "px-2 py-1 text-xs"}`}
-                  style={{ backgroundColor: "var(--surface)", borderColor: "var(--nyaa-table-grid)", border: "1px solid", color: "var(--text-primary)" }}
+                  className={`rounded-md outline-none ${isMobile ? "flex-1 px-3 py-2 text-sm" : "px-2 py-1 text-xs"}`}
+                  style={{ backgroundColor: "var(--ink-dark)", borderColor: "color-mix(in srgb, var(--border) 82%, transparent)", border: "1px solid", color: "var(--text-primary)" }}
                 />
               </div>
 
               {inputMode === "existing" ? (
               <div className={isMobile ? mobileFieldRowClass : "col-span-4 flex flex-col gap-1 min-w-[220px]"} ref={exerciseSearchWrapRef}>
-                <label className={isMobile ? mobileFieldLabelClass : "hidden"} style={{ color: "var(--text-secondary)" }}>{t("Exercise", "normal")}</label>
+                <label className={isMobile ? mobileFieldLabelClass : "hidden"}>{t("Exercise", "normal")}</label>
                 <div className={`relative ${isMobile ? "flex-1" : ""}`}>
                   <span className="pointer-events-none absolute inset-y-0 left-2 flex items-center" style={{ color: "var(--text-secondary)" }}>
                     <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="none" aria-hidden>
@@ -2890,8 +2895,8 @@ function TrainingLogTable({
                       setExerciseHighlightIndex(-1);
                     }}
                     placeholder=""
-                    className={`w-full rounded pl-7 pr-7 outline-none ${isMobile ? "py-2 text-sm" : "py-1 text-xs"}`}
-                    style={{ backgroundColor: "var(--surface)", borderColor: "var(--nyaa-table-grid)", border: "1px solid", color: "var(--text-primary)" }}
+                    className={`w-full rounded-md pl-7 pr-7 outline-none ${isMobile ? "py-2 text-sm" : "py-1 text-xs"}`}
+                    style={{ backgroundColor: "var(--ink-dark)", borderColor: "color-mix(in srgb, var(--border) 82%, transparent)", border: "1px solid", color: "var(--text-primary)" }}
                   />
                   {exerciseSearchTerm.trim() !== "" && (
                     <button
@@ -2918,14 +2923,14 @@ function TrainingLogTable({
               </div>
               ) : (
               <div className={isMobile ? mobileFieldRowClass : "col-span-6 flex flex-col gap-1 min-w-[220px]"}>
-                <label className={isMobile ? mobileFieldLabelClass : "hidden"} style={{ color: "var(--text-secondary)" }}>{t("Exercise Name", "normal")}</label>
+                <label className={isMobile ? mobileFieldLabelClass : "hidden"}>{t("Exercise Name", "normal")}</label>
                 <input
                   type="text"
                   value={workoutInput.newExerciseName}
                   onChange={(event) => handleWorkoutInputChange("newExerciseName", event.target.value)}
                   placeholder=""
-                  className={`w-full rounded outline-none ${isMobile ? "flex-1 px-3 py-2 text-sm" : "px-2 py-1 text-xs"}`}
-                  style={{ backgroundColor: "var(--surface)", borderColor: "var(--nyaa-table-grid)", border: "1px solid", color: "var(--text-primary)" }}
+                  className={`w-full rounded-md outline-none ${isMobile ? "flex-1 px-3 py-2 text-sm" : "px-2 py-1 text-xs"}`}
+                  style={{ backgroundColor: "var(--surface)", borderColor: "color-mix(in srgb, var(--border) 82%, transparent)", border: "1px solid", color: "var(--text-primary)" }}
                 />
               </div>
               )}
@@ -2933,16 +2938,16 @@ function TrainingLogTable({
               {inputMode === "existing" && (
                 <>
                   <div className={isMobile ? mobileFieldRowClass : "col-span-2 flex flex-col gap-1 min-w-[150px]"}>
-                    <label className={isMobile ? mobileFieldLabelClass : "hidden"} style={{ color: "var(--text-secondary)" }}>{t("Progression", "normal")}</label>
+                    <label className={isMobile ? mobileFieldLabelClass : "hidden"}>{t("Progression", "normal")}</label>
                     {isMobile ? (
                       <button
                         type="button"
                         onClick={() => setMobileInputPicker({ field: "level", title: t("Progression", "normal") })}
                         disabled={!hasSelectedInputExercise}
-                        className="flex flex-1 items-center justify-between rounded px-3 py-2 text-sm font-medium"
+                        className="flex flex-1 items-center justify-between rounded-md px-3 py-2 text-sm font-medium"
                         style={{
                           backgroundColor: !hasSelectedInputExercise ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
-                          borderColor: "var(--nyaa-table-grid)",
+                          borderColor: "color-mix(in srgb, var(--border) 82%, transparent)",
                           borderWidth: "1px",
                           borderStyle: "solid",
                           color: !hasSelectedInputExercise ? "var(--text-secondary)" : "var(--text-primary)",
@@ -2979,16 +2984,16 @@ function TrainingLogTable({
                   </div>
 
                   <div className={isMobile ? mobileFieldRowClass : "col-span-2 flex flex-col gap-1 min-w-[150px]"}>
-                    <label className={isMobile ? mobileFieldLabelClass : "hidden"} style={{ color: "var(--text-secondary)" }}>{t("Variant", "normal")}</label>
+                    <label className={isMobile ? mobileFieldLabelClass : "hidden"}>{t("Variant", "normal")}</label>
                     {isMobile ? (
                       <button
                         type="button"
                         onClick={() => setMobileInputPicker({ field: "variant", title: t("Variant", "normal") })}
                         disabled={!hasSelectedInputExercise}
-                        className="flex flex-1 items-center justify-between rounded px-3 py-2 text-sm font-medium"
+                        className="flex flex-1 items-center justify-between rounded-md px-3 py-2 text-sm font-medium"
                         style={{
                           backgroundColor: !hasSelectedInputExercise ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
-                          borderColor: "var(--nyaa-table-grid)",
+                          borderColor: "color-mix(in srgb, var(--border) 82%, transparent)",
                           borderWidth: "1px",
                           borderStyle: "solid",
                           color: !hasSelectedInputExercise ? "var(--text-secondary)" : "var(--text-primary)",
@@ -3030,30 +3035,29 @@ function TrainingLogTable({
               </div>
 
               <div
-                className="flex flex-col gap-2 rounded-xl border px-2 py-2"
+                className="surface-panel flex flex-col gap-2 p-4"
                 style={{
-                  backgroundColor: "color-mix(in srgb, var(--surface) 92%, transparent)",
-                  borderColor: "color-mix(in srgb, var(--border) 78%, var(--accent) 22%)",
-                  boxShadow: "0 6px 16px color-mix(in srgb, var(--ink-deep) 12%, transparent)",
+                  boxShadow: "var(--shadow-elev-1), 0 0 0 1px rgba(58,143,143,0.22) inset",
                 }}
               >
-                <p className="px-4 text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--text-secondary)" }}>
+                <p className="text-xs text-jade-glow uppercase tracking-wider mb-1">
                   Input Mode
                 </p>
 
               <div className={isMobile ? mobileFieldRowClass : "col-span-2 flex flex-col gap-1 min-w-[150px]"}>
-                <label className={isMobile ? mobileFieldLabelClass : "hidden"} style={{ color: "var(--text-secondary)" }}>{t("Mode", "normal")}</label>
+                <label className={isMobile ? mobileFieldLabelClass : "hidden"}>{t("Mode", "normal")}</label>
                 <div className={`grid grid-cols-2 gap-2 ${isMobile ? "flex-1" : ""}`}>
                   <button
                     type="button"
                     onClick={() => setInputValueMode("weight")}
                     className={inputModeOptionButtonClass}
                     style={{
-                      borderColor: "var(--nyaa-table-grid)",
+                      borderColor: !isTimedInput ? "color-mix(in srgb, var(--accent) 40%, var(--border))" : "color-mix(in srgb, var(--border) 82%, transparent)",
                       color: !isTimedInput ? "var(--text-primary)" : "var(--text-secondary)",
                       backgroundColor: !isTimedInput
                         ? "color-mix(in srgb, var(--accent) 18%, transparent)"
                         : "var(--surface)",
+                      boxShadow: !isTimedInput ? "0 0 0 1px rgba(58,143,143,0.18) inset" : "none",
                     }}
                   >
                     Weight
@@ -3063,11 +3067,12 @@ function TrainingLogTable({
                     onClick={() => setInputValueMode("timed")}
                     className={inputModeOptionButtonClass}
                     style={{
-                      borderColor: "var(--nyaa-table-grid)",
+                      borderColor: isTimedInput ? "color-mix(in srgb, var(--timed-color) 40%, var(--border))" : "color-mix(in srgb, var(--border) 82%, transparent)",
                       color: isTimedInput ? "var(--timed-color)" : "var(--text-secondary)",
                       backgroundColor: isTimedInput
                         ? "color-mix(in srgb, var(--timed-color) 20%, transparent)"
                         : "var(--surface)",
+                      boxShadow: isTimedInput ? "0 0 0 1px rgba(58,143,143,0.18) inset" : "none",
                     }}
                   >
                     Timed
@@ -3076,7 +3081,7 @@ function TrainingLogTable({
               </div>
 
               <div className={isMobile ? mobileFieldRowClass : "col-span-2 flex flex-col gap-1 min-w-[150px]"}>
-                <label className={isMobile ? mobileFieldLabelClass : "hidden"} style={{ color: "var(--text-secondary)" }}>{t("Unit", "normal")}</label>
+                <label className={isMobile ? mobileFieldLabelClass : "hidden"}>{t("Unit", "normal")}</label>
                 <div className={`grid grid-cols-2 gap-2 ${isMobile ? "flex-1" : ""}`}>
                   <button
                     type="button"
@@ -3084,11 +3089,12 @@ function TrainingLogTable({
                     disabled={isTimedInput}
                     className={inputModeOptionButtonClass}
                     style={{
-                      borderColor: "var(--nyaa-table-grid)",
+                      borderColor: inputWeightUnit === "kg" ? "color-mix(in srgb, var(--accent) 40%, var(--border))" : "color-mix(in srgb, var(--border) 82%, transparent)",
                       color: inputWeightUnit === "kg" ? "var(--text-primary)" : "var(--text-secondary)",
                       backgroundColor: inputWeightUnit === "kg"
                         ? "color-mix(in srgb, var(--accent) 18%, transparent)"
                         : "var(--surface)",
+                      boxShadow: inputWeightUnit === "kg" ? "0 0 0 1px rgba(58,143,143,0.18) inset" : "none",
                       opacity: isTimedInput ? 0.45 : 1,
                       cursor: isTimedInput ? "not-allowed" : "pointer",
                     }}
@@ -3101,11 +3107,12 @@ function TrainingLogTable({
                     disabled={isTimedInput}
                     className={inputModeOptionButtonClass}
                     style={{
-                      borderColor: "var(--nyaa-table-grid)",
+                      borderColor: inputWeightUnit === "lbs" ? "color-mix(in srgb, var(--accent) 40%, var(--border))" : "color-mix(in srgb, var(--border) 82%, transparent)",
                       color: inputWeightUnit === "lbs" ? "var(--text-primary)" : "var(--text-secondary)",
                       backgroundColor: inputWeightUnit === "lbs"
                         ? "color-mix(in srgb, var(--accent) 18%, transparent)"
                         : "var(--surface)",
+                      boxShadow: inputWeightUnit === "lbs" ? "0 0 0 1px rgba(58,143,143,0.18) inset" : "none",
                       opacity: isTimedInput ? 0.45 : 1,
                       cursor: isTimedInput ? "not-allowed" : "pointer",
                     }}
@@ -3118,20 +3125,18 @@ function TrainingLogTable({
               </div>
 
               <div
-                className="flex flex-col gap-2 rounded-xl border px-2 py-2"
+                className="surface-panel flex flex-col gap-2 p-4"
                 style={{
-                  backgroundColor: "color-mix(in srgb, var(--surface) 92%, transparent)",
-                  borderColor: "color-mix(in srgb, var(--border) 78%, var(--accent) 22%)",
-                  boxShadow: "0 6px 16px color-mix(in srgb, var(--ink-deep) 12%, transparent)",
+                  boxShadow: "var(--shadow-elev-1), 0 0 0 1px rgba(58,143,143,0.22) inset",
                 }}
               >
-                <p className="px-4 text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--text-secondary)" }}>
+                <p className="text-xs text-jade-glow uppercase tracking-wider mb-1">
                   Sets And Notes
                 </p>
 
               {[1, 2, 3].map((setNo) => (
                 <div key={`set-${setNo}`} className={isMobile ? mobileFieldRowClass : "col-span-2 flex flex-col gap-1"}>
-                  <label className={isMobile ? mobileFieldLabelClass : "hidden"} style={{ color: "var(--text-secondary)" }}>{`Set ${setNo}`}</label>
+                  <label className={isMobile ? mobileFieldLabelClass : "hidden"}>{`Set ${setNo}`}</label>
                   <div className={`flex items-center gap-1 ${isMobile ? "flex-1 min-w-0" : ""}`}>
                     <input
                       type="number"
@@ -3141,10 +3146,10 @@ function TrainingLogTable({
                       onChange={(event) => handleWorkoutInputChange(`val${setNo}` as "val1" | "val2" | "val3", event.target.value)}
                       placeholder={setValuePlaceholder}
                       disabled={!canSubmitWorkoutInput}
-                      className={`rounded outline-none text-center ${isMobile ? "flex-1 min-w-0 px-2 py-2 text-sm" : "w-[74px] px-2 py-1 text-xs"}`}
+                      className={`rounded-md outline-none text-center ${isMobile ? "flex-1 min-w-0 px-2 py-2 text-sm" : "w-[74px] px-2 py-1 text-xs"}`}
                       style={{
                         backgroundColor: !canSubmitWorkoutInput ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
-                        borderColor: "var(--nyaa-table-grid)",
+                        borderColor: "color-mix(in srgb, var(--border) 82%, transparent)",
                         border: "1px solid",
                         color: !canSubmitWorkoutInput ? "var(--text-secondary)" : "var(--text-primary)",
                         opacity: !canSubmitWorkoutInput ? 0.6 : 1,
@@ -3159,10 +3164,10 @@ function TrainingLogTable({
                       onChange={(event) => handleWorkoutInputChange(`reps${setNo}` as "reps1" | "reps2" | "reps3", event.target.value)}
                       placeholder={isMobile ? "reps" : ""}
                       disabled={!canSubmitWorkoutInput}
-                      className={`rounded outline-none text-center ${isMobile ? "flex-1 min-w-0 px-2 py-2 text-sm" : "w-[50px] px-2 py-1 text-xs"}`}
+                      className={`rounded-md outline-none text-center ${isMobile ? "flex-1 min-w-0 px-2 py-2 text-sm" : "w-[50px] px-2 py-1 text-xs"}`}
                       style={{
                         backgroundColor: !canSubmitWorkoutInput ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
-                        borderColor: "var(--nyaa-table-grid)",
+                        borderColor: "color-mix(in srgb, var(--border) 82%, transparent)",
                         border: "1px solid",
                         color: !canSubmitWorkoutInput ? "var(--text-secondary)" : "var(--text-primary)",
                         opacity: !canSubmitWorkoutInput ? 0.6 : 1,
@@ -3177,15 +3182,15 @@ function TrainingLogTable({
               <div className={isMobile ? mobileFieldRowClass : "col-span-2 flex flex-col gap-1 min-w-[150px]"}>
                 {isMobile ? (
                   <>
-                    <label className={mobileFieldLabelClass} style={{ color: "var(--text-secondary)" }}>{t("Mod", "normal")}</label>
+                    <label className={mobileFieldLabelClass}>{t("Mod", "normal")}</label>
                     <button
                       type="button"
                       onClick={() => setMobileInputPicker({ field: "modifierKg", title: t("Mod", "normal") })}
                       disabled={!hasSelectedInputExercise}
-                      className="flex flex-1 items-center justify-between rounded px-3 py-2 text-sm"
+                      className="flex flex-1 items-center justify-between rounded-md px-3 py-2 text-sm"
                       style={{
                         backgroundColor: !hasSelectedInputExercise ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
-                        borderColor: "var(--nyaa-table-grid)",
+                        borderColor: "color-mix(in srgb, var(--border) 82%, transparent)",
                         border: "1px solid",
                         color: !hasSelectedInputExercise ? "var(--text-secondary)" : "var(--gold)",
                         opacity: !hasSelectedInputExercise ? 0.6 : 1,
@@ -3227,17 +3232,17 @@ function TrainingLogTable({
 
               {inputMode === "existing" && (
               <div className={isMobile ? mobileFieldRowClass : "col-span-4 flex flex-col gap-1 min-w-[220px]"}>
-                <label className={isMobile ? mobileFieldLabelClass : "hidden"} style={{ color: "var(--text-secondary)" }}>{t("Notes", "normal")}</label>
+                <label className={isMobile ? mobileFieldLabelClass : "hidden"}>{t("Notes", "normal")}</label>
                 <input
                   type="text"
                   value={workoutInput.notes}
                   onChange={(event) => handleWorkoutInputChange("notes", event.target.value)}
                   placeholder=""
                   disabled={!hasSelectedInputExercise}
-                  className={`rounded outline-none ${isMobile ? "flex-1 px-3 py-2 text-sm" : "px-2 py-1 text-xs"}`}
+                  className={`rounded-md outline-none ${isMobile ? "flex-1 px-3 py-2 text-sm" : "px-2 py-1 text-xs"}`}
                   style={{
                     backgroundColor: !hasSelectedInputExercise ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
-                    borderColor: "var(--nyaa-table-grid)",
+                    borderColor: "color-mix(in srgb, var(--border) 82%, transparent)",
                     border: "1px solid",
                     color: !hasSelectedInputExercise ? "var(--text-secondary)" : "var(--text-primary)",
                     opacity: !hasSelectedInputExercise ? 0.6 : 1,
@@ -3249,16 +3254,16 @@ function TrainingLogTable({
 
               {inputMode === "new" && (
               <div className={isMobile ? mobileFieldRowClass : "col-span-4 flex flex-col gap-1 min-w-[220px]"}>
-                <label className={isMobile ? mobileFieldLabelClass : "hidden"} style={{ color: "var(--text-secondary)" }}>{t("Notes", "normal")}</label>
+                <label className={isMobile ? mobileFieldLabelClass : "hidden"}>{t("Notes", "normal")}</label>
                 <input
                   type="text"
                   value={workoutInput.notes}
                   onChange={(event) => handleWorkoutInputChange("notes", event.target.value)}
                   placeholder=""
-                  className={`rounded outline-none ${isMobile ? "flex-1 px-3 py-2 text-sm" : "px-2 py-1 text-xs"}`}
+                  className={`rounded-md outline-none ${isMobile ? "flex-1 px-3 py-2 text-sm" : "px-2 py-1 text-xs"}`}
                   style={{
                     backgroundColor: "var(--surface)",
-                    borderColor: "var(--nyaa-table-grid)",
+                    borderColor: "color-mix(in srgb, var(--border) 82%, transparent)",
                     border: "1px solid",
                     color: "var(--text-primary)",
                   }}
@@ -3296,19 +3301,21 @@ function TrainingLogTable({
         )}
 
         {!forceMobileInputOpen && (
-        <div
-          className="w-full rounded-2xl relative overflow-hidden"
-          style={{
-            borderColor: "var(--border)",
-            border: "1px solid",
-            backgroundColor: "var(--surface)",
-          }}
-        >
+        <div className="w-full rounded-2xl relative overflow-hidden surface-panel surface-panel-strong">
           <div className="relative">
           {/* Edit header bar */}
-            <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
+            <div
+              className="flex items-center justify-between px-4 py-3 border-b"
+              style={{
+                borderColor: "color-mix(in srgb, var(--jade-glow) 25%, var(--border))",
+                backgroundColor: "color-mix(in srgb, var(--jade-glow) 6%, var(--nyaa-table-head-bg))",
+              }}
+            >
               <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-primary)" }} title={tHint("Training Log", "normal") ?? undefined}>{trainingLogTitle}</span>
+                  <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--jade-glow)" }} title={tHint("Training Log", "normal") ?? undefined}>{trainingLogTitle}</span>
+                {isMobile && entries.length > 0 && (
+                  <MobileFocusTrigger onClick={() => setTrainingLogFocusMode(true)} />
+                )}
                 {saveMessage && (
                   <motion.span
                     initial={{ opacity: 0 }}
@@ -3337,7 +3344,7 @@ function TrainingLogTable({
                     style={{
                       borderColor: "var(--border)",
                       color: "var(--text-secondary)",
-                      backgroundColor: "var(--surface)",
+                      backgroundColor: "var(--ink-dark)",
                       opacity: isEditMode ? 0.5 : 1,
                       cursor: isEditMode ? "not-allowed" : "pointer",
                     }}
@@ -3369,7 +3376,7 @@ function TrainingLogTable({
                     aria-checked={isOpenedTableMode}
                     onClick={() => setFitToScreenMode((prev) => !prev)}
                     className={toolbarButtonClass}
-                    style={{ borderColor: "var(--border)", color: "var(--text-secondary)", backgroundColor: "var(--surface)" }}
+                    style={{ borderColor: "var(--border)", color: "var(--text-secondary)", backgroundColor: "var(--ink-dark)" }}
                     title={
                       isOpenedTableMode
                         ? (tHint("Full-page table", "normal") ?? undefined)
@@ -3417,7 +3424,7 @@ function TrainingLogTable({
                     style={{
                       borderColor: isEditMode ? "var(--accent)" : "var(--border)",
                       color: isEditMode ? "var(--accent)" : "var(--text-secondary)",
-                      backgroundColor: "var(--surface)",
+                      backgroundColor: "var(--ink-dark)",
                     }}
                     title={tHint("Edit training log", "normal") ?? undefined}
                   >
@@ -3486,7 +3493,6 @@ function TrainingLogTable({
           <div
             ref={tableScrollRef}
             onScroll={(event) => {
-              if (!fitToScreenMode) return;
               const top = (event.currentTarget as HTMLDivElement).scrollTop;
               if (tableScrollRafRef.current != null) {
                 window.cancelAnimationFrame(tableScrollRafRef.current);
@@ -3515,12 +3521,12 @@ function TrainingLogTable({
                 setHoveredEditLogId(null);
               }
             }}
-            className={`${fitToScreenMode ? "overflow-auto" : "overflow-visible"} w-full ${useMobileTableStyling ? "scrollbar-hide" : ""}`}
+            className={`overflow-auto w-full ${useMobileTableStyling ? "scrollbar-hide" : ""}`}
             style={{
               WebkitOverflowScrolling: "touch",
               backgroundColor: "var(--surface)",
-              height: fitToScreenMode ? `${tableViewportHeight}px` : "auto",
-              maxHeight: fitToScreenMode ? `${tableViewportHeight}px` : "none",
+              height: `${effectiveViewportHeight}px`,
+              maxHeight: `${effectiveViewportHeight}px`,
             }}
           >
           <table
@@ -3538,7 +3544,7 @@ function TrainingLogTable({
               <tr
                 className="border-b"
                 style={{
-                  borderColor: "var(--border)",
+                  borderColor: "color-mix(in srgb, var(--jade-glow) 25%, var(--border))",
                   color: trainingLogHeaderTextColor,
                 }}
               >
@@ -3609,7 +3615,7 @@ function TrainingLogTable({
                   }
                   if (columnId === "exercise") {
                     return (
-                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-1 sm:px-1.5 w-[12rem] min-w-[12rem] text-left`}>
+                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-1 sm:px-1.5 w-[9rem] min-w-[9rem] text-left`}>
                         {renderHeaderLabel("Exercise")}
                       </th>
                     );
@@ -3678,6 +3684,9 @@ function TrainingLogTable({
 
                   const dataIdx = parseDataColumnIndex(columnId);
                   if (dataIdx == null) return null;
+                  const summaryHeaderLabel = useMobileAverageSummary
+                    ? (dataIdx === summaryValueDataIdx ? "Avg W" : (dataIdx === summaryRepsDataIdx ? "Avg R" : headerLabels[dataIdx]))
+                    : headerLabels[dataIdx];
                   return (
                     <th
                       key={sharedKey}
@@ -3688,7 +3697,7 @@ function TrainingLogTable({
                         ...(columnColors ? { color: headerTypes[dataIdx] === "value" ? "var(--col-weight)" : "var(--col-reps)" } : {}),
                       }}
                     >
-                      {renderHeaderLabel(headerLabels[dataIdx])}
+                      {renderHeaderLabel(summaryHeaderLabel)}
                     </th>
                   );
                 })}
@@ -3822,7 +3831,7 @@ function TrainingLogTable({
                               <td
                                 key={`${entry.logId}-exercise`}
                                 className={`${cellPadExercise} align-middle whitespace-nowrap overflow-hidden text-ellipsis transition-colors`}
-                                style={{ minWidth: "140px", maxWidth: "12rem" }}
+                                style={{ minWidth: "120px", maxWidth: "9rem" }}
                               >
                                 {isRowEditing && editData ? (
                                   <select
@@ -3890,9 +3899,14 @@ function TrainingLogTable({
                                 ) : (
                                   <div className="flex min-w-0 items-center gap-1 overflow-hidden">
                                     <Link
-                                      href={historyTargetUserId
-                                        ? `/dashboard/train/${entry.exerciseId}?targetUserId=${encodeURIComponent(historyTargetUserId)}`
-                                        : `/dashboard/train/${entry.exerciseId}`}
+                                      href={(() => {
+                                        const params = new URLSearchParams();
+                                        if (historyTargetUserId) params.set("targetUserId", historyTargetUserId);
+                                        if (exerciseDetailSource) params.set("from", exerciseDetailSource);
+                                        const query = params.toString();
+                                        const base = `/dashboard/train/${entry.exerciseId}`;
+                                        return query ? `${base}?${query}` : base;
+                                      })()}
                                       className="text-xs training-log-exercise-link truncate"
                                       title={entryDisplayName}
                                       onClick={(e) => {
@@ -4212,7 +4226,41 @@ function TrainingLogTable({
                           }
 
                           const rawValue = getRawCellValue(entry, colType, fieldIndex);
-                          const displayText = renderCellValue(entry, colType, fieldIndex);
+                          const summaryDisplay = (() => {
+                            if (!useMobileAverageSummary) return null;
+                            if (dataIdx === summaryValueDataIdx) {
+                              const values = [entry.val1, entry.val2, entry.val3].filter(
+                                (value): value is number => value != null && Number.isFinite(value),
+                              );
+                              const averageValue = values.length > 0
+                                ? Math.round((values.reduce((sum, value) => sum + value, 0) / values.length) * 10) / 10
+                                : null;
+                              return {
+                                raw: averageValue,
+                                text: averageValue != null ? formatSetValue(averageValue, entry.exerciseType, weightUnit) : "—",
+                                type: "value" as const,
+                              };
+                            }
+
+                            if (dataIdx === summaryRepsDataIdx) {
+                              const reps = [entry.reps1, entry.reps2, entry.reps3].filter(
+                                (value): value is number => value != null && Number.isFinite(value),
+                              );
+                              const averageReps = reps.length > 0
+                                ? Math.round((reps.reduce((sum, value) => sum + value, 0) / reps.length) * 10) / 10
+                                : null;
+                              return {
+                                raw: averageReps,
+                                text: averageReps != null ? formatSetReps(averageReps, entry.exerciseType) : "—",
+                                type: "reps" as const,
+                              };
+                            }
+
+                            return null;
+                          })();
+                          const displayText = summaryDisplay ? summaryDisplay.text : renderCellValue(entry, colType, fieldIndex);
+                          const effectiveRawValue = summaryDisplay ? summaryDisplay.raw : rawValue;
+                          const effectiveColType = summaryDisplay ? summaryDisplay.type : colType;
                           const valueColor = isTimedEntry && colType === "value" ? "var(--timed-color)" : undefined;
 
                           return (
@@ -4221,7 +4269,7 @@ function TrainingLogTable({
                               className={`${cellPadStandard} w-[3.25rem] min-w-[3.25rem] text-center text-xs leading-tight align-middle whitespace-nowrap overflow-hidden [contain:paint]`}
                               style={{
                                 color: !valueColor ? "var(--text-primary)" : valueColor,
-                                ...getZeroValueStyle(rawValue, colType, entry.exerciseType),
+                                ...getZeroValueStyle(effectiveRawValue, effectiveColType, entry.exerciseType),
                               }}
                             >
                               {displayText}
@@ -4246,6 +4294,44 @@ function TrainingLogTable({
         </div>
         )}
       </div>
+
+      {isMobile && (
+        <MobileFocusOverlay
+          isOpen={trainingLogFocusMode}
+          onDismiss={() => setTrainingLogFocusMode(false)}
+          label={trainingLogTitle}
+        >
+          <div className="space-y-2">
+            {entries.length === 0 ? (
+              <div className="rounded-lg border px-3 py-4 text-center text-xs" style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)", color: "var(--text-muted)" }}>
+                {t("No training data logged yet.", "normal")}
+              </div>
+            ) : (
+              entries.map((entry) => {
+                const ex = exerciseLookup.get(entry.exerciseId);
+                const exerciseMeta = ex ? exerciseMetaById.get(ex.id) : undefined;
+                const entryDisplayName = ex
+                  ? (exerciseMeta?.displayName ?? stripBwPercentHint(getExerciseDisplayName(ex, settings.terminologyMode, settings.showExerciseForeignLanguage)))
+                  : stripBwPercentHint(entry.exerciseName);
+                const typeLabel = exerciseMeta?.categoryLabel ?? getExerciseCategoryLabel(ex);
+                const formattedEntryDate = formattedDateByLogId.get(entry.logId) ?? formatDate(entry.date, dateFormat);
+
+                return (
+                  <TrainingLogMobileCard
+                    key={`focus-${entry.logId}`}
+                    entry={entry}
+                    entryDisplayName={entryDisplayName}
+                    typeLabel={typeLabel}
+                    formattedEntryDate={formattedEntryDate}
+                    weightUnit={weightUnit}
+                    onOpenExerciseHistory={() => openExerciseHistoryFromMobileCard(entry)}
+                  />
+                );
+              })
+            )}
+          </div>
+        </MobileFocusOverlay>
+      )}
 
       {isMobile && !shouldDisableInputSection && !mobileInputOpen && !forceMobileInputOpen && (
         <button
@@ -4500,9 +4586,14 @@ function TrainingLogTable({
                   <div className="ml-3 flex items-center gap-1">
                     {selectedInputExercise?.id ? (
                       <Link
-                        href={historyTargetUserId
-                          ? `${DASHBOARD_ROUTES.workoutHistory}/${encodeURIComponent(selectedInputExercise.id)}?targetUserId=${encodeURIComponent(historyTargetUserId)}`
-                          : `${DASHBOARD_ROUTES.workoutHistory}/${encodeURIComponent(selectedInputExercise.id)}`}
+                        href={(() => {
+                          const params = new URLSearchParams();
+                          if (historyTargetUserId) params.set("targetUserId", historyTargetUserId);
+                          if (exerciseDetailSource) params.set("from", exerciseDetailSource);
+                          const query = params.toString();
+                          const base = `${DASHBOARD_ROUTES.workoutHistory}/${encodeURIComponent(selectedInputExercise.id)}`;
+                          return query ? `${base}?${query}` : base;
+                        })()}
                         aria-label="Open full exercise history"
                         title={t("Open full history", "normal")}
                         className={panelIconButtonClass}

@@ -169,7 +169,7 @@ function PageLayout({
       {/* Main Content — full width on mobile */}
       <div
         data-mobile-scroll-container={isMobile ? "true" : undefined}
-        className={`flex-1 min-w-0 overflow-y-auto overflow-x-auto ${isMobile ? `${mobileContentPaddingClass} scrollbar-hide` : "h-full overscroll-contain [scrollbar-gutter:stable] p-2"}`}
+        className={`flex-1 min-w-0 overflow-y-auto ${isMobile ? `${mobileContentPaddingClass} scrollbar-hide overflow-x-hidden` : "h-full overscroll-contain [scrollbar-gutter:stable] overflow-x-auto p-2"}`}
       >
         <motion.div
           initial={disableMotion ? false : { opacity: 0 }}

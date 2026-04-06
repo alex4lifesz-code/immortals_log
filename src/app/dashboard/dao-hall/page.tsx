@@ -6,7 +6,8 @@ import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import GlowButton from "@/components/ui/GlowButton";
 import PageSkeleton from "@/components/ui/PageSkeleton";
-import { GlowModal } from "@/components/ui/GlowCard";
+import GlowCard, { GlowModal } from "@/components/ui/GlowCard";
+import MobileFocusOverlay, { MobileFocusTrigger } from "@/components/ui/MobileFocusOverlay";
 import dynamic from "next/dynamic";
 
 const MonthlyComparisonChart = dynamic(() => import("@/components/dashboard/MonthlyComparisonChart"), { ssr: false });
@@ -135,6 +136,7 @@ export default function DaoHallPage() {
     if (typeof window === "undefined") return false;
     try { return localStorage.getItem("dao-cultivation-open") === "true"; } catch { return false; }
   });
+  const [cultivationFocusMode, setCultivationFocusMode] = useState(false);
 
   // Persist charts toggle
   useEffect(() => {
@@ -905,13 +907,13 @@ export default function DaoHallPage() {
       {loading ? (
         <PageSkeleton statCards={4} wideBlock rows={3} />
       ) : (
-        <div className="space-y-2 px-0 py-2 sm:py-3">
+        <div className="space-y-6 px-0 py-2 sm:py-3">
           {/* Upcoming Notes */}
           {scopedFutureNotes.length > 0 && (
-            <div className="w-full border bg-ink-dark/20 p-4" style={{ borderColor: "var(--border)" }}>
+            <GlowCard glow="gold" hoverable={false}>
               <div className="space-y-2.5">
                 <div className="flex items-center gap-2">
-                  <h4 className="text-xs text-gold-glow uppercase tracking-wide font-semibold">Upcoming Notes</h4>
+                  <h4 className="text-sm text-gold-glow uppercase tracking-wider font-semibold">Upcoming Notes</h4>
                   <span className="text-[9px] text-gold-glow bg-gold-dim/20 px-2 py-0.5 rounded-full font-medium">{scopedFutureNotes.length}</span>
                 </div>
                 <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
@@ -944,7 +946,7 @@ export default function DaoHallPage() {
                   })}
                 </div>
               </div>
-            </div>
+            </GlowCard>
           )}
 
           {/* Calendar — always visible */}
@@ -968,10 +970,7 @@ export default function DaoHallPage() {
 
             {/* Stats panel — always visible beside calendar on desktop */}
             {!isMobile && (
-              <div
-                className="border bg-ink-dark/20 p-3 flex flex-col min-h-[260px]"
-                style={{ borderColor: "var(--border)" }}
-              >
+              <GlowCard glow="jade" hoverable={false} className="flex flex-col min-h-[260px]">
                 {user && effectiveChartUserIds.length > 0 && (
                   <CheckInStatsPanel
                     checkInRows={checkInRows}
@@ -982,16 +981,13 @@ export default function DaoHallPage() {
                     currentUserId={user.id}
                   />
                 )}
-              </div>
+              </GlowCard>
             )}
           </div>
 
           {/* Charts + cultivation stats are desktop-only */}
           {!isMobile && (
-            <div
-              className="flex items-center gap-3 border px-3 py-2"
-              style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)" }}
-            >
+            <GlowCard glow="jade" hoverable={false} className="flex items-center gap-3">
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -1034,16 +1030,13 @@ export default function DaoHallPage() {
                   />
                 )}
               </div>
-            </div>
+            </GlowCard>
           )}
 
           {!isMobile && chartsOpen && (
             <div className={`grid ${isMobile ? "grid-cols-1" : "grid-cols-2"} gap-4`}>
               {/* Monthly Comparison (last 6 months) */}
-              <div
-                className="border bg-ink-dark/20 p-3 flex flex-col min-h-[220px]"
-                style={{ borderColor: "var(--border)" }}
-              >
+              <GlowCard glow="jade" hoverable={false} className="flex flex-col min-h-[220px]">
                 {user && effectiveChartUserIds.length > 0 && (
                   <MonthlyComparisonChart
                     checkInRows={checkInRows}
@@ -1053,13 +1046,10 @@ export default function DaoHallPage() {
                     userColors={userColors}
                   />
                 )}
-              </div>
+              </GlowCard>
 
               {/* Weight Trend (all-time) */}
-              <div
-                className="border bg-ink-dark/20 p-3 flex flex-col min-h-[220px]"
-                style={{ borderColor: "var(--border)" }}
-              >
+              <GlowCard glow="jade" hoverable={false} className="flex flex-col min-h-[220px]">
                 {user && effectiveChartUserIds.length > 0 && (
                   <WeightTrendChart
                     checkInRows={checkInRows}
@@ -1068,16 +1058,19 @@ export default function DaoHallPage() {
                     userColors={userColors}
                   />
                 )}
-              </div>
+              </GlowCard>
             </div>
           )}
 
           {/* User View — Personal cultivation history */}
-          <div className="w-full border bg-ink-dark/20 p-4" style={{ borderColor: "var(--border)" }}>
+          <GlowCard glow="jade" hoverable={false}>
             <div ref={sectRegisterRef} className="space-y-4">
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="text-lg font-bold text-jade-glow">{t("My Cultivation View", "normal")}</h3>
-                <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <h3 className="text-sm text-jade-glow uppercase tracking-wider">{t("My Cultivation View", "normal")}</h3>
+                <div className="flex flex-wrap items-center gap-2">
+                  {isMobile && (
+                    <MobileFocusTrigger onClick={() => setCultivationFocusMode(true)} />
+                  )}
                   {!isMobile && (
                     <button
                       type="button"
@@ -1158,7 +1151,7 @@ export default function DaoHallPage() {
                       return (
                         <div
                           key={date}
-                          className="border border-ink-light/40 bg-ink-dark/20 px-3 py-2.5 flex flex-col gap-2"
+                          className="border border-ink-light/40 bg-ink-dark/20 px-3 py-2.5 flex flex-col gap-2.5 overflow-hidden"
                         >
                           {/* Date + status row */}
                           <div className="flex items-center justify-between gap-2">
@@ -1183,7 +1176,7 @@ export default function DaoHallPage() {
                           </div>
 
                           {calendarScope === "mine" ? (
-                            <div className="flex items-center gap-4 text-[11px] text-mist-light">
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-[11px] text-mist-light">
                               <span>{t("Weight:", "normal")} <span className="text-cloud-white">{mineWeight}</span></span>
                               {mine.comment?.trim() && (
                                 <span className="truncate text-mist-light/80">{mine.comment.trim()}</span>
@@ -1194,10 +1187,10 @@ export default function DaoHallPage() {
                               {everyoneDetails.map((detail) => {
                                 const c = getUserCultivatorColor(detail.id, userColors);
                                 return (
-                                  <div key={detail.id} className="flex items-center gap-2 text-[11px] min-w-0">
+                                  <div key={detail.id} className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[11px] min-w-0">
                                     {/* Color dot + name */}
                                     <span className="flex items-center gap-1.5 shrink-0">
-                                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: c }} />
+                                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: c }} />
                                       <span className="font-medium" style={{ color: c }}>{detail.name}</span>
                                     </span>
 
@@ -1245,13 +1238,13 @@ export default function DaoHallPage() {
                   <div className={`overflow-x-auto border border-ink-light/35 bg-ink-dark/20 ${cultivationViewOpen ? "" : "max-h-[520px] overflow-y-auto"}`}>
                     <table className="w-full min-w-[900px] text-xs border-collapse">
                       <thead>
-                        <tr className="border-b border-ink-light/40 bg-ink-dark/35">
-                          <th className="px-3 py-2 text-center text-mist-light font-semibold">Date</th>
-                          <th className="px-3 py-2 text-center text-mist-light font-semibold">Status</th>
-                          <th className="px-3 py-2 text-center text-mist-light font-semibold">Participants</th>
-                          <th className="px-3 py-2 text-center text-mist-light font-semibold">Weight</th>
-                          <th className="px-3 py-2 text-center text-mist-light font-semibold">Comment</th>
-                          <th className="px-3 py-2 text-center text-mist-light font-semibold">Action</th>
+                        <tr className="border-b border-ink-light bg-ink-dark/35">
+                          <th className="px-3 py-2 text-center text-xs text-jade-glow uppercase">Date</th>
+                          <th className="px-3 py-2 text-center text-xs text-jade-glow uppercase">Status</th>
+                          <th className="px-3 py-2 text-center text-xs text-jade-glow uppercase">Participants</th>
+                          <th className="px-3 py-2 text-center text-xs text-jade-glow uppercase">Weight</th>
+                          <th className="px-3 py-2 text-center text-xs text-jade-glow uppercase">Comment</th>
+                          <th className="px-3 py-2 text-center text-xs text-jade-glow uppercase">Action</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1361,11 +1354,112 @@ export default function DaoHallPage() {
                 )
               )}
             </div>
-          </div>
+          </GlowCard>
+
+          <MobileFocusOverlay
+            isOpen={cultivationFocusMode}
+            onDismiss={() => setCultivationFocusMode(false)}
+            label={t("My Cultivation View", "normal")}
+          >
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-1 border border-ink-light/50 p-0.5">
+                  <button
+                    onClick={() => setCalendarScope("all")}
+                    className={`text-xs px-2 py-1 transition-all ${calendarScope === "all" ? "bg-jade-deep/20 border border-jade/40 text-jade-light" : "text-mist-light hover:text-jade-light"}`}
+                  >
+                    {t("All", "normal")}
+                  </button>
+                  <button
+                    onClick={() => setCalendarScope("mine")}
+                    className={`text-xs px-2 py-1 transition-all ${calendarScope === "mine" ? "bg-jade-deep/20 border border-jade/40 text-jade-light" : "text-mist-light hover:text-jade-light"}`}
+                  >
+                    {t("Mine", "normal")}
+                  </button>
+                  <button
+                    onClick={() => setCalendarScope("friends")}
+                    className={`text-xs px-2 py-1 transition-all ${calendarScope === "friends" ? "bg-jade-deep/20 border border-jade/40 text-jade-light" : "text-mist-light hover:text-jade-light"}`}
+                  >
+                    {t("Friends", "normal")}
+                  </button>
+                </div>
+              </div>
+
+              {renderedCheckInRows.length === 0 ? (
+                <div className="flex flex-col items-center py-10 text-center border border-ink-light/40 bg-ink-mid/10">
+                  <div className="text-2xl opacity-30 mb-2">🧭</div>
+                  <p className="text-xs text-mist-dark">{t("No entries for this view", "normal")}</p>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  {renderedCheckInRows.map(({ date, mine, mineWeight, presentCount, everyoneDetails }) => (
+                    <div
+                      key={date}
+                      className="border border-ink-light/40 bg-ink-dark/20 px-3 py-2.5 flex flex-col gap-2.5 overflow-hidden"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <button
+                          onClick={() => handleDayClick(date)}
+                          className="text-xs font-medium text-mist-light hover:text-jade-glow transition-colors text-left"
+                          title={t("Open this day", "normal")}
+                        >
+                          {formatDateWithPreference(date, dateFormat)}
+                        </button>
+                        <span
+                          className={`text-[10px] px-1.5 py-0.5 border ${
+                            (calendarScope === "mine" ? mine.present : presentCount > 0)
+                              ? "border-jade-glow/40 text-jade-glow bg-jade-deep/15"
+                              : "border-ink-light/40 text-mist-dark"
+                          }`}
+                        >
+                          {calendarScope === "mine"
+                            ? (mine.present ? `✓ ${t("In", "normal")}` : t("Not In", "normal"))
+                            : `${presentCount} ${t("In", "normal")}`}
+                        </span>
+                      </div>
+
+                      {calendarScope === "mine" ? (
+                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-mist-light">
+                          <span>{t("Weight:", "normal")} <span className="text-cloud-white">{mineWeight}</span></span>
+                          {mine.comment?.trim() && (
+                            <span className="truncate text-mist-light/80">{mine.comment.trim()}</span>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-1">
+                          {everyoneDetails.map((detail) => {
+                            const c = getUserCultivatorColor(detail.id, userColors);
+                            return (
+                              <div key={detail.id} className="flex flex-wrap items-center gap-1.5 text-[11px] min-w-0">
+                                <span className="flex items-center gap-1.5 shrink-0">
+                                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: c }} />
+                                  <span className="font-medium" style={{ color: c }}>{detail.name}</span>
+                                </span>
+                                {detail.present ? (
+                                  <span className="text-jade-glow text-[10px]">✓</span>
+                                ) : (
+                                  <span className="text-mist-dark text-[10px]">✗</span>
+                                )}
+                                {detail.weight && <span className="text-mist-light/70">{detail.weight}kg</span>}
+                                <span className="text-mist-light/70">{detail.totalCheckIns} {t("In", "normal")}</span>
+                                {detail.comment && (
+                                  <span className="text-mist-light/60 truncate min-w-0 flex-1" title={detail.comment}>
+                                    {detail.comment}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </MobileFocusOverlay>
         </div>
       )}
-
-      {/* Day Check-In Modal */}
       <GlowModal
         isOpen={!!checkInModal}
         onClose={() => { setCheckInModal(null); }}
@@ -1611,22 +1705,16 @@ export default function DaoHallPage() {
         <div className="fixed bottom-0 right-3 z-50">
           {statsTabOpen ? (
             <div
-              className="w-[min(320px,calc(100vw-0.75rem))] rounded-t-xl border shadow-2xl overflow-hidden"
-              style={{
-                backgroundColor: "var(--surface)",
-                borderColor: "var(--border)",
-                boxShadow: "var(--shadow-elev-2)",
-              }}
+              className="w-[min(320px,calc(100vw-0.75rem))] rounded-t-xl border border-ink-light shadow-2xl overflow-hidden bg-ink-deep"
             >
               <div
-                className="flex items-center justify-between px-3 py-2 border-b"
-                style={{ borderColor: "var(--border)", backgroundColor: "var(--nyaa-table-head-bg)" }}
+                className="flex items-center justify-between px-3 py-2 border-b border-ink-light"
               >
                 <div className="min-w-0">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--text-primary)" }}>
+                  <p className="text-sm text-jade-glow uppercase tracking-wider">
                     Cultivation Stats
                   </p>
-                  <p className="text-[11px] truncate" style={{ color: "var(--text-secondary)" }}>
+                  <p className="text-[11px] truncate text-mist-dark">
                     Overview sidebar
                   </p>
                 </div>
@@ -1635,8 +1723,7 @@ export default function DaoHallPage() {
                   aria-label="Close cultivation stats"
                   title="Close"
                   onClick={() => setStatsTabOpen(false)}
-                  className="inline-flex h-6 w-6 items-center justify-center rounded border text-xs font-bold transition-colors hover:bg-ink-mid/35"
-                  style={{ borderColor: "var(--border)", color: "var(--text-secondary)" }}
+                  className="inline-flex h-6 w-6 items-center justify-center rounded border border-ink-light text-xs font-bold text-mist-dark transition-colors hover:bg-ink-mid/35"
                 >
                   x
                 </button>
@@ -1657,12 +1744,7 @@ export default function DaoHallPage() {
             <button
               type="button"
               onClick={() => setStatsTabOpen(true)}
-              className="w-[min(220px,calc(100vw-0.75rem))] rounded-t-xl border border-b-0 px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] shadow-lg transition-all duration-200 hover:bg-ink-mid/30 hover:shadow-[0_16px_36px_rgb(0_0_0_/_0.35)] hover:border-jade-glow/55"
-              style={{
-                backgroundColor: "var(--surface)",
-                borderColor: "var(--border)",
-                color: "var(--text-primary)",
-              }}
+              className="w-[min(220px,calc(100vw-0.75rem))] rounded-t-xl border border-ink-light border-b-0 px-4 py-2 text-xs font-semibold uppercase tracking-wider shadow-lg transition-all duration-200 bg-ink-deep text-cloud-white hover:bg-ink-mid/30 hover:shadow-[0_16px_36px_rgb(0_0_0_/_0.35)] hover:border-jade-glow/55"
             >
               Cultivation Stats
             </button>

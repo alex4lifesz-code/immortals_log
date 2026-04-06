@@ -5,6 +5,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import PageLayout from "@/components/layout/PageLayout";
+import GlowCard from "@/components/ui/GlowCard";
+import GlowButton from "@/components/ui/GlowButton";
 import { useIsMobile } from "@/context/AppContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { api } from "@/lib/api-client";
@@ -337,20 +339,21 @@ export default function RankUpPage() {
       subtitle={t("Simple progression overview for calisthenics skills", "normal")}
       mobileContentPaddingClass="p-2 pb-24"
     >
-      <div className="nyaa-history-page space-y-2 px-0 py-2 sm:py-3">
-        <div className="border rounded px-3 py-2" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--header-bg)" }}>
-          <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
-            {t("Skills", "normal")}: {stats.total} | {t("Active (14d)", "normal")}: {stats.active} | {t("Sessions", "normal")}: {stats.totalSessions}
-          </p>
-        </div>
-
-        <div className="border rounded overflow-hidden" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--surface)" }}>
-          <div className="px-3 py-2 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
-            <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-secondary)" }}>{t("Filters", "normal")}</span>
+      <div className="space-y-6 px-0 py-2 sm:py-3">
+        <GlowCard glow="jade" hoverable={false}>
+          <h3 className="text-sm text-jade-glow uppercase tracking-wider mb-3">{t("Overview", "normal")}</h3>
+          <div className="flex flex-wrap gap-4 text-xs">
+            <span className="text-mist-dark">{t("Skills", "normal")}: <span className="text-cloud-white font-semibold">{stats.total}</span></span>
+            <span className="text-mist-dark">{t("Active (14d)", "normal")}: <span className="text-jade-glow font-semibold">{stats.active}</span></span>
+            <span className="text-mist-dark">{t("Sessions", "normal")}: <span className="text-cloud-white font-semibold">{stats.totalSessions}</span></span>
           </div>
-          <div className="grid gap-2 sm:grid-cols-3 p-2">
+        </GlowCard>
+
+        <GlowCard glow="jade" hoverable={false}>
+          <h3 className="text-sm text-jade-glow uppercase tracking-wider mb-3">{t("Filters", "normal")}</h3>
+          <div className="grid gap-2.5 sm:grid-cols-3">
             <div className="relative">
-              <span className="pointer-events-none absolute inset-y-0 left-2 flex items-center" style={{ color: "var(--text-muted)" }}>
+              <span className="pointer-events-none absolute inset-y-0 left-2 flex items-center text-mist-dark">
                 <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="none" aria-hidden>
                   <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="1.6" />
                   <path d="M13.5 13.5L18 18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -361,21 +364,17 @@ export default function RankUpPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={t("Search skill...", "normal")}
-                className={controlClassName}
                 style={{
-                  borderColor: "var(--nyaa-table-grid)",
-                  backgroundColor: "var(--surface)",
-                  color: "var(--text-primary)",
                   paddingLeft: "1.75rem",
                   paddingRight: search ? "1.75rem" : undefined,
                 }}
+                className={`${controlClassName} border-ink-light bg-ink-dark text-cloud-white`}
               />
               {search && (
                 <button
                   type="button"
                   onClick={() => setSearch("")}
-                  className="absolute inset-y-0 right-1 flex items-center justify-center px-1"
-                  style={{ color: "var(--text-muted)" }}
+                  className="absolute inset-y-0 right-1 flex items-center justify-center px-1 text-mist-dark"
                   aria-label={t("Clear search", "normal")}
                   title={t("Clear", "normal")}
                 >
@@ -389,12 +388,7 @@ export default function RankUpPage() {
               <button
                 type="button"
                 onClick={() => setMobileFilterPicker({ field: "activity", title: t("Activity", "normal") })}
-                className={`${controlClassName} flex items-center justify-between`}
-                style={{
-                  borderColor: "var(--nyaa-table-grid)",
-                  backgroundColor: "var(--surface)",
-                  color: "var(--text-primary)",
-                }}
+                className={`${controlClassName} flex items-center justify-between border-ink-light bg-ink-dark text-cloud-white`}
                 aria-label={t("Activity filter", "normal")}
               >
                 <span>
@@ -406,12 +400,7 @@ export default function RankUpPage() {
               <select
                 value={activityFilter}
                 onChange={(e) => setActivityFilter(e.target.value as ActivityFilter)}
-                className={controlClassName}
-                style={{
-                  borderColor: "var(--nyaa-table-grid)",
-                  backgroundColor: "var(--surface)",
-                  color: "var(--text-primary)",
-                }}
+                className={`${controlClassName} border-ink-light bg-ink-dark text-cloud-white`}
               >
                 {activityFilterOptions.map((option) => (
                   <option key={option.value} value={option.value}>{option.label}</option>
@@ -422,12 +411,7 @@ export default function RankUpPage() {
               <button
                 type="button"
                 onClick={() => setMobileFilterPicker({ field: "sort", title: t("Sort", "normal") })}
-                className={`${controlClassName} flex items-center justify-between`}
-                style={{
-                  borderColor: "var(--nyaa-table-grid)",
-                  backgroundColor: "var(--surface)",
-                  color: "var(--text-primary)",
-                }}
+                className={`${controlClassName} flex items-center justify-between border-ink-light bg-ink-dark text-cloud-white`}
                 aria-label={t("Sort filter", "normal")}
               >
                 <span>
@@ -439,12 +423,7 @@ export default function RankUpPage() {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as SortBy)}
-                className={controlClassName}
-                style={{
-                  borderColor: "var(--nyaa-table-grid)",
-                  backgroundColor: "var(--surface)",
-                  color: "var(--text-primary)",
-                }}
+                className={`${controlClassName} border-ink-light bg-ink-dark text-cloud-white`}
               >
                 {sortByOptions.map((option) => (
                   <option key={option.value} value={option.value}>{option.label}</option>
@@ -454,36 +433,36 @@ export default function RankUpPage() {
             <button
               type="button"
               onClick={() => setAttemptedParentsOnly((prev) => !prev)}
-              className="w-full rounded border px-2 py-1.5 text-xs transition-colors duration-150"
+              className="w-full rounded-lg border px-2 py-1.5 text-xs transition-colors duration-150"
               style={{
-                borderColor: attemptedParentsOnly ? "var(--accent)" : "var(--nyaa-table-grid)",
-                color: attemptedParentsOnly ? "var(--accent)" : "var(--text-secondary)",
+                borderColor: attemptedParentsOnly ? "var(--jade-glow)" : "var(--border)",
+                color: attemptedParentsOnly ? "var(--jade-glow)" : "var(--text-secondary)",
                 backgroundColor: attemptedParentsOnly
-                  ? "color-mix(in srgb, var(--accent) 10%, var(--surface))"
-                  : "var(--surface)",
+                  ? "color-mix(in srgb, var(--jade-glow) 10%, var(--surface))"
+                  : "var(--ink-dark)",
               }}
             >
               {attemptedParentsOnly ? t("Showing: Attempted Exercises", "normal") : t("Show Attempted Exercises Only", "normal")}
             </button>
           </div>
-        </div>
+        </GlowCard>
 
         {errorMessage ? (
-          <div className="border rounded px-3 py-2 text-xs" style={{ borderColor: "var(--danger)", color: "var(--danger)", backgroundColor: "color-mix(in srgb, var(--danger) 10%, var(--surface))" }}>
-            {errorMessage}
-          </div>
+          <GlowCard glow="crimson" hoverable={false}>
+            <p className="text-xs text-crimson-light">{errorMessage}</p>
+          </GlowCard>
         ) : null}
 
         {loading ? (
-          <div className="border rounded px-3 py-6 text-sm" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--surface)", color: "var(--text-secondary)" }}>
-            {t("Loading rank-up data...", "normal")}
-          </div>
+          <GlowCard glow="jade" hoverable={false}>
+            <p className="text-sm text-mist-dark">{t("Loading rank-up data...", "normal")}</p>
+          </GlowCard>
         ) : null}
 
         {!loading && visibleSkills.length === 0 ? (
-          <div className="border rounded px-3 py-6 text-sm" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--surface)", color: "var(--text-secondary)" }}>
-            {t("No skills found for the current filters.", "normal")}
-          </div>
+          <GlowCard glow="none" hoverable={false}>
+            <p className="text-sm text-mist-dark">{t("No skills found for the current filters.", "normal")}</p>
+          </GlowCard>
         ) : null}
 
         {!loading &&
@@ -500,36 +479,30 @@ export default function RankUpPage() {
               settings.showExerciseForeignLanguage,
             );
             return (
-              <div key={skill.id} className="border rounded overflow-hidden" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--surface)" }}>
+              <GlowCard key={skill.id} glow="jade" hoverable={false} className="overflow-hidden">
                 <button
                   type="button"
                   onClick={() => toggleExpand(skill.id)}
                   aria-expanded={isExpanded}
-                  className="w-full px-3 py-2 text-left border-b cursor-pointer transition-all duration-150 hover:opacity-95 active:opacity-80 focus-visible:opacity-100"
-                  style={{
-                    borderColor: "var(--nyaa-table-grid)",
-                    backgroundColor: "var(--nyaa-table-head-bg)",
-                    color: "var(--nyaa-table-head-text)",
-                  }}
+                  className="w-full px-3 py-2 text-left border-b border-ink-light cursor-pointer transition-all duration-150 hover:bg-ink-dark/50 active:opacity-80 focus-visible:opacity-100"
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
+                  <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
                       <span
-                        className="inline-flex h-5 w-5 items-center justify-center border text-[10px] leading-none"
-                        style={{ borderColor: "var(--nyaa-table-grid)", color: "var(--text-secondary)" }}
+                        className="inline-flex h-5 w-5 items-center justify-center border border-ink-light text-[10px] leading-none text-mist-dark"
                       >
                         {isExpanded ? "-" : "+"}
                       </span>
                       <p
                         className="text-sm font-semibold transition-colors duration-150"
-                        style={{ color: isExpanded ? "var(--link-hover)" : "var(--link)" }}
+                        style={{ color: isExpanded ? "var(--jade-glow)" : "var(--cloud-white)" }}
                       >
                         {skillDisplayName}
                       </p>
                     </div>
-                    <p className="text-[11px]" style={{ color: "var(--text-secondary)" }}>
+                    <p className="text-[11px] text-mist-dark">
                       Sessions:{" "}
-                      <span style={{ color: skill.performed > 0 ? "var(--accent)" : "var(--text-secondary)", fontWeight: skill.performed > 0 ? 600 : 400 }}>
+                      <span className={skill.performed > 0 ? "text-jade-glow font-semibold" : "text-mist-dark"}>
                         {skill.performed}
                       </span>
                       {" "}| Last: {formatDate(skill.lastLogAt)} | Tiers: {skill.tierNames.length}
@@ -547,7 +520,7 @@ export default function RankUpPage() {
                       style={{ overflow: "hidden" }}
                     >
                       {isMobile ? (
-                        <div className="space-y-2 p-2">
+                        <div className="space-y-2.5 p-2.5">
                       {skill.tierNames.map((tierName, index) => {
                         const stat = skill.tierStats[index];
                         const showKey = `show-${skill.id}-${index}`;
@@ -577,7 +550,7 @@ export default function RankUpPage() {
                             }}
                           >
                             <div className="mb-1 text-sm font-semibold" style={{ color: rowTextColor }}>{tierName}</div>
-                            <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px]" style={{ color: rowDetailTextColor }}>
+                            <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px]" style={{ color: rowDetailTextColor }}>
                               <span>Attempts: {attemptCount}</span>
                               <span>Best: {stat ? formatBest(stat) : "-"}</span>
                               <span>Best Reps: {stat?.bestReps != null ? `${stat.bestReps}` : "-"}</span>
@@ -648,17 +621,17 @@ export default function RankUpPage() {
                       <div className="overflow-x-auto">
                         <table className="w-full text-xs">
                       <thead>
-                        <tr>
-                          <th className="px-2 py-1.5 text-left">Tier</th>
-                          <th className="px-2 py-1.5 text-left">Attempts</th>
-                          <th className="px-2 py-1.5 text-left">Best</th>
-                          <th className="px-2 py-1.5 text-left">Best Reps</th>
-                          <th className="px-2 py-1.5 text-left">Best Hold</th>
-                          <th className="px-2 py-1.5 text-left">Best Weight</th>
-                          <th className="px-2 py-1.5 text-left">Last</th>
-                          <th className="px-2 py-1.5 text-left">Days Ago</th>
-                          <th className="px-2 py-1.5 text-left">Show History</th>
-                          <th className="px-2 py-1.5 text-left">Action</th>
+                        <tr className="border-b border-ink-light">
+                          <th className="px-2 py-1.5 text-left text-xs text-jade-glow uppercase">Tier</th>
+                          <th className="px-2 py-1.5 text-left text-xs text-jade-glow uppercase">Attempts</th>
+                          <th className="px-2 py-1.5 text-left text-xs text-jade-glow uppercase">Best</th>
+                          <th className="px-2 py-1.5 text-left text-xs text-jade-glow uppercase">Best Reps</th>
+                          <th className="px-2 py-1.5 text-left text-xs text-jade-glow uppercase">Best Hold</th>
+                          <th className="px-2 py-1.5 text-left text-xs text-jade-glow uppercase">Best Weight</th>
+                          <th className="px-2 py-1.5 text-left text-xs text-jade-glow uppercase">Last</th>
+                          <th className="px-2 py-1.5 text-left text-xs text-jade-glow uppercase">Days Ago</th>
+                          <th className="px-2 py-1.5 text-left text-xs text-jade-glow uppercase">Show History</th>
+                          <th className="px-2 py-1.5 text-left text-xs text-jade-glow uppercase">Action</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -775,7 +748,7 @@ export default function RankUpPage() {
                     </motion.div>
                   ) : null}
                 </AnimatePresence>
-              </div>
+              </GlowCard>
             );
           })}
 
@@ -795,28 +768,22 @@ export default function RankUpPage() {
                     initial={{ opacity: 0, y: 16, scale: 0.98 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 16, scale: 0.98 }}
-                    className="fixed left-1/2 top-1/2 z-[96] max-h-[72vh] w-[min(82vw,30rem)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-none border"
-                    style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)", boxShadow: "var(--shadow-elev-2)" }}
+                    className="fixed left-1/2 top-1/2 z-[96] max-h-[72vh] w-[min(82vw,30rem)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-lg border border-ink-light bg-ink-deep"
+                    style={{ boxShadow: "var(--shadow-elev-2)" }}
                     onClick={(event) => event.stopPropagation()}
                   >
-                    <div className="flex items-center justify-between border-b px-4 py-3" style={{ borderColor: "var(--border)" }}>
-                      <p className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--text-primary)" }}>
+                    <div className="flex items-center justify-between border-b border-ink-light px-4 py-3">
+                      <p className="text-sm text-jade-glow uppercase tracking-wider">
                         {mobileFilterPicker.title}
                       </p>
-                      <button
-                        type="button"
-                        onClick={() => setMobileFilterPicker(null)}
-                        className="rounded border px-2.5 py-1 text-[11px]"
-                        style={{ borderColor: "var(--border)", color: "var(--text-secondary)", backgroundColor: "var(--surface-hover)" }}
-                      >
+                      <GlowButton variant="ghost" size="sm" onClick={() => setMobileFilterPicker(null)}>
                         {t("Close", "normal")}
-                      </button>
+                      </GlowButton>
                     </div>
 
                     <div className="relative px-3 pb-3 pt-2">
                       <div
-                        className="pointer-events-none absolute left-3 right-3 top-1/2 h-11 -translate-y-1/2 border"
-                        style={{ borderColor: "var(--accent)", backgroundColor: "color-mix(in srgb, var(--accent) 10%, transparent)" }}
+                        className="pointer-events-none absolute left-3 right-3 top-1/2 h-11 -translate-y-1/2 rounded border border-jade-glow/40 bg-jade-glow/10"
                       />
                       <div
                         ref={mobileFilterWheelScrollRef}
@@ -843,7 +810,7 @@ export default function RankUpPage() {
                               }}
                               className="flex h-11 w-full snap-center items-center justify-center text-sm"
                               style={{
-                                color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
+                                color: isActive ? "var(--cloud-white)" : "var(--text-secondary)",
                                 fontWeight: isActive ? 700 : 500,
                               }}
                             >

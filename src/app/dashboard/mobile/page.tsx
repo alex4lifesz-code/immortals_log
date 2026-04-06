@@ -60,7 +60,7 @@ export default function MobileDashboardPage() {
   return (
     <div>
       <MobileHeader title="Cultivation Dashboard" />
-      <section className="mobile-content-stack space-y-4 p-4">
+      <section className="mobile-content-stack space-y-6 p-4">
         {loading ? (
           <MobileLoadingSkeleton />
         ) : (
@@ -68,7 +68,7 @@ export default function MobileDashboardPage() {
             <MobileCard>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.12em] text-mist-light">Current Stage</p>
+                  <p className="text-xs uppercase tracking-wider text-jade-glow">Current Stage</p>
                   <h2 className="mt-1 text-xl font-bold text-cloud-white">{stage}</h2>
                   <div className="mt-2">
                     <CultivationRealmBadge realm={stage} />
@@ -79,14 +79,14 @@ export default function MobileDashboardPage() {
             </MobileCard>
 
             <MobileCard>
-              <h3 className="text-base font-semibold text-cloud-white">Today Summary</h3>
+              <h3 className="text-sm text-jade-glow uppercase tracking-wider mb-1">Today Summary</h3>
               <div className="mt-3 grid grid-cols-2 gap-3">
-                <div className="rounded-xl border border-border bg-ink-dark p-3">
-                  <p className="text-xs text-mist-light">Check-Ins</p>
+                <div className="rounded-xl border border-ink-light bg-ink-dark p-3">
+                  <p className="text-xs text-jade-glow uppercase tracking-wider">Check-Ins</p>
                   <p className="mt-1 text-2xl font-bold text-cloud-white">{checkinCount}</p>
                 </div>
-                <div className="rounded-xl border border-border bg-ink-dark p-3">
-                  <p className="text-xs text-mist-light">Techniques</p>
+                <div className="rounded-xl border border-ink-light bg-ink-dark p-3">
+                  <p className="text-xs text-jade-glow uppercase tracking-wider">Techniques</p>
                   <p className="mt-1 text-2xl font-bold text-cloud-white">{exerciseCount}</p>
                 </div>
               </div>

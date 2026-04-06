@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import PageSkeleton from "@/components/ui/PageSkeleton";
+import GlowCard from "@/components/ui/GlowCard";
 import ExerciseStatsCarousel from "@/components/dashboard/ExerciseStatsCarousel";
 import ExerciseImageBox from "@/components/exercise/ExerciseImageBox";
 import { useAuth } from "@/context/AuthContext";
@@ -337,37 +338,39 @@ export default function DashboardNewsfeedPage() {
         <>
           {/* Carousel at the top */}
           {allExercises.length > 0 && (
-            <ExerciseStatsCarousel 
-              exercises={allExercises} 
-              communityLogs={exerciseLogs}
-              currentUserId={user?.id}
-              scope={scope}
-              onScopeChange={setScope}
-              onFilterChange={handleFilterChange}
-            />
+            <GlowCard glow="jade" hoverable={false} className="!p-0 overflow-hidden">
+              <ExerciseStatsCarousel 
+                exercises={allExercises} 
+                communityLogs={exerciseLogs}
+                currentUserId={user?.id}
+                scope={scope}
+                onScopeChange={setScope}
+                onFilterChange={handleFilterChange}
+              />
+            </GlowCard>
           )}
 
           {/* Community feed */}
           {allGroupedByMemberDay.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center mt-8">
-              <div className="text-4xl mb-4 opacity-40">🏛️</div>
-              <h3 className="text-lg font-semibold text-cloud-white mb-2">The Hall is Silent</h3>
-              <p className="text-sm text-mist-light max-w-sm">
-                {selectedFilter !== ""
-                  ? `No activity found for the selected ${filterMode === "category" ? "category" : "muscle group"}.`
-                  : "Your fellow cultivators haven't logged any exercises yet. Once they do, their recent activity will appear here."}
-              </p>
-            </div>
+            <GlowCard glow="none" hoverable={false} className="mt-8">
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="text-4xl mb-4 opacity-40">🏛️</div>
+                <h3 className="text-sm text-jade-glow uppercase tracking-wider mb-2">The Hall is Silent</h3>
+                <p className="text-sm text-mist-light max-w-sm">
+                  {selectedFilter !== ""
+                    ? `No activity found for the selected ${filterMode === "category" ? "category" : "muscle group"}.`
+                    : "Your fellow cultivators haven't logged any exercises yet. Once they do, their recent activity will appear here."}
+                </p>
+              </div>
+            </GlowCard>
           ) : (
             <>
-              <div className="space-y-6 mt-8">
+              <div className="space-y-6 mt-6 sm:mt-8">
                 {groupedByMemberDay.map((member, memberIdx) => (
-                  <motion.div
+                  <GlowCard
                     key={`${member.userId}-${member.dateKey}`}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: memberIdx * 0.05 }}
-                    className="flex flex-col gap-3 rounded-lg border border-jade-glow/15 bg-ink-dark/40 p-3 sm:p-4"
+                    glow="jade"
+                    hoverable={false}
                   >
                     {(() => {
                       const memberKey = `${member.userId}-${member.dateKey}`;
@@ -381,23 +384,23 @@ export default function DashboardNewsfeedPage() {
                             className="w-full text-left"
                             aria-expanded={isMemberExpanded}
                           >
-                            <div className="grid grid-cols-[40px_1fr_auto] gap-2 items-center">
-                              <div className="w-10 h-10 rounded-full bg-jade-glow/20 border border-jade-glow/40 grid place-items-center">
-                                <span className="text-lg font-bold text-jade-light">
+                            <div className="grid grid-cols-[36px_1fr_auto] sm:grid-cols-[40px_1fr_auto] gap-2 sm:gap-3 items-center">
+                              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-jade-glow/15 border border-ink-light/30 grid place-items-center">
+                                <span className="text-base sm:text-lg font-bold text-jade-light">
                                   {member.userName.charAt(0).toUpperCase()}
                                 </span>
                               </div>
-                              <div>
-                                <h3 className="font-semibold text-cloud-white">{member.userName}</h3>
-                                <p className="text-xs text-mist-dark">
+                              <div className="min-w-0">
+                                <h3 className="font-semibold text-cloud-white text-sm sm:text-base truncate">{member.userName}</h3>
+                                <p className="text-[10px] sm:text-xs text-mist-dark truncate">
                                   {member.exerciseGroups.length} {member.exerciseGroups.length === 1 ? "exercise" : "exercises"} • {member.logs.length} {member.logs.length === 1 ? "entry" : "entries"} • active {timeAgo(member.stats.lastActiveAt)}
                                 </p>
                               </div>
-                              <div className="justify-self-end flex flex-col items-end gap-1">
-                                <div className="rounded-full border border-jade-glow/25 bg-jade-glow/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-mist-mid">
+                              <div className="justify-self-end flex flex-col items-end gap-1 shrink-0">
+                                <div className="rounded-full border border-ink-light/30 bg-ink-dark px-2 sm:px-2.5 py-0.5 sm:py-1 text-[9px] sm:text-[10px] font-semibold uppercase tracking-wide text-jade-glow whitespace-nowrap">
                                   {formatDayHeader(member.dateKey)}
                                 </div>
-                                <span className="text-[10px] text-jade-light/80">
+                                <span className="text-[10px] text-mist-dark">
                                   {isMemberExpanded ? "Hide exercises" : "Show exercises"}
                                 </span>
                               </div>
@@ -405,7 +408,7 @@ export default function DashboardNewsfeedPage() {
                           </button>
 
                           {isMemberExpanded && (
-                            <div className="flex flex-col gap-2 pt-1">
+                            <div className="flex flex-col gap-2.5 pt-1.5">
                               {member.exerciseGroups.map((exerciseGroup, exerciseIdx) => {
                                 const exerciseKey = `${memberKey}-${exerciseGroup.exerciseName}`;
                                 const isExerciseExpanded = Boolean(expandedExerciseGroups[exerciseKey]);
@@ -416,7 +419,7 @@ export default function DashboardNewsfeedPage() {
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: memberIdx * 0.05 + (exerciseIdx * 0.02) }}
-                                    className="rounded-lg border border-jade-glow/20 p-2.5 sm:p-3 bg-ink-deep/35"
+                                    className="rounded-lg border border-ink-light/30 p-2.5 sm:p-3 bg-ink-deep/40 overflow-hidden"
                                   >
                                     <button
                                       type="button"
@@ -424,7 +427,7 @@ export default function DashboardNewsfeedPage() {
                                       className="w-full text-left"
                                       aria-expanded={isExerciseExpanded}
                                     >
-                                      <div className="flex items-center justify-between gap-3">
+                                      <div className="flex items-center justify-between gap-2 sm:gap-3">
                                         <div className="flex min-w-0 items-center gap-2">
                                           <ExerciseImageBox className="h-8 w-8 sm:h-9 sm:w-9" compact />
                                           <div className="min-w-0">
@@ -436,18 +439,18 @@ export default function DashboardNewsfeedPage() {
                                             </p>
                                           </div>
                                         </div>
-                                        <span className="shrink-0 text-[10px] text-jade-light/80 whitespace-nowrap">
+                                        <span className="shrink-0 text-[10px] text-mist-dark whitespace-nowrap">
                                           {isExerciseExpanded ? "Hide logs" : "Show logs"}
                                         </span>
                                       </div>
                                     </button>
 
                                     {isExerciseExpanded && (
-                                      <div className="mt-2 flex flex-col gap-2 pl-2 sm:pl-3 border-l border-jade-glow/20">
+                                      <div className="mt-2.5 flex flex-col gap-2.5 pl-2 sm:pl-3 border-l border-ink-light/30">
                                         {exerciseGroup.logs.map((log) => (
                                           <div
                                             key={log.id}
-                                            className="rounded-lg border border-jade-glow/20 p-3 sm:p-4 bg-ink-deep/40 hover:border-jade-glow/30 hover:bg-ink-deep/50 transition-all duration-200"
+                                            className="rounded-lg border border-ink-light/30 p-3 sm:p-4 bg-ink-dark/50 hover:border-ink-light/50 hover:bg-ink-dark/70 transition-all duration-200"
                                           >
                                             <div className="mb-2 flex items-center justify-between gap-3">
                                               <span className="text-xs text-jade-light font-semibold">Log Entry</span>
@@ -490,12 +493,12 @@ export default function DashboardNewsfeedPage() {
                                             </div>
 
                                             {log.notes && (
-                                              <div className="text-[10px] sm:text-xs text-mist-light italic pt-2 border-t border-jade-glow/15 mb-2">
+                                              <div className="text-[10px] sm:text-xs text-mist-light italic pt-2 border-t border-ink-light/50 mb-2">
                                                 💭 "{log.notes}"
                                               </div>
                                             )}
 
-                                            <div className="flex items-center justify-between mt-2 pt-2 border-t border-jade-glow/15">
+                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 mt-2 pt-2 border-t border-ink-light/50">
                                               <span className="text-[10px] text-mist-dark">Level {log.level} • Sets {countLogSets(log)} • Volume {calculateLogVolume(log).toFixed(1)} {weightUnit}-reps</span>
                                               {log.completed && (
                                                 <span className="text-jade-light font-semibold text-xs">✦ Completed</span>
@@ -513,7 +516,7 @@ export default function DashboardNewsfeedPage() {
                         </>
                       );
                     })()}
-                  </motion.div>
+                  </GlowCard>
               ))}
               </div>
 
@@ -533,7 +536,7 @@ export default function DashboardNewsfeedPage() {
                   <button
                     type="button"
                     onClick={() => setDisplayCount((prev) => Math.min(prev + ITEMS_PER_PAGE, allGroupedByMemberDay.length))}
-                    className="rounded-md border border-jade-glow/25 bg-jade-deep/10 px-3 py-1.5 text-xs text-jade-light hover:bg-jade-deep/20 transition-colors"
+                    className="rounded-md border border-ink-light/30 bg-ink-dark/60 px-3 py-1.5 text-xs text-jade-glow hover:bg-ink-dark/80 transition-colors"
                   >
                     Load more activity
                   </button>

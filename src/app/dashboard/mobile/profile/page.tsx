@@ -9,11 +9,11 @@ export default function MobileProfilePage() {
   return (
     <div>
       <MobileHeader title="Profile & Settings" />
-      <section className="mobile-content-stack space-y-4 p-4">
+      <section className="mobile-content-stack space-y-6 p-4">
         <MobileCard>
-          <h2 className="text-base font-semibold text-cloud-white">Preferences</h2>
+          <h2 className="text-sm text-jade-glow uppercase tracking-wider mb-1">Preferences</h2>
           <p className="mt-1 text-sm text-mist-light">Theme, handedness, and behaviour settings optimised for one-handed use.</p>
-          <Link href="/dashboard/mobile/profile/settings/theme" className="mt-3 inline-flex min-h-12 items-center rounded-xl border border-border bg-ink-dark px-4 text-sm text-cloud-white">
+          <Link href="/dashboard/mobile/profile/settings/theme" className="mt-3 inline-flex min-h-12 items-center rounded-xl border border-ink-light bg-ink-dark px-4 text-sm text-cloud-white">
             Open Theme Selector
           </Link>
         </MobileCard>

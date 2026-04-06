@@ -15,9 +15,9 @@ export default function MobileCollapsibleSection({ title, defaultOpen = false, c
   return (
     <section className="mobile-card-polish overflow-hidden rounded-xl border border-border bg-ink-deep">
       <button className="flex min-h-12 w-full items-center justify-between px-4 py-3 text-left" onClick={() => setOpen((v) => !v)}>
-        <span className="text-sm font-semibold text-cloud-white">{title}</span>
+        <span className="text-sm text-jade-glow uppercase tracking-wider">{title}</span>
         <motion.span
-          className="text-mist-light"
+          className="text-jade-glow"
           animate={{ rotate: open ? 45 : 0, scale: open ? 1.08 : 1 }}
           transition={{ type: "spring", stiffness: 360, damping: 24 }}
         >

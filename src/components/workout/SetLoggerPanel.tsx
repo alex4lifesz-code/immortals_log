@@ -664,8 +664,8 @@ export function SetLoggerPanel({
         />
 
         {/* Header */}
-        <div className="relative flex items-center justify-between mb-3 pl-2 pr-1 pb-2 border-b" style={{ borderColor: `${diffStyle.glowColor}2b` }}>
-          <div className="flex items-center gap-2 min-w-0">
+        <div className="relative flex items-center justify-between mb-3 pl-2 pr-1 pb-2 border-b gap-2" style={{ borderColor: `${diffStyle.glowColor}2b` }}>
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             {isScrollStyle && (
               <span className="text-sm opacity-80 shrink-0">{typeEmoji}</span>
             )}
@@ -695,7 +695,7 @@ export function SetLoggerPanel({
 
         {useSetPanelLayout ? (
           <div className={`pl-2 ${isMobile ? "flex flex-1 min-h-0 flex-col overflow-hidden" : "space-y-2"}`}>
-            <div className={isMobile ? "relative z-0 flex-1 min-h-0 pr-1 pb-2 flex flex-col gap-3" : "space-y-2"}>
+            <div className={isMobile ? "relative z-0 flex-1 min-h-0 pr-1 pb-2 flex flex-col gap-3.5" : "space-y-2"}>
 
             {(showAddedWeight || showResistanceBand || availableVariationOptions.length > 0) && (
               <div className="grid gap-2">
@@ -796,7 +796,7 @@ export function SetLoggerPanel({
               </div>
             )}
 
-            <div className="grid gap-2 grid-cols-2">
+            <div className={`grid gap-2 ${isMobile ? "grid-cols-1" : "grid-cols-2"}`}>
               <div className="flex flex-col gap-1">
                 <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-mist-mid">Measure</span>
                 <div className={`flex overflow-hidden border ${isMobile ? "rounded-xl" : "rounded-lg"} border-jade-glow/20 bg-ink-deep/40`}>
@@ -857,7 +857,7 @@ export function SetLoggerPanel({
             </div>
 
             <div
-              className={isMobile ? "flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-2 pr-1" : "grid gap-2"}
+              className={isMobile ? "flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-2.5 pr-1" : "grid gap-2"}
               style={isMobile ? undefined : { gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}
             >
               {mobileSetConfigs.slice(0, setCount).map((setConfig) => {

@@ -39,7 +39,7 @@ function EternalTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount
     [mainItems]
   );
   const secondaryItems = useMemo(
-    () => mainItems.filter((item) => !["dashboard", "history", "rank-up"].includes(item.id)),
+    () => mainItems.filter((item) => !["dashboard", "rank-up"].includes(item.id)),
     [mainItems]
   );
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -192,7 +192,7 @@ function EternalTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-surface-hover transition-colors"
+                className="flex min-h-[44px] items-center gap-2 rounded-xl px-3 py-2 hover:bg-surface-hover transition-colors"
               >
                 <span className="text-lg">👤</span>
                 <span className="hidden sm:inline text-sm font-medium text-text-secondary">
@@ -212,7 +212,7 @@ function EternalTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount
                     <UserPhysiqueButton
                       userId={user?.id || ""}
                       userName={user?.name || ""}
-                      className="block w-full text-left px-4 py-2 text-sm font-medium text-text-primary hover:bg-surface-hover rounded-t-lg"
+                      className="block min-h-[44px] w-full text-left rounded-t-xl px-4 py-2 text-sm font-medium text-text-primary hover:bg-surface-hover"
                     />
                     {isMobile && (
                       <div className="border-t border-border">
@@ -223,7 +223,7 @@ function EternalTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount
                               key={item.id}
                               href={item.path}
                               onClick={() => setUserMenuOpen(false)}
-                              className={`block w-full text-left px-4 py-2 text-sm transition-colors ${
+                              className={`block min-h-[44px] w-full text-left px-4 py-2 text-sm transition-colors ${
                                 isActive
                                   ? "bg-accent/10 text-accent font-medium"
                                   : "text-text-secondary hover:text-text-primary hover:bg-surface-hover"
@@ -242,7 +242,7 @@ function EternalTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount
                                   key={item.id}
                                   href={item.path}
                                   onClick={() => setUserMenuOpen(false)}
-                                  className={`block w-full text-left px-4 py-2 text-sm transition-colors ${
+                                  className={`block min-h-[44px] w-full text-left px-4 py-2 text-sm transition-colors ${
                                     isActive
                                       ? "bg-accent/10 text-accent font-medium"
                                       : "text-text-secondary hover:text-text-primary hover:bg-surface-hover"
@@ -261,7 +261,7 @@ function EternalTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount
                         setUserMenuOpen(false);
                         logout();
                       }}
-                      className="w-full text-left px-4 py-2 text-sm text-danger hover:bg-danger/10 rounded-b-lg border-t border-border"
+                      className="min-h-[44px] w-full text-left rounded-b-xl border-t border-border px-4 py-2 text-sm text-danger hover:bg-danger/10"
                     >
                       {t("Sign Out", "normal")}
                     </button>

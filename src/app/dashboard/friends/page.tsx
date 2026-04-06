@@ -205,10 +205,10 @@ export default function FriendsPage() {
           <p className="text-sm text-mist-dark">Loading friends data...</p>
         </GlowCard>
       ) : (
-        <div className="space-y-4">
-          <GlowCard glow="jade">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm text-jade-glow uppercase">Friends</h3>
+        <div className="space-y-6">
+          <GlowCard glow="jade" hoverable={false}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm text-jade-glow uppercase tracking-wider">Friends</h3>
               <span className="text-xs text-mist-dark">{data.friends.length} connected</span>
             </div>
             {data.friends.length === 0 ? (
@@ -217,12 +217,12 @@ export default function FriendsPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-ink-light/70">
-                      <th className="px-2 py-2 text-left text-xs text-jade-glow uppercase">Cultivator</th>
-                      <th className="px-2 py-2 text-center text-xs text-jade-glow uppercase">Check-Ins</th>
-                      <th className="px-2 py-2 text-center text-xs text-jade-glow uppercase">Last Check-In</th>
-                      <th className="px-2 py-2 text-center text-xs text-jade-glow uppercase">Latest Weight</th>
-                      <th className="px-2 py-2 text-center text-xs text-jade-glow uppercase">Action</th>
+                    <tr className="border-b border-ink-light">
+                      <th className="px-3 py-2 text-left text-xs text-jade-glow uppercase">Cultivator</th>
+                      <th className="px-3 py-2 text-center text-xs text-jade-glow uppercase">Check-Ins</th>
+                      <th className="px-3 py-2 text-center text-xs text-jade-glow uppercase">Last Check-In</th>
+                      <th className="px-3 py-2 text-center text-xs text-jade-glow uppercase">Latest Weight</th>
+                      <th className="px-3 py-2 text-center text-xs text-jade-glow uppercase">Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -234,7 +234,7 @@ export default function FriendsPage() {
                       };
 
                       return (
-                        <tr key={friend.id} className="border-b border-ink-light/40">
+                        <tr key={friend.id} className="border-b border-ink-light/50 hover:bg-ink-dark/50 transition-colors">
                           <td className="px-2 py-2 text-cloud-white">
                             <div className="font-medium">{friend.name}</div>
                             <div className="text-xs text-mist-dark">@{friend.username}</div>
@@ -268,9 +268,9 @@ export default function FriendsPage() {
             )}
           </GlowCard>
 
-          <div className="grid grid-cols-2 gap-3">
-            <GlowCard glow="gold">
-              <h3 className="text-sm text-gold uppercase mb-3">Incoming Requests</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <GlowCard glow="gold" hoverable={false}>
+              <h3 className="text-sm text-gold uppercase tracking-wider mb-3">Incoming Requests</h3>
               {data.incomingRequests.length === 0 ? (
                 <p className="text-sm text-mist-dark">No pending incoming requests.</p>
               ) : (
@@ -307,8 +307,8 @@ export default function FriendsPage() {
               )}
             </GlowCard>
 
-            <GlowCard glow="blue">
-              <h3 className="text-sm text-mountain-blue-glow uppercase mb-3">Outgoing Pending Invitations</h3>
+            <GlowCard glow="blue" hoverable={false}>
+              <h3 className="text-sm text-mountain-blue-glow uppercase tracking-wider mb-3">Outgoing Pending Invitations</h3>
               {data.outgoingRequests.length === 0 ? (
                 <p className="text-sm text-mist-dark">No outgoing pending requests.</p>
               ) : (
@@ -337,8 +337,8 @@ export default function FriendsPage() {
             </GlowCard>
           </div>
 
-          <GlowCard glow="blue">
-            <h3 className="text-xs text-mountain-blue-glow uppercase mb-2">Add Friend</h3>
+          <GlowCard glow="blue" hoverable={false}>
+            <h3 className="text-sm text-mountain-blue-glow uppercase tracking-wider mb-3">Add Friend</h3>
             <div className="space-y-2">
               <div className="rounded-md border border-ink-light/50 bg-ink-mid/20 px-2.5 py-1.5">
                 <div className="flex items-center justify-between gap-2">
@@ -357,13 +357,13 @@ export default function FriendsPage() {
                 <p className="text-xs text-cloud-white font-semibold break-all leading-tight mt-1">{shareableFriendId || "-"}</p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <input
                   type="text"
                   value={friendCodeInput}
                   onChange={(event) => setFriendCodeInput(event.target.value.toLowerCase())}
                   placeholder="Enter friend's ID (e.g. immortal1234)"
-                  className="flex-1 bg-ink-deep border border-ink-light rounded px-2.5 py-1.5 text-xs text-cloud-white placeholder-mist-dark outline-none focus:border-jade-glow transition-colors"
+                  className="flex-1 min-w-0 bg-ink-deep border border-ink-light rounded px-2.5 py-1.5 text-xs text-cloud-white placeholder-mist-dark outline-none focus:border-jade-glow transition-colors"
                 />
                 <GlowButton variant="jade" size="sm" disabled={working} onClick={sendFriendRequest}>
                   Send Request

@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import PageLayout from "@/components/layout/PageLayout";
+import GlowCard from "@/components/ui/GlowCard";
 import GlowButton from "@/components/ui/GlowButton";
 import { useAuth } from "@/context/AuthContext";
 import { DASHBOARD_ROUTES } from "@/lib/navigation";
@@ -191,45 +192,41 @@ export default function WebsiteInformationPage() {
       contentWidth="fluid"
       contentMaxWidthClass="max-w-none"
     >
-      <div className="nyaa-history-page space-y-3 px-0 py-2 sm:py-3">
-        <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-          <div className="px-3 py-2 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
-            <span className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>System Summary</span>
-          </div>
-          <table className="w-full text-[11px] border-collapse" style={{ backgroundColor: "var(--surface)" }}>
+      <div className="space-y-6 px-0 py-2 sm:py-3">
+        <GlowCard glow="jade" hoverable={false}>
+          <h3 className="text-sm text-jade-glow uppercase tracking-wider mb-3">System Summary</h3>
+          <table className="w-full text-[11px]">
             <tbody>
               <tr>
-                <td className="px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "var(--border)", color: "var(--text-muted)", backgroundColor: "color-mix(in srgb, var(--border) 10%, var(--surface))", width: "22%" }}>Core Product Areas:</td>
-                <td className="px-2 py-1.5 border-b border-r" style={{ borderColor: "var(--border)", color: "var(--accent)" }}>{appModules.length}</td>
-                <td className="px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "var(--border)", color: "var(--text-muted)", backgroundColor: "color-mix(in srgb, var(--border) 10%, var(--surface))", width: "22%" }}>Persistence Layers:</td>
-                <td className="px-2 py-1.5 border-b" style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}>3</td>
+                <td className="px-2 py-1.5 font-semibold border-b border-r border-ink-light/50 whitespace-nowrap text-mist-dark" style={{ width: "22%" }}>Core Product Areas:</td>
+                <td className="px-2 py-1.5 border-b border-r border-ink-light/50 text-jade-glow">{appModules.length}</td>
+                <td className="px-2 py-1.5 font-semibold border-b border-r border-ink-light/50 whitespace-nowrap text-mist-dark" style={{ width: "22%" }}>Persistence Layers:</td>
+                <td className="px-2 py-1.5 border-b border-ink-light/50 text-cloud-white">3</td>
               </tr>
               <tr>
-                <td className="px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "var(--border)", color: "var(--text-muted)", backgroundColor: "color-mix(in srgb, var(--border) 10%, var(--surface))" }}>Documented Models:</td>
-                <td className="px-2 py-1.5 border-b border-r" style={{ borderColor: "var(--border)", color: "var(--gold)" }}>{totalModelCount}</td>
-                <td className="px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "var(--border)", color: "var(--text-muted)", backgroundColor: "color-mix(in srgb, var(--border) 10%, var(--surface))" }}>Access:</td>
-                <td className="px-2 py-1.5 border-b" style={{ borderColor: "var(--border)", color: "var(--crimson-light)" }}>Admin-only</td>
+                <td className="px-2 py-1.5 font-semibold border-b border-r border-ink-light/50 whitespace-nowrap text-mist-dark">Documented Models:</td>
+                <td className="px-2 py-1.5 border-b border-r border-ink-light/50 text-gold">{totalModelCount}</td>
+                <td className="px-2 py-1.5 font-semibold border-b border-r border-ink-light/50 whitespace-nowrap text-mist-dark">Access:</td>
+                <td className="px-2 py-1.5 border-b border-ink-light/50 text-crimson-light">Admin-only</td>
               </tr>
               <tr>
-                <td className="px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "var(--border)", color: "var(--text-muted)", backgroundColor: "color-mix(in srgb, var(--border) 10%, var(--surface))" }}>Schema Entities:</td>
-                <td className="px-2 py-1.5 border-b border-r" style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}>{relationSchema.length + 3}</td>
-                <td className="px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "var(--border)", color: "var(--text-muted)", backgroundColor: "color-mix(in srgb, var(--border) 10%, var(--surface))" }}>Relation Edges:</td>
-                <td className="px-2 py-1.5 border-b" style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}>{relationSchema.length}</td>
+                <td className="px-2 py-1.5 font-semibold border-b border-r border-ink-light/50 whitespace-nowrap text-mist-dark">Schema Entities:</td>
+                <td className="px-2 py-1.5 border-b border-r border-ink-light/50 text-cloud-white">{relationSchema.length + 3}</td>
+                <td className="px-2 py-1.5 font-semibold border-b border-r border-ink-light/50 whitespace-nowrap text-mist-dark">Relation Edges:</td>
+                <td className="px-2 py-1.5 border-b border-ink-light/50 text-cloud-white">{relationSchema.length}</td>
               </tr>
               <tr>
-                <td className="px-2 py-1.5 font-semibold border-r whitespace-nowrap" style={{ borderColor: "var(--border)", color: "var(--text-muted)", backgroundColor: "color-mix(in srgb, var(--border) 10%, var(--surface))" }}>Purpose:</td>
-                <td className="px-2 py-1.5" colSpan={3} style={{ color: "var(--text-primary)" }}>
+                <td className="px-2 py-1.5 font-semibold border-r border-ink-light/50 whitespace-nowrap text-mist-dark">Purpose:</td>
+                <td className="px-2 py-1.5 text-cloud-white" colSpan={3}>
                   Internal reference for architecture, persistence boundaries, and database structure.
                 </td>
               </tr>
             </tbody>
           </table>
-        </div>
+        </GlowCard>
 
-        <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-          <div className="px-3 py-2 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
-            <span className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>Website Overview</span>
-          </div>
+        <GlowCard glow="jade" hoverable={false}>
+<h3 className="text-sm text-jade-glow uppercase tracking-wider mb-3">Website Overview</h3>
           <table className="w-full text-[11px] border-collapse" style={{ backgroundColor: "var(--surface)" }}>
             <tbody>
               {techStack.map(([label, value], idx) => (
@@ -240,12 +237,10 @@ export default function WebsiteInformationPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </GlowCard>
 
-        <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-          <div className="px-3 py-2 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
-            <span className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>Application Modules</span>
-          </div>
+        <GlowCard glow="jade" hoverable={false}>
+<h3 className="text-sm text-jade-glow uppercase tracking-wider mb-3">Application Modules</h3>
           <table className="w-full text-[11px] border-collapse" style={{ backgroundColor: "var(--surface)" }}>
             <thead>
               <tr className="border-b" style={{ borderColor: "var(--border)" }}>
@@ -262,12 +257,10 @@ export default function WebsiteInformationPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </GlowCard>
 
-        <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-          <div className="px-3 py-2 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
-            <span className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>Persistence Boundaries</span>
-          </div>
+        <GlowCard glow="jade" hoverable={false}>
+<h3 className="text-sm text-jade-glow uppercase tracking-wider mb-3">Persistence Boundaries</h3>
           <table className="w-full text-[11px] border-collapse" style={{ backgroundColor: "var(--surface)" }}>
             <thead>
               <tr className="border-b" style={{ borderColor: "var(--border)" }}>
@@ -288,12 +281,10 @@ export default function WebsiteInformationPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </GlowCard>
 
-        <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-          <div className="px-3 py-2 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
-            <span className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>Database Structure</span>
-          </div>
+        <GlowCard glow="jade" hoverable={false}>
+<h3 className="text-sm text-jade-glow uppercase tracking-wider mb-3">Database Structure</h3>
           <table className="w-full text-[11px] border-collapse" style={{ backgroundColor: "var(--surface)" }}>
             <thead>
               <tr className="border-b" style={{ borderColor: "var(--border)" }}>
@@ -316,12 +307,10 @@ export default function WebsiteInformationPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </GlowCard>
 
-        <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-          <div className="px-3 py-2 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
-            <span className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>Database Schematics (Relationship Map)</span>
-          </div>
+        <GlowCard glow="jade" hoverable={false}>
+<h3 className="text-sm text-jade-glow uppercase tracking-wider mb-3">Database Schematics (Relationship Map)</h3>
           <table className="w-full text-[11px] border-collapse" style={{ backgroundColor: "var(--surface)" }}>
             <thead>
               <tr className="border-b" style={{ borderColor: "var(--border)" }}>
@@ -344,12 +333,10 @@ export default function WebsiteInformationPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </GlowCard>
 
-        <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-          <div className="px-3 py-2 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
-            <span className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>Table Dictionary (Detailed)</span>
-          </div>
+        <GlowCard glow="jade" hoverable={false}>
+<h3 className="text-sm text-jade-glow uppercase tracking-wider mb-3">Table Dictionary (Detailed)</h3>
           <table className="w-full text-[11px] border-collapse" style={{ backgroundColor: "var(--surface)" }}>
             <thead>
               <tr className="border-b" style={{ borderColor: "var(--border)" }}>
@@ -370,12 +357,10 @@ export default function WebsiteInformationPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </GlowCard>
 
-        <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-          <div className="px-3 py-2 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
-            <span className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>Index & Constraint Strategy</span>
-          </div>
+        <GlowCard glow="jade" hoverable={false}>
+<h3 className="text-sm text-jade-glow uppercase tracking-wider mb-3">Index & Constraint Strategy</h3>
           <table className="w-full text-[11px] border-collapse" style={{ backgroundColor: "var(--surface)" }}>
             <thead>
               <tr className="border-b" style={{ borderColor: "var(--border)" }}>
@@ -396,12 +381,10 @@ export default function WebsiteInformationPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </GlowCard>
 
-        <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-          <div className="px-3 py-2 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
-            <span className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>Raw SQL Managed Tables</span>
-          </div>
+        <GlowCard glow="jade" hoverable={false}>
+<h3 className="text-sm text-jade-glow uppercase tracking-wider mb-3">Raw SQL Managed Tables</h3>
           <table className="w-full text-[11px] border-collapse" style={{ backgroundColor: "var(--surface)" }}>
             <thead>
               <tr className="border-b" style={{ borderColor: "var(--border)" }}>
@@ -420,12 +403,10 @@ export default function WebsiteInformationPage() {
               </tr>
             </tbody>
           </table>
-        </div>
+        </GlowCard>
 
-        <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-          <div className="px-3 py-2 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
-            <span className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>Key System Flows</span>
-          </div>
+        <GlowCard glow="jade" hoverable={false}>
+<h3 className="text-sm text-jade-glow uppercase tracking-wider mb-3">Key System Flows</h3>
           <table className="w-full text-[11px] border-collapse" style={{ backgroundColor: "var(--surface)" }}>
             <tbody>
               {keyFlows.map((flow, idx) => (
@@ -436,12 +417,10 @@ export default function WebsiteInformationPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </GlowCard>
 
-        <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-          <div className="px-3 py-2 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
-            <span className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>Data Lifecycle & Ownership</span>
-          </div>
+        <GlowCard glow="jade" hoverable={false}>
+<h3 className="text-sm text-jade-glow uppercase tracking-wider mb-3">Data Lifecycle & Ownership</h3>
           <table className="w-full text-[11px] border-collapse" style={{ backgroundColor: "var(--surface)" }}>
             <thead>
               <tr className="border-b" style={{ borderColor: "var(--border)" }}>
@@ -484,7 +463,7 @@ export default function WebsiteInformationPage() {
               </tr>
             </tbody>
           </table>
-        </div>
+        </GlowCard>
       </div>
     </PageLayout>
   );

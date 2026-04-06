@@ -5,6 +5,7 @@ export const DASHBOARD_ROUTES = {
   community: "/dashboard/community",
   rankUp: "/dashboard/rank-up",
   workoutHistory: "/dashboard/train",
+  trainingLogHistory: "/dashboard/training-log-history",
   attendance: "/dashboard/attendance",
   exercises: "/dashboard/exercises",
   friends: "/dashboard/friends",
@@ -28,6 +29,7 @@ export const NAV_LABELS: Record<string, string> = {
   newsfeed: "Community Feed",
   "rank-up": "Rank Up",
   history: "Train",
+  "training-log-history": "History",
   checkin: "Attendance",
   "exercise-db": "Exercise Library",
   friends: "Friends",
@@ -43,6 +45,7 @@ export const MOBILE_PRIMARY_NAV_IDS: readonly string[] = [
 ];
 
 export const MOBILE_MORE_NAV_IDS_ORDER: readonly string[] = [
+  "training-log-history",
   "newsfeed",
   "friends",
   "exercise-db",
@@ -54,6 +57,7 @@ export const MAIN_NAV_IDS_ORDER: readonly string[] = [
   "dashboard",
   "history",
   "rank-up",
+  "training-log-history",
   "newsfeed",
   "friends",
   "exercise-db",

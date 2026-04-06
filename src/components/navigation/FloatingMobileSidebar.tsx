@@ -94,7 +94,7 @@ function FloatingMobileSidebar() {
               }
             }}
             transition={{ type: "spring", damping: 28, stiffness: 300, mass: 0.8 }}
-            className="fixed left-0 top-0 z-40 h-screen flex flex-col bg-ink-deep/98 border-r border-jade-glow/15 shadow-2xl overflow-hidden touch-pan-y pt-[max(env(safe-area-inset-top,0px),12px)]"
+            className="fixed left-0 top-0 z-40 h-screen flex flex-col bg-ink-deep/98 border-r border-jade-glow/20 shadow-2xl overflow-hidden touch-pan-y pt-[max(env(safe-area-inset-top,0px),12px)]"
             style={{ width: "min(92vw, 420px)" }}
             onTouchStart={onSidebarTouchStart}
             onTouchMove={onSidebarTouchMove}
@@ -103,17 +103,17 @@ function FloatingMobileSidebar() {
             {/* Header */}
             <div className="px-5 pb-4 border-b border-ink-light/50 flex items-center justify-between shrink-0">
               <div>
-                <h2 className="text-base text-jade-glow font-bold tracking-[0.12em] uppercase">
+                <h2 className="text-[15px] text-jade-glow font-bold tracking-[0.1em] uppercase">
                   ⚔ {t("Navigation", "normal")}
                 </h2>
                 {user && (
-                  <p className="text-xs text-mist-light mt-0.5 truncate">{user.name}</p>
+                  <p className="mt-1 text-[13px] text-mist-light truncate">{user.name}</p>
                 )}
               </div>
               <motion.button
                 whileTap={{ scale: 0.9 }}
                 onClick={handleClose}
-                className="p-2 rounded-xl text-mist-dark active:text-cloud-white active:bg-white/10 transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center"
+                className="p-2 rounded-xl text-mist-dark active:text-cloud-white active:bg-white/10 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -122,12 +122,12 @@ function FloatingMobileSidebar() {
             </div>
 
             {user && (
-              <div className="mx-4 mt-3 mb-2 rounded-xl border border-jade-glow/20 bg-ink-mid/35 px-4 py-3">
-                <p className="text-[10px] uppercase tracking-[0.12em] text-mist-dark mb-1">{t("Body Profile", "normal")}</p>
+              <div className="mx-4 mt-3 mb-2 rounded-2xl border border-jade-glow/20 bg-ink-mid/35 px-4 py-3">
+                <p className="mb-1 text-[10px] uppercase tracking-[0.1em] text-mist-dark">{t("Body Profile", "normal")}</p>
                 <UserPhysiqueButton
                   userId={user.id}
                   userName={t("Update Weight & Gender", "normal")}
-                  className="text-sm font-semibold text-jade-light hover:text-jade-glow transition-colors"
+                  className="inline-flex min-h-[44px] items-center text-[13px] font-semibold text-jade-light hover:text-jade-glow transition-colors"
                 />
               </div>
             )}
@@ -144,15 +144,15 @@ function FloatingMobileSidebar() {
                     transition={{ delay: index * 0.03, type: "spring", stiffness: 400, damping: 30 }}
                     whileTap={{ scale: 0.97 }}
                     onClick={() => handleNavigate(item.path)}
-                    className={`w-full flex items-center gap-3 px-4 py-4 rounded-xl text-base transition-colors min-h-[56px] ${
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[15px] transition-colors min-h-[56px] ${
                       isActive
                         ? "bg-jade-deep/40 text-jade-light border border-jade/20 shadow-sm"
                         : "text-mist-light active:text-cloud-white active:bg-ink-mid/60 border border-transparent"
                     }`}
                     style={{ WebkitTapHighlightColor: 'transparent' }}
                   >
-                    <span className="text-xl flex-shrink-0 w-8 text-center">{item.icon}</span>
-                    <span className="flex-1 text-left font-medium" title={tHint(item.label, terminologyMode) ?? undefined}>{t(item.label, terminologyMode)}</span>
+                    <span className="text-[18px] flex-shrink-0 w-8 text-center">{item.icon}</span>
+                    <span className="flex-1 text-left font-semibold" title={tHint(item.label, terminologyMode) ?? undefined}>{t(item.label, terminologyMode)}</span>
                     {item.pinned && <span className="text-[10px] text-gold-dim flex-shrink-0">📌</span>}
                     {isActive && (
                       <div className="w-1.5 h-1.5 bg-jade-glow rounded-full flex-shrink-0" />
@@ -163,7 +163,7 @@ function FloatingMobileSidebar() {
 
               {adminItems.length > 0 && (
                 <div className="pt-3 mt-3 border-t border-ink-light/60">
-                  <p className="px-2 pb-2 text-[10px] uppercase tracking-[0.12em] text-gold-dim/85">{t("Admin", "normal")}</p>
+                  <p className="px-2 pb-2 text-[10px] uppercase tracking-[0.1em] text-gold-dim/85">{t("Admin", "normal")}</p>
                   <div className="space-y-1.5">
                     {adminItems.map((item, index) => {
                       const isActive = pathname === item.path || pathname.startsWith(`${item.path}/`);
@@ -175,15 +175,15 @@ function FloatingMobileSidebar() {
                           transition={{ delay: (mainItems.length + index) * 0.03, type: "spring", stiffness: 400, damping: 30 }}
                           whileTap={{ scale: 0.97 }}
                           onClick={() => handleNavigate(item.path)}
-                          className={`w-full flex items-center gap-3 px-4 py-4 rounded-xl text-base transition-colors min-h-[56px] border ${
+                          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[15px] transition-colors min-h-[56px] border ${
                             isActive
                               ? "bg-gold-dim/20 text-gold border-gold/45"
                               : "text-gold-dim active:text-gold active:bg-gold-dim/15 border-gold/20"
                           }`}
                           style={{ WebkitTapHighlightColor: 'transparent' }}
                         >
-                          <span className="text-xl flex-shrink-0 w-8 text-center">{item.icon}</span>
-                          <span className="flex-1 text-left font-medium" title={tHint(item.label, terminologyMode) ?? undefined}>{t(item.label, terminologyMode)}</span>
+                          <span className="text-[18px] flex-shrink-0 w-8 text-center">{item.icon}</span>
+                          <span className="flex-1 text-left font-semibold" title={tHint(item.label, terminologyMode) ?? undefined}>{t(item.label, terminologyMode)}</span>
                           {isActive && <div className="w-1.5 h-1.5 bg-gold rounded-full flex-shrink-0" />}
                         </motion.button>
                       );

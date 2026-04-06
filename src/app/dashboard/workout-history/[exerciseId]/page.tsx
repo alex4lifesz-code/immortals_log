@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import PageLayout from "@/components/layout/PageLayout";
+import GlowCard from "@/components/ui/GlowCard";
 import { MemoTrainingLogTable } from "@/components/workout/TrainingLogTable";
 import { useAuth } from "@/context/AuthContext";
 import { useIsMobile } from "@/context/AppContext";
@@ -25,6 +26,8 @@ export default function WorkoutHistoryDetailPage() {
   const searchParams = useSearchParams();
   const exerciseId = params?.exerciseId ?? "";
   const targetUserId = searchParams.get("targetUserId") || "";
+  const source = searchParams.get("from") || "";
+  const fromHistoryPage = source === "history";
   const { settings } = useDisplaySettings();
   const isMobile = useIsMobile();
   const { user } = useAuth();
@@ -180,6 +183,14 @@ export default function WorkoutHistoryDetailPage() {
       .replace(",", "");
   }, [lastLogDate]);
 
+  const backHref = useMemo(() => {
+    const base = fromHistoryPage ? DASHBOARD_ROUTES.trainingLogHistory : DASHBOARD_ROUTES.workoutHistory;
+    if (!targetUserId) return base;
+    return `${base}?targetUserId=${encodeURIComponent(targetUserId)}`;
+  }, [fromHistoryPage, targetUserId]);
+
+  const backLabel = fromHistoryPage ? "Back to History" : "Back to Train";
+
   return (
     <PageLayout
       title={`${displayName} History`}
@@ -211,18 +222,16 @@ export default function WorkoutHistoryDetailPage() {
               </div>
             )}
 
+            <GlowCard glow="jade" hoverable={false} className="!p-0 overflow-hidden">
             <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
               <div className="px-3 py-2 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <Link
-                      href={targetUserId
-                        ? `${DASHBOARD_ROUTES.workoutHistory}?targetUserId=${encodeURIComponent(targetUserId)}`
-                        : DASHBOARD_ROUTES.workoutHistory}
-                      className="text-[11px] font-semibold"
-                      style={{ color: "var(--accent)" }}
+                      href={backHref}
+                      className="text-[11px] font-semibold text-jade-glow"
                     >
-                      Back to Train
+                      {backLabel}
                     </Link>
                     <p className="truncate text-xs font-bold" style={{ color: "var(--text-primary)" }}>{displayName}</p>
                     <p className="text-[11px]" style={{ color: "var(--text-secondary)" }}>Exercise snapshot</p>
@@ -297,7 +306,9 @@ export default function WorkoutHistoryDetailPage() {
                 </tbody>
               </table>
             </div>
+            </GlowCard>
 
+            <GlowCard glow="jade" hoverable={false} className="!p-0 overflow-hidden">
             <div className="nyaa-history-table-shell">
               {selectedTierLevel != null ? (
                 <div className="mb-2 border px-2 py-1 text-[11px]" style={{ borderColor: "var(--border)", backgroundColor: "color-mix(in srgb, var(--accent) 8%, var(--surface))", color: "var(--text-secondary)" }}>
@@ -310,12 +321,13 @@ export default function WorkoutHistoryDetailPage() {
                 onRefresh={fetchExercise}
                 userId={userId}
                 historyTargetUserId={targetUserId || undefined}
+                trainingLogTitleOverride={`Training Log - ${displayName}`}
                 disableExerciseLinks
                 hideInputSection
                 forceDesktopTableOnMobile={isMobile}
-                forceSimpleViewOnly={isMobile}
               />
             </div>
+            </GlowCard>
           </>
         )}
       </div>

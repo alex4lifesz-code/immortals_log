@@ -43,7 +43,7 @@ export default function MobileProgressPage() {
   return (
     <div>
       <MobileHeader title="Progress" />
-      <section className="mobile-content-stack space-y-4 p-4">
+      <section className="mobile-content-stack space-y-6 p-4">
         <MobileSegmentedControl
           value={range}
           onChange={setRange}
@@ -57,7 +57,7 @@ export default function MobileProgressPage() {
         <MobileCard>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs uppercase tracking-[0.1em] text-mist-light">Cultivation Momentum</p>
+              <p className="text-xs uppercase tracking-wider text-jade-glow">Cultivation Momentum</p>
               <p className="mt-1 text-sm text-cloud-white">Range: {range}</p>
             </div>
             <MobileProgressRing progress={summary.score} valueText={`${summary.score}%`} />
@@ -66,12 +66,12 @@ export default function MobileProgressPage() {
 
         <MobileCard>
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl border border-border bg-ink-dark p-3">
-              <p className="text-xs text-mist-light">Sessions</p>
+            <div className="rounded-xl border border-ink-light bg-ink-dark p-3">
+              <p className="text-xs text-jade-glow uppercase tracking-wider">Sessions</p>
               <p className="text-xl font-bold text-cloud-white">{summary.sessions}</p>
             </div>
-            <div className="rounded-xl border border-border bg-ink-dark p-3">
-              <p className="text-xs text-mist-light">Total Volume</p>
+            <div className="rounded-xl border border-ink-light bg-ink-dark p-3">
+              <p className="text-xs text-jade-glow uppercase tracking-wider">Total Volume</p>
               <p className="text-xl font-bold text-cloud-white">{summary.volume}</p>
             </div>
           </div>

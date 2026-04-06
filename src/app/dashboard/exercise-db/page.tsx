@@ -23,7 +23,8 @@ import {
   getExerciseTypeIcon,
   getCategoryIcon,
 } from "@/lib/exercise-types";
-import { GlowModal } from "@/components/ui/GlowCard";
+import GlowCard, { GlowModal } from "@/components/ui/GlowCard";
+import MobileFocusOverlay, { MobileFocusTrigger } from "@/components/ui/MobileFocusOverlay";
 import ExerciseImageBox from "@/components/exercise/ExerciseImageBox";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -575,10 +576,8 @@ function OverviewTab({
   const topMuscle = byMuscle[0] ?? null;
 
   return (
-    <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-      <div className="px-3 py-2 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
-        <span className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>Database Overview</span>
-      </div>
+    <GlowCard glow="jade" hoverable={false}>
+      <h3 className="text-sm text-jade-glow uppercase tracking-wider mb-3">Database Overview</h3>
       <div className="overflow-x-auto">
       <table className="w-full text-[11px] border-collapse" style={{ minWidth: "620px", backgroundColor: "var(--surface)" }}>
         <tbody>
@@ -616,12 +615,12 @@ function OverviewTab({
       </table>
       </div>
 
-      <div className="border-t px-3 py-2" style={{ borderColor: "var(--border)", backgroundColor: "color-mix(in srgb, var(--surface) 94%, var(--border))" }}>
+      <div className="border-t border-ink-light px-3 py-2">
         <div className="mb-2 flex items-center justify-between">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>
-            Pending exercise to be addd
+          <span className="text-sm text-jade-glow uppercase tracking-wider">
+            Pending exercise to be added
           </span>
-          <span className="text-[11px]" style={{ color: "var(--gold)" }}>
+          <span className="text-[11px] text-gold">
             {pendingExercises.length}
           </span>
         </div>
@@ -674,7 +673,7 @@ function OverviewTab({
           </div>
         )}
       </div>
-    </div>
+    </GlowCard>
   );
 }
 
@@ -841,6 +840,7 @@ function ExercisesTab({
   const [fitToScreenMode, setFitToScreenMode] = useState(initialViewPrefs.fitToScreenMode);
   const [tableViewportHeight, setTableViewportHeight] = useState(560);
   const [loadedViewPrefsKey, setLoadedViewPrefsKey] = useState(viewPrefsStorageKey);
+  const [exerciseFocusMode, setExerciseFocusMode] = useState(false);
 
   const filtered = useMemo(() => {
     const normalizedQuery = search.trim().toLowerCase();
@@ -1096,7 +1096,13 @@ function ExercisesTab({
   const getDateAddedDisplay = (ex: SimpleExercise) => formatDateValue(ex.createdAt);
 
   const renderToolbar = () => (
-    <div className="px-3 py-2 border-b space-y-2" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
+    <div className="space-y-2 mb-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm text-jade-glow uppercase tracking-wider">Exercise Library</h3>
+        {isMobile && filtered.length > 0 && (
+          <MobileFocusTrigger onClick={() => setExerciseFocusMode(true)} />
+        )}
+      </div>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative flex-1">
           <input
@@ -1104,12 +1110,7 @@ function ExercisesTab({
             placeholder="Search exercises..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded border pl-9 pr-8 py-2 text-xs outline-none"
-            style={{
-              backgroundColor: "var(--surface)",
-              borderColor: "var(--border)",
-              color: "var(--text-primary)",
-            }}
+            className="w-full rounded-lg border border-ink-light bg-ink-dark pl-9 pr-8 py-2 text-xs text-cloud-white outline-none"
           />
           <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: "var(--text-muted)" }} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
             <circle cx="11" cy="11" r="7" />
@@ -1174,15 +1175,15 @@ function ExercisesTab({
         </div>
       </div>
       <div className="flex flex-wrap gap-2 items-center px-0.5 py-1">
-              <select value={catFilter} onChange={(e) => setCatFilter(e.target.value as TrainingCategory | "")} className="w-full sm:w-auto px-2 py-1.5 text-[11px] outline-none border transition-colors cursor-pointer hover:border-accent/60 hover:bg-surface-hover focus:border-accent/70" style={{ borderColor: "var(--border)", color: "var(--text-primary)", backgroundColor: "var(--surface)", borderRadius: "2px" }}>
+              <select value={catFilter} onChange={(e) => setCatFilter(e.target.value as TrainingCategory | "")} className="w-full sm:w-auto px-2 py-1.5 text-[11px] outline-none border border-ink-light bg-ink-dark text-cloud-white rounded-lg transition-colors cursor-pointer">
                 <option value="">All Categories</option>
                 {dbOptions.categories.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
-              <select value={muscleFilter} onChange={(e) => setMuscleFilter(e.target.value as MuscleGroup | "")} className="w-full sm:w-auto px-2 py-1.5 text-[11px] outline-none border transition-colors cursor-pointer hover:border-accent/60 hover:bg-surface-hover focus:border-accent/70" style={{ borderColor: "var(--border)", color: "var(--text-primary)", backgroundColor: "var(--surface)", borderRadius: "2px" }}>
+              <select value={muscleFilter} onChange={(e) => setMuscleFilter(e.target.value as MuscleGroup | "")} className="w-full sm:w-auto px-2 py-1.5 text-[11px] outline-none border border-ink-light bg-ink-dark text-cloud-white rounded-lg transition-colors cursor-pointer">
                 <option value="">All Muscles</option>
                 {dbOptions.muscles.map((m) => <option key={m} value={m}>{m}</option>)}
               </select>
-              <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as SimpleExerciseType | "")} className="w-full sm:w-auto px-2 py-1.5 text-[11px] outline-none border transition-colors cursor-pointer hover:border-accent/60 hover:bg-surface-hover focus:border-accent/70" style={{ borderColor: "var(--border)", color: "var(--text-primary)", backgroundColor: "var(--surface)", borderRadius: "2px" }}>
+              <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as SimpleExerciseType | "")} className="w-full sm:w-auto px-2 py-1.5 text-[11px] outline-none border border-ink-light bg-ink-dark text-cloud-white rounded-lg transition-colors cursor-pointer">
                 <option value="">All Types</option>
                 {dbOptions.types.map((t) => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
               </select>
@@ -1220,7 +1221,7 @@ function ExercisesTab({
 
   return (
     <div className="nyaa-history-table-shell">
-      <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
+      <GlowCard glow="jade" hoverable={false}>
         {renderToolbar()}
       {loading ? (
         <div className="px-3 py-10 text-center text-sm" style={{ backgroundColor: "var(--surface)", color: "var(--text-muted)" }}>
@@ -1447,7 +1448,54 @@ function ExercisesTab({
           )}
         </>
       )}
-      </div>
+      </GlowCard>
+
+      {isMobile && (
+        <MobileFocusOverlay
+          isOpen={exerciseFocusMode}
+          onDismiss={() => setExerciseFocusMode(false)}
+          label="Exercise Library"
+        >
+          <div className="space-y-1.5">
+            {sorted.length === 0 ? (
+              <div className="rounded-lg border px-3 py-4 text-center text-xs" style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)", color: "var(--text-muted)" }}>
+                No matching exercises
+              </div>
+            ) : (
+              sorted.map((ex) => (
+                <div
+                  key={`focus-${ex.id}`}
+                  className="border rounded-lg px-3 py-2.5 flex flex-col gap-1.5"
+                  style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)" }}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-medium truncate" style={{ color: "var(--text-primary)" }}>{resolveExerciseName(ex)}</span>
+                    <DifficultyBadge difficulty={ex.difficulty} />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5 text-[11px]" style={{ color: "var(--text-secondary)" }}>
+                    <span className="inline-flex items-center gap-1 border px-1.5 py-0.5" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
+                      {getCategoryIcon(ex.category)} {ex.category}
+                    </span>
+                    <span className="inline-flex items-center gap-1 border px-1.5 py-0.5" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
+                      {getExerciseTypeIcon(ex.exerciseType)} <span className="capitalize">{ex.exerciseType}</span>
+                    </span>
+                    {ex.muscleGroups.length > 0 && (
+                      <span className="border px-1.5 py-0.5" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
+                        {ex.muscleGroups.join(", ")}
+                      </span>
+                    )}
+                  </div>
+                  {(ex.progression ?? []).length > 0 && (
+                    <div className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+                      Progressions: {(ex.progression ?? []).join(" → ")}
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </MobileFocusOverlay>
+      )}
 
       <GlowModal
         isOpen={quickEditExercise !== null && quickEditField !== null}
@@ -1536,22 +1584,16 @@ function ExercisesTab({
             {historyDockOpen ? (
               <div
                 ref={historyDockRef}
-                className="w-[min(360px,calc(100vw-0.25rem))] rounded-t-xl border shadow-2xl overflow-hidden"
-                style={{
-                  backgroundColor: "var(--surface)",
-                  borderColor: "var(--border)",
-                  boxShadow: "var(--shadow-elev-2)",
-                }}
+                className="w-[min(360px,calc(100vw-0.25rem))] rounded-t-xl border border-ink-light shadow-2xl overflow-hidden bg-ink-deep"
               >
                 <div
-                  className="flex items-center justify-between px-3 py-2 border-b transition-all duration-200"
-                  style={{ borderColor: "var(--border)", backgroundColor: "var(--nyaa-table-head-bg)" }}
+                  className="flex items-center justify-between px-3 py-2 border-b border-ink-light transition-all duration-200"
                 >
                   <div className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--text-primary)" }}>
+                    <p className="text-sm text-jade-glow uppercase tracking-wider">
                       Edit History
                     </p>
-                    <p className="text-[11px] truncate" style={{ color: "var(--text-secondary)" }}>
+                    <p className="text-[11px] truncate text-mist-dark">
                       Latest library edits by users
                     </p>
                   </div>
@@ -1636,12 +1678,7 @@ function ExercisesTab({
               <button
                 type="button"
                 onClick={() => setHistoryDockOpen(true)}
-                className="w-[min(200px,calc(100vw-0.25rem))] rounded-t-xl border border-b-0 px-4 py-2 text-xs font-semibold uppercase tracking-[0.1em] shadow-lg transition-all duration-200 hover:bg-ink-mid/30"
-                style={{
-                  backgroundColor: "var(--surface)",
-                  borderColor: "var(--border)",
-                  color: "var(--text-primary)",
-                }}
+                className="w-[min(200px,calc(100vw-0.25rem))] rounded-t-xl border border-ink-light border-b-0 px-4 py-2 text-xs font-semibold uppercase tracking-wider shadow-lg transition-all duration-200 bg-ink-deep text-cloud-white hover:bg-ink-mid/30"
               >
                 Edit History
               </button>
@@ -1975,7 +2012,7 @@ export default function ExerciseDBPage() {
       subtitle="Manage your exercise database"
       mobileContentPaddingClass="p-2 pb-24"
     >
-      <div className="nyaa-history-page space-y-2 px-0 py-2 sm:py-3">
+      <div className="space-y-6 px-0 py-2 sm:py-3">
         <div className="space-y-3">
           <OverviewTab
             exercises={exercises}

@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import PageLayout from "@/components/layout/PageLayout";
+import GlowCard from "@/components/ui/GlowCard";
+import GlowButton from "@/components/ui/GlowButton";
 import { useAppContext } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -35,7 +37,6 @@ const DATE_OPTIONS: Array<{ value: DateFormatOption; label: string; sample: stri
 ];
 
 type SettingsSectionKey =
-  | "summary"
   | "theme"
   | "dateFormat"
   | "terminology"
@@ -45,7 +46,6 @@ type SettingsSectionKey =
   | "variationLabels";
 
 const DEFAULT_SECTION_STATE: Record<SettingsSectionKey, boolean> = {
-  summary: false,
   theme: false,
   dateFormat: false,
   terminology: false,
@@ -74,13 +74,13 @@ function OptionButton({
     <button
       type="button"
       onClick={onClick}
-      className="w-full text-left border px-2.5 py-2 transition-colors"
+      className="w-full text-left rounded-lg border px-2.5 py-2 transition-colors"
       style={{
-        borderColor: active ? "var(--accent)" : "var(--border)",
+        borderColor: active ? "var(--jade-glow)" : "var(--border)",
         backgroundColor: active
-          ? "color-mix(in srgb, var(--accent) 10%, var(--surface))"
+          ? "color-mix(in srgb, var(--jade-glow) 10%, var(--surface))"
           : "var(--surface)",
-        color: active ? "var(--accent)" : "var(--text-primary)",
+        color: active ? "var(--jade-glow)" : "var(--text-primary)",
       }}
     >
       <p className="text-[11px] font-semibold"><LearningText text={title} languageMode={languageMode} enabled={learningEnabled} /></p>
@@ -111,7 +111,7 @@ function CollapsiblePanel({
   children: React.ReactNode;
 }) {
   return (
-    <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
+    <GlowCard glow="jade" hoverable={false} className="overflow-hidden">
       <button
         type="button"
         onClick={() => onToggle(sectionKey)}
@@ -119,16 +119,12 @@ function CollapsiblePanel({
         aria-expanded={open}
       >
         <div
-          className="px-3 py-2 border-b flex items-center justify-between"
-          style={{
-            borderColor: "var(--nyaa-table-grid)",
-            backgroundColor: "var(--nyaa-table-head-bg)",
-          }}
+          className="flex items-center justify-between"
         >
-          <p className="text-xs font-bold" style={{ color: "var(--nyaa-table-head-text)" }}>
+          <h3 className="text-sm text-jade-glow uppercase tracking-wider">
             <LearningText text={title} languageMode={languageMode} enabled={learningEnabled} />
-          </p>
-          <span className="text-xs font-bold" style={{ color: "var(--nyaa-table-head-text)" }}>
+          </h3>
+          <span className="text-xs font-bold text-jade-glow">
             {open ? "-" : "+"}
           </span>
         </div>
@@ -147,7 +143,7 @@ function CollapsiblePanel({
           </motion.div>
         ) : null}
       </AnimatePresence>
-    </div>
+    </GlowCard>
   );
 }
 
@@ -206,15 +202,11 @@ export default function SettingsPage() {
       subtitle={learningEnabled ? (languageMode === "vietnamese" ? "Tùy chỉnh giao diện tập luyện" : "Configure your training interface") : "Configure your training interface"}
       mobileContentPaddingClass="p-2 pb-24"
     >
-      <div className="nyaa-history-page space-y-2 px-0 py-2 sm:py-3">
-        <CollapsiblePanel
-          sectionKey="summary"
-          title="Settings Summary"
-          open={openSections.summary}
-          onToggle={toggleSection}
-          languageMode={languageMode}
-          learningEnabled={learningEnabled}
-        >
+      <div className="space-y-6 px-0 py-2 sm:py-3">
+        <GlowCard glow="jade" hoverable={false}>
+          <h3 className="text-sm text-jade-glow uppercase tracking-wider mb-3">
+              <LearningText text="Settings Summary" languageMode={languageMode} enabled={learningEnabled} />
+            </h3>
           <table className="w-full text-[11px] border-collapse" style={{ backgroundColor: "var(--surface)" }}>
             <tbody>
               <tr>
@@ -269,15 +261,15 @@ export default function SettingsPage() {
               </tr>
               <tr>
                 <td className="px-2 py-1.5 font-semibold border-t border-r whitespace-nowrap" style={{ borderColor: "var(--border)", color: "var(--text-muted)", backgroundColor: "color-mix(in srgb, var(--border) 10%, var(--surface))" }}>
-                  <LearningText text="Exercise Foreign Language:" languageMode={languageMode} enabled={learningEnabled} />
+                  <LearningText text="Exercise Name Language:" languageMode={languageMode} enabled={learningEnabled} />
                 </td>
                 <td className="px-2 py-1.5 border-t" colSpan={3} style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}>
-                  <LearningText text={settings.showExerciseForeignLanguage ? "Enabled" : "Disabled"} languageMode={languageMode} enabled={learningEnabled} />
+                  <LearningText text={settings.showExerciseForeignLanguage ? "Show exercises in foreign name" : "Hide exercises in foreign name"} languageMode={languageMode} enabled={learningEnabled} />
                 </td>
               </tr>
             </tbody>
           </table>
-        </CollapsiblePanel>
+        </GlowCard>
 
         <CollapsiblePanel
           sectionKey="theme"
@@ -287,7 +279,7 @@ export default function SettingsPage() {
           languageMode={languageMode}
           learningEnabled={learningEnabled}
         >
-          <div className="grid gap-1.5 p-2 sm:grid-cols-2 lg:grid-cols-3" style={{ backgroundColor: "var(--surface)" }}>
+          <div className="grid gap-1.5 p-2 sm:grid-cols-2 lg:grid-cols-3">
             {THEME_OPTIONS.map((theme) => (
               <OptionButton
                 key={theme.value}
@@ -311,7 +303,7 @@ export default function SettingsPage() {
             languageMode={languageMode}
             learningEnabled={learningEnabled}
           >
-            <div className="grid gap-1.5 p-2" style={{ backgroundColor: "var(--surface)" }}>
+            <div className="grid gap-1.5 p-2">
               {DATE_OPTIONS.map((option) => (
                 <OptionButton
                   key={option.value}
@@ -334,7 +326,7 @@ export default function SettingsPage() {
             languageMode={languageMode}
             learningEnabled={learningEnabled}
           >
-            <div className="grid gap-1.5 p-2" style={{ backgroundColor: "var(--surface)" }}>
+            <div className="grid gap-1.5 p-2">
               <OptionButton
                 active={settings.terminologyMode === "fantasy"}
                 title="Cultivation"
@@ -363,7 +355,7 @@ export default function SettingsPage() {
           languageMode={languageMode}
           learningEnabled={learningEnabled}
         >
-          <div className="grid gap-1.5 p-2 sm:grid-cols-2" style={{ backgroundColor: "var(--surface)" }}>
+          <div className="grid gap-1.5 p-2">
             <OptionButton
               active={languageMode === "english"}
               title="English"
@@ -391,19 +383,19 @@ export default function SettingsPage() {
           languageMode={languageMode}
           learningEnabled={learningEnabled}
         >
-          <div className="grid gap-1.5 p-2 sm:grid-cols-2" style={{ backgroundColor: "var(--surface)" }}>
+          <div className="grid gap-1.5 p-2">
             <OptionButton
               active={settings.showExerciseForeignLanguage}
-              title="Show Foreign Name"
-              subtitle="Display opposite exercise name in parentheses"
+              title="Show exercises in foreign name"
+              subtitle="Show foreign-language exercise names"
               onClick={() => updateSettings({ showExerciseForeignLanguage: true })}
               languageMode={languageMode}
               learningEnabled={learningEnabled}
             />
             <OptionButton
               active={!settings.showExerciseForeignLanguage}
-              title="Hide Foreign Name"
-              subtitle="Only show primary exercise name"
+              title="Hide exercises in foreign name"
+              subtitle="Hide foreign-language exercise names"
               onClick={() => updateSettings({ showExerciseForeignLanguage: false })}
               languageMode={languageMode}
               learningEnabled={learningEnabled}
@@ -428,7 +420,7 @@ export default function SettingsPage() {
             languageMode={languageMode}
             learningEnabled={learningEnabled}
           >
-            <div className="grid gap-1.5 p-2" style={{ backgroundColor: "var(--surface)" }}>
+            <div className="grid gap-1.5 p-2">
               {([
                 { value: "kg" as WeightUnitPref, title: "Kilograms (kg)" },
                 { value: "lbs" as WeightUnitPref, title: "Pounds (lbs)" },
@@ -453,7 +445,7 @@ export default function SettingsPage() {
             languageMode={languageMode}
             learningEnabled={learningEnabled}
           >
-            <div className="grid gap-1.5 p-2" style={{ backgroundColor: "var(--surface)" }}>
+            <div className="grid gap-1.5 p-2">
               {([
                 { value: "abbreviation" as VariationDisplayMode, title: "Abbreviated", subtitle: "Short labels" },
                 { value: "full" as VariationDisplayMode, title: "Full Text", subtitle: "Expanded labels" },
@@ -472,45 +464,19 @@ export default function SettingsPage() {
           </CollapsiblePanel>
         </div>
 
-        <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-          <div
-            className="px-3 py-2 border-b"
-            style={{
-              borderColor: "var(--nyaa-table-grid)",
-              backgroundColor: "var(--nyaa-table-head-bg)",
-            }}
-          >
-            <p className="text-xs font-bold" style={{ color: "var(--nyaa-table-head-text)" }}>
-              <LearningText text="Actions" languageMode={languageMode} enabled={learningEnabled} />
-            </p>
-          </div>
-          <div className="grid gap-1.5 p-2 sm:grid-cols-2" style={{ backgroundColor: "var(--surface)" }}>
-            <button
-              type="button"
-              onClick={resetSettings}
-              className="w-full border px-3 py-2 text-[11px] font-semibold transition-colors"
-              style={{
-                borderColor: "var(--border)",
-                backgroundColor: "color-mix(in srgb, var(--surface) 90%, var(--border))",
-                color: "var(--text-primary)",
-              }}
-            >
+        <GlowCard glow="jade" hoverable={false}>
+          <h3 className="text-sm text-jade-glow uppercase tracking-wider mb-3">
+            <LearningText text="Actions" languageMode={languageMode} enabled={learningEnabled} />
+          </h3>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <GlowButton variant="ghost" onClick={resetSettings} className="w-full">
               <LearningText text="Reset Display Settings" languageMode={languageMode} enabled={learningEnabled} />
-            </button>
-            <button
-              type="button"
-              onClick={logout}
-              className="w-full border px-3 py-2 text-[11px] font-semibold transition-colors"
-              style={{
-                borderColor: "var(--danger)",
-                backgroundColor: "color-mix(in srgb, var(--danger) 8%, var(--surface))",
-                color: "var(--danger)",
-              }}
-            >
+            </GlowButton>
+            <GlowButton variant="crimson" onClick={logout} className="w-full">
               <LearningText text="Logout" languageMode={languageMode} enabled={learningEnabled} />
-            </button>
+            </GlowButton>
           </div>
-        </div>
+        </GlowCard>
       </div>
     </PageLayout>
   );

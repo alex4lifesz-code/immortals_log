@@ -55,9 +55,9 @@ export default function MobileCheckinPage() {
   return (
     <div>
       <MobileHeader title="Daily Check-In" />
-      <section className="mobile-content-stack space-y-4 p-4">
+      <section className="mobile-content-stack space-y-6 p-4">
         <MobileCard>
-          <h2 className="text-base font-semibold text-cloud-white">Log today</h2>
+          <h2 className="text-sm text-jade-glow uppercase tracking-wider mb-1">Log Today</h2>
           <p className="mt-1 text-sm text-mist-light">Shared check-in API and user identity from existing auth context.</p>
 
           <div className="mt-4 space-y-3">
