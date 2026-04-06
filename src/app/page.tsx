@@ -22,6 +22,7 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [languageMode, setLanguageMode] = useState<LanguageMode>("english");
+  const [currentTheme, setCurrentTheme] = useState<string>("");
   const router = useRouter();
   const { login } = useAuth();
 
@@ -34,6 +35,7 @@ export default function LoginPage() {
         document.documentElement.classList.remove(...themes);
         if (themes.includes(savedTheme)) {
           document.documentElement.classList.add(savedTheme);
+          setCurrentTheme(savedTheme);
         }
       }
 
@@ -121,18 +123,18 @@ export default function LoginPage() {
       <div className="absolute top-0 inset-x-0 z-20">
         <ConnectivityBanner />
       </div>
-      {/* Background mist layers */}
-      <div className="absolute inset-0 bg-gradient-to-br from-void-black via-ink-deep to-jade-glow/25" />
-      <div className="absolute inset-0 opacity-30">
+      {/* Background mist layers — forced dark regardless of theme */}
+      <div className="absolute inset-0 login-atmosphere" />
+      <div className="absolute inset-0 login-orbs">
         <div
-          className="absolute top-0 left-1/4 w-96 h-96 bg-jade-deep/20 rounded-full blur-3xl animate-glow-pulse"
+          className="absolute top-0 left-1/4 w-96 h-96 rounded-full blur-3xl animate-glow-pulse"
         />
         <div
-          className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-mountain-blue/10 rounded-full blur-3xl animate-glow-pulse"
+          className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full blur-3xl animate-glow-pulse"
           style={{ animationDelay: "1.5s" }}
         />
         <div
-          className="absolute top-1/3 right-1/3 w-64 h-64 bg-crimson-deep/10 rounded-full blur-3xl animate-glow-pulse"
+          className="absolute top-1/3 right-1/3 w-64 h-64 rounded-full blur-3xl animate-glow-pulse"
           style={{ animationDelay: "3s" }}
         />
       </div>
@@ -148,7 +150,7 @@ export default function LoginPage() {
         return (
           <motion.div
             key={i}
-            className="absolute w-1 h-1 bg-jade-glow/40 rounded-full"
+            className="absolute w-1 h-1 rounded-full login-particle"
             animate={{
               y: [0, -100, 0],
               x: [0, xOffset, 0],
@@ -167,6 +169,44 @@ export default function LoginPage() {
         );
       })}
 
+      {/* Document theme — ink wash mountain silhouettes */}
+      {currentTheme === "document" && (
+        <>
+          {/* Distant mountain range — bottom of viewport */}
+          <svg
+            className="absolute bottom-0 left-0 w-full pointer-events-none opacity-[0.08]"
+            viewBox="0 0 1200 200"
+            preserveAspectRatio="none"
+            style={{ height: "30vh" }}
+          >
+            <path
+              d="M0 200 L0 140 Q60 80 120 110 Q180 60 250 90 Q320 40 400 70 Q450 30 520 60 Q580 20 650 55 Q720 35 800 65 Q860 25 930 50 Q980 40 1050 70 Q1120 50 1200 80 L1200 200 Z"
+              fill="rgba(80, 60, 40, 0.6)"
+            />
+            <path
+              d="M0 200 L0 160 Q80 120 160 140 Q240 100 340 125 Q420 85 500 110 Q560 70 650 95 Q740 80 840 105 Q920 75 1000 100 Q1080 85 1200 110 L1200 200 Z"
+              fill="rgba(58, 88, 160, 0.3)"
+            />
+          </svg>
+
+          {/* Calligraphic seal stamp — top right corner */}
+          <div
+            className="absolute top-[12%] right-[8%] pointer-events-none opacity-[0.07] rotate-[-8deg]"
+          >
+            <svg viewBox="0 0 80 80" className="w-20 h-20">
+              <rect x="4" y="4" width="72" height="72" rx="4" fill="none" stroke="#903030" strokeWidth="3" />
+              <rect x="10" y="10" width="60" height="60" rx="2" fill="none" stroke="#903030" strokeWidth="1" />
+              {/* Abstract seal characters */}
+              <line x1="25" y1="28" x2="55" y2="28" stroke="#903030" strokeWidth="2.5" strokeLinecap="round" />
+              <line x1="25" y1="40" x2="55" y2="40" stroke="#903030" strokeWidth="2.5" strokeLinecap="round" />
+              <line x1="25" y1="52" x2="55" y2="52" stroke="#903030" strokeWidth="2.5" strokeLinecap="round" />
+              <line x1="33" y1="22" x2="33" y2="58" stroke="#903030" strokeWidth="2" strokeLinecap="round" />
+              <line x1="47" y1="22" x2="47" y2="58" stroke="#903030" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </div>
+        </>
+      )}
+
       {/* Login Card */}
       <motion.div
         initial={{ opacity: 0, y: 30 }}
@@ -174,7 +214,33 @@ export default function LoginPage() {
         transition={{ duration: 0.8, ease: "easeOut" }}
         className="relative z-10 w-full max-w-md mx-4"
       >
-        <div className="bg-ink-deep/80 backdrop-blur-xl border border-jade-glow/45 rounded-2xl p-8 glow-subtle">
+        <div className="login-panel rounded-2xl p-8 glow-subtle">
+          {/* Document theme — scroll corner ornaments */}
+          {currentTheme === "document" && (
+            <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+              {/* Top-left corner ornament */}
+              <svg className="absolute top-2 left-2 w-8 h-8 opacity-20" viewBox="0 0 32 32">
+                <path d="M2 2 L2 14 Q2 2 14 2" fill="none" stroke="#8a7040" strokeWidth="1.5" />
+                <circle cx="2" cy="2" r="1.5" fill="#8a7040" />
+              </svg>
+              {/* Top-right corner ornament */}
+              <svg className="absolute top-2 right-2 w-8 h-8 opacity-20" viewBox="0 0 32 32">
+                <path d="M30 2 L30 14 Q30 2 18 2" fill="none" stroke="#8a7040" strokeWidth="1.5" />
+                <circle cx="30" cy="2" r="1.5" fill="#8a7040" />
+              </svg>
+              {/* Bottom-left corner ornament */}
+              <svg className="absolute bottom-2 left-2 w-8 h-8 opacity-20" viewBox="0 0 32 32">
+                <path d="M2 30 L2 18 Q2 30 14 30" fill="none" stroke="#8a7040" strokeWidth="1.5" />
+                <circle cx="2" cy="30" r="1.5" fill="#8a7040" />
+              </svg>
+              {/* Bottom-right corner ornament */}
+              <svg className="absolute bottom-2 right-2 w-8 h-8 opacity-20" viewBox="0 0 32 32">
+                <path d="M30 30 L30 18 Q30 30 18 30" fill="none" stroke="#8a7040" strokeWidth="1.5" />
+                <circle cx="30" cy="30" r="1.5" fill="#8a7040" />
+              </svg>
+            </div>
+          )}
+
           {/* Title - bilingual */}
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -317,7 +383,8 @@ export default function LoginPage() {
                 variant="jade"
                 size="lg"
                 glow
-                className="w-full !bg-jade-light !text-pure-white !border-jade-glow/80 hover:!bg-jade-glow hover:!border-jade-light"
+                className="w-full !border-jade-glow/80 hover:!border-jade-light"
+                style={{ backgroundColor: 'var(--jade-glow)', color: '#ffffff' }}
                 disabled={loading}
               >
                 {loading
@@ -337,11 +404,11 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => persistLanguageMode("english")}
-                className="rounded border px-2 py-1 text-[10px]"
+                className="rounded border px-2 py-1 text-[10px] login-lang-btn"
                 style={{
-                  borderColor: languageMode === "english" ? "var(--accent)" : "var(--border)",
-                  color: languageMode === "english" ? "var(--accent)" : "var(--text-secondary)",
-                  backgroundColor: "var(--surface)",
+                  borderColor: languageMode === "english" ? "var(--jade-glow)" : "rgba(60, 70, 90, 0.5)",
+                  color: languageMode === "english" ? "var(--jade-glow)" : "#9eaab6",
+                  backgroundColor: "rgba(10, 14, 22, 0.5)",
                 }}
               >
                 English
@@ -349,11 +416,11 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => persistLanguageMode("vietnamese")}
-                className="rounded border px-2 py-1 text-[10px]"
+                className="rounded border px-2 py-1 text-[10px] login-lang-btn"
                 style={{
-                  borderColor: languageMode === "vietnamese" ? "var(--accent)" : "var(--border)",
-                  color: languageMode === "vietnamese" ? "var(--accent)" : "var(--text-secondary)",
-                  backgroundColor: "var(--surface)",
+                  borderColor: languageMode === "vietnamese" ? "var(--jade-glow)" : "rgba(60, 70, 90, 0.5)",
+                  color: languageMode === "vietnamese" ? "var(--jade-glow)" : "#9eaab6",
+                  backgroundColor: "rgba(10, 14, 22, 0.5)",
                 }}
               >
                 Tiếng Việt

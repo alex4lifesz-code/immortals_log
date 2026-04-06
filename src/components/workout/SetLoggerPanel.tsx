@@ -659,7 +659,7 @@ export function SetLoggerPanel({
         />
         <div
           aria-hidden
-          className="pointer-events-none absolute -right-14 -top-14 h-44 w-44 rounded-full blur-3xl"
+          className="pointer-events-none absolute -right-14 -top-14 h-44 w-44 rounded-full blur-xl"
           style={{ background: `color-mix(in srgb, ${diffStyle.glowColor} 10%, transparent)` }}
         />
 

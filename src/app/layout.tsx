@@ -71,7 +71,7 @@ export default function RootLayout({
         {/* Theme hydration script — theme list must stay in sync with CONFIG.themes in src/lib/config.ts */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var d=document.documentElement;var themes=['midnight-ink','mountain-mist','calligraphy','sakura','sakura-dark','eternal','discord','document','nyaa'];d.classList.remove.apply(d.classList,themes);var t=localStorage.getItem('cultivation-theme');if(t==='light'){d.classList.remove('dark');d.classList.add('light')}var s=localStorage.getItem('cultivation-theme-style');if(s&&themes.indexOf(s)!==-1){d.classList.add(s)}}catch(e){}})()`
+            __html: `(function(){try{var d=document.documentElement;var themes=['midnight-ink','mountain-mist','calligraphy','sakura','sakura-dark','eternal','discord','document','nyaa','emerald-lotus','gilded-bamboo','crane-peak','obsidian-void','crimson-gate','frost-sanctuary'];d.classList.remove.apply(d.classList,themes);var t=localStorage.getItem('cultivation-theme');if(t==='light'){d.classList.remove('dark');d.classList.add('light')}var s=localStorage.getItem('cultivation-theme-style');if(s&&themes.indexOf(s)!==-1){d.classList.add(s)}}catch(e){}})()`
           }}
         />
       </head>

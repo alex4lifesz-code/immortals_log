@@ -128,7 +128,7 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-void-black relative overflow-x-hidden">
       {/* Background effects */}
       <div className="absolute inset-0 bg-gradient-to-br from-void-black via-ink-deep to-jade-glow/10 pointer-events-none" />
-      <div className="absolute top-0 left-1/4 w-80 h-80 bg-jade-deep/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-0 left-1/4 w-80 h-80 bg-jade-deep/10 rounded-full blur-xl pointer-events-none" />
 
       <div className="relative z-10 max-w-lg mx-auto">
         {/* Progress bar (hidden on welcome step) */}

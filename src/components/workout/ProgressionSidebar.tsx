@@ -632,7 +632,7 @@ export function ProgressionSidebar({
                     lastCategoryKey = primaryCategory;
                     const groupCount = searchGroupCountByCategory.get(primaryCategory) ?? 0;
                     elements.push(
-                      <div key={`cat-${primaryCategory}`} className="sticky top-0 z-10 px-1.5 py-1 mt-2 first:mt-0 mb-0.5 bg-ink-dark/90 backdrop-blur-sm border-b border-ink-light/20">
+                      <div key={`cat-${primaryCategory}`} className="sticky top-0 z-10 px-1.5 py-1 mt-2 first:mt-0 mb-0.5 bg-ink-dark/95 border-b border-ink-light/20">
                         <span className="text-[10px] font-semibold text-mist-light/70 uppercase tracking-wider">{primaryCategory}</span>
                         <span className="ml-1.5 text-[9px] text-mist-dark/60">({groupCount})</span>
                       </div>

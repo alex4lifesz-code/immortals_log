@@ -11,8 +11,8 @@ interface MobileHeaderProps {
 export default function MobileHeader({ title, rightSlot }: MobileHeaderProps) {
   return (
     <header
-      className="mobile-header-polish sticky top-0 z-30 flex min-h-14 items-center justify-between border-b border-border px-4 backdrop-blur-sm"
-      style={{ backgroundColor: "var(--header-bg)", borderBottomColor: "var(--header-border)" }}
+      className="mobile-header-polish sticky top-0 z-30 flex min-h-14 items-center justify-between border-b px-4"
+      style={{ backgroundColor: "var(--header-bg)", borderBottomColor: "var(--neon-border)" }}
     >
       <MobileBackButton />
       <h1 className="mobile-header-title max-w-[56vw] truncate text-base font-semibold text-cloud-white">{title}</h1>

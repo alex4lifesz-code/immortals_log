@@ -10,6 +10,7 @@ import MobileNavBar from "@/components/navigation/MobileNavBar";
 import SwipeNavigation from "@/components/navigation/SwipeNavigation";
 import NyaaTopNav from "@/components/navigation/NyaaTopNav";
 import ConnectivityBanner from "@/components/system/ConnectivityBanner";
+import AtmosphericBackground from "@/components/atmosphere/AtmosphericBackground";
 import { useIncomingFriendRequestsCount } from "@/hooks/useIncomingFriendRequestsCount";
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
@@ -25,6 +26,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   return (
     <MotionConfig transition={disableMotion ? { duration: 0 } : undefined}>
       <div className="app-atmosphere safe-area-shell h-screen flex flex-col overflow-hidden nyaa-layout">
+        <AtmosphericBackground />
         {!isWorkoutInputFullscreen && !isMobile && <NyaaTopNav incomingFriendRequestCount={incomingFriendRequestCount} />}
         {!isWorkoutInputFullscreen && <ConnectivityBanner />}
         <div className="flex-1 flex min-w-0 flex-col overflow-hidden nyaa-content-area">

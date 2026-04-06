@@ -102,6 +102,66 @@ const themePreviews: { id: ThemeStyle; title: string; colors: string[]; favorite
     ],
     favorite: true,
   },
+  {
+    id: "emerald-lotus",
+    title: "Emerald Lotus Pavilion",
+    colors: [
+      "var(--theme-preview-emerald-lotus-1)",
+      "var(--theme-preview-emerald-lotus-2)",
+      "var(--theme-preview-emerald-lotus-3)",
+      "var(--theme-preview-emerald-lotus-4)",
+    ],
+  },
+  {
+    id: "gilded-bamboo",
+    title: "Gilded Bamboo Grove",
+    colors: [
+      "var(--theme-preview-gilded-bamboo-1)",
+      "var(--theme-preview-gilded-bamboo-2)",
+      "var(--theme-preview-gilded-bamboo-3)",
+      "var(--theme-preview-gilded-bamboo-4)",
+    ],
+  },
+  {
+    id: "crane-peak",
+    title: "Heavenly Crane Peak",
+    colors: [
+      "var(--theme-preview-crane-peak-1)",
+      "var(--theme-preview-crane-peak-2)",
+      "var(--theme-preview-crane-peak-3)",
+      "var(--theme-preview-crane-peak-4)",
+    ],
+  },
+  {
+    id: "obsidian-void",
+    title: "Obsidian Void Scripture",
+    colors: [
+      "var(--theme-preview-obsidian-void-1)",
+      "var(--theme-preview-obsidian-void-2)",
+      "var(--theme-preview-obsidian-void-3)",
+      "var(--theme-preview-obsidian-void-4)",
+    ],
+  },
+  {
+    id: "crimson-gate",
+    title: "Crimson Demon Gate",
+    colors: [
+      "var(--theme-preview-crimson-gate-1)",
+      "var(--theme-preview-crimson-gate-2)",
+      "var(--theme-preview-crimson-gate-3)",
+      "var(--theme-preview-crimson-gate-4)",
+    ],
+  },
+  {
+    id: "frost-sanctuary",
+    title: "Silent Frost Sanctuary",
+    colors: [
+      "var(--theme-preview-frost-sanctuary-1)",
+      "var(--theme-preview-frost-sanctuary-2)",
+      "var(--theme-preview-frost-sanctuary-3)",
+      "var(--theme-preview-frost-sanctuary-4)",
+    ],
+  },
 ];
 
 export default function MobileThemeSelector() {

@@ -27,6 +27,12 @@ const THEME_OPTIONS: Array<{ value: Theme; label: string; desc: string }> = [
   { value: "discord", label: "Discord", desc: "Discord-inspired dark" },
   { value: "document", label: "Document", desc: "Paper + slate" },
   { value: "nyaa", label: "Nyaa", desc: "Nyaa blue-green" },
+  { value: "emerald-lotus", label: "Emerald Lotus", desc: "Jade temple at dawn" },
+  { value: "gilded-bamboo", label: "Gilded Bamboo", desc: "Golden scripture hall" },
+  { value: "crane-peak", label: "Crane Peak", desc: "Celestial silver-blue" },
+  { value: "obsidian-void", label: "Obsidian Void", desc: "Cosmic purple void" },
+  { value: "crimson-gate", label: "Crimson Gate", desc: "Demonic crimson ember" },
+  { value: "frost-sanctuary", label: "Frost Sanctuary", desc: "Glacial ice aurora" },
 ];
 
 const DATE_OPTIONS: Array<{ value: DateFormatOption; label: string; sample: string }> = [

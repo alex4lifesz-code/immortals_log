@@ -47,6 +47,12 @@ export const CONFIG = {
     "discord",
     "document",
     "nyaa",
+    "emerald-lotus",
+    "gilded-bamboo",
+    "crane-peak",
+    "obsidian-void",
+    "crimson-gate",
+    "frost-sanctuary",
   ] as const,
 
   bandResistance: {

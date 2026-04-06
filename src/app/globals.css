@@ -1,4 +1,4 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 
 /* ===== Cultivation Workout — Wuxia Ink Painting Theme ===== */
 
@@ -178,6 +178,42 @@
     --theme-preview-nyaa-3: #2e51a2;
     --theme-preview-nyaa-4: #6aa84f;
 
+    /* Emerald Lotus preview colors */
+    --theme-preview-emerald-lotus-1: #f0f7f4;
+    --theme-preview-emerald-lotus-2: #dfeee8;
+    --theme-preview-emerald-lotus-3: #1f7858;
+    --theme-preview-emerald-lotus-4: #b04a3a;
+
+    /* Gilded Bamboo preview colors */
+    --theme-preview-gilded-bamboo-1: #f8f4eb;
+    --theme-preview-gilded-bamboo-2: #ebe4d6;
+    --theme-preview-gilded-bamboo-3: #7a6020;
+    --theme-preview-gilded-bamboo-4: #a05038;
+
+    /* Crane Peak preview colors */
+    --theme-preview-crane-peak-1: #f4f6fa;
+    --theme-preview-crane-peak-2: #e4e8f0;
+    --theme-preview-crane-peak-3: #3858a0;
+    --theme-preview-crane-peak-4: #985898;
+
+    /* Obsidian Void preview colors */
+    --theme-preview-obsidian-void-1: #08060e;
+    --theme-preview-obsidian-void-2: #141020;
+    --theme-preview-obsidian-void-3: #8858d8;
+    --theme-preview-obsidian-void-4: #a848c0;
+
+    /* Crimson Gate preview colors */
+    --theme-preview-crimson-gate-1: #0a0606;
+    --theme-preview-crimson-gate-2: #1c1212;
+    --theme-preview-crimson-gate-3: #d04030;
+    --theme-preview-crimson-gate-4: #d8b060;
+
+    /* Frost Sanctuary preview colors */
+    --theme-preview-frost-sanctuary-1: #060a10;
+    --theme-preview-frost-sanctuary-2: #101820;
+    --theme-preview-frost-sanctuary-3: #20a0d0;
+    --theme-preview-frost-sanctuary-4: #4080d0;
+
     /* Cultivator colors */
     --cultivator-jade: #3a8f8f;
     --cultivator-jade-rgb: 58 143 143;
@@ -203,7 +239,10 @@
     --motion-slow: 520ms;
     --ease-polish: cubic-bezier(0.22, 1, 0.36, 1);
     --ease-float: cubic-bezier(0.2, 0.8, 0.2, 1);
-    --ring-accent: color-mix(in srgb, var(--accent) 42%, transparent);
+    --ring-accent: color-mix(in srgb, var(--accent) 60%, transparent);
+    --neon-border: color-mix(in srgb, var(--accent) 12%, var(--border));
+    --neon-glow: none;
+    --neon-glow-strong: 0 0 8px color-mix(in srgb, var(--accent) 18%, transparent);
     --surface-panel: linear-gradient(
       160deg,
       color-mix(in srgb, var(--ink-deep) 94%, transparent) 0%,
@@ -427,6 +466,308 @@ main {
   animation: shake 0.45s ease-in-out;
 }
 
+/* â”€â”€ Login-specific overrides â”€â”€
+   Force a dark, atmospheric aesthetic on the login/register screen
+   regardless of the active theme. Accent colors come from the theme's
+   own CSS variables so each palette (jade, gold, pink, etc.) is honoured. */
+.login-atmosphere {
+  background:
+    linear-gradient(
+      135deg,
+      #0d0f14,
+      color-mix(in srgb, var(--jade-glow) 12%, #121620) 40%,
+      color-mix(in srgb, var(--jade-glow) 35%, #121620)
+    );
+}
+
+.login-panel {
+  background: color-mix(in srgb, var(--jade-glow) 8%, rgba(18, 22, 32, 0.95));
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 1px solid color-mix(in srgb, var(--jade-glow) 65%, transparent);
+  box-shadow:
+    0 0 8px color-mix(in srgb, var(--jade-glow) 35%, transparent),
+    0 0 1px color-mix(in srgb, var(--jade-glow) 70%, transparent),
+    0 8px 24px rgba(0, 0, 0, 0.4);
+  color: #d4d8e0;
+}
+
+.login-panel .text-jade-light  { color: var(--jade-light); }
+.login-panel .text-jade-glow   { color: var(--jade-glow); }
+.login-panel .text-mist-mid    { color: #8090a0; }
+.login-panel .text-mist-dark   { color: #5a6a7a; }
+.login-panel .text-mist-light  { color: #9eaab6; }
+.login-panel .text-cloud-white { color: #d4d8e0; }
+.login-panel .text-crimson-light { color: var(--crimson-light, #e06060); }
+
+.login-panel input,
+.login-panel select {
+  background: rgba(10, 14, 22, 0.85);
+  border-color: color-mix(in srgb, var(--jade-glow) 30%, rgba(60, 70, 90, 0.6));
+  color: #d4d8e0;
+}
+.login-panel input::placeholder { color: #5a6a7a; }
+.login-panel input:focus {
+  border-color: var(--jade-glow);
+  box-shadow:
+    0 0 6px color-mix(in srgb, var(--jade-glow) 45%, transparent),
+    0 0 1px color-mix(in srgb, var(--jade-glow) 80%, transparent);
+}
+
+.login-orbs {
+  opacity: 0.45;
+}
+.login-orbs > :nth-child(1) { background: color-mix(in srgb, var(--jade-glow) 30%, transparent); }
+.login-orbs > :nth-child(2) { background: color-mix(in srgb, var(--mountain-blue-glow) 15%, transparent); }
+.login-orbs > :nth-child(3) { background: color-mix(in srgb, var(--crimson) 15%, transparent); }
+
+.login-particle {
+  background: color-mix(in srgb, var(--jade-glow) 55%, transparent);
+}
+
+/* Ensure the submit button text is always white on the dark login panel */
+.login-panel .text-pure-white,
+.login-panel button[type="submit"] {
+  color: #ffffff !important;
+}
+
+/* â”€â”€ Light-theme login overrides â”€â”€
+   Mountain Mist, Sakura, Eternal are light themes —
+   give them a soft, bright login aesthetic instead of the dark one. */
+:is(html.mountain-mist, html.sakura, html.eternal, html.emerald-lotus, html.gilded-bamboo, html.crane-peak) .login-atmosphere {
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--jade-glow) 10%, var(--ink-mid)),
+      color-mix(in srgb, var(--jade-glow) 20%, var(--ink-dark)) 40%,
+      color-mix(in srgb, var(--jade-glow) 35%, var(--ink-mid))
+    );
+}
+
+:is(html.mountain-mist, html.sakura, html.eternal, html.emerald-lotus, html.gilded-bamboo, html.crane-peak) .login-panel {
+  background: color-mix(in srgb, var(--jade-glow) 12%, rgba(255, 255, 255, 0.88));
+  border: 1px solid color-mix(in srgb, var(--jade-glow) 65%, var(--ink-light));
+  box-shadow:
+    0 0 8px color-mix(in srgb, var(--jade-glow) 30%, transparent),
+    0 0 1px color-mix(in srgb, var(--jade-glow) 60%, transparent),
+    0 8px 24px rgba(0, 0, 0, 0.12);
+  color: var(--cloud-white);
+}
+
+:is(html.mountain-mist, html.sakura, html.eternal, html.emerald-lotus, html.gilded-bamboo, html.crane-peak) .login-panel .text-jade-light  { color: var(--jade-light); }
+:is(html.mountain-mist, html.sakura, html.eternal, html.emerald-lotus, html.gilded-bamboo, html.crane-peak) .login-panel .text-jade-glow   { color: var(--jade-glow); }
+:is(html.mountain-mist, html.sakura, html.eternal, html.emerald-lotus, html.gilded-bamboo, html.crane-peak) .login-panel .text-mist-mid    { color: var(--mist-mid); }
+:is(html.mountain-mist, html.sakura, html.eternal, html.emerald-lotus, html.gilded-bamboo, html.crane-peak) .login-panel .text-mist-dark   { color: var(--mist-dark); }
+:is(html.mountain-mist, html.sakura, html.eternal, html.emerald-lotus, html.gilded-bamboo, html.crane-peak) .login-panel .text-mist-light  { color: var(--mist-light); }
+:is(html.mountain-mist, html.sakura, html.eternal, html.emerald-lotus, html.gilded-bamboo, html.crane-peak) .login-panel .text-cloud-white { color: var(--cloud-white); }
+:is(html.mountain-mist, html.sakura, html.eternal, html.emerald-lotus, html.gilded-bamboo, html.crane-peak) .login-panel .text-crimson-light { color: var(--crimson-light); }
+
+:is(html.mountain-mist, html.sakura, html.eternal, html.emerald-lotus, html.gilded-bamboo, html.crane-peak) .login-panel input,
+:is(html.mountain-mist, html.sakura, html.eternal, html.emerald-lotus, html.gilded-bamboo, html.crane-peak) .login-panel select {
+  background: color-mix(in srgb, var(--jade-glow) 5%, var(--ink-dark));
+  border-color: color-mix(in srgb, var(--jade-glow) 35%, var(--ink-light));
+  color: var(--cloud-white);
+}
+:is(html.mountain-mist, html.sakura, html.eternal, html.emerald-lotus, html.gilded-bamboo, html.crane-peak) .login-panel input::placeholder {
+  color: var(--mist-dark);
+}
+:is(html.mountain-mist, html.sakura, html.eternal, html.emerald-lotus, html.gilded-bamboo, html.crane-peak) .login-panel input:focus {
+  border-color: var(--jade-glow);
+  box-shadow:
+    0 0 6px color-mix(in srgb, var(--jade-glow) 40%, transparent),
+    0 0 1px color-mix(in srgb, var(--jade-glow) 75%, transparent);
+}
+
+:is(html.mountain-mist, html.sakura, html.eternal, html.emerald-lotus, html.gilded-bamboo, html.crane-peak) .login-orbs {
+  opacity: 0.4;
+}
+:is(html.mountain-mist, html.sakura, html.eternal, html.emerald-lotus, html.gilded-bamboo, html.crane-peak) .login-orbs > :nth-child(1) {
+  background: color-mix(in srgb, var(--jade-glow) 30%, transparent);
+}
+:is(html.mountain-mist, html.sakura, html.eternal, html.emerald-lotus, html.gilded-bamboo, html.crane-peak) .login-orbs > :nth-child(2) {
+  background: color-mix(in srgb, var(--mountain-blue-glow) 18%, transparent);
+}
+:is(html.mountain-mist, html.sakura, html.eternal, html.emerald-lotus, html.gilded-bamboo, html.crane-peak) .login-orbs > :nth-child(3) {
+  background: color-mix(in srgb, var(--crimson) 18%, transparent);
+}
+
+:is(html.mountain-mist, html.sakura, html.eternal, html.emerald-lotus, html.gilded-bamboo, html.crane-peak) .login-particle {
+  background: color-mix(in srgb, var(--jade-glow) 50%, transparent);
+}
+
+/* Light-theme login button — dark text on accent bg */
+:is(html.mountain-mist, html.sakura, html.eternal, html.emerald-lotus, html.gilded-bamboo, html.crane-peak) .login-panel button[type="submit"] {
+  color: #ffffff !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   DOCUMENT THEME LOGIN — Ancient Scroll / Imperial Decree Aesthetic
+   Warm parchment, ink wash textures, seal stamp motifs, brush borders
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Background — layered parchment with ink wash gradient */
+html.document .login-atmosphere {
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(58, 88, 160, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 30%, rgba(138, 112, 64, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 80%, rgba(90, 80, 60, 0.05) 0%, transparent 50%),
+    linear-gradient(
+      170deg,
+      #e8e0d4 0%,
+      #ede5d8 20%,
+      #f0e8dc 40%,
+      #e6ddd0 60%,
+      #ddd4c6 80%,
+      #d8cfc0 100%
+    );
+}
+
+/* Orbs — warm ink wash puddles */
+html.document .login-orbs {
+  opacity: 0.5;
+}
+html.document .login-orbs > :nth-child(1) {
+  background: radial-gradient(circle, rgba(58, 88, 160, 0.12) 0%, rgba(58, 88, 160, 0.03) 60%, transparent 100%);
+}
+html.document .login-orbs > :nth-child(2) {
+  background: radial-gradient(circle, rgba(138, 112, 64, 0.10) 0%, rgba(138, 112, 64, 0.02) 60%, transparent 100%);
+}
+html.document .login-orbs > :nth-child(3) {
+  background: radial-gradient(circle, rgba(100, 70, 50, 0.08) 0%, rgba(100, 70, 50, 0.02) 60%, transparent 100%);
+}
+
+/* Panel — parchment scroll card with ink wash border */
+html.document .login-panel {
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(180, 160, 130, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 80%, rgba(160, 140, 110, 0.10) 0%, transparent 50%),
+    linear-gradient(180deg, rgba(248, 242, 232, 0.95), rgba(240, 232, 220, 0.92), rgba(235, 225, 210, 0.95));
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 1px solid #c8b898;
+  box-shadow:
+    inset 0 0 40px rgba(200, 185, 155, 0.15),
+    0 2px 8px rgba(80, 60, 40, 0.10),
+    0 8px 32px rgba(80, 60, 40, 0.08),
+    0 0 20px rgba(58, 88, 160, 0.06);
+  color: #3a3020;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Decorative top border — ink brush stroke */
+html.document .login-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(58, 88, 160, 0.15) 10%,
+    rgba(58, 88, 160, 0.40) 30%,
+    rgba(100, 80, 50, 0.50) 50%,
+    rgba(58, 88, 160, 0.40) 70%,
+    rgba(58, 88, 160, 0.15) 90%,
+    transparent 100%
+  );
+  z-index: 1;
+}
+
+/* Decorative bottom border — matching brush stroke */
+html.document .login-panel::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 15%;
+  right: 15%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(100, 80, 50, 0.30) 20%,
+    rgba(58, 88, 160, 0.25) 50%,
+    rgba(100, 80, 50, 0.30) 80%,
+    transparent
+  );
+  z-index: 1;
+}
+
+/* Text colors — warm ink tones on parchment */
+html.document .login-panel .text-jade-light  { color: #2a4888; }
+html.document .login-panel .text-jade-glow   { color: #3a58a0; }
+html.document .login-panel .text-mist-mid    { color: #706860; }
+html.document .login-panel .text-mist-dark   { color: #8a8278; }
+html.document .login-panel .text-mist-light  { color: #585048; }
+html.document .login-panel .text-cloud-white { color: #3a3020; }
+html.document .login-panel .text-crimson-light { color: #903030; }
+
+/* Inputs — inscribed onto aged paper */
+html.document .login-panel input,
+html.document .login-panel select {
+  background: rgba(245, 238, 228, 0.8);
+  border: 1px solid #c8b898;
+  color: #3a3020;
+  transition: border-color 0.3s, box-shadow 0.3s, background 0.3s;
+}
+html.document .login-panel input::placeholder {
+  color: #a09888;
+}
+html.document .login-panel input:focus {
+  background: rgba(250, 244, 235, 0.95);
+  border-color: #3a58a0;
+  box-shadow:
+    0 0 12px rgba(58, 88, 160, 0.18),
+    0 0 24px rgba(58, 88, 160, 0.08),
+    inset 0 0 8px rgba(58, 88, 160, 0.04);
+}
+
+/* Particles — drifting ink droplets */
+html.document .login-particle {
+  background: radial-gradient(circle, rgba(58, 88, 160, 0.35), rgba(80, 60, 40, 0.20));
+}
+
+/* Submit button — imperial decree seal */
+html.document .login-panel button[type="submit"] {
+  color: #ffffff !important;
+  background: linear-gradient(135deg, #3a58a0, #4a68b0, #3a58a0) !important;
+  border-color: rgba(58, 88, 160, 0.6) !important;
+  box-shadow:
+    0 2px 8px rgba(58, 88, 160, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  transition: all 0.3s ease;
+}
+html.document .login-panel button[type="submit"]:hover {
+  background: linear-gradient(135deg, #2a4888, #3a58a0, #2a4888) !important;
+  box-shadow:
+    0 4px 16px rgba(58, 88, 160, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10);
+}
+
+/* Language toggles — parchment tint */
+html.document .login-lang-btn {
+  background: rgba(240, 232, 220, 0.7) !important;
+  color: #706860 !important;
+  border-color: #c8b898 !important;
+}
+
+/* Divider lines — ink wash stroke */
+html.document .login-panel .bg-ink-light {
+  background-color: #c8b898;
+}
+
+/* Checkbox accent */
+html.document .login-panel input[type="checkbox"] {
+  accent-color: #3a58a0;
+}
+
+/* Gradient divider — brush stroke feel */
+html.document .login-panel .bg-gradient-to-r {
+  background-image: linear-gradient(to right, transparent, #c8b898, transparent);
+}
+
 .animate-glow-pulse {
   animation: glowPulse 3s ease-in-out infinite;
   will-change: opacity;
@@ -531,9 +872,9 @@ main {
 .app-atmosphere {
   position: relative;
   background:
-    radial-gradient(95rem 40rem at 8% -12%, color-mix(in srgb, var(--jade) 12%, transparent), transparent 58%),
-    radial-gradient(80rem 32rem at 88% -16%, color-mix(in srgb, var(--mountain-blue-glow) 14%, transparent), transparent 62%),
-    radial-gradient(65rem 30rem at 52% 118%, color-mix(in srgb, var(--forest) 10%, transparent), transparent 70%),
+    radial-gradient(95rem 40rem at 8% -12%, color-mix(in srgb, var(--jade) 16%, transparent), transparent 58%),
+    radial-gradient(80rem 32rem at 88% -16%, color-mix(in srgb, var(--mountain-blue-glow) 18%, transparent), transparent 62%),
+    radial-gradient(65rem 30rem at 52% 118%, color-mix(in srgb, var(--forest) 14%, transparent), transparent 70%),
     var(--background);
 }
 
@@ -577,10 +918,12 @@ tbody tr:hover {
 }
 
 .surface-panel {
-  background: var(--surface-panel);
-  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  background: color-mix(in srgb, var(--surface-panel) 96%, transparent);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 1px solid var(--neon-border);
   border-radius: 1rem;
-  box-shadow: var(--shadow-elev-1), inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 8%, transparent);
+  box-shadow: var(--shadow-elev-1);
   transition:
     transform var(--motion-fast) var(--ease-polish),
     box-shadow var(--motion-normal) var(--ease-polish),
@@ -599,11 +942,10 @@ tbody tr:hover {
 
 .interactive-panel:hover {
   transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  border-color: color-mix(in srgb, var(--accent) 25%, var(--border));
   box-shadow:
-    0 14px 26px color-mix(in srgb, var(--void-black) 26%, transparent),
-    0 0 0 1px color-mix(in srgb, var(--ring-accent) 80%, transparent),
-    inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 10%, transparent);
+    var(--neon-glow-strong),
+    0 12px 24px color-mix(in srgb, var(--void-black) 30%, transparent);
 }
 
 .polished-focus:focus-visible {
@@ -644,6 +986,7 @@ tbody tr:hover {
 
 /* ===== Theme & Scrollbar Styles (extracted) ===== */
 @import "./themes.css";
+@import "./themes-expansion.css";
 
 /* ===== Hide Number Input Spinners Globally ===== */
 
@@ -782,9 +1125,9 @@ html.discord textarea:focus-visible {
 
 /* Nav bar shell */
 .nyaa-nav-bar {
-  background: color-mix(in srgb, var(--nyaa-nav-bg, var(--header-bg, var(--surface))) 94%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, var(--nyaa-nav-border, var(--header-border, var(--border))) 88%, transparent);
-  backdrop-filter: blur(8px);
+  background: color-mix(in srgb, var(--nyaa-nav-bg, var(--header-bg, var(--surface))) 97%, transparent);
+  border-bottom: 1px solid var(--neon-border);
+  backdrop-filter: none;
 }
 
 .nyaa-nav-inner {

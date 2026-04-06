@@ -332,7 +332,7 @@ function MobileNavBar({ incomingFriendRequestCount = 0 }: { incomingFriendReques
               animate={{ y: 0, opacity: 1, scale: 1 }}
               exit={{ y: 40, opacity: 0, scale: 0.95 }}
               transition={{ type: "spring", damping: 26, stiffness: 300 }}
-              className="mx-2 mb-0 rounded-t-[20px] border border-jade-glow/20 bg-ink-deep/98 p-3 backdrop-blur-lg shadow-[0_-10px_30px_rgba(0,0,0,0.2)]"
+              className="mx-2 mb-0 rounded-t-[20px] border border-border bg-ink-deep/98 p-3 shadow-[0_-8px_20px_rgba(0,0,0,0.15)]"
               style={{
                 maxHeight: "calc(100dvh - 78px)",
                 overflowY: "auto",
@@ -524,7 +524,7 @@ function MobileNavBar({ incomingFriendRequestCount = 0 }: { incomingFriendReques
         {/* ── Main Bottom Navigation Bar ── */}
         <nav
           data-mobile-bottom-nav="true"
-          className="relative bg-ink-deep/95 backdrop-blur-lg border-t border-jade-glow/8 flex items-end justify-around px-1 pb-1.5 safe-area-bottom gap-0.5"
+          className="relative bg-ink-deep/98 border-t border-border flex items-end justify-around px-1 pb-1.5 safe-area-bottom gap-0.5"
         >
           {/* Glow accent line */}
           <div className="absolute inset-x-0 top-0 h-px" style={{ background: `linear-gradient(to right, transparent, color-mix(in srgb, var(--accent) 15%, transparent), transparent)` }} />

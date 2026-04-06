@@ -495,8 +495,8 @@ function UnifiedTrainingLogTable({
     <>
       <div className="w-full">
         <div
-          className="w-full rounded-xl border border-jade-glow/25 backdrop-blur-sm shadow-[var(--shadow-elev-1)] relative overflow-hidden"
-          style={{ background: "var(--surface-gradient-strong)" }}
+          className="w-full rounded-xl border shadow-[var(--shadow-elev-1)] relative overflow-hidden"
+          style={{ borderColor: 'var(--neon-border)', background: 'var(--surface-gradient-strong)' }}
         >
           <div className="relative">
           {/* Edit header bar */}

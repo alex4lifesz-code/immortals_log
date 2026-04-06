@@ -628,7 +628,7 @@ export function TrainingGroundsSidebar({
                     elements.push(
                       <div
                         key={`cat-${primaryCategory}`}
-                        className="sticky top-0 z-10 px-1.5 py-1 mt-2 first:mt-0 mb-0.5 backdrop-blur-sm border-b border-ink-light/20"
+                        className="sticky top-0 z-10 px-1.5 py-1 mt-2 first:mt-0 mb-0.5 border-b border-ink-light/20"
                         style={{ background: "var(--surface-gradient-strong)" }}
                       >
                         <span className="text-[10px] font-semibold text-mist-light/70 uppercase tracking-wider">{primaryCategory}</span>

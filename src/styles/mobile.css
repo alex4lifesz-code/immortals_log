@@ -44,12 +44,10 @@
   0% {
     opacity: 0;
     transform: translate3d(0, -8px, 0);
-    backdrop-filter: blur(0px);
   }
   100% {
     opacity: 1;
     transform: translate3d(0, 0, 0);
-    backdrop-filter: blur(10px);
   }
 }
 
@@ -81,7 +79,6 @@
 
 .mobile-header-polish {
   animation: mobileHeaderIn var(--mobile-motion-normal) var(--mobile-ease-out) both;
-  backdrop-filter: saturate(1.15) blur(10px);
 }
 
 .mobile-header-title {
@@ -158,8 +155,7 @@
 .mobile-speed-dial-backdrop {
   position: fixed;
   inset: 0;
-  background: color-mix(in srgb, var(--void-black) 28%, transparent);
-  backdrop-filter: blur(2px);
+  background: color-mix(in srgb, var(--void-black) 40%, transparent);
 }
 
 /* ── Mobile flexbox layout overhaul ── */

@@ -10,7 +10,7 @@ export default function MobileBottomNav() {
   const haptics = useHapticFeedback();
 
   return (
-    <nav className="mobile-bottom-nav-polish fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-ink-deep/95 pb-[max(env(safe-area-inset-bottom,0px),8px)] pt-2 backdrop-blur-sm">
+    <nav className="mobile-bottom-nav-polish fixed bottom-0 left-0 right-0 z-50 border-t bg-ink-deep/98 pb-[max(env(safe-area-inset-bottom,0px),8px)] pt-2" style={{ borderTopColor: "var(--neon-border)" }}>
       <ul className="mx-auto grid max-w-xl gap-1 px-2" style={{ gridTemplateColumns: `repeat(${MOBILE_BOTTOM_TABS.length}, minmax(0, 1fr))` }}>
         {MOBILE_BOTTOM_TABS.map((tab) => {
           const active = pathname === tab.href;

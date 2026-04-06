@@ -149,7 +149,7 @@ function DesktopNavBar() {
             </button>
 
             {menuOpen && (
-              <div className="absolute right-0 mt-2 w-72 rounded-xl border border-ink-light/60 bg-ink-deep/98 p-2 shadow-2xl backdrop-blur-md">
+              <div className="absolute right-0 mt-2 w-72 rounded-xl border bg-ink-deep p-2 shadow-2xl" style={{ borderColor: 'var(--neon-border)' }}>
                 <div className="space-y-1">
                   {secondaryItems.map((item) => {
                     const isActive = pathname === item.path || pathname.startsWith(`${item.path}/`);
