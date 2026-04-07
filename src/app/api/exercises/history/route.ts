@@ -31,44 +31,14 @@ function encodeCursor(createdAt: Date, id: string): string {
   return Buffer.from(JSON.stringify({ createdAt: createdAt.toISOString(), id }), "utf8").toString("base64url");
 }
 
-function normalizeExerciseName(value: string): string {
-  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
-}
-
-function canonicalExerciseName(value: string): string {
-  const normalized = String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-  if (!normalized) return "";
-
-  const stopwords = new Set([
-    "barbell",
-    "dumbbell",
-    "machine",
-    "cable",
-    "smith",
-    "gym",
-    "seated",
-    "standing",
-    "standard",
-    "weighted",
-  ]);
-
-  const tokens = normalized
-    .split(" ")
-    .map((token) => token.trim())
-    .filter((token) => token.length > 0 && !stopwords.has(token));
-
-  return tokens.join("");
-}
-
 export const GET = withAuth(async (req, { auth }) => {
   try {
     const { searchParams } = new URL(req.url);
     const exerciseId = searchParams.get("exerciseId");
+    const progressionLevelRaw = searchParams.get("progressionLevel");
+    const progressionLevel = progressionLevelRaw != null && progressionLevelRaw !== ""
+      ? Number.parseInt(progressionLevelRaw, 10)
+      : null;
     const limit = resolveLimit(searchParams.get("limit"));
     const cursor = decodeCursor(searchParams.get("cursor"));
     const targetUserId = searchParams.get("targetUserId");
@@ -90,53 +60,15 @@ export const GET = withAuth(async (req, { auth }) => {
       return ApiErrors.badRequest("Exercise ID is required");
     }
 
-    const requestedExercise = await prisma.progressionExercise.findUnique({
-      where: { id: exerciseId },
-      select: { id: true, name: true },
-    });
-
-    const exerciseIdsForHistory = new Set<string>([exerciseId]);
-    const normalizedRequestedName = normalizeExerciseName(requestedExercise?.name ?? "");
-    const canonicalRequestedName = canonicalExerciseName(requestedExercise?.name ?? "");
-    if (normalizedRequestedName.length > 0 || canonicalRequestedName.length > 0) {
-      const userProgressions = await prisma.userProgressionLevel.findMany({
-        where: { userId },
-        select: {
-          exerciseId: true,
-          exercise: {
-            select: { name: true },
-          },
-        },
-      });
-
-      for (const progression of userProgressions) {
-        const normalizedCandidate = normalizeExerciseName(progression.exercise.name ?? "");
-        const canonicalCandidate = canonicalExerciseName(progression.exercise.name ?? "");
-        const exactNameMatch =
-          normalizedRequestedName.length > 0
-          && normalizedCandidate.length > 0
-          && normalizedCandidate === normalizedRequestedName;
-        const canonicalMatch =
-          canonicalRequestedName.length > 0
-          && canonicalCandidate.length > 0
-          && (
-            canonicalCandidate === canonicalRequestedName
-            || canonicalCandidate.includes(canonicalRequestedName)
-            || canonicalRequestedName.includes(canonicalCandidate)
-          );
-
-        if (exactNameMatch || canonicalMatch) {
-          exerciseIdsForHistory.add(progression.exerciseId);
-        }
-      }
-    }
-
     const page = await prisma.progressionLog.findMany({
       where: {
         userProgression: {
           userId,
-          exerciseId: { in: [...exerciseIdsForHistory] },
+          exerciseId,
         },
+        ...(progressionLevel != null && Number.isFinite(progressionLevel) && progressionLevel > 0
+          ? { level: progressionLevel }
+          : {}),
         ...(cursor
           ? {
               OR: [

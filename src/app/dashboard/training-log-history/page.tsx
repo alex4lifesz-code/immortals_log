@@ -309,14 +309,18 @@ export default function TrainingLogHistoryPage() {
               <h3 className="text-sm text-jade-glow uppercase tracking-wider mb-3">Filters</h3>
               <div className="grid gap-2 lg:grid-cols-2">
                 <div className="flex flex-wrap items-center gap-2">
-                  <label htmlFor="history-user-scope-dedicated" className="text-xs text-mist-dark uppercase">
+                  <label htmlFor="history-user-scope-dedicated" className="text-[11px] text-jade-light uppercase tracking-[0.08em]">
                     View user
                   </label>
                   {isMobile ? (
                     <button
                       type="button"
                       onClick={() => setMobileUserPickerOpen(true)}
-                      className="flex min-w-[160px] items-center justify-between rounded-lg border border-ink-light/30 bg-ink-dark px-3 py-2 text-sm font-medium text-cloud-white"
+                      className="flex min-w-[170px] items-center justify-between rounded-lg border px-3 py-2 text-sm font-medium text-cloud-white"
+                      style={{
+                        borderColor: "color-mix(in srgb, var(--jade-glow) 28%, var(--border))",
+                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 84%, var(--ink-deep))",
+                      }}
                       aria-label="Pick user"
                     >
                       <span className="truncate">{activeUserLabel}</span>
@@ -327,7 +331,11 @@ export default function TrainingLogHistoryPage() {
                       id="history-user-scope-dedicated"
                       value={activeUserId || userId}
                       onChange={(event) => handleUserScopeChange(event.target.value)}
-                      className="rounded-lg border border-ink-light/30 bg-ink-dark px-2 py-1 text-xs text-cloud-white outline-none"
+                      className="rounded-lg border px-2 py-1 text-xs text-cloud-white outline-none"
+                      style={{
+                        borderColor: "color-mix(in srgb, var(--jade-glow) 30%, var(--border))",
+                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 84%, var(--ink-deep))",
+                      }}
                     >
                       {orderedVisibleUsers.length === 0 ? (
                         <option value={userId}>{user?.name || "Me"}</option>

@@ -5,7 +5,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import PageLayout from "@/components/layout/PageLayout";
 import GlowCard, { GlowModal } from "@/components/ui/GlowCard";
 import GlowButton from "@/components/ui/GlowButton";
-import { GlowSelect } from "@/components/ui/GlowInput";
 import { MemoTrainingLogTable } from "@/components/workout/TrainingLogTable";
 import { useIsMobile } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
@@ -166,51 +165,93 @@ export default function HistoryPage() {
           </GlowCard>
         ) : (
           <>
-            <GlowCard glow="jade" hoverable={false}>
-              <h3 className="text-sm text-jade-glow uppercase tracking-wider mb-3">User Scope</h3>
-              <div className="flex flex-wrap items-center gap-3">
-                {isMobile ? (
-                  <GlowButton
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setMobileUserPickerOpen(true)}
-                    className="min-w-[160px] flex items-center justify-between"
-                    aria-label="Pick user"
-                  >
-                    <span className="truncate">{activeUserLabel}</span>
-                    <span className="ml-2 text-xs text-mist-dark">▾</span>
-                  </GlowButton>
-                ) : (
-                  <GlowSelect
-                    label="View user"
-                    glowColor="jade"
-                    value={activeUserId || userId}
-                    onChange={(event) => handleUserScopeChange(event.target.value)}
-                    options={
-                      orderedVisibleUsers.length === 0
-                        ? [{ value: userId, label: user?.name || "Me" }]
-                        : orderedVisibleUsers.map((u) => ({
-                            value: u.id,
-                            label: u.id === userId ? `* ${u.name || u.username}` : (u.name || u.username),
-                          }))
-                    }
-                    className="!w-auto min-w-[180px]"
-                  />
-                )}
-                <GlowButton
-                  variant="jade"
-                  size="sm"
+            <section
+              className="w-full rounded-2xl relative overflow-hidden"
+              style={{
+                border: "1px solid color-mix(in srgb, var(--jade-glow) 30%, var(--border))",
+                background: "linear-gradient(160deg, color-mix(in srgb, var(--ink-deep) 96%, transparent) 0%, color-mix(in srgb, var(--ink-mid) 90%, transparent) 100%)",
+                boxShadow: "0 0 0 1px color-mix(in srgb, var(--jade-glow) 10%, transparent), var(--shadow-elev-1)",
+              }}
+            >
+              <div
+                className="flex flex-wrap items-center justify-between gap-2.5 px-3 py-2.5 border-b"
+                style={{
+                  borderColor: "color-mix(in srgb, var(--jade-glow) 30%, var(--border))",
+                  backgroundColor: "color-mix(in srgb, var(--jade-glow) 9%, var(--ink-dark))",
+                }}
+              >
+                <span
+                  className="text-[11px] font-semibold uppercase tracking-[0.09em] shrink-0"
+                  style={{ color: "var(--jade-light)" }}
+                >
+                  Friends Scope
+                </span>
+
+                <button
+                  type="button"
                   onClick={() => {
                     const href = targetUserId
                       ? `${DASHBOARD_ROUTES.trainingLogHistory}?targetUserId=${encodeURIComponent(targetUserId)}`
                       : DASHBOARD_ROUTES.trainingLogHistory;
                     router.push(href);
                   }}
+                  className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-[12px] font-semibold transition-all duration-150 hover:scale-[1.02] active:scale-[0.98]"
+                  style={{
+                    color: "var(--cloud-white)",
+                    borderColor: "color-mix(in srgb, var(--jade-glow) 25%, var(--border))",
+                    backgroundColor: "color-mix(in srgb, var(--ink-mid) 84%, var(--ink-deep))",
+                  }}
                 >
-                  Open history page
-                </GlowButton>
+                  <span>Open history page</span>
+                  <span aria-hidden="true" className="text-[13px] leading-none">↗</span>
+                </button>
               </div>
-            </GlowCard>
+
+              <div className="px-3 py-3">
+                {isMobile ? (
+                  <button
+                    type="button"
+                    onClick={() => setMobileUserPickerOpen(true)}
+                    className="inline-flex min-w-[210px] items-center justify-between rounded-md border px-3 py-2.5 text-[15px] font-medium"
+                    style={{
+                      borderColor: "color-mix(in srgb, var(--jade-glow) 25%, var(--border))",
+                      backgroundColor: "color-mix(in srgb, var(--ink-mid) 84%, var(--ink-deep))",
+                      color: "var(--cloud-white)",
+                    }}
+                    aria-label="Pick friend"
+                  >
+                    <span className="truncate">{activeUserLabel}</span>
+                    <span className="ml-2 text-sm" style={{ color: "var(--text-muted)" }}>▾</span>
+                  </button>
+                ) : (
+                  <div className="space-y-1.5">
+                    <label className="block text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--jade-light)" }}>
+                      View friends
+                    </label>
+                    <select
+                      value={activeUserId || userId}
+                      onChange={(event) => handleUserScopeChange(event.target.value)}
+                      className="min-w-[240px] rounded-md border px-3 py-2 text-[15px] font-medium outline-none"
+                      style={{
+                        borderColor: "color-mix(in srgb, var(--jade-glow) 25%, var(--border))",
+                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 84%, var(--ink-deep))",
+                        color: "var(--cloud-white)",
+                      }}
+                    >
+                      {orderedVisibleUsers.length === 0 ? (
+                        <option value={userId}>{user?.name || "Me"}</option>
+                      ) : (
+                        orderedVisibleUsers.map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.id === userId ? `* ${u.name || u.username}` : (u.name || u.username)}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </div>
+                )}
+              </div>
+            </section>
 
             <div className="nyaa-history-table-shell">
               <MemoTrainingLogTable
@@ -232,7 +273,7 @@ export default function HistoryPage() {
       <GlowModal
         isOpen={isMobile && mobileUserPickerOpen}
         onClose={() => setMobileUserPickerOpen(false)}
-        title="View user"
+        title="View friends"
         contentClassName="!p-0"
       >
         <div className="relative px-3 pb-3 pt-2">

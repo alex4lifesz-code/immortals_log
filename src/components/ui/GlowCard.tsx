@@ -119,7 +119,7 @@ export function GlowModal({
               aria-modal="true"
               aria-label={title}
               onClick={(e) => e.stopPropagation()}
-              className={`bg-ink-deep w-full max-w-lg max-h-[80vh] overflow-y-auto pointer-events-auto glow-modal-container ${panelClassName}`}
+              className={`surface-panel surface-panel-strong w-full max-w-lg max-h-[80vh] overflow-y-auto pointer-events-auto glow-modal-container ${panelClassName}`}
               style={{
                 borderRadius: '2px',
                 border: '1px solid var(--border)',

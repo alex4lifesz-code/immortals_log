@@ -97,7 +97,7 @@ export default function WeightTrendChart({
   }
 
   return (
-    <div className="flex flex-col h-full gap-2">
+    <div className="dao-modern-weight-trend-panel flex flex-col h-full gap-2">
       <div className="flex items-center justify-between px-1">
         <h4 className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-primary)" }}>
           {t("Weight Trend", "normal")}

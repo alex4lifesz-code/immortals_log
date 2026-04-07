@@ -918,7 +918,7 @@ tbody tr:hover {
 }
 
 .surface-panel {
-  background: color-mix(in srgb, var(--surface-panel) 96%, transparent);
+  background: var(--surface-gradient-strong);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   border: 1px solid var(--neon-border);
@@ -932,7 +932,7 @@ tbody tr:hover {
 }
 
 .surface-panel-strong {
-  background: var(--surface-panel-strong);
+  background: var(--surface-gradient-strong);
 }
 
 .interactive-panel {
@@ -1008,6 +1008,7 @@ input[type="datetime-local"],
 input[type="month"],
 input[type="week"] {
   padding-inline-end: 2rem;
+  color-scheme: dark;
 }
 
 input[type="date"]::-webkit-calendar-picker-indicator,
@@ -1019,6 +1020,17 @@ input[type="week"]::-webkit-calendar-picker-indicator {
   filter:
     drop-shadow(0 0 1px color-mix(in srgb, var(--text-primary) 82%, transparent))
     drop-shadow(0 0 1px color-mix(in srgb, var(--surface) 90%, transparent));
+}
+
+/* Prevent Android/WebView date picker text from becoming unreadable on touch UIs. */
+@media (hover: none) and (pointer: coarse) {
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+  input[type="month"]::-webkit-calendar-picker-indicator,
+  input[type="week"]::-webkit-calendar-picker-indicator {
+    filter: none;
+    opacity: 1;
+  }
 }
 
 /* ===== Mobile Safe Area & Responsive Utilities ===== */
@@ -1382,5 +1394,754 @@ html.discord textarea:focus-visible {
 
 .training-log-exercise-link:visited {
   color: #1d457b;
+}
+
+/* Modern training log table system */
+.training-log-grid-scroll {
+  --tl-space-x: 0.625rem;
+  background:
+    radial-gradient(120% 80% at 50% -20%, color-mix(in srgb, var(--jade-glow) 9%, transparent), transparent 65%),
+    color-mix(in srgb, var(--ink-deep) 92%, var(--surface) 8%);
+  padding: 0 !important;
+}
+
+.training-log-grid-table {
+  border-spacing: 0;
+  margin-top: 0 !important;
+  background: transparent !important;
+}
+
+.training-log-grid-head {
+  background-color: color-mix(in srgb, var(--nyaa-table-head-bg) 78%, var(--ink-deep) 22%);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--jade-glow) 25%, var(--border));
+  backdrop-filter: blur(6px);
+}
+
+.training-log-grid-head-row {
+  border-color: color-mix(in srgb, var(--jade-glow) 25%, var(--border));
+}
+
+.training-log-grid-head-chip {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+/* High-specificity overrides to beat history-table !important defaults */
+.nyaa-layout .nyaa-history-page .training-log-grid-table thead th {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ink-mid) 86%, var(--ink-deep)) 0%, color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid)) 100%) !important;
+  border-top: 0 !important;
+  border-left: 0 !important;
+  border-right: 0 !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--jade-glow) 30%, var(--border)) !important;
+  padding-top: 0.35rem !important;
+  padding-bottom: 0.35rem !important;
+}
+
+.nyaa-layout .nyaa-history-page .training-log-grid-table thead th .training-log-grid-head-chip {
+  color: var(--jade-light) !important;
+  font-size: 11px !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+}
+
+.nyaa-layout .nyaa-history-page .training-log-grid-scroll .training-log-grid-table thead {
+  margin-top: 0 !important;
+}
+
+.training-log-grid-row {
+  border-color: color-mix(in srgb, var(--jade-glow) 20%, var(--border));
+}
+
+.training-log-modern-shell {
+  border: 1px solid color-mix(in srgb, var(--jade-glow) 32%, var(--border)) !important;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--ink-deep) 96%, transparent) 0%, color-mix(in srgb, var(--ink-mid) 90%, transparent) 100%) !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--jade-glow) 12%, transparent), var(--shadow-elev-1) !important;
+}
+
+/* Beat .nyaa-history-table-shell .rounded-2xl !important and make edge visibly modern */
+.nyaa-layout .nyaa-history-page .training-log-modern-shell {
+  border: 1px solid color-mix(in srgb, var(--jade-glow) 60%, var(--border)) !important;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--jade-glow) 26%, transparent) inset,
+    0 0 0 1px color-mix(in srgb, var(--jade-glow) 18%, transparent),
+    0 14px 30px color-mix(in srgb, black 34%, transparent) !important;
+}
+
+.training-log-input-grid-shell {
+  border: 1px solid color-mix(in srgb, var(--jade-glow) 26%, var(--border)) !important;
+  background:
+    radial-gradient(120% 90% at 50% -20%, color-mix(in srgb, var(--jade-glow) 8%, transparent), transparent 65%),
+    color-mix(in srgb, var(--ink-deep) 93%, var(--surface) 7%);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--jade-glow) 22%, transparent),
+    0 10px 24px color-mix(in srgb, black 22%, transparent);
+}
+
+.training-log-input-grid-table {
+  border-spacing: 0;
+  margin-top: 0 !important;
+  background: transparent !important;
+}
+
+.training-log-input-grid-head {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ink-mid) 86%, var(--ink-deep)) 0%, color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid)) 100%);
+}
+
+.training-log-input-grid-th {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ink-mid) 86%, var(--ink-deep)) 0%, color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid)) 100%) !important;
+  padding: 0.42rem 0.35rem !important;
+  text-align: center !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  border-top: 0 !important;
+  border-left: 0 !important;
+  border-right: 1px solid color-mix(in srgb, var(--jade-glow) 28%, var(--border)) !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--jade-glow) 30%, var(--border)) !important;
+}
+
+.training-log-input-grid-th-last {
+  border-right: 0;
+}
+
+.training-log-input-grid-row {
+  background: color-mix(in srgb, var(--ink-dark) 90%, var(--ink-deep)) !important;
+}
+
+.training-log-input-grid-td {
+  background: color-mix(in srgb, var(--ink-dark) 90%, var(--ink-deep)) !important;
+  padding: 0.3rem !important;
+  border-top: 0 !important;
+  border-left: 0 !important;
+  border-right: 1px solid color-mix(in srgb, var(--jade-glow) 18%, var(--border)) !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--jade-glow) 18%, var(--border)) !important;
+}
+
+.training-log-input-grid-td-last {
+  border-right: 0;
+}
+
+.training-log-input-actions {
+  align-items: center;
+}
+
+.training-log-input-actions-desktop {
+  border-top: 1px solid color-mix(in srgb, var(--jade-glow) 18%, transparent);
+  padding-top: 0.55rem;
+}
+
+.training-log-input-actions-mobile {
+  border-top: 1px solid color-mix(in srgb, var(--jade-glow) 20%, transparent);
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 0.55rem);
+  z-index: 90;
+  width: min(760px, calc(100vw - 1rem));
+  margin-top: 0;
+  padding: 0.6rem 0.55rem calc(0.5rem + env(safe-area-inset-bottom, 0px));
+  border: 1px solid color-mix(in srgb, var(--jade-glow) 34%, var(--border));
+  border-radius: 0.95rem;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ink-mid) 78%, transparent) 0%, color-mix(in srgb, var(--ink-deep) 94%, transparent) 100%);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--jade-glow) 12%, transparent) inset,
+    0 14px 28px color-mix(in srgb, black 34%, transparent);
+  backdrop-filter: blur(10px);
+}
+
+.training-log-input-action-btn {
+  border-radius: 0.7rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.01em;
+  transition: transform 140ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.training-log-input-action-btn:hover {
+  transform: translateY(-1px) scale(1.01);
+}
+
+.training-log-input-action-primary {
+  border-color: color-mix(in srgb, var(--jade-glow) 54%, var(--border)) !important;
+  color: var(--cloud-white) !important;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--jade-glow) 34%, var(--ink-mid)) 0%, color-mix(in srgb, var(--jade) 30%, var(--ink-deep)) 100%) !important;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--jade-glow) 18%, transparent) inset,
+    0 6px 16px color-mix(in srgb, black 26%, transparent);
+}
+
+.training-log-input-action-primary:hover {
+  border-color: color-mix(in srgb, var(--jade-glow) 72%, var(--border)) !important;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--jade-glow) 28%, transparent) inset,
+    0 10px 22px color-mix(in srgb, black 34%, transparent);
+}
+
+.training-log-input-action-secondary {
+  border-color: color-mix(in srgb, var(--mountain-blue-glow) 36%, var(--border)) !important;
+  color: color-mix(in srgb, var(--cloud-white) 92%, var(--mountain-blue-glow)) !important;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--mountain-blue-glow) 16%, var(--ink-mid)) 0%, color-mix(in srgb, var(--ink-mid) 78%, var(--ink-deep)) 100%) !important;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--mountain-blue-glow) 14%, transparent) inset,
+    0 5px 14px color-mix(in srgb, black 24%, transparent);
+}
+
+.training-log-input-action-secondary:hover {
+  border-color: color-mix(in srgb, var(--mountain-blue-glow) 54%, var(--border)) !important;
+}
+
+.training-log-mobile-card {
+  border: 1px solid color-mix(in srgb, var(--jade-glow) 28%, var(--border)) !important;
+  border-radius: 1rem !important;
+  background:
+    radial-gradient(120% 85% at 50% -22%, color-mix(in srgb, var(--jade-glow) 10%, transparent), transparent 62%),
+    linear-gradient(160deg, color-mix(in srgb, var(--ink-deep) 94%, transparent) 0%, color-mix(in srgb, var(--ink-mid) 88%, transparent) 100%) !important;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--jade-glow) 14%, transparent) inset,
+    0 10px 20px color-mix(in srgb, black 26%, transparent) !important;
+}
+
+.training-log-mobile-section-title {
+  color: color-mix(in srgb, var(--jade-light) 92%, var(--cloud-white)) !important;
+  letter-spacing: 0.11em;
+  font-weight: 700;
+}
+
+.training-log-mobile-row {
+  gap: 0.6rem;
+}
+
+.training-log-mobile-label {
+  color: color-mix(in srgb, var(--jade-light) 78%, var(--text-secondary)) !important;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+}
+
+.training-log-mobile-control {
+  border: 1px solid color-mix(in srgb, var(--jade-glow) 34%, var(--border)) !important;
+  background: color-mix(in srgb, var(--ink-dark) 86%, var(--ink-deep)) !important;
+  color: var(--cloud-white) !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--jade-glow) 10%, transparent) inset !important;
+}
+
+.training-log-mobile-control:focus,
+.training-log-mobile-control:focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, var(--jade-glow) 62%, var(--border)) !important;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--jade-glow) 24%, transparent) inset,
+    0 0 0 3px color-mix(in srgb, var(--jade-glow) 16%, transparent) !important;
+}
+
+.training-log-mobile-picker {
+  border: 1px solid color-mix(in srgb, var(--jade-glow) 34%, var(--border)) !important;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--ink-mid) 78%, var(--ink-deep)) 0%, color-mix(in srgb, var(--ink-deep) 94%, var(--ink-mid)) 100%) !important;
+  color: var(--cloud-white) !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--jade-glow) 12%, transparent) inset !important;
+}
+
+.training-log-mobile-toggle {
+  border-radius: 0.7rem;
+}
+
+.training-log-mobile-shell {
+  border: 1px solid color-mix(in srgb, var(--jade-glow) 24%, transparent);
+  border-radius: 1.05rem;
+  padding-top: 0.4rem;
+  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  background:
+    radial-gradient(130% 90% at 50% -26%, color-mix(in srgb, var(--jade-glow) 12%, transparent), transparent 64%),
+    linear-gradient(180deg, color-mix(in srgb, var(--ink-mid) 24%, transparent), transparent 62%);
+}
+
+.training-log-mobile-fab {
+  border: 1px solid color-mix(in srgb, var(--jade-glow) 68%, var(--border)) !important;
+  color: var(--cloud-white) !important;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--jade-glow) 62%, var(--ink-mid)) 0%, color-mix(in srgb, var(--jade) 48%, var(--ink-deep)) 100%) !important;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--jade-glow) 26%, transparent) inset,
+    0 12px 28px color-mix(in srgb, var(--jade-glow) 38%, transparent),
+    0 8px 24px color-mix(in srgb, black 28%, transparent) !important;
+}
+
+.training-log-mobile-fab:hover {
+  transform: translateY(-1px) scale(1.03);
+}
+
+.training-log-mobile-entry-card {
+  position: relative;
+  border: 1px solid color-mix(in srgb, var(--jade-glow) 34%, var(--border)) !important;
+  border-radius: 0.95rem !important;
+  background:
+    radial-gradient(130% 88% at 50% -28%, color-mix(in srgb, var(--jade-glow) 11%, transparent), transparent 64%),
+    linear-gradient(165deg, color-mix(in srgb, var(--ink-deep) 95%, transparent) 0%, color-mix(in srgb, var(--ink-mid) 88%, transparent) 100%) !important;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--jade-glow) 14%, transparent) inset,
+    0 10px 22px color-mix(in srgb, black 28%, transparent) !important;
+}
+
+.training-log-mobile-entry-title {
+  letter-spacing: 0.01em;
+}
+
+.training-log-mobile-entry-date {
+  color: color-mix(in srgb, var(--jade-light) 62%, var(--text-secondary)) !important;
+}
+
+.training-log-mobile-entry-metrics {
+  border-color: color-mix(in srgb, var(--jade-glow) 34%, var(--border)) !important;
+  background: color-mix(in srgb, var(--ink-mid) 82%, var(--ink-deep) 18%) !important;
+}
+
+.training-log-mobile-entry-metric-primary {
+  color: color-mix(in srgb, var(--jade-light) 90%, var(--cloud-white)) !important;
+}
+
+.training-log-mobile-entry-metric {
+  color: color-mix(in srgb, var(--cloud-white) 78%, var(--text-secondary)) !important;
+}
+
+.training-log-mobile-entry-metric-accent {
+  color: color-mix(in srgb, var(--gold) 92%, var(--cloud-white)) !important;
+}
+
+.training-log-mobile-entry-badge {
+  border-radius: 999px;
+}
+
+.training-log-mobile-entry-notes {
+  color: color-mix(in srgb, var(--cloud-white) 74%, var(--text-secondary)) !important;
+}
+
+.training-log-mobile-entry-footer {
+  border-top: 1px dashed color-mix(in srgb, var(--jade-glow) 26%, transparent);
+  padding-top: 0.35rem;
+}
+
+.dashboard-modern-feed {
+  position: relative;
+}
+
+.dashboard-modern-feed::before {
+  content: "";
+  position: absolute;
+  inset: -0.5rem 0 auto;
+  height: 12rem;
+  pointer-events: none;
+  background: radial-gradient(85% 90% at 50% 0%, color-mix(in srgb, var(--jade-glow) 12%, transparent), transparent 72%);
+}
+
+.dashboard-modern-hero,
+.dashboard-modern-member,
+.dashboard-modern-empty {
+  border: 1px solid color-mix(in srgb, var(--jade-glow) 28%, var(--border)) !important;
+  background: linear-gradient(165deg, color-mix(in srgb, var(--ink-deep) 95%, transparent) 0%, color-mix(in srgb, var(--ink-mid) 88%, transparent) 100%) !important;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--jade-glow) 12%, transparent) inset,
+    0 12px 24px color-mix(in srgb, black 26%, transparent) !important;
+}
+
+.dashboard-modern-member-trigger {
+  border-radius: 0.85rem;
+  padding: 0.2rem;
+}
+
+.dashboard-modern-exercise {
+  border-color: color-mix(in srgb, var(--jade-glow) 24%, var(--border)) !important;
+  background: color-mix(in srgb, var(--ink-mid) 26%, var(--ink-deep)) !important;
+}
+
+.dashboard-modern-log {
+  border-color: color-mix(in srgb, var(--mountain-blue-glow) 20%, var(--border)) !important;
+  background: linear-gradient(165deg, color-mix(in srgb, var(--ink-deep) 92%, transparent), color-mix(in srgb, var(--ink-mid) 80%, transparent)) !important;
+}
+
+.dashboard-modern-loadmore-btn {
+  border-color: color-mix(in srgb, var(--jade-glow) 42%, var(--border)) !important;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--ink-mid) 76%, var(--ink-deep)), color-mix(in srgb, var(--jade-glow) 12%, var(--ink-deep))) !important;
+}
+
+.completionist-modern-hero-mobile,
+.completionist-modern-hero-main,
+.completionist-modern-hero-side,
+.completionist-modern-overview,
+.completionist-modern-filters,
+.completionist-modern-skill-mobile,
+.completionist-modern-skill-desktop {
+  border: 1px solid color-mix(in srgb, var(--jade-glow) 30%, var(--border)) !important;
+  background:
+    radial-gradient(130% 88% at 50% -28%, color-mix(in srgb, var(--jade-glow) 10%, transparent), transparent 66%),
+    linear-gradient(165deg, color-mix(in srgb, var(--ink-deep) 95%, transparent) 0%, color-mix(in srgb, var(--ink-mid) 88%, transparent) 100%) !important;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--jade-glow) 12%, transparent) inset,
+    0 12px 24px color-mix(in srgb, black 26%, transparent) !important;
+}
+
+.completionist-modern-skill-mobile button[aria-expanded="true"] {
+  background: color-mix(in srgb, var(--jade-glow) 10%, var(--ink-deep)) !important;
+}
+
+.completionist-modern-skill-desktop table thead th {
+  background: color-mix(in srgb, var(--ink-mid) 68%, var(--ink-deep)) !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--jade-glow) 30%, var(--border)) !important;
+}
+
+.dao-modern-page {
+  position: relative;
+}
+
+.dao-modern-page::before {
+  content: "";
+  position: absolute;
+  inset: -0.5rem 0 auto;
+  height: 14rem;
+  pointer-events: none;
+  background: radial-gradient(82% 90% at 50% 0%, color-mix(in srgb, var(--jade-glow) 14%, transparent), transparent 72%);
+}
+
+.dao-modern-calendar,
+.dao-modern-monthly-stats,
+.dao-modern-chart-toolbar,
+.dao-modern-monthly-chart,
+.dao-modern-weight-trend,
+.dao-modern-cultivation-view {
+  border: 1px solid color-mix(in srgb, var(--jade-glow) 30%, var(--border)) !important;
+  background:
+    radial-gradient(120% 86% at 50% -24%, color-mix(in srgb, var(--jade-glow) 10%, transparent), transparent 64%),
+    linear-gradient(165deg, color-mix(in srgb, var(--ink-deep) 95%, transparent) 0%, color-mix(in srgb, var(--ink-mid) 88%, transparent) 100%) !important;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--jade-glow) 14%, transparent) inset,
+    0 14px 28px color-mix(in srgb, black 28%, transparent) !important;
+}
+
+.dao-modern-calendar-day {
+  border-radius: 0.8rem !important;
+}
+
+.dao-modern-calendar-day:hover {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--jade-glow) 26%, transparent) inset;
+}
+
+.dao-modern-monthly-stats-panel,
+.dao-modern-monthly-chart-panel,
+.dao-modern-weight-trend-panel {
+  padding: 0.15rem 0.1rem;
+}
+
+.dao-modern-monthly-stats-user {
+  border: 1px solid color-mix(in srgb, var(--jade-glow) 22%, transparent);
+  border-radius: 0.7rem;
+  padding: 0.5rem 0.55rem;
+  background: color-mix(in srgb, var(--ink-mid) 24%, var(--ink-deep));
+}
+
+.dao-modern-cultivation-view table thead th {
+  background: color-mix(in srgb, var(--ink-mid) 70%, var(--ink-deep)) !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--jade-glow) 30%, var(--border)) !important;
+}
+
+.dao-modern-cultivation-view table tbody tr:hover {
+  background: color-mix(in srgb, var(--jade-glow) 8%, var(--ink-dark)) !important;
+}
+
+.dao-modern-cultivation-card {
+  border: 1px solid color-mix(in srgb, var(--jade-glow) 28%, var(--border)) !important;
+  border-radius: 0.9rem;
+  background:
+    radial-gradient(120% 82% at 50% -24%, color-mix(in srgb, var(--jade-glow) 10%, transparent), transparent 64%),
+    linear-gradient(165deg, color-mix(in srgb, var(--ink-deep) 95%, transparent) 0%, color-mix(in srgb, var(--ink-mid) 88%, transparent) 100%) !important;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--jade-glow) 12%, transparent) inset,
+    0 10px 22px color-mix(in srgb, black 28%, transparent);
+}
+
+.dao-modern-cultivation-card-head {
+  border-bottom: 1px dashed color-mix(in srgb, var(--jade-glow) 22%, transparent);
+  padding-bottom: 0.35rem;
+}
+
+.dao-modern-cultivation-date {
+  color: color-mix(in srgb, var(--cloud-white) 92%, var(--jade-light)) !important;
+}
+
+.dao-modern-cultivation-status {
+  border-radius: 999px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.dao-modern-cultivation-summary {
+  color: color-mix(in srgb, var(--cloud-white) 82%, var(--text-secondary)) !important;
+}
+
+.dao-modern-cultivation-members {
+  gap: 0.4rem;
+}
+
+.dao-modern-cultivation-member {
+  border: 1px solid color-mix(in srgb, var(--jade-glow) 18%, transparent);
+  border-radius: 0.55rem;
+  padding: 0.35rem 0.45rem;
+  background: color-mix(in srgb, var(--ink-mid) 30%, var(--ink-deep));
+}
+
+.dao-modern-cultivation-switch {
+  border-radius: 999px;
+  padding-inline: 0.7rem;
+  background: color-mix(in srgb, var(--ink-mid) 75%, var(--ink-deep));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--jade-glow) 12%, transparent) inset;
+}
+
+.dao-modern-scope-group {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink-mid) 70%, var(--ink-deep));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--jade-glow) 10%, transparent) inset;
+  padding: 0.2rem;
+}
+
+.dao-modern-scope-btn {
+  border-radius: 999px;
+  border: 1px solid transparent;
+  min-width: 3.4rem;
+  font-weight: 600;
+}
+
+.dao-modern-scope-btn-active {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--jade-glow) 20%, transparent) inset;
+}
+
+.dao-modern-cultivation-open-btn {
+  border-radius: 999px;
+  border-color: color-mix(in srgb, var(--jade-glow) 35%, var(--border)) !important;
+  background: color-mix(in srgb, var(--ink-mid) 68%, var(--ink-deep));
+  color: var(--cloud-white) !important;
+  font-weight: 600;
+}
+
+.dao-modern-cultivation-open-btn:hover {
+  border-color: color-mix(in srgb, var(--jade-glow) 55%, var(--border)) !important;
+  background: color-mix(in srgb, var(--jade-glow) 14%, var(--ink-deep));
+}
+
+.dao-checkin-modal {
+  border: 1px solid color-mix(in srgb, var(--jade-glow) 28%, var(--border));
+  border-radius: 0.95rem;
+  padding: 0.6rem;
+  background:
+    radial-gradient(130% 90% at 50% -25%, color-mix(in srgb, var(--jade-glow) 10%, transparent), transparent 64%),
+    linear-gradient(165deg, color-mix(in srgb, var(--ink-deep) 95%, transparent) 0%, color-mix(in srgb, var(--ink-mid) 88%, transparent) 100%);
+}
+
+.dao-checkin-modal-head {
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--jade-glow) 18%, transparent);
+  padding: 0.45rem;
+  background: color-mix(in srgb, var(--ink-mid) 22%, var(--ink-deep));
+}
+
+.dao-checkin-modal-date {
+  padding: 0.25rem 0.45rem;
+  border-radius: 0.55rem;
+  background: color-mix(in srgb, var(--ink-mid) 26%, var(--ink-deep));
+}
+
+.dao-checkin-modal-state {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  font-weight: 700;
+}
+
+.dao-checkin-modal-state-checkin {
+  border-color: color-mix(in srgb, var(--jade-glow) 30%, transparent);
+  color: color-mix(in srgb, var(--jade-light) 86%, var(--cloud-white));
+  background: color-mix(in srgb, var(--jade-glow) 12%, var(--ink-deep));
+}
+
+.dao-checkin-modal-state-note {
+  border-color: color-mix(in srgb, var(--gold) 35%, transparent);
+  color: color-mix(in srgb, var(--gold) 90%, var(--cloud-white));
+  background: color-mix(in srgb, var(--gold) 10%, var(--ink-deep));
+}
+
+.dao-checkin-future-note {
+  border-radius: 0.75rem;
+}
+
+.dao-checkin-section {
+  border: 1px solid color-mix(in srgb, var(--jade-glow) 20%, transparent);
+  border-radius: 0.85rem;
+  padding: 0.65rem;
+  background: color-mix(in srgb, var(--ink-mid) 20%, var(--ink-deep));
+}
+
+.dao-checkin-section-title {
+  color: color-mix(in srgb, var(--jade-light) 90%, var(--cloud-white));
+}
+
+.dao-checkin-section-help {
+  line-height: 1.35;
+}
+
+.dao-checkin-cultivator-card {
+  border-radius: 0.8rem;
+  border-color: color-mix(in srgb, var(--jade-glow) 22%, var(--border));
+  background: color-mix(in srgb, var(--ink-mid) 28%, var(--ink-deep));
+}
+
+.dao-checkin-cultivator-me {
+  border: 1px solid color-mix(in srgb, var(--jade-glow) 36%, transparent);
+  border-radius: 999px;
+  padding: 0.05rem 0.38rem;
+  color: color-mix(in srgb, var(--jade-light) 80%, var(--cloud-white));
+  background: color-mix(in srgb, var(--jade-glow) 12%, var(--ink-deep));
+}
+
+.dao-checkin-cultivator-mark {
+  letter-spacing: 0.01em;
+}
+
+.dao-checkin-cultivator-card-self {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--jade-glow) 14%, transparent) inset;
+}
+
+.dao-checkin-cultivator-card-active {
+  background: linear-gradient(155deg, color-mix(in srgb, var(--jade-glow) 13%, var(--ink-mid)) 0%, color-mix(in srgb, var(--ink-deep) 90%, var(--ink-mid)) 100%);
+}
+
+.dao-checkin-weight-input {
+  border-radius: 0.55rem;
+}
+
+.dao-checkin-comment {
+  border: 1px solid color-mix(in srgb, var(--jade-glow) 18%, transparent);
+  border-radius: 0.85rem;
+  padding: 0.6rem;
+  background: color-mix(in srgb, var(--ink-mid) 18%, var(--ink-deep));
+}
+
+.dao-checkin-comment-input {
+  border-radius: 0.65rem;
+}
+
+.dao-checkin-action-primary {
+  border-color: color-mix(in srgb, var(--jade-glow) 48%, var(--border)) !important;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--jade-glow) 30%, var(--ink-mid)) 0%, color-mix(in srgb, var(--jade) 26%, var(--ink-deep)) 100%) !important;
+}
+
+.dao-checkin-action-danger {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border)) !important;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--danger) 22%, var(--ink-mid)) 0%, color-mix(in srgb, var(--danger) 14%, var(--ink-deep)) 100%) !important;
+}
+
+.training-log-delete-modal {
+  border: 1px solid color-mix(in srgb, var(--danger) 38%, var(--border)) !important;
+  background:
+    radial-gradient(120% 90% at 50% -25%, color-mix(in srgb, var(--danger) 10%, transparent), transparent 62%),
+    linear-gradient(165deg, color-mix(in srgb, var(--ink-deep) 96%, transparent) 0%, color-mix(in srgb, var(--ink-mid) 88%, transparent) 100%) !important;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--danger) 15%, transparent) inset,
+    0 14px 30px color-mix(in srgb, black 36%, transparent),
+    0 0 22px color-mix(in srgb, var(--danger) 16%, transparent) !important;
+}
+
+/* Stronger than legacy .nyaa-history-page table !important rules */
+.nyaa-layout .nyaa-history-page .training-log-input-grid-table thead th.training-log-input-grid-th {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ink-mid) 86%, var(--ink-deep)) 0%, color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid)) 100%) !important;
+  border-top: 0 !important;
+  border-left: 0 !important;
+  border-right: 1px solid color-mix(in srgb, var(--jade-glow) 28%, var(--border)) !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--jade-glow) 30%, var(--border)) !important;
+  padding-top: 0.42rem !important;
+  padding-bottom: 0.42rem !important;
+}
+
+.nyaa-layout .nyaa-history-page .training-log-input-grid-table tbody td.training-log-input-grid-td {
+  border-top: 0 !important;
+  border-left: 0 !important;
+  border-right: 1px solid color-mix(in srgb, var(--jade-glow) 18%, var(--border)) !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--jade-glow) 18%, var(--border)) !important;
+  padding: 0.3rem !important;
+}
+
+.nyaa-layout .nyaa-history-page .training-log-input-grid-table thead th.training-log-input-grid-th-last,
+.nyaa-layout .nyaa-history-page .training-log-input-grid-table tbody td.training-log-input-grid-td-last {
+  border-right: 0 !important;
+}
+
+.tl-col-date { width: 5.75rem; min-width: 5.75rem; }
+.tl-col-category { width: 5.5rem; min-width: 5.5rem; }
+.tl-col-exercise { width: 8.5rem; min-width: 8.5rem; }
+.tl-col-progression { width: 8rem; min-width: 8rem; }
+.tl-col-modifier { width: 4.75rem; min-width: 4.75rem; }
+.tl-col-band { width: 5rem; min-width: 5rem; }
+.tl-col-variant { width: 8rem; min-width: 8rem; }
+.tl-col-notes { width: 8rem; min-width: 8rem; }
+.tl-col-next { width: 4.25rem; min-width: 4.25rem; }
+.tl-col-avg { width: 4.25rem; min-width: 4.25rem; }
+.tl-col-actions { width: 4.5rem; min-width: 4.5rem; }
+.tl-col-data { width: 3.5rem; min-width: 3.5rem; }
+
+@media (max-width: 1100px) {
+  .tl-col-exercise,
+  .tl-col-progression,
+  .tl-col-variant,
+  .tl-col-notes {
+    width: 7rem;
+    min-width: 7rem;
+  }
+
+  .tl-col-date,
+  .tl-col-category {
+    width: 5.25rem;
+    min-width: 5.25rem;
+  }
+}
+
+.tl-head-pad {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.tl-head-pad-compact {
+  padding-top: 0.375rem;
+  padding-bottom: 0.375rem;
+}
+
+.tl-cell-pad-tight {
+  padding: 0.25rem 0.25rem 0.375rem;
+}
+
+.tl-cell-pad-tight-compact {
+  padding: 0.25rem;
+}
+
+.tl-cell-pad-standard {
+  padding: 0.375rem;
+}
+
+.tl-cell-pad-standard-compact {
+  padding: 0.25rem;
+}
+
+.tl-cell-pad-wide {
+  padding: 0.375rem;
+}
+
+.tl-cell-pad-wide-compact {
+  padding: 0.25rem 0.375rem;
+}
+
+.tl-cell-pad-exercise {
+  padding: 0.375rem;
+}
+
+.tl-cell-pad-exercise-compact {
+  padding: 0.25rem 0.375rem;
 }
 

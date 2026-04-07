@@ -908,7 +908,7 @@ export default function DaoHallPage() {
       {loading ? (
         <PageSkeleton statCards={4} wideBlock rows={3} />
       ) : (
-        <div className="space-y-6 px-0 py-2 sm:py-3">
+        <div className="dao-modern-page space-y-6 px-0 py-2 sm:py-3">
           {/* Getting Started checklist for new users */}
           <GettingStartedCard />
 
@@ -954,8 +954,8 @@ export default function DaoHallPage() {
           )}
 
           {/* Calendar — always visible */}
-          <div className={`grid ${isMobile ? "grid-cols-1" : "grid-cols-2"} gap-4`}>
-            <div className="min-w-0">
+          <div className={`grid ${isMobile ? "grid-cols-1" : "grid-cols-2"} gap-4 dao-modern-grid`}> 
+            <div className="min-w-0 dao-modern-calendar-wrap">
               <Calendar
                 checkInUsersByDate={scopedCheckInUsersByDate}
                 currentMonth={currentMonth}
@@ -974,7 +974,7 @@ export default function DaoHallPage() {
 
             {/* Stats panel — always visible beside calendar on desktop */}
             {!isMobile && (
-              <GlowCard glow="jade" hoverable={false} className="flex flex-col min-h-[260px]">
+              <GlowCard glow="jade" hoverable={false} className="dao-modern-monthly-stats flex flex-col min-h-[260px]">
                 {user && effectiveChartUserIds.length > 0 && (
                   <CheckInStatsPanel
                     checkInRows={checkInRows}
@@ -991,7 +991,7 @@ export default function DaoHallPage() {
 
           {/* Charts + cultivation stats are desktop-only */}
           {!isMobile && (
-            <GlowCard glow="jade" hoverable={false} className="flex items-center gap-3">
+            <GlowCard glow="jade" hoverable={false} className="dao-modern-chart-toolbar flex items-center gap-3">
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -1040,7 +1040,7 @@ export default function DaoHallPage() {
           {!isMobile && chartsOpen && (
             <div className={`grid ${isMobile ? "grid-cols-1" : "grid-cols-2"} gap-4`}>
               {/* Monthly Comparison (last 6 months) */}
-              <GlowCard glow="jade" hoverable={false} className="flex flex-col min-h-[220px]">
+              <GlowCard glow="jade" hoverable={false} className="dao-modern-monthly-chart flex flex-col min-h-[220px]">
                 {user && effectiveChartUserIds.length > 0 && (
                   <MonthlyComparisonChart
                     checkInRows={checkInRows}
@@ -1053,7 +1053,7 @@ export default function DaoHallPage() {
               </GlowCard>
 
               {/* Weight Trend (all-time) */}
-              <GlowCard glow="jade" hoverable={false} className="flex flex-col min-h-[220px]">
+              <GlowCard glow="jade" hoverable={false} className="dao-modern-weight-trend flex flex-col min-h-[220px]">
                 {user && effectiveChartUserIds.length > 0 && (
                   <WeightTrendChart
                     checkInRows={checkInRows}
@@ -1067,7 +1067,7 @@ export default function DaoHallPage() {
           )}
 
           {/* User View — Personal cultivation history */}
-          <GlowCard glow="jade" hoverable={false}>
+          <GlowCard glow="jade" hoverable={false} className="dao-modern-cultivation-view">
             <div ref={sectRegisterRef} className="space-y-4">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <h3 className="text-sm text-jade-glow uppercase tracking-wider">{t("My Cultivation View", "normal")}</h3>
@@ -1081,7 +1081,7 @@ export default function DaoHallPage() {
                       role="switch"
                       aria-checked={cultivationViewOpen}
                       onClick={() => setCultivationViewOpen((prev) => !prev)}
-                      className="inline-flex items-center gap-2 border px-2 py-1 text-[11px] transition-colors"
+                      className="dao-modern-cultivation-switch inline-flex items-center gap-2 border px-2 py-1 text-[11px] transition-colors"
                       style={{
                         borderColor: cultivationViewOpen ? "color-mix(in srgb, var(--accent) 35%, var(--border))" : "var(--border)",
                         color: cultivationViewOpen ? "var(--accent)" : "var(--text-muted)",
@@ -1107,34 +1107,61 @@ export default function DaoHallPage() {
                       </span>
                     </button>
                   )}
-                  <div className="flex items-center gap-1 border border-ink-light/50 p-0.5">
+                  <div
+                    className="dao-modern-scope-group flex items-center gap-1 border border-ink-light/50 p-0.5"
+                    style={{
+                      borderColor: "color-mix(in srgb, var(--jade-glow) 32%, var(--border))",
+                      background: "linear-gradient(135deg, color-mix(in srgb, var(--ink-mid) 78%, var(--ink-deep)) 0%, color-mix(in srgb, var(--jade-glow) 8%, var(--ink-deep)) 100%)",
+                    }}
+                  >
                     <button
                       onClick={() => setCalendarScope("all")}
-                      className={`text-xs px-2 py-1 transition-all ${
+                      className={`dao-modern-scope-btn text-xs px-2 py-1 transition-all ${
                         calendarScope === "all"
-                          ? "bg-jade-deep/20 border border-jade/40 text-jade-light"
+                          ? "dao-modern-scope-btn-active bg-jade-deep/20 border border-jade/40 text-jade-light"
                           : "text-mist-light hover:text-jade-light"
                       }`}
+                      style={{
+                        borderColor: calendarScope === "all" ? "color-mix(in srgb, var(--jade-glow) 45%, var(--border))" : "transparent",
+                        color: calendarScope === "all" ? "var(--cloud-white)" : "var(--text-secondary)",
+                        background: calendarScope === "all"
+                          ? "linear-gradient(135deg, color-mix(in srgb, var(--jade-glow) 24%, var(--ink-mid)) 0%, color-mix(in srgb, var(--jade) 20%, var(--ink-deep)) 100%)"
+                          : "transparent",
+                      }}
                     >
                       {t("All", "normal")}
                     </button>
                     <button
                       onClick={() => setCalendarScope("mine")}
-                      className={`text-xs px-2 py-1 transition-all ${
+                      className={`dao-modern-scope-btn text-xs px-2 py-1 transition-all ${
                         calendarScope === "mine"
-                          ? "bg-jade-deep/20 border border-jade/40 text-jade-light"
+                          ? "dao-modern-scope-btn-active bg-jade-deep/20 border border-jade/40 text-jade-light"
                           : "text-mist-light hover:text-jade-light"
                       }`}
+                      style={{
+                        borderColor: calendarScope === "mine" ? "color-mix(in srgb, var(--jade-glow) 45%, var(--border))" : "transparent",
+                        color: calendarScope === "mine" ? "var(--cloud-white)" : "var(--text-secondary)",
+                        background: calendarScope === "mine"
+                          ? "linear-gradient(135deg, color-mix(in srgb, var(--jade-glow) 24%, var(--ink-mid)) 0%, color-mix(in srgb, var(--jade) 20%, var(--ink-deep)) 100%)"
+                          : "transparent",
+                      }}
                     >
                       {t("Mine", "normal")}
                     </button>
                     <button
                       onClick={() => setCalendarScope("friends")}
-                      className={`text-xs px-2 py-1 transition-all ${
+                      className={`dao-modern-scope-btn text-xs px-2 py-1 transition-all ${
                         calendarScope === "friends"
-                          ? "bg-jade-deep/20 border border-jade/40 text-jade-light"
+                          ? "dao-modern-scope-btn-active bg-jade-deep/20 border border-jade/40 text-jade-light"
                           : "text-mist-light hover:text-jade-light"
                       }`}
+                      style={{
+                        borderColor: calendarScope === "friends" ? "color-mix(in srgb, var(--jade-glow) 45%, var(--border))" : "transparent",
+                        color: calendarScope === "friends" ? "var(--cloud-white)" : "var(--text-secondary)",
+                        background: calendarScope === "friends"
+                          ? "linear-gradient(135deg, color-mix(in srgb, var(--jade-glow) 24%, var(--ink-mid)) 0%, color-mix(in srgb, var(--jade) 20%, var(--ink-deep)) 100%)"
+                          : "transparent",
+                      }}
                     >
                       {t("Friends", "normal")}
                     </button>
@@ -1155,19 +1182,19 @@ export default function DaoHallPage() {
                       return (
                         <div
                           key={date}
-                          className="border border-ink-light/40 bg-ink-dark/20 px-3 py-2.5 flex flex-col gap-2.5 overflow-hidden"
+                          className="dao-modern-cultivation-card border border-ink-light/40 bg-ink-dark/20 px-3 py-2.5 flex flex-col gap-2.5 overflow-hidden"
                         >
                           {/* Date + status row */}
-                          <div className="flex items-center justify-between gap-2">
+                          <div className="dao-modern-cultivation-card-head flex items-center justify-between gap-2">
                             <button
                               onClick={() => handleDayClick(date)}
-                              className="text-xs font-medium text-mist-light hover:text-jade-glow transition-colors text-left"
+                              className="dao-modern-cultivation-date text-xs font-medium text-mist-light hover:text-jade-glow transition-colors text-left"
                               title={t("Open this day", "normal")}
                             >
                               {formatDateWithPreference(date, dateFormat)}
                             </button>
                             <span
-                              className={`text-[10px] px-1.5 py-0.5 border ${
+                              className={`dao-modern-cultivation-status text-[10px] px-1.5 py-0.5 border ${
                                 (calendarScope === "mine" ? mine.present : presentCount > 0)
                                   ? "border-jade-glow/40 text-jade-glow bg-jade-deep/15"
                                   : "border-ink-light/40 text-mist-dark"
@@ -1180,18 +1207,18 @@ export default function DaoHallPage() {
                           </div>
 
                           {calendarScope === "mine" ? (
-                            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-[11px] text-mist-light">
+                            <div className="dao-modern-cultivation-summary flex flex-wrap items-center gap-2 sm:gap-4 text-[11px] text-mist-light">
                               <span>{t("Weight:", "normal")} <span className="text-cloud-white">{mineWeight}</span></span>
                               {mine.comment?.trim() && (
                                 <span className="truncate text-mist-light/80">{mine.comment.trim()}</span>
                               )}
                             </div>
                           ) : (
-                            <div className="flex flex-col gap-1">
+                            <div className="dao-modern-cultivation-members flex flex-col gap-1">
                               {everyoneDetails.map((detail) => {
                                 const c = getUserCultivatorColor(detail.id, userColors);
                                 return (
-                                  <div key={detail.id} className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[11px] min-w-0">
+                                  <div key={detail.id} className="dao-modern-cultivation-member flex flex-wrap items-center gap-1.5 sm:gap-2 text-[11px] min-w-0">
                                     {/* Color dot + name */}
                                     <span className="flex items-center gap-1.5 shrink-0">
                                       <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: c }} />
@@ -1332,8 +1359,13 @@ export default function DaoHallPage() {
                               <td className="px-3 py-2 text-right">
                                 <button
                                   onClick={() => handleDayClick(date)}
-                                  className="text-xs px-2 py-1 border border-ink-light/45 text-mist-light hover:text-jade-glow hover:border-jade-glow/45 transition-colors"
+                                  className="dao-modern-cultivation-open-btn text-xs px-2 py-1 border border-ink-light/45 text-mist-light hover:text-jade-glow hover:border-jade-glow/45 transition-colors"
                                   title="Open this day"
+                                  style={{
+                                    borderColor: "color-mix(in srgb, var(--jade-glow) 36%, var(--border))",
+                                    color: "var(--cloud-white)",
+                                    background: "linear-gradient(135deg, color-mix(in srgb, var(--ink-mid) 82%, var(--ink-deep)) 0%, color-mix(in srgb, var(--jade-glow) 12%, var(--ink-deep)) 100%)",
+                                  }}
                                 >
                                   Open
                                 </button>
@@ -1367,22 +1399,49 @@ export default function DaoHallPage() {
           >
             <div className="space-y-4">
               <div className="flex flex-wrap items-center gap-2">
-                <div className="flex items-center gap-1 border border-ink-light/50 p-0.5">
+                <div
+                  className="dao-modern-scope-group flex items-center gap-1 border border-ink-light/50 p-0.5"
+                  style={{
+                    borderColor: "color-mix(in srgb, var(--jade-glow) 32%, var(--border))",
+                    background: "linear-gradient(135deg, color-mix(in srgb, var(--ink-mid) 78%, var(--ink-deep)) 0%, color-mix(in srgb, var(--jade-glow) 8%, var(--ink-deep)) 100%)",
+                  }}
+                >
                   <button
                     onClick={() => setCalendarScope("all")}
-                    className={`text-xs px-2 py-1 transition-all ${calendarScope === "all" ? "bg-jade-deep/20 border border-jade/40 text-jade-light" : "text-mist-light hover:text-jade-light"}`}
+                    className={`dao-modern-scope-btn text-xs px-2 py-1 transition-all ${calendarScope === "all" ? "dao-modern-scope-btn-active bg-jade-deep/20 border border-jade/40 text-jade-light" : "text-mist-light hover:text-jade-light"}`}
+                    style={{
+                      borderColor: calendarScope === "all" ? "color-mix(in srgb, var(--jade-glow) 45%, var(--border))" : "transparent",
+                      color: calendarScope === "all" ? "var(--cloud-white)" : "var(--text-secondary)",
+                      background: calendarScope === "all"
+                        ? "linear-gradient(135deg, color-mix(in srgb, var(--jade-glow) 24%, var(--ink-mid)) 0%, color-mix(in srgb, var(--jade) 20%, var(--ink-deep)) 100%)"
+                        : "transparent",
+                    }}
                   >
                     {t("All", "normal")}
                   </button>
                   <button
                     onClick={() => setCalendarScope("mine")}
-                    className={`text-xs px-2 py-1 transition-all ${calendarScope === "mine" ? "bg-jade-deep/20 border border-jade/40 text-jade-light" : "text-mist-light hover:text-jade-light"}`}
+                    className={`dao-modern-scope-btn text-xs px-2 py-1 transition-all ${calendarScope === "mine" ? "dao-modern-scope-btn-active bg-jade-deep/20 border border-jade/40 text-jade-light" : "text-mist-light hover:text-jade-light"}`}
+                    style={{
+                      borderColor: calendarScope === "mine" ? "color-mix(in srgb, var(--jade-glow) 45%, var(--border))" : "transparent",
+                      color: calendarScope === "mine" ? "var(--cloud-white)" : "var(--text-secondary)",
+                      background: calendarScope === "mine"
+                        ? "linear-gradient(135deg, color-mix(in srgb, var(--jade-glow) 24%, var(--ink-mid)) 0%, color-mix(in srgb, var(--jade) 20%, var(--ink-deep)) 100%)"
+                        : "transparent",
+                    }}
                   >
                     {t("Mine", "normal")}
                   </button>
                   <button
                     onClick={() => setCalendarScope("friends")}
-                    className={`text-xs px-2 py-1 transition-all ${calendarScope === "friends" ? "bg-jade-deep/20 border border-jade/40 text-jade-light" : "text-mist-light hover:text-jade-light"}`}
+                    className={`dao-modern-scope-btn text-xs px-2 py-1 transition-all ${calendarScope === "friends" ? "dao-modern-scope-btn-active bg-jade-deep/20 border border-jade/40 text-jade-light" : "text-mist-light hover:text-jade-light"}`}
+                    style={{
+                      borderColor: calendarScope === "friends" ? "color-mix(in srgb, var(--jade-glow) 45%, var(--border))" : "transparent",
+                      color: calendarScope === "friends" ? "var(--cloud-white)" : "var(--text-secondary)",
+                      background: calendarScope === "friends"
+                        ? "linear-gradient(135deg, color-mix(in srgb, var(--jade-glow) 24%, var(--ink-mid)) 0%, color-mix(in srgb, var(--jade) 20%, var(--ink-deep)) 100%)"
+                        : "transparent",
+                    }}
                   >
                     {t("Friends", "normal")}
                   </button>
@@ -1399,18 +1458,18 @@ export default function DaoHallPage() {
                   {renderedCheckInRows.map(({ date, mine, mineWeight, presentCount, everyoneDetails }) => (
                     <div
                       key={date}
-                      className="border border-ink-light/40 bg-ink-dark/20 px-3 py-2.5 flex flex-col gap-2.5 overflow-hidden"
+                      className="dao-modern-cultivation-card border border-ink-light/40 bg-ink-dark/20 px-3 py-2.5 flex flex-col gap-2.5 overflow-hidden"
                     >
-                      <div className="flex items-center justify-between gap-2">
+                      <div className="dao-modern-cultivation-card-head flex items-center justify-between gap-2">
                         <button
                           onClick={() => handleDayClick(date)}
-                          className="text-xs font-medium text-mist-light hover:text-jade-glow transition-colors text-left"
+                          className="dao-modern-cultivation-date text-xs font-medium text-mist-light hover:text-jade-glow transition-colors text-left"
                           title={t("Open this day", "normal")}
                         >
                           {formatDateWithPreference(date, dateFormat)}
                         </button>
                         <span
-                          className={`text-[10px] px-1.5 py-0.5 border ${
+                          className={`dao-modern-cultivation-status text-[10px] px-1.5 py-0.5 border ${
                             (calendarScope === "mine" ? mine.present : presentCount > 0)
                               ? "border-jade-glow/40 text-jade-glow bg-jade-deep/15"
                               : "border-ink-light/40 text-mist-dark"
@@ -1423,18 +1482,18 @@ export default function DaoHallPage() {
                       </div>
 
                       {calendarScope === "mine" ? (
-                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-mist-light">
+                        <div className="dao-modern-cultivation-summary flex flex-wrap items-center gap-2 text-[11px] text-mist-light">
                           <span>{t("Weight:", "normal")} <span className="text-cloud-white">{mineWeight}</span></span>
                           {mine.comment?.trim() && (
                             <span className="truncate text-mist-light/80">{mine.comment.trim()}</span>
                           )}
                         </div>
                       ) : (
-                        <div className="flex flex-col gap-1">
+                        <div className="dao-modern-cultivation-members flex flex-col gap-1">
                           {everyoneDetails.map((detail) => {
                             const c = getUserCultivatorColor(detail.id, userColors);
                             return (
-                              <div key={detail.id} className="flex flex-wrap items-center gap-1.5 text-[11px] min-w-0">
+                              <div key={detail.id} className="dao-modern-cultivation-member flex flex-wrap items-center gap-1.5 text-[11px] min-w-0">
                                 <span className="flex items-center gap-1.5 shrink-0">
                                   <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: c }} />
                                   <span className="font-medium" style={{ color: c }}>{detail.name}</span>
@@ -1479,23 +1538,33 @@ export default function DaoHallPage() {
 
             return (
             <>
-              <p className="text-xs text-mist-dark">
-                {modalDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
-              </p>
+              <div className="dao-checkin-modal-head flex items-center justify-between gap-2">
+                <p className="dao-checkin-modal-date text-xs text-mist-dark">
+                  {modalDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+                </p>
+                <span className={`dao-checkin-modal-state text-[10px] uppercase tracking-wider ${isFarFuture ? "dao-checkin-modal-state-note" : "dao-checkin-modal-state-checkin"}`}>
+                  {isFarFuture ? "Notes Mode" : "Check-In Mode"}
+                </span>
+              </div>
 
               {isFarFuture && (
-                <div className="px-3 py-2 rounded-lg border border-gold/35 bg-gold-dim/15 text-[11px] text-gold/90">
-                  ⏳ Future date — save a personal note for this day. Check-in is restricted to today and the next day.
+                <div className="dao-checkin-future-note px-3 py-2 rounded-lg border border-gold/35 bg-gold-dim/15 text-[11px] text-gold/90">
+                  Save a personal note for this future day. Full check-in is available only for today and tomorrow.
                 </div>
               )}
 
               {/* Check-In Section — Horizontal cultivator boxes (hidden for far-future dates) */}
               {!isFarFuture && (
-              <div>
-                <label className="block text-xs text-jade-glow uppercase tracking-wider mb-3">
-                  📋 Cultivator Check-In
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <div className="dao-checkin-section">
+                <div className="dao-checkin-section-header mb-3">
+                  <label className="dao-checkin-section-title block text-xs text-jade-glow uppercase tracking-wider">
+                    Cultivator Check-In
+                  </label>
+                  <p className="dao-checkin-section-help text-[11px] text-mist-mid mt-1">
+                    Tap your card to mark presence. Weight is optional and only editable on your own card.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                   {allUsers.map((u) => {
                     const entry = checkInModal.entries[u.id] || { present: false, weight: "", comment: "" };
                     const color = getUserCultivatorColor(u.id, userColors);
@@ -1504,13 +1573,13 @@ export default function DaoHallPage() {
                         key={u.id}
                         whileHover={u.id === user.id ? { scale: 1.04 } : {}}
                         whileTap={u.id === user.id ? { scale: 0.96 } : {}}
-                        className={`rounded-lg border-2 transition-all duration-200 select-none ${
+                        className={`dao-checkin-cultivator-card rounded-lg border-2 transition-all duration-200 select-none ${
                           entry.present
-                            ? "bg-jade-deep/30"
+                            ? "dao-checkin-cultivator-card-active bg-jade-deep/30"
                             : "border-ink-light bg-ink-dark/60"
                         } ${
                           u.id === user.id
-                            ? "hover:bg-ink-mid/40 hover:border-mist-dark"
+                            ? "dao-checkin-cultivator-card-self hover:bg-ink-mid/40 hover:border-mist-dark"
                             : "opacity-60 cursor-default"
                         }`}
                         style={entry.present ? { borderColor: color, boxShadow: `0 0 14px ${getCultivatorGlowColor(color, 0.31)}` } : {}}
@@ -1519,15 +1588,21 @@ export default function DaoHallPage() {
                           className={`p-3 text-center ${u.id === user.id ? 'cursor-pointer' : 'cursor-default'}`}
                           onClick={() => { if (u.id === user.id) updateCheckInModalEntry(u.id, "present", !entry.present); }}
                         >
-                          <div className="flex flex-col items-center gap-1.5">
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <span className="text-[11px] font-semibold text-cloud-white truncate">{u.name}</span>
+                            {u.id === user.id && (
+                              <span className="dao-checkin-cultivator-me text-[9px] uppercase tracking-wide">Me</span>
+                            )}
+                          </div>
+                          <div className="flex flex-col items-center gap-1">
                             <span
-                              className="text-xl font-bold transition-all drop-shadow-[0_0_4px_currentColor]"
+                              className="dao-checkin-cultivator-mark text-xl font-bold transition-all drop-shadow-[0_0_4px_currentColor]"
                               style={{ color: entry.present ? color : 'var(--mist-dark)' }}
                             >
                               {entry.present ? '✓' : '○'}
                             </span>
-                            <span className={`text-xs font-medium transition-colors ${entry.present ? 'text-cloud-white' : 'text-mist-mid'}`}>
-                              {u.name}
+                            <span className={`text-[10px] font-medium transition-colors ${entry.present ? 'text-cloud-white' : 'text-mist-mid'}`}>
+                              {entry.present ? 'Present' : 'Not marked'}
                             </span>
                           </div>
                         </div>
@@ -1539,7 +1614,7 @@ export default function DaoHallPage() {
                               value={entry.weight}
                               onClick={(e) => e.stopPropagation()}
                               onChange={(e) => updateCheckInModalEntry(u.id, "weight", e.target.value)}
-                              className="w-full bg-ink-deep/80 border border-ink-light rounded px-2 py-1 text-[10px] text-cloud-white placeholder-mist-dark outline-none focus:border-jade-glow transition-colors text-center"
+                              className="dao-checkin-weight-input w-full bg-ink-deep/80 border border-ink-light rounded px-2 py-1 text-[10px] text-cloud-white placeholder-mist-dark outline-none focus:border-jade-glow transition-colors text-center"
                               min="0"
                               max="500"
                               step="0.1"
@@ -1559,36 +1634,36 @@ export default function DaoHallPage() {
               )}
 
                 {/* Personal comment */}
-                <div className={isFarFuture ? "" : "mt-4"}>
-                  <label className="block text-[10px] text-mist-dark uppercase mb-1">My Comment</label>
+                <div className={`dao-checkin-comment ${isFarFuture ? "" : "mt-4"}`}>
+                  <label className="block text-[10px] text-mist-dark uppercase mb-1">Personal Note</label>
                   <input
                     type="text"
-                    placeholder="Your personal note..."
+                    placeholder="Add a short note for this day"
                     value={user?.id ? checkInModal.entries[user.id]?.comment || "" : ""}
                     onChange={(e) => {
                       if (user?.id) {
                         updateCheckInModalEntry(user.id, "comment", e.target.value);
                       }
                     }}
-                    className="w-full bg-ink-deep border border-ink-light rounded px-3 py-2 text-xs text-cloud-white placeholder-mist-dark outline-none focus:border-jade-glow transition-colors"
+                    className="dao-checkin-comment-input w-full bg-ink-deep border border-ink-light rounded px-3 py-2 text-xs text-cloud-white placeholder-mist-dark outline-none focus:border-jade-glow transition-colors"
                   />
                 </div>
 
                 {isFarFuture ? (
-                  <div className="flex gap-2 mt-4">
+                  <div className="dao-checkin-actions flex gap-2 mt-4">
                     <GlowButton
                       variant="jade"
                       glow
-                      className="flex-1"
+                      className="dao-checkin-action-primary flex-1"
                       onClick={handleSaveCheckIn}
                       size="sm"
                     >
-                      💾 Save Note
+                      Save Note
                     </GlowButton>
                     {futureNotes.some(n => n.date === checkInModal.date && n.user.id === user.id) && (
                       <GlowButton
                         variant="crimson"
-                        className="flex-1"
+                        className="dao-checkin-action-danger flex-1"
                         onClick={async () => {
                           const existingNote = futureNotes.find(n => n.date === checkInModal.date && n.user.id === user.id);
                           if (existingNote) {
@@ -1621,7 +1696,7 @@ export default function DaoHallPage() {
                         }}
                         size="sm"
                       >
-                        🗑 Clear Note
+                        Clear Note
                       </GlowButton>
                     )}
                   </div>
@@ -1629,11 +1704,11 @@ export default function DaoHallPage() {
                   <GlowButton
                     variant="jade"
                     glow
-                    className="w-full mt-4"
+                    className="dao-checkin-action-primary w-full mt-4"
                     onClick={handleSaveCheckIn}
                     size="sm"
                   >
-                    ✓ Save Check-In
+                    Save Check-In
                   </GlowButton>
                 )}
             </>

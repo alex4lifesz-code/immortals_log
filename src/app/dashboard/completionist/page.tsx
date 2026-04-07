@@ -503,13 +503,13 @@ export default function CompletionistPage() {
       subtitle={t("Attempt every exercise. Leave nothing untried.", "normal")}
       mobileContentPaddingClass="p-2 pb-24"
     >
-      <div className="space-y-6 px-0 py-2 sm:py-3">
+      <div className="completionist-modern space-y-6 px-0 py-2 sm:py-3">
 
         {/* ===== COMPLETIONIST HERO / MOTIVATION SECTION ===== */}
         {!loading && skills.length > 0 && (
           isMobile ? (
             /* --- MOBILE: Compact motivational card --- */
-            <GlowCard glow={completionStats.pct >= 100 ? "gold" : "jade"} hoverable={false}>
+            <GlowCard glow={completionStats.pct >= 100 ? "gold" : "jade"} hoverable={false} className="completionist-modern-hero-mobile">
               <div className="flex items-center gap-4">
                 <ProgressRing percent={completionStats.pct} size={72} strokeWidth={5} />
                 <div className="flex-1 min-w-0">
@@ -546,7 +546,7 @@ export default function CompletionistPage() {
             /* --- DESKTOP: Spacious motivational dashboard --- */
             <div className="grid grid-cols-[280px_1fr] gap-4">
               {/* Left: Ring + Title */}
-              <GlowCard glow={completionStats.pct >= 100 ? "gold" : "jade"} hoverable={false}>
+              <GlowCard glow={completionStats.pct >= 100 ? "gold" : "jade"} hoverable={false} className="completionist-modern-hero-main">
                 <div className="flex flex-col items-center text-center py-3">
                   <ProgressRing percent={completionStats.pct} size={120} strokeWidth={8} />
                   <p className="mt-3 text-base font-bold text-cloud-white">
@@ -578,7 +578,7 @@ export default function CompletionistPage() {
               </GlowCard>
 
               {/* Right: Category breakdown */}
-              <GlowCard glow="jade" hoverable={false}>
+              <GlowCard glow="jade" hoverable={false} className="completionist-modern-hero-side">
                 <h3 className="text-sm text-jade-glow uppercase tracking-wider mb-4">
                   {t("Category Progress", "normal")}
                 </h3>
@@ -624,7 +624,7 @@ export default function CompletionistPage() {
         )}
 
         {/* ===== OVERVIEW STATS ===== */}
-        <GlowCard glow="jade" hoverable={false}>
+        <GlowCard glow="jade" hoverable={false} className="completionist-modern-overview">
           <h3 className="text-sm text-jade-glow uppercase tracking-wider mb-3">{t("Overview", "normal")}</h3>
           <div className="flex flex-wrap gap-4 text-xs">
             <span className="text-mist-dark">{t("Skills", "normal")}: <span className="text-cloud-white font-semibold">{stats.total}</span></span>
@@ -634,7 +634,7 @@ export default function CompletionistPage() {
         </GlowCard>
 
         {/* ===== FILTERS ===== */}
-        <GlowCard glow="jade" hoverable={false}>
+        <GlowCard glow="jade" hoverable={false} className="completionist-modern-filters">
           <h3 className="text-sm text-jade-glow uppercase tracking-wider mb-3">{t("Filters", "normal")}</h3>
           {isMobile ? (
             /* --- MOBILE: stacked filter buttons --- */
@@ -836,7 +836,7 @@ export default function CompletionistPage() {
               );
               const hasAttempted = skill.performed > 0;
               return (
-                <GlowCard key={skill.id} glow="jade" hoverable={false} className="overflow-hidden">
+                <GlowCard key={skill.id} glow="jade" hoverable={false} className="completionist-modern-skill-mobile overflow-hidden">
                   <button
                     type="button"
                     onClick={() => toggleExpand(skill.id)}
@@ -991,7 +991,7 @@ export default function CompletionistPage() {
             })
           ) : (
             /* --- DESKTOP: Rich table-based exercise grid --- */
-            <GlowCard glow="jade" hoverable={false}>
+            <GlowCard glow="jade" hoverable={false} className="completionist-modern-skill-desktop">
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
@@ -1062,16 +1062,24 @@ export default function CompletionistPage() {
                               </span>
                             </td>
                           </tr>
-                          {isExpanded && (
-                            <tr>
-                              <td colSpan={8} className="p-0">
-                                <motion.div
-                                  initial={{ height: 0, opacity: 0 }}
-                                  animate={{ height: "auto", opacity: 1 }}
-                                  transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                                  style={{ overflow: "hidden" }}
-                                >
-                                  <div className="px-4 py-3" style={{ backgroundColor: "color-mix(in srgb, var(--surface) 95%, var(--jade-glow) 5%)" }}>
+                          <AnimatePresence initial={false}>
+                            {isExpanded ? (
+                              <motion.tr
+                                key={`${skill.id}-expanded-row`}
+                                initial={{ opacity: 1 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.12, ease: [0.22, 1, 0.36, 1] }}
+                              >
+                                <td colSpan={8} className="p-0">
+                                  <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: "auto", opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ duration: 0.14, ease: [0.16, 1, 0.3, 1] }}
+                                    style={{ overflow: "hidden" }}
+                                  >
+                                    <div className="px-4 py-3" style={{ backgroundColor: "color-mix(in srgb, var(--surface) 95%, var(--jade-glow) 5%)" }}>
                                     <table className="w-full text-xs">
                                       <thead>
                                         <tr className="border-b border-ink-light/30">
@@ -1167,11 +1175,12 @@ export default function CompletionistPage() {
                                         })}
                                       </tbody>
                                     </table>
-                                  </div>
-                                </motion.div>
-                              </td>
-                            </tr>
-                          )}
+                                    </div>
+                                  </motion.div>
+                                </td>
+                              </motion.tr>
+                            ) : null}
+                          </AnimatePresence>
                         </React.Fragment>
                       );
                     })}

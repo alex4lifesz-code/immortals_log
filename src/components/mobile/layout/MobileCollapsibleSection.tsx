@@ -13,7 +13,7 @@ export default function MobileCollapsibleSection({ title, defaultOpen = false, c
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <section className="mobile-card-polish overflow-hidden rounded-xl border border-border bg-ink-deep">
+    <section className="mobile-card-polish surface-panel surface-panel-strong overflow-hidden rounded-xl">
       <button className="flex min-h-12 w-full items-center justify-between px-4 py-3 text-left" onClick={() => setOpen((v) => !v)}>
         <span className="text-sm text-jade-glow uppercase tracking-wider">{title}</span>
         <motion.span

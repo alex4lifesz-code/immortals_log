@@ -276,7 +276,7 @@ const TrainingLogMobileCard = memo(function TrainingLogMobileCard({
   const typeTone = getCategoryTone(typeLabel);
   const progressionTone = getSimpleLabelTone("progression");
   const variantTone = getSimpleLabelTone("variant");
-  const badgeClassName = "inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold leading-tight";
+  const badgeClassName = "training-log-mobile-entry-badge inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold leading-tight shadow-[0_1px_0_rgba(255,255,255,0.03)]";
   const valueSamples = [entry.val1, entry.val2, entry.val3].filter((value): value is number => value != null && Number.isFinite(value));
   const repsSamples = [entry.reps1, entry.reps2, entry.reps3].filter((reps): reps is number => reps != null && Number.isFinite(reps));
   const averageValue = valueSamples.length > 0 ? Math.round((valueSamples.reduce((sum, value) => sum + value, 0) / valueSamples.length) * 10) / 10 : null;
@@ -291,38 +291,39 @@ const TrainingLogMobileCard = memo(function TrainingLogMobileCard({
     <button
       type="button"
       onClick={onOpenExerciseHistory}
-      className="w-full rounded-lg border px-3 py-2.5 text-left"
+      className="training-log-mobile-entry-card w-full rounded-xl border px-3 py-2.5 text-left transition-all duration-150 hover:scale-[1.01] active:scale-[0.99]"
       style={{
-        borderColor: "color-mix(in srgb, var(--border) 82%, var(--nyaa-table-grid) 18%)",
-        backgroundColor: "color-mix(in srgb, var(--surface) 90%, var(--nyaa-table-head-bg) 10%)",
+        borderColor: "color-mix(in srgb, var(--jade-glow) 26%, var(--border))",
+        background: "linear-gradient(160deg, color-mix(in srgb, var(--ink-deep) 94%, transparent) 0%, color-mix(in srgb, var(--ink-mid) 88%, transparent) 100%)",
+        boxShadow: "0 0 0 1px color-mix(in srgb, var(--jade-glow) 10%, transparent)",
         color: "var(--text-primary)",
       }}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-xs font-semibold" style={{ color: "var(--text-primary)" }}>{entryDisplayName}</p>
-          <p className="mt-0.5 text-[10px]" style={{ color: "var(--text-muted)" }}>{formattedEntryDate}</p>
+          <p className="training-log-mobile-entry-title truncate text-xs font-semibold" style={{ color: "var(--cloud-white)" }}>{entryDisplayName}</p>
+          <p className="training-log-mobile-entry-date mt-0.5 text-[10px]" style={{ color: "var(--text-muted)" }}>{formattedEntryDate}</p>
         </div>
         {(hasAverageWeight || hasAverageReps || hasWeight) && (
           <div
-            className="ml-1 grid shrink-0 gap-1 rounded-md border px-1.5 py-1 text-right"
+            className="training-log-mobile-entry-metrics ml-1 grid shrink-0 gap-1 rounded-md border px-1.5 py-1 text-right"
             style={{
-              borderColor: "color-mix(in srgb, var(--border) 75%, var(--accent) 25%)",
-              backgroundColor: "color-mix(in srgb, var(--surface) 88%, var(--accent) 12%)",
+              borderColor: "color-mix(in srgb, var(--jade-glow) 28%, var(--border))",
+              backgroundColor: "color-mix(in srgb, var(--ink-mid) 82%, var(--ink-deep) 18%)",
             }}
           >
             {hasAverageWeight && (
-              <span className="text-[10px] leading-tight" style={{ color: "var(--accent)" }}>
-                Average Weight: {averageValueText}
+              <span className="training-log-mobile-entry-metric-primary text-[10px] leading-tight" style={{ color: "var(--jade-light)" }}>
+                Avg Weight: {averageValueText}
               </span>
             )}
             {hasAverageReps && (
-              <span className="text-[10px] leading-tight" style={{ color: "var(--text-secondary)" }}>
-                Average Reps: {averageRepsText}
+              <span className="training-log-mobile-entry-metric text-[10px] leading-tight" style={{ color: "var(--text-secondary)" }}>
+                Avg Reps: {averageRepsText}
               </span>
             )}
             {hasWeight && (
-              <span className="text-[10px] leading-tight" style={{ color: "var(--gold)" }}>
+              <span className="training-log-mobile-entry-metric-accent text-[10px] leading-tight" style={{ color: "var(--gold)" }}>
                 Weight: {entry.modifier}
               </span>
             )}
@@ -330,17 +331,27 @@ const TrainingLogMobileCard = memo(function TrainingLogMobileCard({
         )}
       </div>
 
-      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+      <div className="training-log-mobile-entry-badges mt-1.5 flex flex-wrap items-center gap-1.5">
         <span
           className={badgeClassName}
-          style={{ borderColor: typeTone.borderColor, backgroundColor: typeTone.backgroundColor, color: typeTone.color }}
+          style={{
+            borderColor: typeTone.borderColor,
+            backgroundColor: `color-mix(in srgb, ${typeTone.backgroundColor} 88%, var(--ink-deep) 12%)`,
+            color: typeTone.color,
+            boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${typeTone.color} 18%, transparent)`,
+          }}
         >
           {typeLabel}
         </span>
         {entry.tierName.trim().length > 0 && (
           <span
             className={badgeClassName}
-            style={{ borderColor: progressionTone.borderColor, backgroundColor: progressionTone.backgroundColor, color: progressionTone.color }}
+            style={{
+              borderColor: progressionTone.borderColor,
+              backgroundColor: `color-mix(in srgb, ${progressionTone.backgroundColor} 88%, var(--ink-deep) 12%)`,
+              color: progressionTone.color,
+              boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${progressionTone.color} 18%, transparent)`,
+            }}
             title={entry.tierName}
           >
             {entry.tierName}
@@ -349,7 +360,12 @@ const TrainingLogMobileCard = memo(function TrainingLogMobileCard({
         {entry.variant && (
           <span
             className={badgeClassName}
-            style={{ borderColor: variantTone.borderColor, backgroundColor: variantTone.backgroundColor, color: variantTone.color }}
+            style={{
+              borderColor: variantTone.borderColor,
+              backgroundColor: `color-mix(in srgb, ${variantTone.backgroundColor} 88%, var(--ink-deep) 12%)`,
+              color: variantTone.color,
+              boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${variantTone.color} 18%, transparent)`,
+            }}
             title={entry.variant}
           >
             {entry.variant}
@@ -358,10 +374,15 @@ const TrainingLogMobileCard = memo(function TrainingLogMobileCard({
       </div>
 
       {entry.notes && (
-        <p className="mt-1 line-clamp-2 text-[10px]" style={{ color: "var(--text-secondary)" }}>
+        <p className="training-log-mobile-entry-notes mt-1 line-clamp-2 text-[10px]" style={{ color: "var(--text-secondary)" }}>
           {entry.notes}
         </p>
       )}
+
+      <div className="training-log-mobile-entry-footer mt-1.5 flex items-center justify-end gap-1 text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "color-mix(in srgb, var(--jade-light) 78%, var(--text-secondary))" }}>
+        <span>{t("View", "normal")}</span>
+        <span aria-hidden>{">"}</span>
+      </div>
     </button>
   );
 });
@@ -654,6 +675,8 @@ function TrainingLogTable({
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ logId: string; exerciseName: string } | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleteConfirmAcknowledge, setDeleteConfirmAcknowledge] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedEditLogId, setSelectedEditLogId] = useState<string | null>(null);
   const [hoveredEditLogId, setHoveredEditLogId] = useState<string | null>(null);
@@ -1573,9 +1596,13 @@ function TrainingLogTable({
 
   const fetchExerciseHistoryPage = useCallback(async (
     exerciseId: string,
+    progressionLevel: number | null,
     cursor: string | null,
   ): Promise<{ history: ExerciseHistoryEntry[]; nextCursor: string | null }> => {
     const params = new URLSearchParams({ exerciseId, limit: "24" });
+    if (typeof progressionLevel === "number" && Number.isFinite(progressionLevel) && progressionLevel > 0) {
+      params.set("progressionLevel", String(progressionLevel));
+    }
     if (historyTargetUserId) {
       params.set("targetUserId", historyTargetUserId);
     }
@@ -1608,7 +1635,12 @@ function TrainingLogTable({
     setHistoryLoadingMore(false);
     setHistoryNextCursor(null);
 
-    fetchExerciseHistoryPage(selectedInputExercise.id, null)
+    const selectedProgressionLevel = Number.parseInt(workoutInput.level || "", 10);
+    const progressionLevel = Number.isFinite(selectedProgressionLevel) && selectedProgressionLevel > 0
+      ? selectedProgressionLevel
+      : null;
+
+    fetchExerciseHistoryPage(selectedInputExercise.id, progressionLevel, null)
       .then(({ history, nextCursor }) => {
         if (cancelled) return;
         setHistoryData(history);
@@ -1630,15 +1662,19 @@ function TrainingLogTable({
     return () => {
       cancelled = true;
     };
-  }, [fetchExerciseHistoryPage, inputMode, selectedInputExercise?.id]);
+  }, [fetchExerciseHistoryPage, inputMode, selectedInputExercise?.id, workoutInput.level]);
 
   const handleLoadMoreHistory = useCallback(async () => {
     const selectedExerciseId = selectedInputExercise?.id;
+    const selectedProgressionLevel = Number.parseInt(workoutInput.level || "", 10);
+    const progressionLevel = Number.isFinite(selectedProgressionLevel) && selectedProgressionLevel > 0
+      ? selectedProgressionLevel
+      : null;
     if (!selectedExerciseId || !historyNextCursor || historyLoading || historyLoadingMore) return;
 
     setHistoryLoadingMore(true);
     try {
-      const { history, nextCursor } = await fetchExerciseHistoryPage(selectedExerciseId, historyNextCursor);
+      const { history, nextCursor } = await fetchExerciseHistoryPage(selectedExerciseId, progressionLevel, historyNextCursor);
       setHistoryData((prev) => {
         if (history.length === 0) return prev;
         const seen = new Set(prev.map((entry) => entry.id));
@@ -1651,7 +1687,7 @@ function TrainingLogTable({
     } finally {
       setHistoryLoadingMore(false);
     }
-  }, [fetchExerciseHistoryPage, historyLoading, historyLoadingMore, historyNextCursor, selectedInputExercise?.id]);
+  }, [fetchExerciseHistoryPage, historyLoading, historyLoadingMore, historyNextCursor, selectedInputExercise?.id, workoutInput.level]);
 
   useEffect(() => {
     if (inputMode === "new") {
@@ -2092,6 +2128,8 @@ function TrainingLogTable({
         setSaveMessage({ type: "success", text: "Pending exercise added to log and library" });
         setWorkoutInput((prev) => ({
           ...prev,
+          exerciseId: "",
+          level: "",
           newExerciseName: "",
           val1: "",
           reps1: "",
@@ -2103,6 +2141,9 @@ function TrainingLogTable({
           variant: "",
           notes: "",
         }));
+        setExerciseSearchTerm("");
+        setExerciseDropdownOpen(false);
+        setExerciseHighlightIndex(-1);
         window.dispatchEvent(new Event("progression-exercises-updated"));
         onRefresh();
         if (isMobile) handleMobileInputClose();
@@ -2159,6 +2200,8 @@ function TrainingLogTable({
       setSaveMessage({ type: "success", text: "Training log added" });
       setWorkoutInput((prev) => ({
         ...prev,
+        exerciseId: "",
+        level: "",
         val1: "",
         reps1: "",
         val2: "",
@@ -2169,6 +2212,9 @@ function TrainingLogTable({
         variant: "",
         notes: "",
       }));
+      setExerciseSearchTerm("");
+      setExerciseDropdownOpen(false);
+      setExerciseHighlightIndex(-1);
       onRefresh();
       if (isMobile) handleMobileInputClose();
     } catch (err) {
@@ -2193,6 +2239,8 @@ function TrainingLogTable({
       await api.post("/api/progressions/logs/delete", { logId });
       setSaveMessage({ type: "success", text: "Log record deleted successfully" });
       setDeleteConfirm(null);
+      setDeleteConfirmText("");
+      setDeleteConfirmAcknowledge(false);
       onRefresh();
     } catch (err) {
       if (err instanceof ApiRequestError) {
@@ -2245,17 +2293,17 @@ function TrainingLogTable({
   };
 
   const headerTypographyClass = "font-semibold text-[10px] sm:text-[11px] uppercase tracking-[0.08em] text-jade-glow";
-  const headerPadClass = effectiveCompact ? "py-1.5" : "py-2";
-  const cellPadTight = effectiveCompact ? "px-1 py-1" : "px-1 py-1.5";
-  const cellPadStandard = effectiveCompact ? "px-1 py-1" : "px-1.5 py-1.5";
-  const cellPadWide = effectiveCompact ? "px-1.5 py-1" : "px-1.5 py-1.5";
-  const cellPadExercise = effectiveCompact ? "px-1.5 py-1" : "px-1.5 py-1.5";
-  const segmentedToggleButtonClass = "rounded px-2 py-1 text-[11px] font-semibold transition-all duration-150";
-  const toolbarButtonClass = "inline-flex items-center gap-2 rounded-md border px-2 py-1 text-[11px] font-semibold transition-all duration-150 hover:scale-[1.02] active:scale-[0.98]";
+  const headerPadClass = effectiveCompact ? "tl-head-pad-compact" : "tl-head-pad";
+  const cellPadTight = effectiveCompact ? "tl-cell-pad-tight-compact" : "tl-cell-pad-tight";
+  const cellPadStandard = effectiveCompact ? "tl-cell-pad-standard-compact" : "tl-cell-pad-standard";
+  const cellPadWide = effectiveCompact ? "tl-cell-pad-wide-compact" : "tl-cell-pad-wide";
+  const cellPadExercise = effectiveCompact ? "tl-cell-pad-exercise-compact" : "tl-cell-pad-exercise";
+  const segmentedToggleButtonClass = "rounded-md px-2.5 py-1 text-[11px] font-semibold transition-all duration-150";
+  const toolbarButtonClass = "inline-flex items-center gap-2 rounded-md border px-2.5 py-1 text-[11px] font-semibold transition-all duration-150 hover:scale-[1.02] active:scale-[0.98]";
   const panelIconButtonClass = "inline-flex h-6 w-6 items-center justify-center rounded border text-xs font-bold transition-colors hover:bg-ink-mid/35";
-  const mobileFieldRowClass = "w-full min-w-0 max-w-[760px] mx-auto flex items-center gap-2 px-2.5 sm:px-4";
-  const mobileFieldLabelClass = "text-xs font-medium w-12 sm:w-20 shrink-0 text-left text-mist-dark uppercase";
-  const inputModeOptionButtonClass = `w-full min-h-9 appearance-none rounded-md border px-3 py-2 text-center font-semibold leading-tight whitespace-nowrap transition-[transform,box-shadow,border-color,background-color,color] duration-150 hover:scale-[1.005] active:scale-[0.985] ${isMobile ? "text-sm" : "text-xs"}`;
+  const mobileFieldRowClass = "training-log-mobile-row w-full min-w-0 max-w-[760px] mx-auto grid grid-cols-[5.25rem_minmax(0,1fr)] sm:grid-cols-[6.5rem_minmax(0,1fr)] items-center gap-2 px-2.5 sm:px-4";
+  const mobileFieldLabelClass = "training-log-mobile-label text-xs font-medium text-left uppercase";
+  const inputModeOptionButtonClass = `training-log-mobile-toggle w-full min-h-9 appearance-none rounded-md border px-3 py-2 text-center font-semibold leading-tight whitespace-nowrap transition-[transform,box-shadow,border-color,background-color,color] duration-150 hover:scale-[1.005] active:scale-[0.985] ${isMobile ? "text-sm" : "text-xs"}`;
   const selectCaretStyle = {
     appearance: "none" as const,
     backgroundImage: "url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23b5bac1' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.7' d='M6 8l4 4 4-4'/%3e%3c/svg%3e\")",
@@ -2264,6 +2312,29 @@ function TrainingLogTable({
     backgroundSize: "16px",
     paddingRight: "30px",
   };
+  const inputActionPrimaryStyle = {
+    borderColor: "color-mix(in srgb, var(--jade-glow) 62%, var(--border))",
+    color: "var(--cloud-white)",
+    background: "linear-gradient(135deg, color-mix(in srgb, var(--jade-glow) 36%, var(--ink-mid)) 0%, color-mix(in srgb, var(--jade) 34%, var(--ink-deep)) 100%)",
+    boxShadow: "0 0 0 1px color-mix(in srgb, var(--jade-glow) 22%, transparent) inset, 0 8px 18px color-mix(in srgb, black 28%, transparent)",
+  };
+  const inputActionSecondaryStyle = {
+    borderColor: "color-mix(in srgb, var(--mountain-blue-glow) 42%, var(--border))",
+    color: "color-mix(in srgb, var(--cloud-white) 92%, var(--mountain-blue-glow))",
+    background: "linear-gradient(135deg, color-mix(in srgb, var(--mountain-blue-glow) 20%, var(--ink-mid)) 0%, color-mix(in srgb, var(--ink-mid) 80%, var(--ink-deep)) 100%)",
+    boxShadow: "0 0 0 1px color-mix(in srgb, var(--mountain-blue-glow) 16%, transparent) inset, 0 6px 14px color-mix(in srgb, black 24%, transparent)",
+  };
+  const deleteTargetEntry = useMemo(() => {
+    if (!deleteConfirm) return null;
+    return entries.find((entry) => entry.logId === deleteConfirm.logId) ?? null;
+  }, [deleteConfirm, entries]);
+  const deleteTargetSetCount = deleteTargetEntry
+    ? [deleteTargetEntry.reps1, deleteTargetEntry.reps2, deleteTargetEntry.reps3].filter((reps) => typeof reps === "number" && reps > 0).length
+    : 0;
+  const deleteTargetDate = deleteTargetEntry
+    ? (formattedDateByLogId.get(deleteTargetEntry.logId) ?? formatDate(deleteTargetEntry.date, dateFormat))
+    : "-";
+  const isDeleteConfirmationReady = deleteConfirmAcknowledge && deleteConfirmText.trim().toUpperCase() === "DELETE";
   const shouldRenderInputSection = !shouldDisableInputSection && (!isMobile || mobileInputOpen);
 
   return (
@@ -2271,48 +2342,72 @@ function TrainingLogTable({
       <div className="w-full">
         {!isMobile && isViewingAnotherUser && (
           <div
-            className="mb-4 w-full rounded-2xl border px-4 py-3"
+            className="mb-4 w-full rounded-2xl border px-4 py-3 relative overflow-hidden"
             style={{
-              borderColor: "color-mix(in srgb, var(--border) 78%, var(--text-muted) 22%)",
-              backgroundColor: "color-mix(in srgb, var(--surface) 70%, var(--border) 30%)",
-              opacity: 0.82,
+              borderColor: "color-mix(in srgb, var(--jade-glow) 42%, var(--border))",
+              background: "linear-gradient(145deg, color-mix(in srgb, var(--ink-deep) 88%, black 12%) 0%, color-mix(in srgb, var(--ink-mid) 88%, black 12%) 100%)",
+              boxShadow: "0 0 0 1px color-mix(in srgb, var(--jade-glow) 20%, transparent), 0 10px 26px color-mix(in srgb, black 42%, transparent)",
             }}
           >
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-secondary)" }}>
+            <div
+              aria-hidden="true"
+              className="absolute left-0 top-0 h-full w-1"
+              style={{ background: "linear-gradient(180deg, var(--jade-glow) 0%, color-mix(in srgb, var(--gold) 75%, var(--jade-glow)) 100%)" }}
+            />
+            <div className="flex items-center justify-between gap-3 pl-2">
+              <span
+                className="inline-flex items-center rounded-md border px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em]"
+                style={{
+                  color: "var(--cloud-white)",
+                  borderColor: "color-mix(in srgb, var(--jade-glow) 44%, var(--border))",
+                  backgroundColor: "color-mix(in srgb, var(--jade-glow) 18%, var(--ink-deep))",
+                }}
+              >
+                <span className="mr-1.5 inline-flex h-1.5 w-1.5 rounded-full" style={{ backgroundColor: "var(--jade-light)" }} />
                 <span title={tHint("Training Log Input Section", "normal") ?? undefined}>{t("Training Log Input Section", "normal")}</span>
               </span>
-              <span className="rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}>
+              <span
+                className="rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em]"
+                style={{
+                  borderColor: "color-mix(in srgb, var(--gold) 42%, var(--border))",
+                  color: "color-mix(in srgb, var(--gold) 72%, var(--cloud-white))",
+                  backgroundColor: "color-mix(in srgb, var(--gold) 14%, var(--ink-deep))",
+                }}
+              >
                 <span title={tHint("Collapsed", "normal") ?? undefined}>{t("Collapsed", "normal")}</span>
               </span>
             </div>
-            <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
+            <p className="mt-2 pl-2 text-xs" style={{ color: "color-mix(in srgb, var(--cloud-white) 78%, var(--text-secondary))" }}>
               {t("Input is disabled while viewing another user.", "normal")}
             </p>
           </div>
         )}
         {shouldRenderInputSection && (
           <div
-            className="w-full rounded-2xl relative overflow-hidden min-w-0 mb-6 nyaa-input-section surface-panel surface-panel-strong"
+            className="w-full rounded-2xl relative overflow-hidden min-w-0 mb-6 nyaa-input-section training-log-modern-shell"
           >
             <div
               className={`flex flex-wrap items-center justify-between gap-2.5 px-3 py-2.5 border-b min-w-0 ${isMobile ? "relative pr-20" : ""}`}
-              style={{ borderColor: "color-mix(in srgb, var(--jade-glow) 25%, var(--border))", backgroundColor: "color-mix(in srgb, var(--jade-glow) 6%, var(--nyaa-table-head-bg))" }}
+              style={{
+                borderColor: "color-mix(in srgb, var(--jade-glow) 30%, var(--border))",
+                backgroundColor: "color-mix(in srgb, var(--jade-glow) 9%, var(--ink-dark))",
+              }}
             >
-              <span className="text-[11px] font-semibold uppercase tracking-wide shrink-0" style={{ color: "var(--jade-glow)" }} title={tHint("Training Log Input", "normal") ?? undefined}>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.09em] shrink-0" style={{ color: "var(--jade-light)" }} title={tHint("Training Log Input", "normal") ?? undefined}>
                 {t("Training Log Input", "normal")}
               </span>
               <div className="flex flex-wrap items-center gap-2 min-w-0">
                 {!isMobile && (
                   <div className="flex items-center gap-2">
-                    <div className="inline-flex items-center rounded-md border p-1" style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)" }}>
+                    <div className="inline-flex items-center rounded-lg border p-1" style={{ borderColor: "color-mix(in srgb, var(--jade-glow) 25%, var(--border))", backgroundColor: "color-mix(in srgb, var(--ink-mid) 85%, var(--ink-deep))" }}>
                       <button
                         type="button"
                         onClick={() => setInputValueMode("weight")}
                         className={segmentedToggleButtonClass}
                         style={{
-                          color: !isTimedInput ? "var(--accent)" : "var(--text-secondary)",
-                          backgroundColor: !isTimedInput ? "color-mix(in srgb, var(--accent) 14%, transparent)" : "transparent",
+                          color: !isTimedInput ? "var(--cloud-white)" : "var(--text-secondary)",
+                          backgroundColor: !isTimedInput ? "color-mix(in srgb, var(--jade-glow) 24%, transparent)" : "transparent",
+                          boxShadow: !isTimedInput ? "0 0 0 1px color-mix(in srgb, var(--jade-glow) 35%, transparent) inset" : "none",
                         }}
                       >
                         <span title={tHint("Weight", "normal") ?? undefined}>{t("Weight", "normal")}</span>
@@ -2322,22 +2417,24 @@ function TrainingLogTable({
                         onClick={() => setInputValueMode("timed")}
                         className={segmentedToggleButtonClass}
                         style={{
-                          color: isTimedInput ? "var(--timed-color)" : "var(--text-secondary)",
+                          color: isTimedInput ? "var(--cloud-white)" : "var(--text-secondary)",
                           backgroundColor: isTimedInput ? "color-mix(in srgb, var(--timed-color) 16%, transparent)" : "transparent",
+                          boxShadow: isTimedInput ? "0 0 0 1px color-mix(in srgb, var(--timed-color) 45%, transparent) inset" : "none",
                         }}
                       >
                         <span title={tHint("Timed", "normal") ?? undefined}>{t("Timed", "normal")}</span>
                       </button>
                     </div>
-                    <div className="inline-flex items-center rounded-md border p-1" style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)" }}>
+                    <div className="inline-flex items-center rounded-lg border p-1" style={{ borderColor: "color-mix(in srgb, var(--jade-glow) 25%, var(--border))", backgroundColor: "color-mix(in srgb, var(--ink-mid) 85%, var(--ink-deep))" }}>
                       <button
                         type="button"
                         onClick={() => setInputWeightUnit("kg")}
                         disabled={isTimedInput}
                         className={segmentedToggleButtonClass}
                         style={{
-                          color: inputWeightUnit === "kg" ? "var(--accent)" : "var(--text-secondary)",
-                          backgroundColor: inputWeightUnit === "kg" ? "color-mix(in srgb, var(--accent) 14%, transparent)" : "transparent",
+                          color: inputWeightUnit === "kg" ? "var(--cloud-white)" : "var(--text-secondary)",
+                          backgroundColor: inputWeightUnit === "kg" ? "color-mix(in srgb, var(--jade-glow) 24%, transparent)" : "transparent",
+                          boxShadow: inputWeightUnit === "kg" ? "0 0 0 1px color-mix(in srgb, var(--jade-glow) 35%, transparent) inset" : "none",
                           opacity: isTimedInput ? 0.45 : 1,
                           cursor: isTimedInput ? "not-allowed" : "pointer",
                         }}
@@ -2350,8 +2447,9 @@ function TrainingLogTable({
                         disabled={isTimedInput}
                         className={segmentedToggleButtonClass}
                         style={{
-                          color: inputWeightUnit === "lbs" ? "var(--accent)" : "var(--text-secondary)",
-                          backgroundColor: inputWeightUnit === "lbs" ? "color-mix(in srgb, var(--accent) 14%, transparent)" : "transparent",
+                          color: inputWeightUnit === "lbs" ? "var(--cloud-white)" : "var(--text-secondary)",
+                          backgroundColor: inputWeightUnit === "lbs" ? "color-mix(in srgb, var(--jade-glow) 24%, transparent)" : "transparent",
+                          boxShadow: inputWeightUnit === "lbs" ? "0 0 0 1px color-mix(in srgb, var(--jade-glow) 35%, transparent) inset" : "none",
                           opacity: isTimedInput ? 0.45 : 1,
                           cursor: isTimedInput ? "not-allowed" : "pointer",
                         }}
@@ -2361,14 +2459,15 @@ function TrainingLogTable({
                     </div>
                   </div>
                 )}
-                <div className="inline-flex items-center rounded-md border p-1" style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)" }}>
+                <div className="inline-flex items-center rounded-lg border p-1" style={{ borderColor: "color-mix(in srgb, var(--jade-glow) 25%, var(--border))", backgroundColor: "color-mix(in srgb, var(--ink-mid) 85%, var(--ink-deep))" }}>
                   <button
                     type="button"
                     onClick={() => setInputMode("existing")}
                     className={segmentedToggleButtonClass}
                     style={{
-                      color: inputMode === "existing" ? "var(--accent)" : "var(--text-secondary)",
-                      backgroundColor: inputMode === "existing" ? "color-mix(in srgb, var(--accent) 14%, transparent)" : "transparent",
+                      color: inputMode === "existing" ? "var(--cloud-white)" : "var(--text-secondary)",
+                      backgroundColor: inputMode === "existing" ? "color-mix(in srgb, var(--jade-glow) 24%, transparent)" : "transparent",
+                      boxShadow: inputMode === "existing" ? "0 0 0 1px color-mix(in srgb, var(--jade-glow) 35%, transparent) inset" : "none",
                     }}
                   >
                     <span title={tHint("Existing Exercise", "normal") ?? undefined}>{t("Existing Exercise", "normal")}</span>
@@ -2382,8 +2481,9 @@ function TrainingLogTable({
                     }}
                     className={segmentedToggleButtonClass}
                     style={{
-                      color: inputMode === "new" ? "var(--gold)" : "var(--text-secondary)",
+                      color: inputMode === "new" ? "var(--cloud-white)" : "var(--text-secondary)",
                       backgroundColor: inputMode === "new" ? "color-mix(in srgb, var(--gold) 16%, transparent)" : "transparent",
+                      boxShadow: inputMode === "new" ? "0 0 0 1px color-mix(in srgb, var(--gold) 38%, transparent) inset" : "none",
                     }}
                   >
                     <span title={tHint("Add New Exercise", "normal") ?? undefined}>{t("Add New Exercise", "normal")}</span>
@@ -2395,17 +2495,17 @@ function TrainingLogTable({
                   type="button"
                   onClick={handleMobileInputClose}
                   className={`${toolbarButtonClass} absolute right-3 top-2`}
-                  style={{ borderColor: "var(--border)", color: "var(--text-secondary)", backgroundColor: "var(--surface)" }}
+                  style={{ borderColor: "color-mix(in srgb, var(--jade-glow) 28%, var(--border))", color: "var(--cloud-white)", backgroundColor: "color-mix(in srgb, var(--jade-glow) 14%, transparent)" }}
                 >
                   <span title={tHint("Close", "normal") ?? undefined}>{t("Close", "normal")}</span>
                 </button>
               )}
             </div>
-            <div className="px-0 py-3 min-w-0">
+            <div className={`px-0 min-w-0 ${isMobile ? "py-3" : "pt-0 pb-3"}`}>
               {!isMobile && (
                 <>
-                <div className="overflow-x-hidden rounded" style={{ border: "1px solid var(--nyaa-table-grid)" }}>
-                  <table className="w-full table-fixed border-collapse text-[11px]" style={{ color: "var(--text-primary)" }}>
+                <div className="training-log-input-grid-shell overflow-x-hidden rounded">
+                  <table className="training-log-input-grid-table w-full table-fixed border-collapse text-[11px]" style={{ color: "var(--text-primary)" }}>
                     <colgroup>
                       <col style={{ width: inputMode === "existing" ? "8.3%" : "12.9%" }} />
                       <col style={{ width: inputMode === "existing" ? "23.5%" : "25.8%" }} />
@@ -2420,36 +2520,35 @@ function TrainingLogTable({
                       {inputMode === "existing" && <col style={{ width: "6.2%" }} />}
                       <col style={{ width: inputMode === "existing" ? "12.8%" : "19.3%" }} />
                     </colgroup>
-                    <thead style={{ backgroundColor: "var(--nyaa-table-head-bg)" }}>
+                    <thead className="training-log-input-grid-head">
                       <tr>
-                        <th className="px-1 py-0.5 text-center font-semibold uppercase tracking-[0.08em]" style={{ borderRight: "1px solid var(--nyaa-table-grid)", borderBottom: "1px solid var(--nyaa-table-grid)", color: inputSectionHeaderTextColor }} title={tHint("Date", "normal") ?? undefined}>{t("Date", "normal")}</th>
-                        <th className="px-1 py-0.5 text-center font-semibold uppercase tracking-[0.08em]" style={{ borderRight: "1px solid var(--nyaa-table-grid)", borderBottom: "1px solid var(--nyaa-table-grid)", color: inputSectionHeaderTextColor }} title={inputMode === "existing" ? (tHint("Exercise", "normal") ?? undefined) : (tHint("Exercise Name", "normal") ?? undefined)}>{inputMode === "existing" ? t("Exercise", "normal") : t("Exercise Name", "normal")}</th>
+                        <th className="training-log-input-grid-th" style={{ color: inputSectionHeaderTextColor }} title={tHint("Date", "normal") ?? undefined}>{t("Date", "normal")}</th>
+                        <th className="training-log-input-grid-th" style={{ color: inputSectionHeaderTextColor }} title={inputMode === "existing" ? (tHint("Exercise", "normal") ?? undefined) : (tHint("Exercise Name", "normal") ?? undefined)}>{inputMode === "existing" ? t("Exercise", "normal") : t("Exercise Name", "normal")}</th>
                         {inputMode === "existing" && (
-                          <th className="px-1 py-0.5 text-center font-semibold uppercase tracking-[0.08em]" style={{ borderRight: "1px solid var(--nyaa-table-grid)", borderBottom: "1px solid var(--nyaa-table-grid)", color: inputSectionHeaderTextColor }} title={tHint("Progression", "normal") ?? undefined}>{t("Progression", "normal")}</th>
+                          <th className="training-log-input-grid-th" style={{ color: inputSectionHeaderTextColor }} title={tHint("Progression", "normal") ?? undefined}>{t("Progression", "normal")}</th>
                         )}
                         {inputMode === "existing" && (
-                          <th className="px-1 py-0.5 text-center font-semibold uppercase tracking-[0.08em]" style={{ borderRight: "1px solid var(--nyaa-table-grid)", borderBottom: "1px solid var(--nyaa-table-grid)", color: inputSectionHeaderTextColor }} title={tHint("Variant", "normal") ?? undefined}>{t("Variant", "normal")}</th>
+                          <th className="training-log-input-grid-th" style={{ color: inputSectionHeaderTextColor }} title={tHint("Variant", "normal") ?? undefined}>{t("Variant", "normal")}</th>
                         )}
                         {desktopInputSetColumns.map((col) => (
                           <th
                             key={`desktop-input-head-${col.key}`}
-                            className="px-1 py-0.5 text-center font-semibold uppercase tracking-[0.08em]"
-                            style={{ borderRight: "1px solid var(--nyaa-table-grid)", borderBottom: "1px solid var(--nyaa-table-grid)", color: inputSectionHeaderTextColor }}
+                            className="training-log-input-grid-th"
+                            style={{ color: inputSectionHeaderTextColor }}
                           >
                             {col.label}
                           </th>
                         ))}
                         {inputMode === "existing" && (
-                          <th className="px-1 py-0.5 text-center font-semibold uppercase tracking-[0.08em]" style={{ borderRight: "1px solid var(--nyaa-table-grid)", borderBottom: "1px solid var(--nyaa-table-grid)", color: inputSectionHeaderTextColor }} title={tHint("Mod", "normal") ?? undefined}>{t("Mod", "normal")}</th>
+                          <th className="training-log-input-grid-th" style={{ color: inputSectionHeaderTextColor }} title={tHint("Mod", "normal") ?? undefined}>{t("Mod", "normal")}</th>
                         )}
-                        <th className="px-1 py-0.5 text-center font-semibold uppercase tracking-[0.08em]" style={{ borderBottom: "1px solid var(--nyaa-table-grid)", color: inputSectionHeaderTextColor }} title={tHint("Notes", "normal") ?? undefined}>{t("Notes", "normal")}</th>
+                        <th className="training-log-input-grid-th training-log-input-grid-th-last" style={{ color: inputSectionHeaderTextColor }} title={tHint("Notes", "normal") ?? undefined}>{t("Notes", "normal")}</th>
                       </tr>
                     </thead>
                     <tbody>
-                      <tr style={{ backgroundColor: "var(--ink-dark)" }}>
+                      <tr className="training-log-input-grid-row">
                         <td
-                          className="p-0.5"
-                          style={{ borderRight: "1px solid var(--nyaa-table-grid)" }}
+                          className="training-log-input-grid-td"
                           onClick={openDesktopDatePicker}
                         >
                           <div className="relative">
@@ -2477,7 +2576,7 @@ function TrainingLogTable({
                             />
                           </div>
                         </td>
-                        <td className="p-0.5" style={{ borderRight: "1px solid var(--nyaa-table-grid)" }}>
+                        <td className="training-log-input-grid-td">
                           {inputMode === "existing" ? (
                             <div className="relative" ref={exerciseSearchWrapRef}>
                               <span className="pointer-events-none absolute inset-y-0 left-2 flex items-center" style={{ color: "var(--text-secondary)" }}>
@@ -2603,7 +2702,7 @@ function TrainingLogTable({
                           )}
                         </td>
                         {inputMode === "existing" && (
-                          <td className="p-0.5" style={{ borderRight: "1px solid var(--nyaa-table-grid)" }}>
+                          <td className="training-log-input-grid-td">
                             <select
                               value={workoutInput.level}
                               onChange={(event) => handleWorkoutInputChange("level", event.target.value)}
@@ -2626,7 +2725,7 @@ function TrainingLogTable({
                           </td>
                         )}
                         {inputMode === "existing" && (
-                          <td className="p-0.5" style={{ borderRight: "1px solid var(--nyaa-table-grid)" }}>
+                          <td className="training-log-input-grid-td">
                             <select
                               value={workoutInput.variant}
                               onChange={(event) => handleWorkoutInputChange("variant", event.target.value)}
@@ -2654,7 +2753,7 @@ function TrainingLogTable({
                           const isValueField = key.startsWith("val");
                           const hasCellValue = Boolean(workoutInput[key]);
                           return (
-                            <td key={`desktop-${key}`} className="p-0.5" style={{ borderRight: "1px solid var(--nyaa-table-grid)" }}>
+                            <td key={`desktop-${key}`} className="training-log-input-grid-td">
                               {activeDesktopInputCell === key ? (
                                 <input
                                   type="number"
@@ -2700,7 +2799,7 @@ function TrainingLogTable({
                           );
                         })}
                         {inputMode === "existing" && (
-                          <td className="p-0.5" style={{ borderRight: "1px solid var(--nyaa-table-grid)" }}>
+                          <td className="training-log-input-grid-td">
                             <select
                               value={workoutInput.modifierKg}
                               onChange={(event) => handleWorkoutInputChange("modifierKg", event.target.value)}
@@ -2725,7 +2824,7 @@ function TrainingLogTable({
                             </select>
                           </td>
                         )}
-                        <td className="p-0.5">
+                        <td className="training-log-input-grid-td training-log-input-grid-td-last">
                           {activeDesktopInputCell === "notes" ? (
                             <input
                               type="text"
@@ -2772,13 +2871,14 @@ function TrainingLogTable({
                     </tbody>
                   </table>
                 </div>
-                <div className="mt-1.5 flex items-center justify-end gap-1.5 pr-1">
+                <div className="training-log-input-actions training-log-input-actions-desktop mt-1.5 flex items-center justify-end gap-1.5 pr-1">
                   <GlowButton
                     variant="jade"
                     size="sm"
                     onClick={handleAddWorkoutLog}
                     disabled={isSaving || !canSubmitWorkoutInput}
-                    className={!canSubmitWorkoutInput ? "opacity-50 cursor-not-allowed" : ""}
+                    className={`training-log-input-action-btn training-log-input-action-primary ${!canSubmitWorkoutInput ? "opacity-50 cursor-not-allowed" : ""}`}
+                    style={inputActionPrimaryStyle}
                   >
                     {isSaving ? "Saving..." : "+ Add"}
                   </GlowButton>
@@ -2786,6 +2886,8 @@ function TrainingLogTable({
                     variant="ghost"
                     size="sm"
                     onClick={resetWorkoutInput}
+                    className="training-log-input-action-btn training-log-input-action-secondary"
+                    style={inputActionSecondaryStyle}
                   >
                     Reset
                   </GlowButton>
@@ -2795,14 +2897,14 @@ function TrainingLogTable({
 
               {isMobile && (
               <div className={isMobile ? "grid grid-cols-1 gap-3" : "grid grid-cols-[repeat(28,minmax(0,1fr))] items-end gap-x-3 gap-y-2"}>
-              <div className="mx-auto w-full max-w-[760px] space-y-4 px-2 sm:px-3">
+              <div className="training-log-mobile-shell mx-auto w-full max-w-[760px] space-y-4 px-2 sm:px-3">
               <div
-                className="surface-panel flex flex-col gap-2 p-4"
+                className="surface-panel training-log-mobile-card flex flex-col gap-2 p-4"
                 style={{
                   boxShadow: "var(--shadow-elev-1), 0 0 0 1px rgba(58,143,143,0.22) inset",
                 }}
               >
-                <p className="text-xs text-jade-glow uppercase tracking-wider mb-1">
+                <p className="training-log-mobile-section-title text-xs text-jade-glow uppercase tracking-wider mb-1">
                   Exercise Details
                 </p>
               <div className={isMobile ? mobileFieldRowClass : "col-span-2 flex flex-col gap-1"}>
@@ -2816,7 +2918,7 @@ function TrainingLogTable({
                       date: event.target.value,
                     }))
                   }
-                  className={`rounded-md outline-none ${isMobile ? "flex-1 px-3 py-2 text-sm" : "px-2 py-1 text-xs"}`}
+                  className={`training-log-mobile-control rounded-md outline-none ${isMobile ? "flex-1 px-3 py-2 text-sm" : "px-2 py-1 text-xs"}`}
                   style={{ backgroundColor: "var(--ink-dark)", borderColor: "color-mix(in srgb, var(--border) 82%, transparent)", border: "1px solid", color: "var(--text-primary)" }}
                 />
               </div>
@@ -2903,7 +3005,7 @@ function TrainingLogTable({
                       setExerciseHighlightIndex(-1);
                     }}
                     placeholder=""
-                    className={`w-full rounded-md pl-7 pr-7 outline-none ${isMobile ? "py-2 text-sm" : "py-1 text-xs"}`}
+                    className={`training-log-mobile-control w-full rounded-md pl-7 pr-7 outline-none ${isMobile ? "py-2 text-sm" : "py-1 text-xs"}`}
                     style={{ backgroundColor: "var(--ink-dark)", borderColor: "color-mix(in srgb, var(--border) 82%, transparent)", border: "1px solid", color: "var(--text-primary)" }}
                   />
                   {exerciseSearchTerm.trim() !== "" && (
@@ -2937,7 +3039,7 @@ function TrainingLogTable({
                   value={workoutInput.newExerciseName}
                   onChange={(event) => handleWorkoutInputChange("newExerciseName", event.target.value)}
                   placeholder=""
-                  className={`w-full rounded-md outline-none ${isMobile ? "flex-1 px-3 py-2 text-sm" : "px-2 py-1 text-xs"}`}
+                  className={`training-log-mobile-control w-full rounded-md outline-none ${isMobile ? "flex-1 px-3 py-2 text-sm" : "px-2 py-1 text-xs"}`}
                   style={{ backgroundColor: "var(--surface)", borderColor: "color-mix(in srgb, var(--border) 82%, transparent)", border: "1px solid", color: "var(--text-primary)" }}
                 />
               </div>
@@ -2952,7 +3054,7 @@ function TrainingLogTable({
                         type="button"
                         onClick={() => setMobileInputPicker({ field: "level", title: t("Progression", "normal") })}
                         disabled={!hasSelectedInputExercise}
-                        className="flex flex-1 items-center justify-between rounded-md px-3 py-2 text-sm font-medium"
+                        className="training-log-mobile-picker flex flex-1 items-center justify-between rounded-md px-3 py-2 text-sm font-medium"
                         style={{
                           backgroundColor: !hasSelectedInputExercise ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
                           borderColor: "color-mix(in srgb, var(--border) 82%, transparent)",
@@ -2971,7 +3073,7 @@ function TrainingLogTable({
                         value={workoutInput.level}
                         onChange={(event) => handleWorkoutInputChange("level", event.target.value)}
                         disabled={!hasSelectedInputExercise}
-                        className={`rounded outline-none font-medium ${isMobile ? "flex-1 px-3 py-2 text-sm" : "px-2 py-1 text-xs"}`}
+                        className={`training-log-mobile-control rounded outline-none font-medium ${isMobile ? "flex-1 px-3 py-2 text-sm" : "px-2 py-1 text-xs"}`}
                         style={{
                           backgroundColor: !hasSelectedInputExercise ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
                           borderColor: "var(--nyaa-table-grid)",
@@ -2998,7 +3100,7 @@ function TrainingLogTable({
                         type="button"
                         onClick={() => setMobileInputPicker({ field: "variant", title: t("Variant", "normal") })}
                         disabled={!hasSelectedInputExercise}
-                        className="flex flex-1 items-center justify-between rounded-md px-3 py-2 text-sm font-medium"
+                        className="training-log-mobile-picker flex flex-1 items-center justify-between rounded-md px-3 py-2 text-sm font-medium"
                         style={{
                           backgroundColor: !hasSelectedInputExercise ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
                           borderColor: "color-mix(in srgb, var(--border) 82%, transparent)",
@@ -3017,7 +3119,7 @@ function TrainingLogTable({
                         value={workoutInput.variant}
                         onChange={(event) => handleWorkoutInputChange("variant", event.target.value)}
                         disabled={!hasSelectedInputExercise}
-                        className={`rounded outline-none font-medium ${isMobile ? "flex-1 px-3 py-2 text-sm" : "px-2 py-1 text-xs"}`}
+                        className={`training-log-mobile-control rounded outline-none font-medium ${isMobile ? "flex-1 px-3 py-2 text-sm" : "px-2 py-1 text-xs"}`}
                         style={{
                           backgroundColor: !hasSelectedInputExercise ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
                           borderColor: "var(--nyaa-table-grid)",
@@ -3043,12 +3145,12 @@ function TrainingLogTable({
               </div>
 
               <div
-                className="surface-panel flex flex-col gap-2 p-4"
+                className="surface-panel training-log-mobile-card flex flex-col gap-2 p-4"
                 style={{
                   boxShadow: "var(--shadow-elev-1), 0 0 0 1px rgba(58,143,143,0.22) inset",
                 }}
               >
-                <p className="text-xs text-jade-glow uppercase tracking-wider mb-1">
+                <p className="training-log-mobile-section-title text-xs text-jade-glow uppercase tracking-wider mb-1">
                   Input Mode
                 </p>
 
@@ -3133,12 +3235,12 @@ function TrainingLogTable({
               </div>
 
               <div
-                className="surface-panel flex flex-col gap-2 p-4"
+                className="surface-panel training-log-mobile-card flex flex-col gap-2 p-4"
                 style={{
                   boxShadow: "var(--shadow-elev-1), 0 0 0 1px rgba(58,143,143,0.22) inset",
                 }}
               >
-                <p className="text-xs text-jade-glow uppercase tracking-wider mb-1">
+                <p className="training-log-mobile-section-title text-xs text-jade-glow uppercase tracking-wider mb-1">
                   Sets And Notes
                 </p>
 
@@ -3154,7 +3256,7 @@ function TrainingLogTable({
                       onChange={(event) => handleWorkoutInputChange(`val${setNo}` as "val1" | "val2" | "val3", event.target.value)}
                       placeholder={setValuePlaceholder}
                       disabled={!canSubmitWorkoutInput}
-                      className={`rounded-md outline-none text-center ${isMobile ? "flex-1 min-w-0 px-2 py-2 text-sm" : "w-[74px] px-2 py-1 text-xs"}`}
+                      className={`training-log-mobile-control rounded-md outline-none text-center ${isMobile ? "flex-1 min-w-0 px-2 py-2 text-sm" : "w-[74px] px-2 py-1 text-xs"}`}
                       style={{
                         backgroundColor: !canSubmitWorkoutInput ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
                         borderColor: "color-mix(in srgb, var(--border) 82%, transparent)",
@@ -3172,7 +3274,7 @@ function TrainingLogTable({
                       onChange={(event) => handleWorkoutInputChange(`reps${setNo}` as "reps1" | "reps2" | "reps3", event.target.value)}
                       placeholder={isMobile ? "reps" : ""}
                       disabled={!canSubmitWorkoutInput}
-                      className={`rounded-md outline-none text-center ${isMobile ? "flex-1 min-w-0 px-2 py-2 text-sm" : "w-[50px] px-2 py-1 text-xs"}`}
+                      className={`training-log-mobile-control rounded-md outline-none text-center ${isMobile ? "flex-1 min-w-0 px-2 py-2 text-sm" : "w-[50px] px-2 py-1 text-xs"}`}
                       style={{
                         backgroundColor: !canSubmitWorkoutInput ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
                         borderColor: "color-mix(in srgb, var(--border) 82%, transparent)",
@@ -3195,7 +3297,7 @@ function TrainingLogTable({
                       type="button"
                       onClick={() => setMobileInputPicker({ field: "modifierKg", title: t("Mod", "normal") })}
                       disabled={!hasSelectedInputExercise}
-                      className="flex flex-1 items-center justify-between rounded-md px-3 py-2 text-sm"
+                      className="training-log-mobile-picker flex flex-1 items-center justify-between rounded-md px-3 py-2 text-sm"
                       style={{
                         backgroundColor: !hasSelectedInputExercise ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
                         borderColor: "color-mix(in srgb, var(--border) 82%, transparent)",
@@ -3216,7 +3318,7 @@ function TrainingLogTable({
                       value={workoutInput.modifierKg}
                       onChange={(event) => handleWorkoutInputChange("modifierKg", event.target.value)}
                       disabled={!hasSelectedInputExercise}
-                      className="rounded outline-none px-2 py-1 text-xs"
+                      className="training-log-mobile-control rounded outline-none px-2 py-1 text-xs"
                       style={{
                         backgroundColor: !hasSelectedInputExercise ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
                         borderColor: "var(--nyaa-table-grid)",
@@ -3247,7 +3349,7 @@ function TrainingLogTable({
                   onChange={(event) => handleWorkoutInputChange("notes", event.target.value)}
                   placeholder=""
                   disabled={!hasSelectedInputExercise}
-                  className={`rounded-md outline-none ${isMobile ? "flex-1 px-3 py-2 text-sm" : "px-2 py-1 text-xs"}`}
+                  className={`training-log-mobile-control rounded-md outline-none ${isMobile ? "flex-1 px-3 py-2 text-sm" : "px-2 py-1 text-xs"}`}
                   style={{
                     backgroundColor: !hasSelectedInputExercise ? "color-mix(in srgb, var(--border) 14%, var(--surface))" : "var(--surface)",
                     borderColor: "color-mix(in srgb, var(--border) 82%, transparent)",
@@ -3268,7 +3370,7 @@ function TrainingLogTable({
                   value={workoutInput.notes}
                   onChange={(event) => handleWorkoutInputChange("notes", event.target.value)}
                   placeholder=""
-                  className={`rounded-md outline-none ${isMobile ? "flex-1 px-3 py-2 text-sm" : "px-2 py-1 text-xs"}`}
+                  className={`training-log-mobile-control rounded-md outline-none ${isMobile ? "flex-1 px-3 py-2 text-sm" : "px-2 py-1 text-xs"}`}
                   style={{
                     backgroundColor: "var(--surface)",
                     borderColor: "color-mix(in srgb, var(--border) 82%, transparent)",
@@ -3282,14 +3384,15 @@ function TrainingLogTable({
               </div>
 
               <div
-                className={`flex gap-2 ${isMobile ? "mx-auto w-full max-w-[760px] items-stretch px-2 sm:px-3 pt-3 pb-2" : "col-span-2 items-end justify-end pr-1"}`}
+                className={`training-log-input-actions flex gap-2 ${isMobile ? "training-log-input-actions-mobile mx-auto w-full max-w-[760px] items-stretch px-2 sm:px-3 pt-3 pb-2" : "col-span-2 items-end justify-end pr-1"}`}
               >
                 <GlowButton
                   variant="jade"
                   size={isMobile ? "md" : "sm"}
                   onClick={handleAddWorkoutLog}
                   disabled={isSaving || !canSubmitWorkoutInput}
-                  className={`${isMobile ? "order-2 flex-1" : ""} ${!canSubmitWorkoutInput ? "opacity-50 cursor-not-allowed" : ""}`}
+                  className={`training-log-input-action-btn training-log-input-action-primary ${isMobile ? "order-2 flex-1" : ""} ${!canSubmitWorkoutInput ? "opacity-50 cursor-not-allowed" : ""}`}
+                  style={inputActionPrimaryStyle}
                 >
                   {isSaving ? t("Saving...", "normal") : `+ ${t("Add", "normal")}`}
                 </GlowButton>
@@ -3297,7 +3400,8 @@ function TrainingLogTable({
                   variant="ghost"
                   size={isMobile ? "md" : "sm"}
                   onClick={resetWorkoutInput}
-                  className={isMobile ? "order-1 flex-1" : ""}
+                  className={`training-log-input-action-btn training-log-input-action-secondary ${isMobile ? "order-1 flex-1" : ""}`}
+                  style={inputActionSecondaryStyle}
                 >
                   {t("Reset", "normal")}
                 </GlowButton>
@@ -3309,18 +3413,26 @@ function TrainingLogTable({
         )}
 
         {!forceMobileInputOpen && (
-        <div className="w-full rounded-2xl relative overflow-hidden surface-panel surface-panel-strong">
+        <div
+          className="w-full rounded-2xl relative overflow-hidden surface-panel surface-panel-strong training-log-modern-shell"
+        >
           <div className="relative">
           {/* Edit header bar */}
             <div
-              className="flex items-center justify-between px-4 py-3 border-b"
+              className="flex items-center justify-between gap-2 px-3 py-2.5 border-b"
               style={{
-                borderColor: "color-mix(in srgb, var(--jade-glow) 25%, var(--border))",
-                backgroundColor: "color-mix(in srgb, var(--jade-glow) 6%, var(--nyaa-table-head-bg))",
+                borderColor: "color-mix(in srgb, var(--jade-glow) 30%, var(--border))",
+                backgroundColor: "color-mix(in srgb, var(--jade-glow) 9%, var(--ink-dark))",
               }}
             >
               <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--jade-glow)" }} title={tHint("Training Log", "normal") ?? undefined}>{trainingLogTitle}</span>
+                  <span
+                    className="text-[11px] font-semibold uppercase tracking-[0.09em] shrink-0"
+                    style={{ color: "var(--jade-light)" }}
+                    title={tHint("Training Log", "normal") ?? undefined}
+                  >
+                    {trainingLogTitle}
+                  </span>
                 {isMobile && entries.length > 0 && (
                   <MobileFocusTrigger onClick={() => setTrainingLogFocusMode(true)} />
                 )}
@@ -3328,33 +3440,52 @@ function TrainingLogTable({
                   <motion.span
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    style={{ fontSize: "11px", color: saveMessage.type === "success" ? "var(--accent)" : "var(--danger)" }}
+                    className="rounded-md border px-2 py-0.5 text-[11px] font-medium"
+                    style={{
+                      color: saveMessage.type === "success" ? "var(--accent)" : "var(--danger)",
+                      borderColor: saveMessage.type === "success"
+                        ? "color-mix(in srgb, var(--accent) 45%, transparent)"
+                        : "color-mix(in srgb, var(--danger) 45%, transparent)",
+                      backgroundColor: saveMessage.type === "success"
+                        ? "color-mix(in srgb, var(--accent) 12%, transparent)"
+                        : "color-mix(in srgb, var(--danger) 12%, transparent)",
+                    }}
                   >
                     {saveMessage.text}
                   </motion.span>
                 )}
-                {isEditMode && !selectedEditLogId && (
-                  <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>
-                    {t("Select a row to edit", "normal")}
-                  </span>
-                )}
               </div>
               <div className="flex items-center gap-2">
+                {canEditTrainingLogs && entries.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleEditModeToggle}
+                    className={toolbarButtonClass}
+                    style={{
+                      borderColor: isEditMode
+                        ? "color-mix(in srgb, var(--gold) 45%, var(--border))"
+                        : "color-mix(in srgb, var(--jade-glow) 28%, var(--border))",
+                      color: isEditMode ? "var(--gold)" : "var(--cloud-white)",
+                      backgroundColor: isEditMode
+                        ? "color-mix(in srgb, var(--gold) 14%, var(--ink-deep))"
+                        : "color-mix(in srgb, var(--jade-glow) 12%, var(--ink-deep))",
+                    }}
+                    title={isEditMode ? tHint("Exit edit mode", "normal") ?? undefined : tHint("Edit training log", "normal") ?? undefined}
+                  >
+                    <span>{isEditMode ? t("Done", "normal") : t("Edit", "normal")}</span>
+                  </button>
+                )}
                 {!isMobile && entries.length > 0 && !forceSimpleViewOnly && (
                   <button
                     type="button"
                     role="switch"
                     aria-checked={effectiveSimpleView}
-                    aria-disabled={isEditMode}
                     onClick={() => setIsSimpleView((prev) => !prev)}
-                    disabled={isEditMode}
                     className={toolbarButtonClass}
                     style={{
-                      borderColor: "var(--border)",
+                      borderColor: "color-mix(in srgb, var(--jade-glow) 25%, var(--border))",
                       color: "var(--text-secondary)",
-                      backgroundColor: "var(--ink-dark)",
-                      opacity: isEditMode ? 0.5 : 1,
-                      cursor: isEditMode ? "not-allowed" : "pointer",
+                      backgroundColor: "color-mix(in srgb, var(--ink-mid) 84%, var(--ink-deep))",
                     }}
                     title={tHint("Simple view", "normal") ?? undefined}
                   >
@@ -3363,7 +3494,7 @@ function TrainingLogTable({
                       className="relative inline-flex h-4 w-8 items-center rounded-full transition-colors"
                       style={{
                         backgroundColor: effectiveSimpleView
-                          ? "color-mix(in srgb, var(--accent) 40%, transparent)"
+                          ? "color-mix(in srgb, var(--jade-glow) 35%, transparent)"
                           : "color-mix(in srgb, var(--border) 55%, transparent)",
                       }}
                     >
@@ -3371,7 +3502,7 @@ function TrainingLogTable({
                         className="absolute h-3 w-3 rounded-full transition-all"
                         style={{
                           left: effectiveSimpleView ? "16px" : "2px",
-                          backgroundColor: effectiveSimpleView ? "var(--accent)" : "var(--text-muted)",
+                          backgroundColor: effectiveSimpleView ? "var(--jade-light)" : "var(--text-muted)",
                         }}
                       />
                     </span>
@@ -3384,7 +3515,11 @@ function TrainingLogTable({
                     aria-checked={isOpenedTableMode}
                     onClick={() => setFitToScreenMode((prev) => !prev)}
                     className={toolbarButtonClass}
-                    style={{ borderColor: "var(--border)", color: "var(--text-secondary)", backgroundColor: "var(--ink-dark)" }}
+                    style={{
+                      borderColor: "color-mix(in srgb, var(--jade-glow) 25%, var(--border))",
+                      color: "var(--text-secondary)",
+                      backgroundColor: "color-mix(in srgb, var(--ink-mid) 84%, var(--ink-deep))",
+                    }}
                     title={
                       isOpenedTableMode
                         ? (tHint("Full-page table", "normal") ?? undefined)
@@ -3396,7 +3531,7 @@ function TrainingLogTable({
                       className="relative inline-flex h-4 w-8 items-center rounded-full transition-colors"
                       style={{
                         backgroundColor: isOpenedTableMode
-                          ? "color-mix(in srgb, var(--accent) 40%, transparent)"
+                          ? "color-mix(in srgb, var(--jade-glow) 35%, transparent)"
                           : "color-mix(in srgb, var(--border) 55%, transparent)",
                       }}
                     >
@@ -3404,52 +3539,7 @@ function TrainingLogTable({
                         className="absolute h-3 w-3 rounded-full transition-all"
                         style={{
                           left: isOpenedTableMode ? "16px" : "2px",
-                          backgroundColor: isOpenedTableMode ? "var(--accent)" : "var(--text-muted)",
-                        }}
-                      />
-                    </span>
-                  </button>
-                )}
-                {!isMobile && entries.length > 0 && isEditMode && (
-                  <GlowButton variant="ghost" size="sm" onClick={handleResetHeadersToDefault} disabled={isSaving}>
-                    {t("Reset Headers", "normal")}
-                  </GlowButton>
-                )}
-                {!isMobile && entries.length > 0 && canEditTrainingLogs && (
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={isEditMode}
-                    aria-label="Toggle edit training log mode"
-                    onClick={() => {
-                      if (isEditMode) {
-                        handleCancel();
-                      } else {
-                        handleEditModeToggle();
-                      }
-                    }}
-                    className={toolbarButtonClass}
-                    style={{
-                      borderColor: isEditMode ? "var(--accent)" : "var(--border)",
-                      color: isEditMode ? "var(--accent)" : "var(--text-secondary)",
-                      backgroundColor: "var(--ink-dark)",
-                    }}
-                    title={tHint("Edit training log", "normal") ?? undefined}
-                  >
-                    <span>{t("Edit Training Log", "normal")}</span>
-                    <span
-                      className="relative inline-flex h-4 w-8 items-center rounded-full transition-colors"
-                      style={{
-                        backgroundColor: isEditMode
-                          ? "color-mix(in srgb, var(--accent) 40%, transparent)"
-                          : "color-mix(in srgb, var(--border) 55%, transparent)",
-                      }}
-                    >
-                      <span
-                        className="absolute h-3 w-3 rounded-full transition-all"
-                        style={{
-                          left: isEditMode ? "16px" : "2px",
-                          backgroundColor: isEditMode ? "var(--accent)" : "var(--text-muted)",
+                          backgroundColor: isOpenedTableMode ? "var(--jade-light)" : "var(--text-muted)",
                         }}
                       />
                     </span>
@@ -3464,7 +3554,7 @@ function TrainingLogTable({
               className="overflow-y-auto px-2 py-2 space-y-2 scrollbar-hide"
               style={{
                 WebkitOverflowScrolling: "touch",
-                backgroundColor: "var(--background)",
+                backgroundColor: "color-mix(in srgb, var(--ink-deep) 88%, var(--surface) 12%)",
                 height: `${tableViewportHeight}px`,
                 maxHeight: `${tableViewportHeight}px`,
               }}
@@ -3529,28 +3619,22 @@ function TrainingLogTable({
                 setHoveredEditLogId(null);
               }
             }}
-            className={`overflow-auto w-full ${useMobileTableStyling ? "scrollbar-hide" : ""}`}
+            className={`training-log-grid-scroll overflow-auto w-full ${useMobileTableStyling ? "scrollbar-hide" : ""}`}
             style={{
               WebkitOverflowScrolling: "touch",
-              backgroundColor: "var(--surface)",
               height: `${effectiveViewportHeight}px`,
               maxHeight: `${effectiveViewportHeight}px`,
             }}
           >
           <table
-            className="text-xs w-full border-collapse"
-            style={{ whiteSpace: "nowrap", minWidth: tableMinWidth, backgroundColor: "var(--surface)", tableLayout: "fixed" }}
+            className="training-log-grid-table text-xs w-full border-collapse"
+            style={{ whiteSpace: "nowrap", minWidth: tableMinWidth, backgroundColor: "transparent", tableLayout: "fixed" }}
           >
             <thead
-              className="sticky top-0 z-10"
-              style={{
-                backgroundColor: "var(--nyaa-table-head-bg)",
-                boxShadow: "0 -2px 0 var(--nyaa-table-head-bg)",
-                cursor: isEditMode ? (isTableDragging ? "grabbing" : "grab") : undefined,
-              }}
+              className="training-log-grid-head sticky top-0 z-10"
             >
               <tr
-                className="border-b"
+                className="training-log-grid-head-row border-b"
                 style={{
                   borderColor: "color-mix(in srgb, var(--jade-glow) 25%, var(--border))",
                   color: trainingLogHeaderTextColor,
@@ -3559,9 +3643,11 @@ function TrainingLogTable({
                 {orderedColumnIds.map((columnId) => {
                   const isSortedColumn = sortState?.columnId === columnId;
                   const sortArrow = isSortedColumn ? (sortState?.direction === "asc" ? "↑" : "↓") : null;
-                  const renderHeaderLabel = (label: string) => (
-                    <span className="inline-flex items-center justify-center gap-1">
-                      <span>{label}</span>
+                  const renderHeaderLabel = (label: string, align: "left" | "center" = "center") => (
+                    <span
+                      className={`training-log-grid-head-chip inline-flex w-full items-center gap-1 ${align === "left" ? "justify-start" : "justify-center"}`}
+                    >
+                      <span className="font-semibold uppercase tracking-[0.08em]">{label}</span>
                       {sortArrow && (
                         <span className="text-[10px]" style={{ color: "var(--accent)" }}>{sortArrow}</span>
                       )}
@@ -3597,82 +3683,78 @@ function TrainingLogTable({
                     className: `${headerPadClass} ${isEditMode ? "cursor-grab active:cursor-grabbing" : (columnId === "actions" ? "cursor-default" : "cursor-pointer")} select-none ${headerTypographyClass}`,
                     style: {
                       opacity: draggingColumnId === columnId ? 0.6 : 1,
-                      backgroundColor: isEditMode && hoveredHeaderId === columnId
-                        ? "color-mix(in srgb, var(--accent) 10%, var(--nyaa-table-head-bg))"
-                        : "var(--nyaa-table-head-bg)",
-                      boxShadow: isEditMode && hoveredHeaderId === columnId
-                        ? "inset 0 -1px 0 color-mix(in srgb, var(--accent) 45%, transparent)"
-                        : undefined,
+                      backgroundColor: "transparent",
+                      boxShadow: undefined,
                       transition: "background-color 140ms ease, box-shadow 140ms ease, opacity 140ms ease",
                     } as React.CSSProperties,
                   };
 
                   if (columnId === "date") {
                     return (
-                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-1.5 w-[5.5rem] min-w-[5.5rem] text-center`}>
+                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} tl-col-date text-center`}>
                         {renderHeaderLabel("Date")}
                       </th>
                     );
                   }
                   if (columnId === "category") {
                     return (
-                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-1.5 w-[5.5rem] min-w-[5.5rem] text-center`}>
+                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} tl-col-category text-center`}>
                         {renderHeaderLabel("Category")}
                       </th>
                     );
                   }
                   if (columnId === "exercise") {
                     return (
-                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-1.5 w-[8rem] min-w-[8rem] text-left`}>
-                        {renderHeaderLabel("Exercise")}
+                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} tl-col-exercise text-left`}>
+                        {renderHeaderLabel("Exercise", "left")}
                       </th>
                     );
                   }
                   if (columnId === "progression") {
                     return (
-                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-1.5 w-[7.5rem] min-w-[7.5rem] text-left`}>
-                        {renderHeaderLabel("Progression")}
+                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} tl-col-progression text-left`}>
+                        {renderHeaderLabel("Progression", "left")}
                       </th>
                     );
                   }
                   if (columnId === "modifier") {
                     return (
-                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-1 w-[4.5rem] min-w-[4.5rem] text-center text-gold`}>
+                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} tl-col-modifier text-center text-gold`}>
                         {renderHeaderLabel("Mod")}
                       </th>
                     );
                   }
                   if (columnId === "band") {
                     return (
-                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-1 w-[5rem] min-w-[5rem] text-center text-mountain-blue-glow`}>
+                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} tl-col-band text-center text-mountain-blue-glow`}>
                         {renderHeaderLabel("Band")}
                       </th>
                     );
                   }
                   if (columnId === "variant") {
                     return (
-                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-1.5 w-[8rem] min-w-[8rem] text-left text-mountain-blue-glow`}>
-                        {renderHeaderLabel("Variant")}
+                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} tl-col-variant text-left text-mountain-blue-glow`}>
+                        {renderHeaderLabel("Variant", "left")}
                       </th>
                     );
                   }
                   if (columnId === "notes") {
                     return (
-                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-1.5 w-[8rem] min-w-[8rem] text-center`}>
+                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} tl-col-notes text-center`}>
                         {renderHeaderLabel("Notes")}
                       </th>
                     );
                   }
                   if (columnId === "next") {
                     return (
-                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-1 w-[4rem] min-w-[4rem] text-center text-difficulty-green`}>
+                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} tl-col-next text-center text-difficulty-green`}>
                         {renderHeaderLabel("Next")}
                       </th>
                     );
                   }
                   if (columnId === "avg") {
                     return (
-                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} px-1 w-[4rem] min-w-[4rem] text-center text-difficulty-cyan`}>
+                      <th key={sharedKey} {...sharedProps} className={`${sharedProps.className} tl-col-avg text-center text-difficulty-cyan`}>
                         {renderHeaderLabel("Avg")}
                       </th>
                     );
@@ -3682,7 +3764,7 @@ function TrainingLogTable({
                       <th
                         key={sharedKey}
                         {...sharedProps}
-                        className={`${sharedProps.className} px-1 w-[4.5rem] min-w-[4.5rem] text-center align-middle`}
+                        className={`${sharedProps.className} tl-col-actions text-center align-middle`}
                         style={{ ...(sharedProps.style ?? {}), color: "var(--text-muted)" }}
                       >
                         {isEditMode ? "⋮" : ""}
@@ -3699,7 +3781,7 @@ function TrainingLogTable({
                     <th
                       key={sharedKey}
                       {...sharedProps}
-                      className={`${sharedProps.className} px-1 w-[3.25rem] min-w-[3.25rem] text-center tabular-nums`}
+                      className={`${sharedProps.className} tl-col-data text-center tabular-nums`}
                       style={{
                         ...(sharedProps.style ?? {}),
                         ...(columnColors ? { color: headerTypes[dataIdx] === "value" ? "var(--col-weight)" : "var(--col-reps)" } : {}),
@@ -3711,7 +3793,7 @@ function TrainingLogTable({
                 })}
               </tr>
             </thead>
-            <tbody style={{ backgroundColor: "var(--surface)" }}>
+            <tbody style={{ backgroundColor: "transparent" }}>
               {entries.length === 0 ? (
                 <tr>
                   <td colSpan={emptyRowColSpan} className="py-8 text-center text-sm" style={{ color: "var(--text-muted)", backgroundColor: "var(--surface)" }}>
@@ -3786,7 +3868,7 @@ function TrainingLogTable({
                         key={entry.logId}
                         data-log-row="true"
                         data-log-id={entry.logId}
-                        className={`border-b transition-colors ${isEditMode ? "cursor-pointer" : ""}`}
+                        className={`training-log-grid-row border-b transition-all ${isEditMode ? "cursor-pointer" : ""}`}
                         onClick={() => {
                           if (isEditMode) setSelectedEditLogId(entry.logId);
                         }}
@@ -3799,19 +3881,20 @@ function TrainingLogTable({
                           }
                         }}
                         style={{
-                          borderColor: "var(--border)",
+                          borderColor: "color-mix(in srgb, var(--jade-glow) 20%, var(--border))",
                           backgroundColor: isRowEditing
-                            ? "color-mix(in srgb, var(--accent) 7%, transparent)"
+                            ? "color-mix(in srgb, var(--accent) 11%, var(--ink-mid))"
                             : isEditMode && hoveredEditLogId === entry.logId
-                              ? "color-mix(in srgb, var(--accent) 4%, transparent)"
-                            : "var(--surface)",
+                              ? "color-mix(in srgb, var(--accent) 7%, var(--ink-mid))"
+                            : "color-mix(in srgb, var(--surface) 86%, var(--ink-mid) 14%)",
+                          boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--jade-glow) 10%, transparent)",
                           opacity: isEditMode && isOlderThan7Days ? 0.62 : 1,
                         }}
                       >
                         {orderedColumnIds.map((columnId) => {
                           if (columnId === "date") {
                             return (
-                              <td key={`${entry.logId}-date`} className={`${cellPadStandard} w-[6rem] min-w-[6rem] text-center text-xs align-middle whitespace-nowrap`} style={{ color: "var(--text-secondary)" }}>
+                              <td key={`${entry.logId}-date`} className={`${cellPadStandard} tl-col-date text-center text-xs align-middle whitespace-nowrap`} style={{ color: "var(--text-secondary)" }}>
                                 {formattedEntryDate}
                               </td>
                             );
@@ -3819,7 +3902,7 @@ function TrainingLogTable({
 
                           if (columnId === "category") {
                             return (
-                              <td key={`${entry.logId}-category`} className={`${cellPadStandard} w-[5.5rem] min-w-[5.5rem] text-center align-middle`}>
+                              <td key={`${entry.logId}-category`} className={`${cellPadStandard} tl-col-category text-center align-middle`}>
                                 <span
                                   className="inline-block px-2 py-1 border rounded text-[10px] leading-none font-semibold"
                                   style={{
@@ -3961,7 +4044,7 @@ function TrainingLogTable({
                           if (columnId === "progression") {
                             const progressionLabel = getProgressionTierLabel(ex, displayLevel);
                             return isRowEditing && editData ? (
-                              <td key={`${entry.logId}-progression`} className="w-[7.5rem] min-w-[7.5rem] overflow-hidden px-1 py-1.5 text-left align-middle [contain:paint]">
+                              <td key={`${entry.logId}-progression`} className={`${cellPadStandard} tl-col-progression overflow-hidden text-left align-middle [contain:paint]`}>
                                 <select
                                   value={String(editData.level)}
                                   onChange={(e) => handleEditChange(entry.logId, "level", parseInt(e.target.value, 10))}
@@ -3987,7 +4070,7 @@ function TrainingLogTable({
                             ) : (
                               <td
                                 key={`${entry.logId}-progression`}
-                                className={`${cellPadStandard} w-[7.5rem] min-w-[7.5rem] text-left text-xs align-middle`}
+                                className={`${cellPadStandard} tl-col-progression text-left text-xs align-middle`}
                                 title={progressionLabel}
                                 style={{ color: "var(--text-secondary)" }}
                               >
@@ -4000,7 +4083,7 @@ function TrainingLogTable({
 
                           if (columnId === "modifier") {
                             return isRowEditing && editData ? (
-                              <td key={`${entry.logId}-modifier`} className="w-[4.5rem] min-w-[4.5rem] overflow-hidden px-1 py-1.5 text-center align-middle [contain:paint]">
+                              <td key={`${entry.logId}-modifier`} className={`${cellPadStandard} tl-col-modifier overflow-hidden text-center align-middle [contain:paint]`}>
                                 <select
                                   value={(() => {
                                     const kg = parseModifierDisplayToSignedKg(editData.modifier);
@@ -4029,7 +4112,7 @@ function TrainingLogTable({
                             ) : (
                               <td
                                 key={`${entry.logId}-modifier`}
-                                className={`${cellPadStandard} w-[4.5rem] min-w-[4.5rem] text-center text-gold text-xs whitespace-nowrap align-middle`}
+                                className={`${cellPadStandard} tl-col-modifier text-center text-gold text-xs whitespace-nowrap align-middle`}
                                 title={entry.modifier || ""}
                               >
                                 {entry.modifier || "—"}
@@ -4039,7 +4122,7 @@ function TrainingLogTable({
 
                           if (columnId === "variant") {
                             return isRowEditing && editData ? (
-                              <td key={`${entry.logId}-variant`} className="w-[8rem] min-w-[8rem] overflow-hidden px-1.5 py-1.5 text-left align-middle [contain:paint]">
+                              <td key={`${entry.logId}-variant`} className={`${cellPadStandard} tl-col-variant overflow-hidden text-left align-middle [contain:paint]`}>
                                 <select
                                   value={editData.variant ?? ""}
                                   onChange={(e) => handleEditChange(entry.logId, "variant", e.target.value || null)}
@@ -4062,7 +4145,7 @@ function TrainingLogTable({
                             ) : (
                               <td
                                 key={`${entry.logId}-variant`}
-                                className={`${cellPadStandard} w-[8rem] min-w-[8rem] text-left text-mountain-blue-glow text-xs align-middle`}
+                                className={`${cellPadStandard} tl-col-variant text-left text-mountain-blue-glow text-xs align-middle`}
                                 title={entry.variant || ""}
                               >
                                 <span className="block whitespace-normal break-words leading-tight">
@@ -4074,7 +4157,7 @@ function TrainingLogTable({
 
                           if (columnId === "notes") {
                             return isRowEditing && editData ? (
-                              <td key={`${entry.logId}-notes`} className="w-[8rem] min-w-[8rem] overflow-hidden px-1.5 py-1.5 align-middle [contain:paint]">
+                              <td key={`${entry.logId}-notes`} className={`${cellPadStandard} tl-col-notes overflow-hidden align-middle [contain:paint]`}>
                                 <input
                                   type="text"
                                   value={editData.notes ?? ""}
@@ -4092,7 +4175,7 @@ function TrainingLogTable({
                             ) : (
                               <td
                                 key={`${entry.logId}-notes`}
-                                className={`${cellPadStandard} w-[8rem] min-w-[8rem] text-mist-light text-xs align-middle`}
+                                className={`${cellPadStandard} tl-col-notes text-mist-light text-xs align-middle`}
                                 title={entry.notes || ""}
                               >
                                 <div className="flex items-center gap-1 overflow-hidden">
@@ -4117,7 +4200,7 @@ function TrainingLogTable({
                             return (
                               <td
                                 key={`${entry.logId}-next`}
-                                className={`${cellPadStandard} w-[4rem] min-w-[4rem] text-center text-difficulty-green text-xs tabular-nums align-middle`}
+                                className={`${cellPadStandard} tl-col-next text-center text-difficulty-green text-xs tabular-nums align-middle`}
                                 title={stdDisplay != null ? `Next tier target: ${stdDisplay} ${weightUnit}` : "At max tier"}
                               >
                                 {stdDisplay != null ? stdDisplay.toFixed(1) : "✦"}
@@ -4131,7 +4214,7 @@ function TrainingLogTable({
                             return (
                               <td
                                 key={`${entry.logId}-avg`}
-                                className={`${cellPadStandard} w-[4rem] min-w-[4rem] text-center text-difficulty-cyan text-xs tabular-nums align-middle`}
+                                className={`${cellPadStandard} tl-col-avg text-center text-difficulty-cyan text-xs tabular-nums align-middle`}
                                 title={avgDisplay != null ? `Avg: ${avgDisplay} ${weightUnit}` : "No weight data"}
                               >
                                 {avgDisplay != null ? avgDisplay.toFixed(1) : "—"}
@@ -4145,7 +4228,7 @@ function TrainingLogTable({
                                 key={`${entry.logId}-actions`}
                                 data-actions-cell="true"
                                 data-log-id={entry.logId}
-                                className="px-1 py-1.5 w-[4.5rem] min-w-[4.5rem] text-center align-middle"
+                                className={`${cellPadStandard} tl-col-actions text-center align-middle`}
                               >
                                 {isEditMode && selectedEditLogId === entry.logId ? (
                                   <div className="flex items-center justify-center gap-2">
@@ -4169,6 +4252,8 @@ function TrainingLogTable({
                                       onClick={(event) => {
                                         event.stopPropagation();
                                         setDeleteConfirm({ logId: entry.logId, exerciseName: entryDisplayName });
+                                        setDeleteConfirmText("");
+                                        setDeleteConfirmAcknowledge(false);
                                       }}
                                       className="transition-colors text-base leading-none"
                                       style={{
@@ -4202,7 +4287,7 @@ function TrainingLogTable({
                             const editVal = editData[editField as keyof typeof editData] as number | null;
                             const isValue = colType === "value";
                             return (
-                              <td key={`${entry.logId}-data-${dataIdx}`} className="w-[3.25rem] min-w-[3.25rem] px-1 py-1.5 text-center align-middle overflow-hidden [contain:paint]">
+                              <td key={`${entry.logId}-data-${dataIdx}`} className={`${cellPadStandard} tl-col-data text-center align-middle overflow-hidden [contain:paint]`}>
                                 <input
                                   type="number"
                                   min="0"
@@ -4274,7 +4359,7 @@ function TrainingLogTable({
                           return (
                             <td
                               key={`${entry.logId}-data-${dataIdx}`}
-                              className={`${cellPadStandard} w-[3.25rem] min-w-[3.25rem] text-center text-xs leading-tight align-middle whitespace-nowrap overflow-hidden [contain:paint]`}
+                              className={`${cellPadStandard} tl-col-data text-center text-xs leading-tight align-middle whitespace-nowrap overflow-hidden [contain:paint]`}
                               style={{
                                 color: !valueColor ? "var(--text-primary)" : valueColor,
                                 ...getZeroValueStyle(effectiveRawValue, effectiveColType, entry.exerciseType),
@@ -4346,7 +4431,7 @@ function TrainingLogTable({
           type="button"
           aria-label={t("Open training log input", "normal")}
           onClick={() => router.push(`/dashboard/train/input/${Date.now()}`)}
-          className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+4rem)] right-4 z-[70] h-14 w-14 rounded-full border text-3xl leading-none shadow-lg transition-transform duration-150 active:scale-95"
+          className="training-log-mobile-fab fixed bottom-[calc(env(safe-area-inset-bottom,0px)+4rem)] right-4 z-[70] h-14 w-14 rounded-full border text-3xl leading-none shadow-lg transition-transform duration-150 active:scale-95"
           style={{
             borderColor: "var(--accent)",
             color: "var(--cloud-white)",
@@ -4369,26 +4454,80 @@ function TrainingLogTable({
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   className="fixed inset-0 z-40 bg-black/70"
-                  onClick={() => setDeleteConfirm(null)}
+                  onClick={() => {
+                    if (isDeleting) return;
+                    setDeleteConfirm(null);
+                    setDeleteConfirmText("");
+                    setDeleteConfirmAcknowledge(false);
+                  }}
                 />
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[340px] max-w-[90vw] rounded-xl shadow-2xl p-5"
+                  className="training-log-delete-modal fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[390px] max-w-[92vw] rounded-xl shadow-2xl p-5"
                   style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)", border: "1px solid", boxShadow: "var(--danger-modal-glow)" }}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <h3 className="text-sm font-semibold mb-3" style={{ color: "var(--danger)" }}>{t("Delete Training Record", "normal")}</h3>
-                  <p className="text-xs mb-5 leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                  <p className="mb-2 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ borderColor: "color-mix(in srgb, var(--danger) 45%, var(--border))", color: "var(--danger)", backgroundColor: "color-mix(in srgb, var(--danger) 12%, transparent)" }}>
+                    {t("Danger Zone", "normal")}
+                  </p>
+                  <h3 className="text-sm font-semibold mb-2" style={{ color: "var(--danger)" }}>{t("Delete Training Record", "normal")}</h3>
+                  <p className="text-xs mb-3 leading-relaxed" style={{ color: "var(--text-secondary)" }}>
                     {t("Are you sure you want to permanently delete the log record for", "normal")}{" "}
                     <span className="font-medium" style={{ color: "var(--accent)" }}>{deleteConfirm.exerciseName}</span>? This action
                     {" "}{t("cannot be undone.", "normal")}
                   </p>
+
+                  <div className="mb-3 rounded-lg border px-3 py-2 text-[11px]" style={{ borderColor: "color-mix(in srgb, var(--danger) 30%, var(--border))", backgroundColor: "color-mix(in srgb, var(--danger) 7%, var(--surface))" }}>
+                    <div className="flex items-center justify-between gap-2">
+                      <span style={{ color: "var(--text-secondary)" }}>{t("Exercise", "normal")}</span>
+                      <span className="font-semibold text-right" style={{ color: "var(--cloud-white)" }}>{deleteConfirm.exerciseName}</span>
+                    </div>
+                    <div className="mt-1.5 flex items-center justify-between gap-2">
+                      <span style={{ color: "var(--text-secondary)" }}>{t("Date", "normal")}</span>
+                      <span className="font-medium" style={{ color: "var(--text-primary)" }}>{deleteTargetDate}</span>
+                    </div>
+                    <div className="mt-1.5 flex items-center justify-between gap-2">
+                      <span style={{ color: "var(--text-secondary)" }}>{t("Sets", "normal")}</span>
+                      <span className="font-medium" style={{ color: "var(--text-primary)" }}>{deleteTargetSetCount}</span>
+                    </div>
+                  </div>
+
+                  <label className="mb-2 flex items-start gap-2 text-[11px]" style={{ color: "var(--text-secondary)" }}>
+                    <input
+                      type="checkbox"
+                      checked={deleteConfirmAcknowledge}
+                      disabled={isDeleting}
+                      onChange={(event) => setDeleteConfirmAcknowledge(event.target.checked)}
+                      className="mt-0.5"
+                    />
+                    <span>{t("I understand this permanently removes this log and cannot be undone.", "normal")}</span>
+                  </label>
+
+                  <div className="mb-4">
+                    <p className="mb-1 text-[10px] uppercase tracking-[0.08em]" style={{ color: "var(--text-secondary)" }}>
+                      {t("Type DELETE to confirm", "normal")}
+                    </p>
+                    <input
+                      type="text"
+                      value={deleteConfirmText}
+                      onChange={(event) => setDeleteConfirmText(event.target.value)}
+                      disabled={isDeleting}
+                      className="w-full rounded-md border px-2.5 py-2 text-xs outline-none"
+                      style={{
+                        borderColor: "color-mix(in srgb, var(--danger) 35%, var(--border))",
+                        backgroundColor: "color-mix(in srgb, var(--surface) 94%, var(--ink-deep))",
+                        color: "var(--text-primary)",
+                      }}
+                      placeholder="DELETE"
+                    />
+                  </div>
+
                   <div className="flex gap-3">
                     <motion.button
                       onClick={() => handleDeleteLog(deleteConfirm.logId)}
-                      disabled={isDeleting}
+                      disabled={isDeleting || !isDeleteConfirmationReady}
                       className="flex-1 px-4 py-2 text-xs font-semibold rounded-lg border transition-[transform] duration-150 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
                       style={{
                         backgroundColor: "color-mix(in srgb, var(--danger) 10%, transparent)",
@@ -4399,7 +4538,11 @@ function TrainingLogTable({
                       {isDeleting ? t("Deleting...", "normal") : t("Delete Record", "normal")}
                     </motion.button>
                     <motion.button
-                      onClick={() => setDeleteConfirm(null)}
+                      onClick={() => {
+                        setDeleteConfirm(null);
+                        setDeleteConfirmText("");
+                        setDeleteConfirmAcknowledge(false);
+                      }}
                       disabled={isDeleting}
                       className="flex-1 px-4 py-2 text-xs font-semibold rounded-lg border transition-[transform] duration-150 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
                       style={{
@@ -4407,7 +4550,7 @@ function TrainingLogTable({
                         color: "var(--text-secondary)"
                       }}
                     >
-                      {t("Cancel", "normal")}
+                      {t("Keep Record", "normal")}
                     </motion.button>
                   </div>
                 </motion.div>

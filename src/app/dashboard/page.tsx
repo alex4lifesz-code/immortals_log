@@ -336,10 +336,10 @@ export default function DashboardNewsfeedPage() {
       {loading ? (
         <PageSkeleton statCards={0} wideBlock rows={4} />
       ) : (
-        <>
+        <div className="dashboard-modern-feed">
           {/* Carousel at the top */}
           {allExercises.length > 0 && (
-            <GlowCard glow="jade" hoverable={false} className="!p-0 overflow-hidden">
+            <GlowCard glow="jade" hoverable={false} className="dashboard-modern-hero !p-0 overflow-hidden">
               <ExerciseStatsCarousel 
                 exercises={allExercises} 
                 communityLogs={exerciseLogs}
@@ -354,7 +354,7 @@ export default function DashboardNewsfeedPage() {
           {/* Community feed */}
           {allGroupedByMemberDay.length === 0 ? (
             selectedFilter !== "" ? (
-              <GlowCard glow="none" hoverable={false} className="mt-8">
+              <GlowCard glow="none" hoverable={false} className="dashboard-modern-empty mt-8">
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <div className="text-4xl mb-4 opacity-40">🏛️</div>
                   <h3 className="text-sm text-jade-glow uppercase tracking-wider mb-2">The Hall is Silent</h3>
@@ -374,6 +374,7 @@ export default function DashboardNewsfeedPage() {
                     key={`${member.userId}-${member.dateKey}`}
                     glow="jade"
                     hoverable={false}
+                    className="dashboard-modern-member"
                   >
                     {(() => {
                       const memberKey = `${member.userId}-${member.dateKey}`;
@@ -384,7 +385,7 @@ export default function DashboardNewsfeedPage() {
                           <button
                             type="button"
                             onClick={() => toggleMemberGroup(memberKey)}
-                            className="w-full text-left"
+                            className="dashboard-modern-member-trigger w-full text-left"
                             aria-expanded={isMemberExpanded}
                           >
                             <div className="grid grid-cols-[36px_1fr_auto] sm:grid-cols-[40px_1fr_auto] gap-2 sm:gap-3 items-center">
@@ -422,7 +423,7 @@ export default function DashboardNewsfeedPage() {
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: memberIdx * 0.05 + (exerciseIdx * 0.02) }}
-                                    className="rounded-lg border border-ink-light/30 p-2.5 sm:p-3 bg-ink-deep/40 overflow-hidden"
+                                    className="dashboard-modern-exercise rounded-lg border border-ink-light/30 p-2.5 sm:p-3 bg-ink-deep/40 overflow-hidden"
                                   >
                                     <button
                                       type="button"
@@ -453,7 +454,7 @@ export default function DashboardNewsfeedPage() {
                                         {exerciseGroup.logs.map((log) => (
                                           <div
                                             key={log.id}
-                                            className="rounded-lg border border-ink-light/30 p-3 sm:p-4 bg-ink-dark/50 hover:border-ink-light/50 hover:bg-ink-dark/70 transition-all duration-200"
+                                            className="dashboard-modern-log rounded-lg border border-ink-light/30 p-3 sm:p-4 bg-ink-dark/50 hover:border-ink-light/50 hover:bg-ink-dark/70 transition-all duration-200"
                                           >
                                             <div className="mb-2 flex items-center justify-between gap-3">
                                               <span className="text-xs text-jade-light font-semibold">Log Entry</span>
@@ -526,7 +527,7 @@ export default function DashboardNewsfeedPage() {
               {/* Infinite scroll observer target */}
               <div
                 ref={observerTarget}
-                className="flex items-center justify-center py-8"
+                className="dashboard-modern-loadmore flex items-center justify-center py-8"
               >
                 {isLoadingMore ? (
                   <div className="flex items-center gap-3">
@@ -539,7 +540,7 @@ export default function DashboardNewsfeedPage() {
                   <button
                     type="button"
                     onClick={() => setDisplayCount((prev) => Math.min(prev + ITEMS_PER_PAGE, allGroupedByMemberDay.length))}
-                    className="rounded-md border border-ink-light/30 bg-ink-dark/60 px-3 py-1.5 text-xs text-jade-glow hover:bg-ink-dark/80 transition-colors"
+                    className="dashboard-modern-loadmore-btn rounded-md border border-ink-light/30 bg-ink-dark/60 px-3 py-1.5 text-xs text-jade-glow hover:bg-ink-dark/80 transition-colors"
                   >
                     Load more activity
                   </button>
@@ -552,7 +553,7 @@ export default function DashboardNewsfeedPage() {
               </div>
             </>
           )}
-        </>
+        </div>
       )}
     </PageLayout>
   );

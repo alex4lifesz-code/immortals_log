@@ -90,7 +90,7 @@ export default function MonthlyComparisonChart({
   }
 
   return (
-    <div className="flex flex-col h-full gap-2">
+    <div className="dao-modern-monthly-chart-panel flex flex-col h-full gap-2">
       <div className="flex items-center justify-between px-1">
         <h4 className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-primary)" }}>
           {t("Monthly Comparison", "normal")}

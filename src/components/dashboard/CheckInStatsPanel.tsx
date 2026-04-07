@@ -157,7 +157,7 @@ export default function CheckInStatsPanel({
   const monthName = currentMonth.toLocaleString("default", { month: "long" });
 
   return (
-    <div className="flex flex-col h-full gap-2 overflow-y-auto">
+    <div className="dao-modern-monthly-stats-panel flex flex-col h-full gap-2 overflow-y-auto">
       <div className="flex items-center justify-between px-1">
         <h4
           className="text-xs font-semibold uppercase tracking-wide"
@@ -170,7 +170,7 @@ export default function CheckInStatsPanel({
 
       <div className="space-y-3">
         {stats.map((s) => (
-          <div key={s.userId} className="space-y-1.5">
+          <div key={s.userId} className="dao-modern-monthly-stats-user space-y-1.5">
             {/* User label header (show when multiple users) */}
             {stats.length > 1 && (
               <div className="flex items-center gap-1.5 mb-1">

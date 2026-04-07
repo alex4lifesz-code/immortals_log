@@ -272,7 +272,7 @@ function CalendarDay({ date, checkedInUsers, isToday, isPast, hasNote, hasFuture
     <motion.div
       whileHover={compact ? undefined : { scale: 1.05 }}
       onClick={onClick}
-      className={`aspect-square flex flex-col items-center justify-center transition-all relative cursor-pointer rounded-lg ${
+      className={`dao-modern-calendar-day aspect-square flex flex-col items-center justify-center transition-all relative cursor-pointer rounded-lg ${
         isToday
           ? "border-2 border-jade-glow bg-jade-deep/42 hover:bg-jade-deep/55"
           : hasFutureNote
@@ -359,7 +359,7 @@ export function Calendar({
 
   return (
     <div
-      className={`${compactMode ? "p-2.5" : "p-4"} space-y-3 min-w-0 overflow-hidden surface-panel`}
+      className={`dao-modern-calendar ${compactMode ? "p-2.5" : "p-4"} space-y-3 min-w-0 overflow-hidden surface-panel`}
       style={{
         boxShadow: "var(--shadow-elev-1), 0 0 0 1px rgba(58,143,143,0.22) inset",
       }}
