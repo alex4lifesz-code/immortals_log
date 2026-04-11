@@ -27,21 +27,38 @@ export default function MobileFAB({ icon = "+", label, onClick, side = "right" }
     return nav ? nav.getBoundingClientRect().top : window.innerHeight;
   }, []);
 
+  const getSafeInsets = useCallback(() => {
+    const rootStyles = getComputedStyle(document.documentElement);
+    const parseInset = (token: string) => {
+      const value = Number.parseFloat(rootStyles.getPropertyValue(token));
+      return Number.isFinite(value) ? value : 0;
+    };
+
+    return {
+      top: parseInset("--safe-area-inset-top"),
+      right: parseInset("--safe-area-inset-right"),
+      bottom: parseInset("--safe-area-inset-bottom"),
+      left: parseInset("--safe-area-inset-left"),
+    };
+  }, []);
+
   const getViewportBounds = useCallback(() => {
     const el = buttonRef.current;
     const navTop = resolveBottomNavTop();
+    const safeInsets = getSafeInsets();
     const margin = 12;
     const gapAboveNav = 10;
     const width = el?.offsetWidth ?? 56;
     const height = el?.offsetHeight ?? 56;
 
-    const minX = margin;
-    const maxX = Math.max(minX, window.innerWidth - width - margin);
-    const minY = margin;
-    const maxY = Math.max(minY, Math.min(window.innerHeight - height - margin, navTop - height - gapAboveNav));
+    const minX = margin + safeInsets.left;
+    const maxX = Math.max(minX, window.innerWidth - width - margin - safeInsets.right);
+    const minY = margin + safeInsets.top;
+    const bottomLimit = window.innerHeight - height - margin - safeInsets.bottom;
+    const maxY = Math.max(minY, Math.min(bottomLimit, navTop - height - gapAboveNav));
 
     return { minX, maxX, minY, maxY };
-  }, [resolveBottomNavTop]);
+  }, [getSafeInsets, resolveBottomNavTop]);
 
   const clampToBounds = useCallback((next: FabPosition): FabPosition => {
     const bounds = getViewportBounds();
@@ -62,13 +79,14 @@ export default function MobileFAB({ icon = "+", label, onClick, side = "right" }
       const width = el?.offsetWidth ?? 56;
       const height = el?.offsetHeight ?? 56;
       const navTop = resolveBottomNavTop();
+      const safeInsets = getSafeInsets();
       const sideInset = 16;
       const yGap = 12;
 
       const targetX = side === "left"
-        ? sideInset
-        : Math.max(sideInset, window.innerWidth - width - sideInset);
-      const targetY = Math.max(12, Math.min(window.innerHeight - height - 12, navTop - height - yGap));
+        ? sideInset + safeInsets.left
+        : Math.max(sideInset + safeInsets.left, window.innerWidth - width - sideInset - safeInsets.right);
+      const targetY = Math.max(12 + safeInsets.top, Math.min(window.innerHeight - height - 12 - safeInsets.bottom, navTop - height - yGap));
       const next = clampToBounds({ x: targetX, y: targetY });
 
       setPosition(next);
@@ -83,7 +101,7 @@ export default function MobileFAB({ icon = "+", label, onClick, side = "right" }
       window.cancelAnimationFrame(rafId);
       window.removeEventListener("resize", placeDefault);
     };
-  }, [clampToBounds, resolveBottomNavTop, side]);
+  }, [clampToBounds, getSafeInsets, resolveBottomNavTop, side]);
 
   useEffect(() => {
     if (!isPositionReady) return;

@@ -41,7 +41,6 @@ export const NAV_LABELS: Record<string, string> = {
 export const MOBILE_PRIMARY_NAV_IDS: readonly string[] = [
   "dashboard",
   "history",
-  "rank-up",
 ];
 
 export const MOBILE_MORE_NAV_IDS_ORDER: readonly string[] = [
@@ -84,7 +83,7 @@ export function sortNavItemsByIdOrder<T extends { id: string }>(items: T[], orde
 
 export const MOBILE_BOTTOM_TABS = [
   { href: MOBILE_DASHBOARD_ROUTES.home, label: "Home", icon: "\u2302" },
-  { href: MOBILE_DASHBOARD_ROUTES.training, label: "Training", icon: "\u2694" },
   { href: MOBILE_DASHBOARD_ROUTES.checkIn, label: "Check-In", icon: "\u270e" },
+  { href: MOBILE_DASHBOARD_ROUTES.training, label: "Training", icon: "\u2694" },
   { href: MOBILE_DASHBOARD_ROUTES.theme, label: "Theme", icon: "\u25e8" },
 ] as const;

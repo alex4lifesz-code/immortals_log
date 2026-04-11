@@ -49,7 +49,7 @@ export default function MobileFocusOverlay({ isOpen, onDismiss, label, children 
     >
       {/* Sticky header with label + dismiss */}
       <div
-        className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 border-b shrink-0"
+        className="sticky top-0 z-10 safe-area-top flex items-center justify-between px-4 py-3 border-b shrink-0"
         style={{
           borderColor: "color-mix(in srgb, var(--jade-glow) 35%, var(--border))",
           backgroundColor: "var(--header-bg)",
@@ -77,7 +77,7 @@ export default function MobileFocusOverlay({ isOpen, onDismiss, label, children 
       </div>
 
       {/* Scrollable content area */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden p-2">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-2 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)]">
         {children}
       </div>
     </div>,

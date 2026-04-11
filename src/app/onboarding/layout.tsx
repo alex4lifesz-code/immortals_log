@@ -16,7 +16,7 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
 
   if (isLoading) {
     return (
-      <div className="safe-area-shell min-h-screen flex items-center justify-center bg-void-black">
+      <div className="safe-area-shell min-h-app flex items-center justify-center bg-void-black">
         <p className="text-mist-mid text-sm animate-pulse">Preparing your path…</p>
       </div>
     );
@@ -25,7 +25,7 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
   if (!isAuthenticated) return null;
 
   return (
-    <div className="safe-area-shell min-h-screen bg-void-black">
+    <div className="safe-area-shell min-h-app bg-void-black">
       {children}
     </div>
   );

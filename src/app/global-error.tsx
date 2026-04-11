@@ -10,7 +10,7 @@ export default function GlobalError({
   return (
     <html lang="en" className="dark">
       <body className="bg-void-black text-cloud-white">
-        <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-4 text-center">
+        <div className="safe-area-shell flex min-h-app flex-col items-center justify-center gap-4 px-4 text-center">
           <div className="rounded-lg border border-crimson/30 bg-crimson-deep/30 px-6 py-5 max-w-md">
             <h2 className="text-sm font-semibold text-crimson-light mb-2">Application Error</h2>
             <p className="text-xs text-mist-light mb-4 leading-relaxed">

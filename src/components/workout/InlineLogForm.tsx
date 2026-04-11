@@ -1446,7 +1446,7 @@ export function InlineLogForm({
                 initial={{ opacity: 0, y: 24 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 24 }}
-                className="fixed left-1/2 bottom-0 z-[96] max-h-[72vh] w-[min(82vw,32rem)] -translate-x-1/2 overflow-hidden rounded-none border"
+                className="fixed left-1/2 bottom-0 z-[96] max-h-[72vh] w-[min(82vw,32rem)] -translate-x-1/2 overflow-hidden rounded-none border safe-area-top safe-area-bottom"
                 style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)", boxShadow: "var(--shadow-elev-2)" }}
                 onClick={(event) => event.stopPropagation()}
               >

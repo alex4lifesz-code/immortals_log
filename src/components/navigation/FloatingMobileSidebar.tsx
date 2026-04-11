@@ -35,6 +35,9 @@ function FloatingMobileSidebar() {
   }, [setMobileSidebarOpen]);
 
   const handleNavigate = useCallback((path: string) => {
+    if (path === "/dashboard/train" && typeof window !== "undefined") {
+      window.dispatchEvent(new Event("train-reset-view"));
+    }
     router.push(path);
     setMobileSidebarOpen(false);
   }, [router, setMobileSidebarOpen]);
@@ -94,7 +97,7 @@ function FloatingMobileSidebar() {
               }
             }}
             transition={{ type: "spring", damping: 28, stiffness: 300, mass: 0.8 }}
-            className="fixed left-0 top-0 z-40 h-screen flex flex-col bg-ink-deep/98 border-r border-jade-glow/20 shadow-2xl overflow-hidden touch-pan-y pt-[max(env(safe-area-inset-top,0px),12px)]"
+            className="fixed left-0 top-0 z-40 h-app flex flex-col bg-ink-deep/98 border-r border-jade-glow/20 shadow-2xl overflow-hidden touch-pan-y pt-[max(env(safe-area-inset-top,0px),12px)] pb-[max(env(safe-area-inset-bottom,0px),10px)] pl-[max(env(safe-area-inset-left,0px),0px)]"
             style={{ width: "min(92vw, 420px)" }}
             onTouchStart={onSidebarTouchStart}
             onTouchMove={onSidebarTouchMove}

@@ -35,7 +35,7 @@ export default function MobileModal({ open, onClose, children, ariaLabel }: Mobi
             initial={{ y: 30, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 24, opacity: 0 }}
-            className="fixed bottom-0 left-0 right-0 z-[61] surface-panel surface-panel-strong rounded-t-3xl p-5"
+            className="fixed bottom-0 left-0 right-0 z-[61] surface-panel surface-panel-strong rounded-t-3xl p-5 pb-[max(env(safe-area-inset-bottom,0px),20px)] pl-[max(env(safe-area-inset-left,0px),20px)] pr-[max(env(safe-area-inset-right,0px),20px)]"
           >
             {children}
           </motion.section>

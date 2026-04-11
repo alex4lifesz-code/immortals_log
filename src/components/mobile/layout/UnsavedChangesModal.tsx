@@ -24,7 +24,7 @@ export default function UnsavedChangesModal({ open, onStay, onLeave }: UnsavedCh
             initial={{ y: 40, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 20, opacity: 0 }}
-            className="fixed bottom-0 left-0 right-0 z-[76] rounded-t-3xl border-t border-border bg-ink-deep p-5"
+            className="fixed bottom-0 left-0 right-0 z-[76] rounded-t-3xl border-t border-border bg-ink-deep p-5 pb-[max(env(safe-area-inset-bottom,0px),20px)] pl-[max(env(safe-area-inset-left,0px),20px)] pr-[max(env(safe-area-inset-right,0px),20px)]"
           >
             <h3 className="text-lg font-semibold text-cloud-white">Unsaved changes</h3>
             <p className="mt-1 text-sm text-mist-light">Leave this screen and discard your current edits?</p>

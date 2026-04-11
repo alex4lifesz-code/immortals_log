@@ -88,7 +88,13 @@ const LOGOUT_ICON = (
   </svg>
 );
 
-function MobileNavBar({ incomingFriendRequestCount = 0 }: { incomingFriendRequestCount?: number }) {
+function MobileNavBar({
+  incomingFriendRequestCount = 0,
+  isTrainExerciseHistoryOpen = false,
+}: {
+  incomingFriendRequestCount?: number;
+  isTrainExerciseHistoryOpen?: boolean;
+}) {
   const { getSortedNavItems, isMobile, setMobileSidebarOpen } = useAppContext();
   const { logout, user } = useAuth();
   const { settings } = useDisplaySettings();
@@ -167,6 +173,11 @@ function MobileNavBar({ incomingFriendRequestCount = 0 }: { incomingFriendReques
   const handleNavigate = useCallback((path: string) => {
     setMenuOpen(false);
     setMobileSidebarOpen(false);
+
+    if (path === DASHBOARD_ROUTES.workoutHistory && typeof window !== "undefined") {
+      window.dispatchEvent(new Event("train-reset-view"));
+    }
+
     router.push(path);
   }, [router, setMobileSidebarOpen]);
 
@@ -302,7 +313,7 @@ function MobileNavBar({ incomingFriendRequestCount = 0 }: { incomingFriendReques
   // Show the APK-style bottom nav whenever mobile viewport is active.
   if (!effectiveMobile) return null;
 
-  // Build nav button order: [main, community, overview, workout-history, more]
+  // Build nav button order: [check-in, train, me]
   return (
     <>
       {/* Overlay for expanded menu */}
@@ -320,7 +331,7 @@ function MobileNavBar({ incomingFriendRequestCount = 0 }: { incomingFriendReques
       </AnimatePresence>
 
       <motion.div
-        className="fixed bottom-0 left-0 right-0 z-50"
+        className={`fixed bottom-0 left-0 right-0 safe-area-left safe-area-right ${isTrainExerciseHistoryOpen ? "z-[120]" : "z-[200]"}`}
         animate={{ y: navVisible || menuOpen ? 0 : 120 }}
         transition={{ type: "tween", duration: 0.2, ease: "easeOut" }}
       >
@@ -332,7 +343,7 @@ function MobileNavBar({ incomingFriendRequestCount = 0 }: { incomingFriendReques
               animate={{ y: 0, opacity: 1, scale: 1 }}
               exit={{ y: 40, opacity: 0, scale: 0.95 }}
               transition={{ type: "spring", damping: 26, stiffness: 300 }}
-              className="mx-2 mb-0 rounded-t-[20px] border border-border bg-ink-deep/98 p-3 shadow-[0_-8px_20px_rgba(0,0,0,0.15)]"
+              className="mx-2 mb-0 rounded-t-[20px] border border-[#3b3f48] bg-[#2b2d31] p-3 pt-[max(env(safe-area-inset-top,0px),12px)] shadow-[0_-10px_28px_rgba(0,0,0,0.42)]"
               style={{
                 maxHeight: "calc(100dvh - 78px)",
                 overflowY: "auto",
@@ -341,13 +352,13 @@ function MobileNavBar({ incomingFriendRequestCount = 0 }: { incomingFriendReques
             >
               <div className="mb-2 flex items-start justify-between px-1.5 pt-1.5">
                 <div>
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-mist-dark">{t("Navigation", "normal")}</span>
-                  <p className="mt-0.5 text-[12px] text-mist-mid">{t("Quick access to your pages and profile", "normal")}</p>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#b5bac1]">{t("Me", "normal")}</span>
+                  <p className="mt-0.5 text-[12px] text-[#949ba4]">{t("Profile, settings, and all other pages", "normal")}</p>
                 </div>
                 <button
                   onClick={() => setMenuOpen(false)}
                   aria-label="Close navigation menu"
-                  className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-ink-light/60 bg-ink-mid/28 p-2 text-mist-dark transition-colors active:bg-ink-mid/60 active:text-cloud-white"
+                  className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-[#3b3f48] bg-[#1e1f22] p-2 text-[#949ba4] transition-colors active:bg-[#3a3d44] active:text-[#f2f3f5]"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -356,11 +367,11 @@ function MobileNavBar({ incomingFriendRequestCount = 0 }: { incomingFriendReques
               </div>
               <div className="grid grid-cols-1 gap-2.5 px-1 pb-[max(env(safe-area-inset-bottom,0px),4px)]" role="menu" aria-label="Navigation menu">
                 {user && (
-                  <div className="rounded-2xl border border-jade-glow/20 bg-ink-mid/22 p-3.5">
+                  <div className="rounded-2xl border border-[#3b3f48] bg-[#1e1f22] p-3.5">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                       <div className="min-w-0 flex-1">
-                        <p className="text-[10px] uppercase tracking-[0.1em] text-mist-dark">{t("Body Profile", "normal")}</p>
-                        <p className="mt-0.5 text-[12px] text-mist-light">{t("Keep your stats current for accurate training targets.", "normal")}</p>
+                        <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">{t("Body Profile", "normal")}</p>
+                        <p className="mt-0.5 text-[12px] text-[#dbdee1]">{t("Keep your stats current for accurate training targets.", "normal")}</p>
                         {(bodyWeightLabel || weightTrendLabel || checkInTotalCount !== null) && (
                           <div className="mt-2.5 flex flex-wrap items-center gap-2">
                             {bodyWeightLabel && (
@@ -417,7 +428,7 @@ function MobileNavBar({ incomingFriendRequestCount = 0 }: { incomingFriendReques
                           </div>
                         )}
                       </div>
-                      <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-jade-glow/40 bg-jade-deep/18 text-jade-light">
+                      <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[#5865f2]/40 bg-[#5865f2]/15 text-[#c8cdfa]">
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z" />
                           <path strokeLinecap="round" strokeLinejoin="round" d="M4 20a8 8 0 0116 0" />
@@ -428,14 +439,14 @@ function MobileNavBar({ incomingFriendRequestCount = 0 }: { incomingFriendReques
                       <UserPhysiqueButton
                         userId={user.id}
                         userName={t("Update Weight & Gender", "normal")}
-                        className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-jade-glow/35 bg-jade-deep/14 px-3.5 text-[13px] font-semibold text-jade-light transition-all duration-150 hover:border-jade-glow/50 hover:bg-jade-deep/20 hover:text-jade-glow active:scale-[0.98]"
+                        className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-[#5865f2]/45 bg-[#5865f2]/18 px-3.5 text-[13px] font-semibold text-[#dee1ff] transition-all duration-150 hover:border-[#7a84ff] hover:bg-[#5865f2]/28 hover:text-white active:scale-[0.98]"
                       />
                     </div>
                   </div>
                 )}
                 {regularMoreItems.length > 0 && (
                   <div className="mt-1 px-1.5">
-                    <p className="text-[10px] uppercase tracking-[0.1em] text-mist-dark">{t("Pages", "normal")}</p>
+                    <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">{t("Pages", "normal")}</p>
                   </div>
                 )}
                 {regularMoreItems.map((item, index) => (
@@ -448,15 +459,15 @@ function MobileNavBar({ incomingFriendRequestCount = 0 }: { incomingFriendReques
                     role="menuitem"
                     className={`group flex min-h-[48px] items-center gap-2.5 rounded-xl border px-3 py-2.5 transition-all duration-150 ${
                       pathname === item.path
-                        ? "border-jade-glow/35 bg-jade-deep/14 text-jade-light"
-                        : "border-ink-light/35 bg-ink-mid/20 text-mist-light active:border-jade-glow/30 active:bg-ink-mid/40 active:text-jade-light"
+                        ? "border-[#5865f2]/70 bg-[#5865f2]/20 text-[#f2f3f5]"
+                        : "border-[#3b3f48] bg-[#1e1f22] text-[#dbdee1] active:border-[#5865f2]/60 active:bg-[#3a3d44] active:text-[#f2f3f5]"
                     }`}
                     onClick={() => handleNavigate(item.path)}
                   >
                     <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border ${
                       pathname === item.path
-                        ? "border-jade-glow/30 bg-jade-deep/20"
-                        : "border-ink-light/45 bg-ink-deep/38"
+                        ? "border-[#5865f2]/55 bg-[#5865f2]/20"
+                        : "border-[#3b3f48] bg-[#2b2d31]"
                     }`}>
                       {NAV_ICON_MAP[item.path] ?? <span className="text-base">{item.icon}</span>}
                     </span>
@@ -470,12 +481,12 @@ function MobileNavBar({ incomingFriendRequestCount = 0 }: { incomingFriendReques
                 ))}
 
                 <div className="mt-1 px-1.5">
-                  <p className="text-[10px] uppercase tracking-[0.1em] text-mist-dark">{t("Account", "normal")}</p>
+                  <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">{t("Account", "normal")}</p>
                 </div>
 
                 {adminMoreItems.length > 0 && (
                   <div className="mt-1 px-1.5">
-                    <p className="text-[10px] uppercase tracking-[0.1em] text-gold-dim/85">{t("Admin", "normal")}</p>
+                    <p className="text-[10px] uppercase tracking-[0.1em] text-[#f0b96a]">{t("Admin", "normal")}</p>
                   </div>
                 )}
 
@@ -489,15 +500,15 @@ function MobileNavBar({ incomingFriendRequestCount = 0 }: { incomingFriendReques
                     role="menuitem"
                     className={`group flex min-h-[48px] items-center gap-2.5 rounded-xl border px-3 py-2.5 transition-all duration-150 ${
                       pathname === item.path
-                        ? "border-gold/40 bg-gold-dim/16 text-gold"
-                        : "border-gold/20 bg-gold-dim/8 text-gold-dim hover:border-gold/38 hover:text-gold"
+                        ? "border-[#f0b96a]/65 bg-[#f0b96a]/16 text-[#ffd9a3]"
+                        : "border-[#6a5332] bg-[#3b3326] text-[#f0c991] hover:border-[#f0b96a]/55 hover:text-[#ffd9a3]"
                     }`}
                     onClick={() => handleNavigate(item.path)}
                   >
                     <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border ${
                       pathname === item.path
-                        ? "border-gold/40 bg-gold-dim/16"
-                        : "border-gold/22 bg-gold-dim/8"
+                        ? "border-[#f0b96a]/65 bg-[#f0b96a]/16"
+                        : "border-[#6a5332] bg-[#4b402e]"
                     }`}>
                       {NAV_ICON_MAP[item.path] ?? <span className="text-base">{item.icon}</span>}
                     </span>
@@ -510,10 +521,10 @@ function MobileNavBar({ incomingFriendRequestCount = 0 }: { incomingFriendReques
                   transition={{ delay: (regularMoreItems.length + adminMoreItems.length) * 0.04 }}
                   whileTap={{ scale: 0.97 }}
                   role="menuitem"
-                  className="mt-1 flex min-h-[48px] items-center gap-2.5 rounded-xl border border-crimson/22 bg-crimson-deep/7 px-3 py-2.5 text-crimson-light/85 transition-all duration-150 active:border-crimson/40 active:bg-crimson-deep/16 active:text-crimson-light"
+                  className="mt-1 flex min-h-[48px] items-center gap-2.5 rounded-xl border border-[#f23f43]/35 bg-[#4f2228] px-3 py-2.5 text-[#ffb3b8] transition-all duration-150 active:border-[#f23f43]/60 active:bg-[#6a2830] active:text-[#ffd1d4]"
                   onClick={() => { setMenuOpen(false); logout(); }}
                 >
-                  <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-crimson/30 bg-crimson-deep/14">{LOGOUT_ICON}</span>
+                  <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-[#f23f43]/45 bg-[#6a2830]">{LOGOUT_ICON}</span>
                   <span className="text-[13px] font-medium">{t("Logout", "normal")}</span>
                 </motion.button>
               </div>
@@ -524,7 +535,7 @@ function MobileNavBar({ incomingFriendRequestCount = 0 }: { incomingFriendReques
         {/* ── Main Bottom Navigation Bar ── */}
         <nav
           data-mobile-bottom-nav="true"
-          className="relative bg-ink-deep/98 border-t border-border flex items-end justify-around px-1 pb-1.5 safe-area-bottom gap-0.5"
+          className="relative border-t border-[#3b3f48] bg-[#1e1f22] flex items-end justify-around px-1 pb-1.5 safe-area-bottom gap-0.5"
         >
           {/* Glow accent line */}
           <div className="absolute inset-x-0 top-0 h-px" style={{ background: `linear-gradient(to right, transparent, color-mix(in srgb, var(--accent) 15%, transparent), transparent)` }} />
@@ -539,14 +550,14 @@ function MobileNavBar({ incomingFriendRequestCount = 0 }: { incomingFriendReques
                 aria-current={isActive ? "page" : undefined}
                 onClick={() => handleNavigate(item.path)}
                 className={`relative flex flex-col items-center justify-center gap-0.5 min-w-[68px] min-h-[60px] pt-2 pb-1.5 rounded-xl transition-colors ${
-                  isActive ? "text-[var(--accent)]" : "text-mist-mid active:text-mist-light"
+                  isActive ? "text-[#f2f3f5]" : "text-[#949ba4] active:text-[#dbdee1]"
                 }`}
                 style={{ WebkitTapHighlightColor: 'transparent' }}
               >
                 <div className={`transition-transform duration-200 ${isActive ? "scale-110" : ""}`}>
                   {NAV_ICON_MAP[item.path] || <span className="text-lg">{item.icon}</span>}
                 </div>
-                <span className={`text-[11px] font-medium tracking-wide ${isActive ? "text-[var(--accent)]" : ""}`}>
+                <span className={`text-[11px] font-medium tracking-wide ${isActive ? "text-[#f2f3f5]" : ""}`}>
                   {t(item.label, terminologyMode).split(" ")[0]}
                 </span>
                 {item.id === "friends" && incomingFriendRequestCount > 0 && (
@@ -558,7 +569,7 @@ function MobileNavBar({ incomingFriendRequestCount = 0 }: { incomingFriendReques
                   <motion.div
                     layoutId="bottomBarActiveTab"
                     className="absolute -bottom-0.5 w-6 h-[3px] rounded-full"
-                    style={{ backgroundColor: 'var(--accent)', boxShadow: '0 0 8px color-mix(in srgb, var(--accent) 60%, transparent)' }}
+                    style={{ backgroundColor: "#5865f2", boxShadow: "0 0 10px rgba(88,101,242,0.65)" }}
                     transition={{ type: "spring", stiffness: 400, damping: 30 }}
                   />
                 )}
@@ -570,10 +581,10 @@ function MobileNavBar({ incomingFriendRequestCount = 0 }: { incomingFriendReques
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={handleMenuToggle}
-            aria-label={menuOpen ? "Close more menu" : "Open more menu"}
+            aria-label={menuOpen ? "Close Me menu" : "Open Me menu"}
             aria-expanded={menuOpen || undefined}
             className={`relative flex flex-col items-center justify-center gap-0.5 min-w-[68px] min-h-[60px] pt-2 pb-1.5 rounded-xl transition-colors ${
-              menuOpen ? "text-[var(--accent)]" : "text-mist-mid active:text-mist-light"
+              menuOpen ? "text-[#f2f3f5]" : "text-[#949ba4] active:text-[#dbdee1]"
             }`}
             style={{ WebkitTapHighlightColor: 'transparent' }}
           >
@@ -587,14 +598,14 @@ function MobileNavBar({ incomingFriendRequestCount = 0 }: { incomingFriendReques
                 <circle cx="12" cy="19" r="1.5" fill="currentColor" stroke="none" />
               </svg>
             </motion.div>
-            <span className={`text-[11px] font-medium tracking-wide ${menuOpen ? "text-[var(--accent)]" : ""}`}>
-              {t("More", "normal")}
+            <span className={`text-[11px] font-medium tracking-wide ${menuOpen ? "text-[#f2f3f5]" : ""}`}>
+              {t("Me", "normal")}
             </span>
             {menuOpen && (
               <motion.div
                 layoutId="bottomBarActiveTab"
                 className="absolute -bottom-0.5 w-6 h-[3px] rounded-full"
-                style={{ backgroundColor: 'var(--accent)', boxShadow: '0 0 8px color-mix(in srgb, var(--accent) 60%, transparent)' }}
+                style={{ backgroundColor: "#5865f2", boxShadow: "0 0 10px rgba(88,101,242,0.65)" }}
                 transition={{ type: "spring", stiffness: 400, damping: 30 }}
               />
             )}

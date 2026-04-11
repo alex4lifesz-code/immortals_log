@@ -225,26 +225,31 @@ export default function WorkoutHistoryDetailPage() {
               </div>
             )}
 
-            <GlowCard glow="jade" hoverable={false} className="!p-0 overflow-hidden">
-            <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
-              <div className="px-3 py-2 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
+            <GlowCard
+              glow="none"
+              hoverable={false}
+              className="!p-0 overflow-hidden rounded-2xl border border-white/10 bg-[#2b2d31] shadow-[0_10px_30px_rgba(0,0,0,0.35)]"
+            >
+            <div className="border overflow-hidden rounded-2xl" style={{ borderColor: "rgba(255,255,255,0.08)", background: "linear-gradient(180deg, #313338 0%, #2b2d31 100%)" }}>
+              <div className="px-3 py-2 border-b" style={{ borderColor: "rgba(255,255,255,0.08)", backgroundColor: "#232428" }}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <Link
                       href={backHref}
-                      className="text-[11px] font-semibold text-jade-glow"
+                      className="text-[11px] font-semibold"
+                      style={{ color: "#8ea1ff" }}
                     >
                       {backLabel}
                     </Link>
-                    <p className="truncate text-xs font-bold" style={{ color: "var(--text-primary)" }}>{displayName}</p>
-                    <p className="text-[11px]" style={{ color: "var(--text-secondary)" }}>Exercise snapshot</p>
+                    <p className="truncate text-xs font-bold" style={{ color: "#f2f3f5" }}>{displayName}</p>
+                    <p className="text-[11px]" style={{ color: "#b5bac1" }}>Exercise snapshot</p>
                   </div>
                   <span
                     className="shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-semibold"
                     style={{
                       color: categoryColor,
-                      borderColor: `color-mix(in srgb, ${categoryColor} 55%, var(--border))`,
-                      backgroundColor: `color-mix(in srgb, ${categoryColor} 13%, transparent)`,
+                      borderColor: `color-mix(in srgb, ${categoryColor} 60%, rgba(255,255,255,0.12))`,
+                      backgroundColor: "rgba(20,20,20,0.25)",
                     }}
                   >
                     {categoryLabel}
@@ -252,57 +257,57 @@ export default function WorkoutHistoryDetailPage() {
                 </div>
               </div>
 
-              <table className="w-full text-[11px] border-collapse" style={{ backgroundColor: "var(--surface)" }}>
+              <table className="w-full text-[11px] border-collapse" style={{ backgroundColor: "#2b2d31" }}>
                 <tbody>
                   <tr>
-                    <td className="px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "var(--border)", color: "var(--text-muted)", backgroundColor: "color-mix(in srgb, var(--border) 10%, var(--surface))", width: "30%" }}>Current Progression:</td>
-                    <td className="px-2 py-1.5 border-b border-r" style={{ borderColor: "var(--border)", color: "var(--accent)" }}>
+                    <td className="px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "rgba(255,255,255,0.08)", color: "#b5bac1", backgroundColor: "#232428", width: "30%" }}>Current Progression:</td>
+                    <td className="px-2 py-1.5 border-b border-r" style={{ borderColor: "rgba(255,255,255,0.08)", color: "#8ea1ff" }}>
                       {currentTier?.tierName || "Unassigned progression"}
                     </td>
-                    <td className="px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "var(--border)", color: "var(--text-muted)", backgroundColor: "color-mix(in srgb, var(--border) 10%, var(--surface))", width: "15%" }}>Last Logged:</td>
-                    <td className="px-2 py-1.5 border-b" style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}>
+                    <td className="px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "rgba(255,255,255,0.08)", color: "#b5bac1", backgroundColor: "#232428", width: "15%" }}>Last Logged:</td>
+                    <td className="px-2 py-1.5 border-b" style={{ borderColor: "rgba(255,255,255,0.08)", color: "#f2f3f5" }}>
                       {lastLoggedDisplay}
                     </td>
                   </tr>
                   <tr>
-                    <td className="px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "var(--border)", color: "var(--text-muted)", backgroundColor: "color-mix(in srgb, var(--border) 10%, var(--surface))" }}>Total Logs:</td>
-                    <td className="px-2 py-1.5 border-b border-r" style={{ borderColor: "var(--border)", color: "var(--accent)" }}>
+                    <td className="px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "rgba(255,255,255,0.08)", color: "#b5bac1", backgroundColor: "#232428" }}>Total Logs:</td>
+                    <td className="px-2 py-1.5 border-b border-r" style={{ borderColor: "rgba(255,255,255,0.08)", color: "#8ea1ff" }}>
                       {totalLogs}
                     </td>
-                    <td className="px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "var(--border)", color: "var(--text-muted)", backgroundColor: "color-mix(in srgb, var(--border) 10%, var(--surface))" }}>Completion:</td>
-                    <td className="px-2 py-1.5 border-b" style={{ borderColor: "var(--border)", color: "var(--gold)" }}>
+                    <td className="px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "rgba(255,255,255,0.08)", color: "#b5bac1", backgroundColor: "#232428" }}>Completion:</td>
+                    <td className="px-2 py-1.5 border-b" style={{ borderColor: "rgba(255,255,255,0.08)", color: "#f0b232" }}>
                       {completionRate}%
                     </td>
                   </tr>
                   <tr>
-                    <td className="px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "var(--border)", color: "var(--text-muted)", backgroundColor: "color-mix(in srgb, var(--border) 10%, var(--surface))" }}>Average Weight:</td>
-                    <td className="px-2 py-1.5 border-b border-r" style={{ borderColor: "var(--border)", color: "var(--col-weight)" }}>
+                    <td className="px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "rgba(255,255,255,0.08)", color: "#b5bac1", backgroundColor: "#232428" }}>Average Weight:</td>
+                    <td className="px-2 py-1.5 border-b border-r" style={{ borderColor: "rgba(255,255,255,0.08)", color: "#57f287" }}>
                       {averageWeightDisplay}
                     </td>
-                    <td className="px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "var(--border)", color: "var(--text-muted)", backgroundColor: "color-mix(in srgb, var(--border) 10%, var(--surface))" }}>Average Reps:</td>
-                    <td className="px-2 py-1.5 border-b" style={{ borderColor: "var(--border)", color: "var(--col-reps)" }}>
+                    <td className="px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "rgba(255,255,255,0.08)", color: "#b5bac1", backgroundColor: "#232428" }}>Average Reps:</td>
+                    <td className="px-2 py-1.5 border-b" style={{ borderColor: "rgba(255,255,255,0.08)", color: "#eb459e" }}>
                       {averageRepsDisplay}
                     </td>
                   </tr>
                   <tr>
-                    <td className="px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "var(--border)", color: "var(--text-muted)", backgroundColor: "color-mix(in srgb, var(--border) 10%, var(--surface))" }}>Difficulty / Equipment:</td>
-                    <td className="px-2 py-1.5 border-b border-r" style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}>
+                    <td className="px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "rgba(255,255,255,0.08)", color: "#b5bac1", backgroundColor: "#232428" }}>Difficulty / Equipment:</td>
+                    <td className="px-2 py-1.5 border-b border-r" style={{ borderColor: "rgba(255,255,255,0.08)", color: "#f2f3f5" }}>
                       {exercise.difficulty || "-"} / {exercise.equipmentType || "Bodyweight"}
                     </td>
-                    <td className="px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "var(--border)", color: "var(--text-muted)", backgroundColor: "color-mix(in srgb, var(--border) 10%, var(--surface))" }}>Activity:</td>
-                    <td className="px-2 py-1.5 border-b" style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}>
+                    <td className="px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "rgba(255,255,255,0.08)", color: "#b5bac1", backgroundColor: "#232428" }}>Activity:</td>
+                    <td className="px-2 py-1.5 border-b" style={{ borderColor: "rgba(255,255,255,0.08)", color: "#f2f3f5" }}>
                       {logsLast7Days} (7d) • {logsLast30Days} (30d)
                     </td>
                   </tr>
                   <tr>
-                    <td className="px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "var(--border)", color: "var(--text-muted)", backgroundColor: "color-mix(in srgb, var(--border) 10%, var(--surface))" }}>Primary Muscles:</td>
-                    <td className="px-2 py-1.5 border-b" colSpan={3} style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}>
+                    <td className="px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "rgba(255,255,255,0.08)", color: "#b5bac1", backgroundColor: "#232428" }}>Primary Muscles:</td>
+                    <td className="px-2 py-1.5 border-b" colSpan={3} style={{ borderColor: "rgba(255,255,255,0.08)", color: "#f2f3f5" }}>
                       {exercise.primaryMuscles || "-"}
                     </td>
                   </tr>
                   <tr>
-                    <td className="px-2 py-1.5 font-semibold border-r whitespace-nowrap" style={{ borderColor: "var(--border)", color: "var(--text-muted)", backgroundColor: "color-mix(in srgb, var(--border) 10%, var(--surface))" }}>Assigned Days:</td>
-                    <td className="px-2 py-1.5" colSpan={3} style={{ color: "var(--text-primary)" }}>
+                    <td className="px-2 py-1.5 font-semibold border-r whitespace-nowrap" style={{ borderColor: "rgba(255,255,255,0.08)", color: "#b5bac1", backgroundColor: "#232428" }}>Assigned Days:</td>
+                    <td className="px-2 py-1.5" colSpan={3} style={{ color: "#f2f3f5" }}>
                       {exercise.assignedDays || "-"}
                     </td>
                   </tr>
@@ -311,7 +316,11 @@ export default function WorkoutHistoryDetailPage() {
             </div>
             </GlowCard>
 
-            <GlowCard glow="jade" hoverable={false} className="!p-0 overflow-hidden">
+            <GlowCard
+              glow="none"
+              hoverable={false}
+              className="!p-0 overflow-hidden rounded-2xl border border-ink-light/70 bg-ink-deep/80 shadow-[0_0_0_1px_color-mix(in_srgb,var(--jade-glow)_10%,transparent),var(--shadow-elev-1)]"
+            >
             <div className="nyaa-history-table-shell">
               {selectedTierLevel != null ? (
                 <div className="mb-2 border px-2 py-1 text-[11px]" style={{ borderColor: "var(--border)", backgroundColor: "color-mix(in srgb, var(--accent) 8%, var(--surface))", color: "var(--text-secondary)" }}>

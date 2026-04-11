@@ -20,7 +20,7 @@ export default function MobileLayout({ children }: { children: ReactNode }) {
         <HapticProvider>
           <SystemBarsProvider>
             <BackButtonProvider>
-              <main className="mobile-shell min-h-screen bg-background text-foreground">
+              <main className="mobile-shell min-h-app bg-background text-foreground">
                 <AnimatePresence mode="wait" initial={false}>
                   <motion.div
                     key={pathname}

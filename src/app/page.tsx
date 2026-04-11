@@ -119,7 +119,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="safe-area-shell min-h-screen flex items-center justify-center relative overflow-hidden">
+    <div className="safe-area-shell min-h-app flex items-center justify-center relative overflow-hidden">
       <div className="absolute top-0 inset-x-0 z-20">
         <ConnectivityBanner />
       </div>

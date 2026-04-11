@@ -173,19 +173,31 @@ function NyaaTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount = 
     return "neutral";
   }, [weightTrendLabel]);
 
+  const navigateToPath = (path: string) => {
+    if (path === DASHBOARD_ROUTES.workoutHistory && typeof window !== "undefined") {
+      window.dispatchEvent(new Event("train-reset-view"));
+    }
+    router.push(path);
+  };
+
   const navigateAndCloseMore = (path: string) => {
     setMoreMenuOpen(false);
-    router.push(path);
+    navigateToPath(path);
   };
 
   const navigateAndCloseUserMenu = (path: string) => {
     setUserMenuOpen(false);
-    router.push(path);
+    navigateToPath(path);
   };
 
   const NavLink = ({ href, label, hint, isActive }: { href: string; label: string; hint?: string; isActive: boolean }) => (
     <Link
       href={href}
+      onClick={() => {
+        if (href === DASHBOARD_ROUTES.workoutHistory && typeof window !== "undefined") {
+          window.dispatchEvent(new Event("train-reset-view"));
+        }
+      }}
       title={hint || undefined}
       className={`nyaa-nav-link px-2 py-1 text-xs transition-colors whitespace-nowrap ${
         isActive
@@ -198,7 +210,7 @@ function NyaaTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount = 
   );
 
   return (
-    <nav className="nyaa-nav-bar sticky top-0 z-40 w-full" role="navigation" aria-label="Main navigation">
+    <nav className="nyaa-nav-bar sticky top-0 z-40 w-full safe-area-top" role="navigation" aria-label="Main navigation">
       <div className="nyaa-nav-inner w-full px-3 flex items-center gap-0 h-13">
 
         {/* Logo */}

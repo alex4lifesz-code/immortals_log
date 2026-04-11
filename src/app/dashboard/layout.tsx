@@ -1,53 +1,101 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { AppProvider, useAppContext } from "@/context/AppContext";
 import { DisplaySettingsProvider } from "@/context/DisplaySettingsContext";
 import { useAuth } from "@/context/AuthContext";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence, MotionConfig, useReducedMotion } from "framer-motion";
 import MobileNavBar from "@/components/navigation/MobileNavBar";
 import SwipeNavigation from "@/components/navigation/SwipeNavigation";
 import NyaaTopNav from "@/components/navigation/NyaaTopNav";
+import DiscordFriendsRail from "@/components/navigation/DiscordFriendsRail";
 import ConnectivityBanner from "@/components/system/ConnectivityBanner";
 import AtmosphericBackground from "@/components/atmosphere/AtmosphericBackground";
 import { useIncomingFriendRequestsCount } from "@/hooks/useIncomingFriendRequestsCount";
+import { DASHBOARD_ROUTES } from "@/lib/navigation";
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const prefersReducedMotion = useReducedMotion();
   const { count: incomingFriendRequestCount } = useIncomingFriendRequestsCount(user?.id);
   const { themeStyle, isMobile } = useAppContext();
+  const [isTrainExerciseHistoryOpen, setIsTrainExerciseHistoryOpen] = useState(false);
   const disableMotion = themeStyle === "eternal" || themeStyle === "discord" || prefersReducedMotion;
   const isWorkoutInputFullscreen =
     pathname?.startsWith("/dashboard/train/input/") || pathname?.startsWith("/dashboard/workout-history/input/") || false;
+  const isFriendDrawerRoute =
+    pathname?.startsWith("/dashboard/train")
+    && Boolean(searchParams.get("targetUserId"))
+    && Boolean(searchParams.get("friendView"));
+  const hideFriendsRail =
+    pathname?.startsWith(DASHBOARD_ROUTES.overview)
+    || pathname?.startsWith(DASHBOARD_ROUTES.rankUp)
+    || pathname?.startsWith(DASHBOARD_ROUTES.exercises)
+    || false;
+  const showMobileNav = !isWorkoutInputFullscreen && !isTrainExerciseHistoryOpen;
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const onVisibilityChange = (event: Event) => {
+      const detail = (event as CustomEvent<{ open?: boolean }>).detail;
+      setIsTrainExerciseHistoryOpen(Boolean(detail?.open));
+    };
+
+    window.addEventListener("train-exercise-history-visibility", onVisibilityChange as EventListener);
+    return () => {
+      window.removeEventListener("train-exercise-history-visibility", onVisibilityChange as EventListener);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!pathname?.startsWith("/dashboard/train")) {
+      setIsTrainExerciseHistoryOpen(false);
+    }
+  }, [pathname]);
 
   return (
     <MotionConfig transition={disableMotion ? { duration: 0 } : undefined}>
-      <div className="app-atmosphere safe-area-shell h-screen flex flex-col overflow-hidden nyaa-layout">
+      <div className="app-atmosphere safe-area-shell h-app flex overflow-hidden nyaa-layout">
         <AtmosphericBackground />
-        {!isWorkoutInputFullscreen && !isMobile && <NyaaTopNav incomingFriendRequestCount={incomingFriendRequestCount} />}
-        {!isWorkoutInputFullscreen && <ConnectivityBanner />}
-        <div className="flex-1 flex min-w-0 flex-col overflow-hidden nyaa-content-area">
-          <SwipeNavigation>
-            <div className="h-full min-w-0 overflow-y-auto">
-              <AnimatePresence mode="wait" initial={false}>
-                <motion.div
-                  key={pathname}
-                  initial={disableMotion ? false : { opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={disableMotion ? { opacity: 1 } : { opacity: 0 }}
-                  transition={{ duration: disableMotion ? 0 : 0.1, ease: "easeOut" }}
-                  className="h-full"
-                >
-                  {children}
-                </motion.div>
-              </AnimatePresence>
-            </div>
-          </SwipeNavigation>
+        {!isWorkoutInputFullscreen && !isFriendDrawerRoute && !isTrainExerciseHistoryOpen && !hideFriendsRail && (
+          <DiscordFriendsRail incomingFriendRequestCount={incomingFriendRequestCount} />
+        )}
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          {!isWorkoutInputFullscreen && !isMobile && <NyaaTopNav incomingFriendRequestCount={incomingFriendRequestCount} />}
+          {!isWorkoutInputFullscreen && <ConnectivityBanner />}
+          <div className="flex-1 flex min-w-0 flex-col overflow-hidden nyaa-content-area">
+            <SwipeNavigation>
+              <div
+                data-mobile-scroll-container={isMobile ? "true" : undefined}
+                className="h-full min-w-0 overflow-y-auto"
+              >
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div
+                    key={pathname}
+                    initial={disableMotion ? false : { opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={disableMotion ? { opacity: 1 } : { opacity: 0 }}
+                    transition={{ duration: disableMotion ? 0 : 0.1, ease: "easeOut" }}
+                    className="h-full"
+                  >
+                    {children}
+                  </motion.div>
+                </AnimatePresence>
+                {isMobile && showMobileNav ? <div aria-hidden="true" className="h-[calc(env(safe-area-inset-bottom,0px)+4.25rem)]" /> : null}
+              </div>
+            </SwipeNavigation>
+          </div>
         </div>
-        {!isWorkoutInputFullscreen && <MobileNavBar incomingFriendRequestCount={incomingFriendRequestCount} />}
+        {showMobileNav && (
+          <MobileNavBar
+            incomingFriendRequestCount={incomingFriendRequestCount}
+            isTrainExerciseHistoryOpen={isTrainExerciseHistoryOpen}
+          />
+        )}
       </div>
     </MotionConfig>
   );
@@ -76,7 +124,7 @@ export default function DashboardLayout({
 
   if (isLoading) {
     return (
-      <div className="safe-area-shell h-screen flex items-center justify-center bg-void-black">
+      <div className="safe-area-shell h-app flex items-center justify-center bg-void-black">
         <p className="text-mist-mid text-sm animate-pulse">Restoring session…</p>
       </div>
     );

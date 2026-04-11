@@ -73,7 +73,8 @@ function DesktopNavBar() {
         <motion.div
           initial={{ y: -30, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="fixed top-0 left-1/2 transform -translate-x-1/2 z-50 pointer-events-auto"
+          className="fixed left-1/2 transform -translate-x-1/2 z-50 pointer-events-auto"
+          style={{ top: "var(--safe-area-inset-top)" }}
         >
           <motion.button
             onClick={() => setTopPanelExpanded(true)}

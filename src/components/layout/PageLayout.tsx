@@ -37,6 +37,7 @@ function PageLayout({
   const sidebarWidth = DISPLAY_DEFAULTS.sidebarWidth;
 
   const MIN_SIDEBAR_WIDTH = 200;
+
   const contentContainerClass = contentWidth === "centered"
     ? `mx-auto w-full ${contentMaxWidthClass}`
     : "w-full";
@@ -127,7 +128,7 @@ function PageLayout({
   const desktopSidebar = sidebar && !isMobile && effectivePosition !== "top" ? (
     <motion.div
       layout={!disableMotion}
-      className="sticky top-0 self-start h-full border-r border-l-0 border-ink-light/50 surface-panel surface-panel-strong shrink-0 overflow-hidden flex flex-col"
+      className="sticky top-0 safe-area-top safe-area-bottom self-start h-full border-r border-l-0 border-ink-light/50 surface-panel surface-panel-strong shrink-0 overflow-hidden flex flex-col"
       style={{
         width: `${sidebarWidth}px`,
         minWidth: `${MIN_SIDEBAR_WIDTH}px`,
@@ -167,23 +168,25 @@ function PageLayout({
       {desktopSidebar}
 
       {/* Main Content — full width on mobile */}
-      <div
-        data-mobile-scroll-container={isMobile ? "true" : undefined}
-        className={`flex-1 min-w-0 overflow-y-auto ${isMobile ? `${mobileContentPaddingClass} scrollbar-hide overflow-x-hidden` : "h-full overscroll-contain [scrollbar-gutter:stable] overflow-x-auto p-2"}`}
-      >
-        <motion.div
-          initial={disableMotion ? false : { opacity: 0 }}
-          animate={disableMotion ? { opacity: 1 } : { opacity: 1 }}
-          transition={{ delay: disableMotion ? 0 : 0.04, duration: disableMotion ? 0 : 0.25, ease: [0.22, 1, 0.36, 1] }}
-          className="page-rise"
+      <div className="flex-1 min-w-0">
+        <div
+          data-mobile-scroll-container={isMobile ? "true" : undefined}
+          className={`flex-1 min-w-0 overflow-y-auto ${isMobile ? `${mobileContentPaddingClass} scrollbar-hide overflow-x-hidden` : "h-full overscroll-contain [scrollbar-gutter:stable] overflow-x-auto p-2"}`}
         >
-          <div className={`${contentContainerClass} ${isMobile ? "" : "rounded-2xl"}`}>
-            {subtitle && (
-              <p className="text-xs text-mist-dark mb-3 italic">{subtitle}</p>
-            )}
-            {children}
-          </div>
-        </motion.div>
+          <motion.div
+            initial={disableMotion ? false : { opacity: 0 }}
+            animate={disableMotion ? { opacity: 1 } : { opacity: 1 }}
+            transition={{ delay: disableMotion ? 0 : 0.04, duration: disableMotion ? 0 : 0.25, ease: [0.22, 1, 0.36, 1] }}
+            className="page-rise"
+          >
+            <div className={`${contentContainerClass} ${isMobile ? "" : "rounded-2xl"}`}>
+              {subtitle && (
+                <p className="text-xs text-mist-dark mb-3 italic">{subtitle}</p>
+              )}
+              {children}
+            </div>
+          </motion.div>
+        </div>
       </div>
 
 
@@ -215,7 +218,7 @@ function PageLayout({
                 }
               }}
               transition={disableMotion ? { duration: 0 } : { type: "spring", damping: 31, stiffness: 360, mass: 0.72 }}
-              className="fixed inset-y-0 left-0 z-50 surface-panel surface-panel-strong border-r border-jade-glow/15 flex flex-col shadow-2xl touch-pan-y pt-[max(env(safe-area-inset-top,0px),12px)]"
+              className="fixed inset-y-0 left-0 z-50 surface-panel surface-panel-strong border-r border-jade-glow/15 flex flex-col shadow-2xl touch-pan-y pt-[max(env(safe-area-inset-top,0px),12px)] pb-[max(env(safe-area-inset-bottom,0px),10px)]"
               style={{ width: "min(88vw, 380px)" }}
               onTouchStart={onSidebarTouchStart}
               onTouchMove={onSidebarTouchMove}

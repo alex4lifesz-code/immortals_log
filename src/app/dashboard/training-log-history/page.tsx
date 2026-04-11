@@ -11,7 +11,6 @@ import { useIsMobile } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { api } from "@/lib/api-client";
-import { DASHBOARD_ROUTES } from "@/lib/navigation";
 import { getExerciseDisplayName } from "@/lib/exercise-name";
 import { isDeletedExerciseDescription } from "@/lib/pending-exercises";
 import { DEFAULT_USER_PHYSIQUE, loadUserPhysique } from "@/lib/user-physique";

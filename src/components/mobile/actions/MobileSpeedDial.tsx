@@ -40,7 +40,7 @@ export default function MobileSpeedDial({ actions, side = "right" }: MobileSpeed
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
             transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className={`fixed bottom-40 z-40 flex flex-col gap-2 ${side === "left" ? "left-4" : "right-4"}`}
+            className={`fixed bottom-[calc(env(safe-area-inset-bottom,0px)+10rem)] z-40 flex flex-col gap-2 ${side === "left" ? "left-[max(env(safe-area-inset-left,0px),1rem)]" : "right-[max(env(safe-area-inset-right,0px),1rem)]"}`}
           >
             {actions.map((action, index) => (
               <motion.button

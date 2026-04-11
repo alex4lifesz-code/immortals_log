@@ -118,14 +118,14 @@ export default function OnboardingPage() {
 
   if (onboarding.loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="safe-area-shell min-h-app flex items-center justify-center">
         <p className="text-mist-mid text-sm animate-pulse">Loading…</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-void-black relative overflow-x-hidden">
+    <div className="safe-area-shell min-h-app bg-void-black relative overflow-x-hidden">
       {/* Background effects */}
       <div className="absolute inset-0 bg-gradient-to-br from-void-black via-ink-deep to-jade-glow/10 pointer-events-none" />
       <div className="absolute top-0 left-1/4 w-80 h-80 bg-jade-deep/10 rounded-full blur-xl pointer-events-none" />

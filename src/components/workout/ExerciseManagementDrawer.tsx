@@ -397,7 +397,7 @@ export default function ExerciseManagementDrawer({
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 right-0 z-50 flex flex-col max-w-full w-full md:w-[61.8%] pt-[max(env(safe-area-inset-top,0px),12px)]"
+            className="fixed inset-y-0 right-0 z-50 flex flex-col max-w-full w-full md:w-[61.8%] pt-[max(env(safe-area-inset-top,0px),12px)] pb-[max(env(safe-area-inset-bottom,0px),10px)] pr-[max(env(safe-area-inset-right,0px),0px)]"
             style={{
               background: "linear-gradient(180deg, color-mix(in srgb, var(--ink-deep) 95%, black) 0%, color-mix(in srgb, var(--ink-dark) 95%, black) 100%)",
               borderLeft: "1px solid color-mix(in srgb, var(--accent) 15%, transparent)",
