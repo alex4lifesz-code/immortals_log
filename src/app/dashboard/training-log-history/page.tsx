@@ -11,6 +11,7 @@ import { useIsMobile } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { api } from "@/lib/api-client";
+import { DASHBOARD_ROUTES } from "@/lib/navigation";
 import { getExerciseDisplayName } from "@/lib/exercise-name";
 import { isDeletedExerciseDescription } from "@/lib/pending-exercises";
 import { DEFAULT_USER_PHYSIQUE, loadUserPhysique } from "@/lib/user-physique";
@@ -128,6 +129,11 @@ export default function TrainingLogHistoryPage() {
     const target = orderedVisibleUsers.find((u) => u.id === targetUserId);
     if (!target) return undefined;
     return (target.name || target.username || "").trim() || undefined;
+  }, [orderedVisibleUsers, targetUserId]);
+
+  const selectedTargetUser = useMemo(() => {
+    if (!targetUserId) return null;
+    return orderedVisibleUsers.find((u) => u.id === targetUserId) ?? null;
   }, [orderedVisibleUsers, targetUserId]);
 
   const activeUserLabel = useMemo(() => {
@@ -295,7 +301,7 @@ export default function TrainingLogHistoryPage() {
   return (
     <PageLayout
       title="Training Log History"
-      subtitle="Filter and search your saved training log entries"
+      subtitle="Filter and explore your archived training logs"
       mobileContentPaddingClass="p-2 pb-2"
     >
       <div className="nyaa-history-page space-y-6 px-0 py-2 sm:py-3">
@@ -305,7 +311,44 @@ export default function TrainingLogHistoryPage() {
           </GlowCard>
         ) : (
           <>
-            <GlowCard glow="jade" hoverable={false}>
+            {selectedTargetUser && (
+              <GlowCard
+                glow="none"
+                hoverable={false}
+                className="rounded-2xl border border-[#3b3f48] bg-[#2b2d31] shadow-[0_0_0_1px_rgba(88,101,242,0.2),0_12px_24px_rgba(0,0,0,0.35)]"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">Friend Profile</p>
+                    <h3 className="mt-1 truncate text-lg font-semibold text-[#f2f3f5]">{selectedTargetUser.name || "Friend"}</h3>
+                    <p className="text-xs text-[#b5bac1]">@{selectedTargetUser.username || "unknown"}</p>
+                    <p className="mt-1 text-[11px] text-[#949ba4]">ID: {selectedTargetUser.id}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => router.push(DASHBOARD_ROUTES.friends)}
+                      className="rounded-lg border border-[#3b3f48] bg-[#1e1f22] px-3 py-1.5 text-xs font-medium text-[#dbdee1] hover:text-[#f2f3f5]"
+                    >
+                      Open Friends
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleUserScopeChange(userId)}
+                      className="rounded-lg border border-[#5865f2]/55 bg-[#5865f2]/18 px-3 py-1.5 text-xs font-semibold text-[#dee1ff] hover:bg-[#5865f2]/28"
+                    >
+                      View My History
+                    </button>
+                  </div>
+                </div>
+              </GlowCard>
+            )}
+
+            <GlowCard
+              glow="none"
+              hoverable={false}
+              className="rounded-2xl border border-ink-light/70 bg-ink-deep/80 shadow-[0_0_0_1px_color-mix(in_srgb,var(--jade-glow)_10%,transparent),var(--shadow-elev-1)]"
+            >
               <h3 className="text-sm text-jade-glow uppercase tracking-wider mb-3">Filters</h3>
               <div className="grid gap-2 lg:grid-cols-2">
                 <div className="flex flex-wrap items-center gap-2">
@@ -463,7 +506,11 @@ export default function TrainingLogHistoryPage() {
               </div>
             </GlowCard>
 
-            <GlowCard glow="jade" hoverable={false} className="!p-0 overflow-hidden">
+            <GlowCard
+              glow="none"
+              hoverable={false}
+              className="!p-0 overflow-hidden rounded-2xl border border-ink-light/70 bg-ink-deep/80 shadow-[0_0_0_1px_color-mix(in_srgb,var(--jade-glow)_10%,transparent),var(--shadow-elev-1)]"
+            >
             <div className="nyaa-history-table-shell">
               <MemoTrainingLogTable
                 exercises={filteredExercises}
