@@ -26,9 +26,9 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
   const { user } = useAuth();
 
   const isActive = pathname === DASHBOARD_ROUTES.friends || pathname.startsWith(`${DASHBOARD_ROUTES.friends}/`);
-  const [friends, setFriends] = useState<Array<{ id: string; name: string }>>([]);
+  const [friends, setFriends] = useState<Array<{ id: string; name: string; username?: string }>>([]);
   const [friendActionsOpen, setFriendActionsOpen] = useState(false);
-  const [activeFriend, setActiveFriend] = useState<{ id: string; name: string } | null>(null);
+  const [activeFriend, setActiveFriend] = useState<{ id: string; name: string; username?: string } | null>(null);
   const railWidthPx = isMobile ? 64 : 76;
 
   useEffect(() => {
@@ -45,6 +45,7 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
               .map((friend) => ({
                 id: friend.id,
                 name: (friend.name || friend.username || "Friend").trim() || "Friend",
+                username: (friend.username || "").trim() || undefined,
               }))
           : [];
 
@@ -68,6 +69,14 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
     return [{ id: meId, name: meName, isMe: true }, ...others.map((friend) => ({ ...friend, isMe: false }))];
   }, [friends, user?.id, user?.name, user?.username]);
 
+  const closeFriendPanels = () => {
+    setFriendActionsOpen(false);
+    setActiveFriend(null);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("train-reset-view"));
+    }
+  };
+
   return (
     <>
       <aside className="flex h-full w-[64px] md:w-[76px] shrink-0 border-r border-[#1f2227] bg-[#1e1f22]">
@@ -75,7 +84,10 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
           <motion.button
             type="button"
             whileTap={{ scale: 0.94 }}
-            onClick={() => router.push(DASHBOARD_ROUTES.friends)}
+            onClick={() => {
+              closeFriendPanels();
+              router.push(DASHBOARD_ROUTES.friends);
+            }}
             aria-current={isActive ? "page" : undefined}
             aria-label="Friends"
             className={`relative flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-2xl border transition-colors duration-150 ${
@@ -108,15 +120,18 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                 type="button"
                 onClick={() => {
                   if (friend.isMe) {
-                    setFriendActionsOpen(false);
-                    setActiveFriend(null);
-                    if (typeof window !== "undefined") {
-                      window.dispatchEvent(new Event("train-reset-view"));
-                    }
+                    closeFriendPanels();
                     router.push(DASHBOARD_ROUTES.workoutHistory);
                     return;
                   }
-                  setActiveFriend({ id: friend.id, name: friend.name });
+
+                  if (friendActionsOpen && activeFriend?.id === friend.id) {
+                    closeFriendPanels();
+                    return;
+                  }
+
+                  closeFriendPanels();
+                  setActiveFriend({ id: friend.id, name: friend.name, username: "username" in friend ? friend.username : undefined });
                   setFriendActionsOpen(true);
                 }}
                 className="group w-full rounded-xl px-1.5 py-1 text-center border border-transparent bg-transparent"
@@ -178,8 +193,7 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                         <button
                           type="button"
                           onClick={() => {
-                            setFriendActionsOpen(false);
-                            setActiveFriend(null);
+                            closeFriendPanels();
                           }}
                           className="inline-flex h-9 w-9 items-center justify-center rounded-md"
                           style={{
@@ -201,6 +215,28 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                   </div>
 
                   <div>
+                    <div className="mx-1 mt-1 mb-2 rounded-2xl border border-[#3b3f48] bg-[#1e1f22] p-3.5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Friend Profile</p>
+                          <p className="mt-0.5 truncate text-[13px] font-semibold text-[#f2f3f5]">{activeFriend.name}</p>
+                          <p className="truncate text-[11px] text-[#dbdee1]">@{activeFriend.username || activeFriend.name.toLowerCase().replace(/\s+/g, "")}</p>
+                          <p className="mt-1 truncate text-[10px] text-[#949ba4]">ID: {activeFriend.id || "-"}</p>
+                        </div>
+
+                        <span className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[#5865f2]/40 bg-[#5865f2]/15 text-[#c8cdfa]">
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4 20a8 8 0 0116 0" />
+                          </svg>
+                          <span
+                            className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border"
+                            style={{ backgroundColor: "#3ba55d", borderColor: "#1e1f22" }}
+                          />
+                        </span>
+                      </div>
+                    </div>
+
                     {[
                       { id: "history", label: "History", hint: "Open train history" },
                       { id: "chart", label: "Chart", hint: "Coming soon" },

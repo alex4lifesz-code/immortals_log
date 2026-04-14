@@ -49,7 +49,7 @@ export default function WorkoutHistoryMobileInputPage() {
   }, [fetchExercises]);
 
   return (
-    <div className="h-full min-w-0 overflow-y-auto overflow-x-hidden p-2 pb-24">
+    <div className="min-h-0 min-w-0 overflow-x-hidden p-2 pb-24">
       <div className="min-w-0 nyaa-history-page space-y-2 px-0 py-2 sm:py-3">
         {loading ? (
           <div

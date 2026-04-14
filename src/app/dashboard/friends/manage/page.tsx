@@ -54,7 +54,7 @@ interface FriendStats {
   latestWeight: number | null;
 }
 
-export default function FriendsPage() {
+export default function ManageFriendsPage() {
   const { settings } = useDisplaySettings();
   const dateFormat = settings.dateFormat || "dd-mmm-yyyy";
 
@@ -87,7 +87,7 @@ export default function FriendsPage() {
       setData(friendData);
       setCheckins(checkinResult.checkins || []);
     } catch (error) {
-      console.error("Failed to load friends page:", error);
+      console.error("Failed to load manage friends page:", error);
     } finally {
       setLoading(false);
     }
@@ -127,15 +127,8 @@ export default function FriendsPage() {
   }, [checkins, data.friends]);
 
   const sortedFriends = useMemo(() => {
-    return [...data.friends].sort((left, right) => {
-      const leftStats = friendStatsMap.get(left.id);
-      const rightStats = friendStatsMap.get(right.id);
-      const leftDate = leftStats?.lastCheckInDate || "";
-      const rightDate = rightStats?.lastCheckInDate || "";
-      if (leftDate !== rightDate) return rightDate.localeCompare(leftDate);
-      return left.name.localeCompare(right.name);
-    });
-  }, [data.friends, friendStatsMap]);
+    return [...data.friends].sort((left, right) => left.name.localeCompare(right.name));
+  }, [data.friends]);
 
   const sendFriendRequest = useCallback(async () => {
     const normalized = friendCodeInput.trim();
@@ -149,13 +142,10 @@ export default function FriendsPage() {
     try {
       const response = await api.post<FriendRequestCreateResponse>("/api/friends", { friendCode: normalized });
       if (response?.request) {
-        setData((prev) => {
-          const withoutSame = prev.outgoingRequests.filter((request) => request.id !== response.request.id);
-          return {
-            ...prev,
-            outgoingRequests: [response.request, ...withoutSame],
-          };
-        });
+        setData((prev) => ({
+          ...prev,
+          outgoingRequests: [response.request, ...prev.outgoingRequests.filter((request) => request.id !== response.request.id)],
+        }));
       }
       broadcastFriendRequestsUpdated();
       await refresh();
@@ -208,13 +198,10 @@ export default function FriendsPage() {
     }
   }, [broadcastFriendRequestsUpdated, refresh]);
 
-  const pendingCount = data.incomingRequests.length + data.outgoingRequests.length;
-  const activeFriendsCount = Array.from(friendStatsMap.values()).filter((stats) => stats.totalCheckIns > 0).length;
-
   return (
     <PageLayout
-      title="Friends"
-      subtitle="Social navigation for your cultivation circle"
+      title="Manage Friends"
+      subtitle="Handle requests, invites, and your connected cultivators"
       mobileContentPaddingClass="p-0 pb-0"
     >
       {loading ? (
@@ -224,7 +211,7 @@ export default function FriendsPage() {
       ) : (
         <div className="px-0">
           <section
-            className="overflow-hidden rounded-tl-2xl border"
+            className="overflow-hidden border rounded-tl-2xl"
             style={{
               borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
               backgroundColor: "color-mix(in srgb, var(--ink-mid) 20%, var(--ink-deep))",
@@ -237,72 +224,142 @@ export default function FriendsPage() {
                 backgroundColor: "color-mix(in srgb, var(--ink-deep) 94%, var(--ink-mid))",
               }}
             >
-              <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Cultivation Circle</p>
-              <h2 className="mt-1 text-sm font-semibold text-[#f2f3f5]">Friends Navigation</h2>
-              <p className="mt-1 text-[11px] text-[#b5bac1]">Open the social areas you want, with the same flatter train-style feed feel.</p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Social Management</p>
+                  <h2 className="mt-1 text-sm font-semibold text-[#f2f3f5]">Manage Friends</h2>
+                  <p className="mt-1 text-[11px] text-[#b5bac1]">Accept requests, send invites, and manage your cultivation circle.</p>
+                </div>
+                <Link
+                  href="/dashboard/friends"
+                  className="rounded-md border border-[#3b3f48] bg-[#232428] px-2.5 py-1.5 text-[11px] font-medium text-[#dbdee1] transition-colors hover:border-[#5865f2]/60 hover:text-[#f2f3f5]"
+                >
+                  Back
+                </Link>
+              </div>
             </div>
 
             <div className="space-y-3 px-2 py-2.5 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)]">
-              <section className="grid grid-cols-3 gap-2">
-                <div className="rounded-md border border-[#3b3f48] bg-[#232428] px-2.5 py-2">
-                  <p className="text-[10px] uppercase tracking-[0.08em] text-[#949ba4]">Friends</p>
-                  <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{data.friends.length}</p>
+              <section className="rounded-lg border border-[#3b3f48] bg-[#313338] p-3">
+                <div className="mb-3">
+                  <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Add Friend</p>
+                  <p className="mt-1 text-[11px] text-[#b5bac1]">Share your code or send a request directly.</p>
                 </div>
+
                 <div className="rounded-md border border-[#3b3f48] bg-[#232428] px-2.5 py-2">
-                  <p className="text-[10px] uppercase tracking-[0.08em] text-[#949ba4]">Pending</p>
-                  <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{pendingCount}</p>
-                </div>
-                <div className="rounded-md border border-[#3b3f48] bg-[#232428] px-2.5 py-2">
-                  <p className="text-[10px] uppercase tracking-[0.08em] text-[#949ba4]">Active</p>
-                  <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{activeFriendsCount}</p>
-                </div>
-              </section>
-
-              <section className="rounded-lg border border-[#3b3f48] bg-[#313338] p-2">
-                <p className="px-1 pb-2 text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Navigation</p>
-
-                <div className="space-y-2">
-                  <Link
-                    href="/dashboard/friends/manage"
-                    className="flex items-center justify-between gap-3 rounded-md border border-[#3b3f48] bg-[#232428] px-3 py-3 transition-colors hover:border-[#5865f2]/55 hover:bg-[#2b2d31]"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-[#f2f3f5]">Manage Friends</p>
-                      <p className="mt-0.5 text-[11px] text-[#b5bac1]">Incoming requests, outgoing invites, and remove friend actions.</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="flex h-7 min-w-7 items-center justify-center rounded-full border border-[#5865f2]/60 bg-[#5865f2]/12 px-2 text-[11px] font-semibold text-[#c8cdfa]">
-                        {pendingCount}
-                      </span>
-                      <span className="text-[#949ba4]">›</span>
-                    </div>
-                  </Link>
-
-                  <div className="flex items-center justify-between gap-3 rounded-md border border-[#3b3f48] bg-[#232428] px-3 py-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-[#f2f3f5]">Connected Cultivators</p>
-                      <p className="mt-0.5 text-[11px] text-[#b5bac1]">Your current circle and recent social activity at a glance.</p>
-                    </div>
-                    <span className="flex h-7 min-w-7 items-center justify-center rounded-full border border-[#3b3f48] bg-[#2b2d31] px-2 text-[11px] font-semibold text-[#dbdee1]">
-                      {data.friends.length}
-                    </span>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[10px] uppercase tracking-[0.08em] text-[#949ba4]">Your Friend ID</p>
+                    <GlowButton
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        if (!shareableFriendId) return;
+                        navigator.clipboard?.writeText(shareableFriendId).catch(() => {});
+                      }}
+                    >
+                      Copy
+                    </GlowButton>
                   </div>
+                  <p className="mt-1 break-all text-xs font-semibold text-[#f2f3f5]">{shareableFriendId || "-"}</p>
                 </div>
+
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <input
+                    type="text"
+                    value={friendCodeInput}
+                    onChange={(event) => setFriendCodeInput(event.target.value.toLowerCase())}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        void sendFriendRequest();
+                      }
+                    }}
+                    placeholder="Enter a friend ID"
+                    className="h-9 flex-1 rounded-md border px-2.5 text-sm outline-none"
+                    style={{
+                      borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                      backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
+                      color: "var(--cloud-white)",
+                    }}
+                  />
+                  <GlowButton variant="jade" size="sm" disabled={working} onClick={sendFriendRequest}>
+                    Send Request
+                  </GlowButton>
+                </div>
+
+                {addFriendMessage ? <p className="mt-2 text-[11px] text-[#dbdee1]">{addFriendMessage}</p> : null}
               </section>
 
               <section className="rounded-lg border border-[#3b3f48] bg-[#313338] p-3">
                 <div className="mb-2">
-                  <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Preview</p>
-                  <p className="mt-1 text-[11px] text-[#b5bac1]">A light feed preview of your current circle.</p>
+                  <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Incoming Requests</p>
                 </div>
+                {data.incomingRequests.length === 0 ? (
+                  <div className="rounded-md border border-[#3b3f48] bg-[#232428] px-3 py-3 text-[11px] text-[#949ba4]">
+                    No pending incoming requests.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {data.incomingRequests.map((request) => (
+                      <article key={request.id} className="rounded-md border border-[#3b3f48] bg-[#232428] px-3 py-2.5">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-[#f2f3f5]">{request.requester.name}</p>
+                            <p className="truncate text-[11px] text-[#b5bac1]">@{request.requester.username}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <GlowButton variant="jade" size="sm" disabled={working} onClick={() => respondRequest(request.id, "accept")}>
+                              Accept
+                            </GlowButton>
+                            <GlowButton variant="crimson" size="sm" disabled={working} onClick={() => respondRequest(request.id, "reject")}>
+                              Reject
+                            </GlowButton>
+                          </div>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </section>
 
+              <section className="rounded-lg border border-[#3b3f48] bg-[#313338] p-3">
+                <div className="mb-2">
+                  <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Outgoing Requests</p>
+                </div>
+                {data.outgoingRequests.length === 0 ? (
+                  <div className="rounded-md border border-[#3b3f48] bg-[#232428] px-3 py-3 text-[11px] text-[#949ba4]">
+                    No outgoing pending requests.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {data.outgoingRequests.map((request) => (
+                      <article key={request.id} className="rounded-md border border-[#3b3f48] bg-[#232428] px-3 py-2.5">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-[#f2f3f5]">{request.receiver.name}</p>
+                            <p className="truncate text-[11px] text-[#b5bac1]">@{request.receiver.username}</p>
+                          </div>
+                          <GlowButton variant="ghost" size="sm" disabled={working} onClick={() => cancelOutgoing(request.id)}>
+                            Cancel
+                          </GlowButton>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              <section className="rounded-lg border border-[#3b3f48] bg-[#313338] p-3">
+                <div className="mb-2">
+                  <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Connected Friends</p>
+                </div>
                 {sortedFriends.length === 0 ? (
                   <div className="rounded-md border border-[#3b3f48] bg-[#232428] p-3">
                     <EmptyFriends friendCode={data.me?.friendCode ?? undefined} />
                   </div>
                 ) : (
                   <div className="space-y-2.5">
-                    {sortedFriends.slice(0, 4).map((friend) => {
+                    {sortedFriends.map((friend) => {
                       const stats = friendStatsMap.get(friend.id) || {
                         totalCheckIns: 0,
                         lastCheckInDate: null,
@@ -313,12 +370,15 @@ export default function FriendsPage() {
                         <article key={friend.id} className="rounded-md border border-[#3b3f48] bg-[#232428] p-3">
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
-                              <p className="truncate text-sm font-semibold text-[#f2f3f5]">{friend.name}</p>
-                              <p className="truncate text-[11px] text-[#b5bac1]">@{friend.username}</p>
+                              <p className="text-sm font-semibold text-[#f2f3f5]">{friend.name}</p>
+                              <p className="text-[11px] text-[#b5bac1]">@{friend.username}</p>
+                              <p className="mt-1 text-[10px] text-[#949ba4]">
+                                {stats.lastCheckInDate ? `Last check-in on ${formatDateWithPreference(stats.lastCheckInDate, dateFormat)}` : "No check-in activity yet."}
+                              </p>
                             </div>
-                            <span className="rounded-md border border-[#3b3f48] bg-[#2b2d31] px-2 py-1 text-[11px] text-[#b5bac1]">
-                              {stats.totalCheckIns} check-ins
-                            </span>
+                            <GlowButton variant="ghost" size="sm" disabled={working} onClick={() => removeFriend(friend.id)}>
+                              Remove
+                            </GlowButton>
                           </div>
                         </article>
                       );

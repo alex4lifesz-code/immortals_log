@@ -4,7 +4,15 @@ import { motion } from "framer-motion";
 import { useState } from "react";
 import GlowButton from "@/components/ui/GlowButton";
 import { useIsMobile } from "@/context/AppContext";
-import { formatDateWithPreference } from "@/lib/constants";
+import type { CalendarWeekStartOption } from "@/context/DisplaySettingsContext";
+import {
+  createCalendarMonthAnchor,
+  formatCalendarMonthLabel,
+  formatDateLocal as formatDateLocalForZone,
+  formatDateWithPreference,
+  getTimeZoneDateParts,
+  resolveCalendarWeekStartsOn,
+} from "@/lib/constants";
 import { t } from "@/lib/terminology";
 
 export interface DashboardUser {
@@ -148,11 +156,8 @@ export function getCultivatorGlowColor(colorValue: string | undefined, alpha = 0
   return `rgb(255 255 255 / ${alpha})`;
 }
 
-export function formatDateLocal(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+export function formatDateLocal(date: Date, timeZone?: string): string {
+  return formatDateLocalForZone(date, timeZone);
 }
 
 // ── Dashboard Sidebar ──
@@ -266,7 +271,7 @@ export function DashboardSidebar({
 
 // ── Calendar Day Cell ──
 
-function CalendarDay({ date, checkedInUsers, isToday, isPast, hasNote, hasFutureNote, compact, onClick }: { date: Date; checkedInUsers: { id: string; name: string; color: string }[]; isToday: boolean; isPast?: boolean; hasNote?: boolean; hasFutureNote?: boolean; compact: boolean; onClick?: () => void }) {
+function CalendarDay({ dayNumber, checkedInUsers, isToday, isPast, hasNote, hasFutureNote, compact, onClick }: { dayNumber: number; checkedInUsers: { id: string; name: string; color: string }[]; isToday: boolean; isPast?: boolean; hasNote?: boolean; hasFutureNote?: boolean; compact: boolean; onClick?: () => void }) {
   const hasCheckIns = checkedInUsers.length > 0;
   return (
     <motion.div
@@ -285,7 +290,7 @@ function CalendarDay({ date, checkedInUsers, isToday, isPast, hasNote, hasFuture
       }`}
     >
       <div className="text-center">
-        <div className={`${compact ? "text-xs" : "text-sm"} font-medium ${isPast && !isToday ? 'text-mist-mid' : 'text-cloud-white'}`}>{date.getDate()}</div>
+        <div className={`${compact ? "text-xs" : "text-sm"} font-medium ${isPast && !isToday ? 'text-mist-mid' : 'text-cloud-white'}`}>{dayNumber}</div>
         {isToday && <div className={`${compact ? "text-[8px]" : "text-[10px]"} text-jade-glow font-bold`}>TODAY</div>}
       </div>
       {hasCheckIns && (
@@ -327,6 +332,8 @@ export function Calendar({
   dateFormat = "dd-mmm-yyyy",
   onManageNotes,
   forceCompact = false,
+  timeZone,
+  calendarWeekStart = "auto",
 }: {
   checkInUsersByDate: Map<string, string[]>;
   currentMonth: Date;
@@ -340,21 +347,29 @@ export function Calendar({
   dateFormat?: "dd-mm-yyyy" | "dd-mmm-yyyy" | "dd-mm-yy" | "dd-mmm-yy";
   onManageNotes?: () => void;
   forceCompact?: boolean;
+  timeZone?: string;
+  calendarWeekStart?: CalendarWeekStartOption;
 }) {
   const isMobile = useIsMobile();
   const compactMode = isMobile || forceCompact;
-  const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
-  const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
-  const days = [];
-  const today = formatDateLocal(new Date());
+  const { year: currentYear, month: currentMonthNumber } = getTimeZoneDateParts(currentMonth, timeZone);
+  const daysInMonth = new Date(Date.UTC(currentYear, currentMonthNumber, 0)).getUTCDate();
+  const firstDayOfMonth = new Date(Date.UTC(currentYear, currentMonthNumber - 1, 1)).getUTCDay();
+  const weekStartsOn = resolveCalendarWeekStartsOn(calendarWeekStart, timeZone);
+  const leadingBlankDays = (firstDayOfMonth - weekStartsOn + 7) % 7;
+  const days: Array<{ dateStr: string; dayNumber: number } | null> = [];
+  const today = formatDateLocalForZone(new Date(), timeZone);
+  const weekdayHeaders = weekStartsOn === 1
+    ? ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-  for (let i = 0; i < firstDayOfMonth; i++) {
+  for (let i = 0; i < leadingBlankDays; i++) {
     days.push(null);
   }
 
   for (let i = 1; i <= daysInMonth; i++) {
-    const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i);
-    days.push(date);
+    const dateStr = `${currentYear}-${String(currentMonthNumber).padStart(2, "0")}-${String(i).padStart(2, "0")}`;
+    days.push({ dateStr, dayNumber: i });
   }
 
   return (
@@ -366,28 +381,28 @@ export function Calendar({
     >
       <div className={`flex ${compactMode ? "flex-wrap gap-2" : "items-center justify-between"}`}>
         <h3 className={`${compactMode ? "text-sm" : "text-sm"} text-jade-glow uppercase tracking-wider`}>
-          {currentMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+          {formatCalendarMonthLabel(currentMonth, timeZone)}
         </h3>
         <div className="flex gap-1.5 ml-auto">
           <GlowButton
             variant="ghost"
             size="sm"
-            onClick={() =>
-              setCurrentMonth(
-                new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1)
-              )
-            }
+            onClick={() => {
+              const previousMonth = currentMonthNumber === 1 ? 12 : currentMonthNumber - 1;
+              const previousYear = currentMonthNumber === 1 ? currentYear - 1 : currentYear;
+              setCurrentMonth(createCalendarMonthAnchor(previousYear, previousMonth));
+            }}
           >
             {compactMode ? "←" : "← Prev"}
           </GlowButton>
           <GlowButton
             variant="ghost"
             size="sm"
-            onClick={() =>
-              setCurrentMonth(
-                new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1)
-              )
-            }
+            onClick={() => {
+              const nextMonth = currentMonthNumber === 12 ? 1 : currentMonthNumber + 1;
+              const nextYear = currentMonthNumber === 12 ? currentYear + 1 : currentYear;
+              setCurrentMonth(createCalendarMonthAnchor(nextYear, nextMonth));
+            }}
           >
             {compactMode ? "→" : "Next →"}
           </GlowButton>
@@ -395,7 +410,7 @@ export function Calendar({
       </div>
 
       <div className={`grid grid-cols-7 ${compactMode ? "gap-1 mb-1" : "gap-2 mb-2"}`}>
-        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+        {weekdayHeaders.map((day) => (
           <div key={day} className={`text-center ${compactMode ? "text-[10px]" : "text-xs"} text-jade-glow uppercase font-semibold tracking-wider`}>
             {compactMode ? day[0] : day}
           </div>
@@ -407,9 +422,9 @@ export function Calendar({
           <div key={i}>
             {date ? (
               <CalendarDay
-                date={date}
+                dayNumber={date.dayNumber}
                 checkedInUsers={
-                  (checkInUsersByDate.get(formatDateLocal(date)) || []).map(uid => {
+                  (checkInUsersByDate.get(date.dateStr) || []).map(uid => {
                     const u = allUsers.find(usr => usr.id === uid);
                     return {
                       id: uid,
@@ -418,12 +433,12 @@ export function Calendar({
                     };
                   })
                 }
-                isToday={formatDateLocal(date) === today}
-                isPast={formatDateLocal(date) < today}
-                hasNote={dayNotes?.has(formatDateLocal(date))}
-                hasFutureNote={futureNoteDates?.has(formatDateLocal(date))}
+                isToday={date.dateStr === today}
+                isPast={date.dateStr < today}
+                hasNote={dayNotes?.has(date.dateStr)}
+                hasFutureNote={futureNoteDates?.has(date.dateStr)}
                 compact={compactMode}
-                onClick={() => onDayClick?.(formatDateLocal(date))}
+                onClick={() => onDayClick?.(date.dateStr)}
               />
             ) : (
               <div className="aspect-square" />

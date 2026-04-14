@@ -9,7 +9,7 @@ import GlowButton from "@/components/ui/GlowButton";
 import MobileFocusOverlay, { MobileFocusTrigger } from "@/components/ui/MobileFocusOverlay";
 import { useDisplaySettings, DEFAULT_UNIFIED_VISIBLE_COLUMNS, DISPLAY_DEFAULTS } from "@/context/DisplaySettingsContext";
 import { useIsMobile } from "@/context/AppContext";
-import { formatDateWithPreference } from "@/lib/constants";
+import { buildIsoAtUserDateTime, formatDateLocal, formatDateWithPreference } from "@/lib/constants";
 import { api, ApiRequestError } from "@/lib/api-client";
 import { getExerciseDisplayName } from "@/lib/exercise-name";
 import { DASHBOARD_ROUTES } from "@/lib/navigation";
@@ -212,7 +212,11 @@ function flattenLogsUnified(exercises: ProgressionExercise[]): UnifiedFlatLogEnt
   return entries;
 }
 
-function formatDate(dateString: string, dateFormat: "dd-mm-yyyy" | "dd-mmm-yyyy" | "dd-mm-yy" | "dd-mmm-yy"): string {
+function formatDate(
+  dateString: string,
+  dateFormat: "dd-mm-yyyy" | "dd-mmm-yyyy" | "dd-mm-yy" | "dd-mmm-yy",
+  timeZone?: string,
+): string {
   const date = new Date(dateString);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -220,10 +224,10 @@ function formatDate(dateString: string, dateFormat: "dd-mm-yyyy" | "dd-mmm-yyyy"
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return formatDateWithPreference(date, dateFormat);
+  if (diffMs >= 0 && diffMins < 60) return `${Math.max(1, diffMins)}m ago`;
+  if (diffMs >= 0 && diffHours < 24) return `${Math.max(1, diffHours)}h ago`;
+  if (diffMs >= 0 && diffDays < 7) return `${Math.max(1, diffDays)}d ago`;
+  return formatDateWithPreference(date, dateFormat, timeZone);
 }
 
 function getCategoryTone(categoryLabel: string): { color: string; borderColor: string; backgroundColor: string } {
@@ -405,9 +409,9 @@ type InputExerciseSearchResult = {
   prefillVariant?: string;
 };
 
-function getDefaultWorkoutInput() {
+function getDefaultWorkoutInput(timeZone?: string) {
   return {
-    date: new Date().toISOString().slice(0, 10),
+    date: formatDateLocal(new Date(), timeZone),
     newExerciseName: "",
     exerciseId: "",
     level: "",
@@ -457,13 +461,13 @@ function readPersistedTableModes(storageKey: string): { fitToScreenMode: boolean
   }
 }
 
-function readPersistedWorkoutInput(storageKey: string): WorkoutInputState | null {
+function readPersistedWorkoutInput(storageKey: string, timeZone?: string): WorkoutInputState | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(storageKey);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<WorkoutInputState>;
-    const fallback = getDefaultWorkoutInput();
+    const fallback = getDefaultWorkoutInput(timeZone);
     return {
       date: typeof parsed.date === "string" && parsed.date ? parsed.date : fallback.date,
       newExerciseName: typeof parsed.newExerciseName === "string" ? parsed.newExerciseName : "",
@@ -517,24 +521,18 @@ function parseDataColumnIndex(columnId: string): number | null {
   return Number.isInteger(parsed) ? parsed : null;
 }
 
-function buildCreatedAtFromDateInput(dateValue: string): string | undefined {
+function buildCreatedAtFromDateInput(dateValue: string, timeZone?: string): string | undefined {
   if (!dateValue) return undefined;
-  const selected = new Date(`${dateValue}T00:00:00`);
-  if (Number.isNaN(selected.getTime())) return undefined;
-
-  const now = new Date();
-  selected.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
-  return selected.toISOString();
+  return buildIsoAtUserDateTime(dateValue, timeZone);
 }
 
 function formatWorkoutInputDateDisplay(
   isoDate: string,
   dateFormat: "dd-mm-yyyy" | "dd-mmm-yyyy" | "dd-mm-yy" | "dd-mmm-yy",
+  timeZone?: string,
 ): string {
   if (!isoDate) return "";
-  const date = new Date(`${isoDate}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return isoDate;
-  return formatDateWithPreference(date, dateFormat);
+  return formatDateWithPreference(isoDate, dateFormat, timeZone);
 }
 
 function parseWorkoutInputDateDisplay(
@@ -646,6 +644,7 @@ function TrainingLogTable({
   const allEntries = useMemo(() => flattenLogsUnified(exercises), [exercises]);
   const exerciseLookup = useMemo(() => new Map(exercises.map((exercise) => [exercise.id, exercise])), [exercises]);
   const { settings } = useDisplaySettings();
+  const selectedTimeZone = settings.timeZone || "UTC";
   const isMobile = useIsMobile();
   const displayTerminologyMode = !settings.showExerciseForeignLanguage && settings.languageMode === "english"
     ? "normal"
@@ -707,8 +706,8 @@ function TrainingLogTable({
   const sortStorageKey = `${TRAINING_LOG_SORT_STORAGE_KEY_PREFIX}:${resolvedUserId}`;
   const columnOrderStorageKey = `${TRAINING_LOG_COLUMN_ORDER_STORAGE_KEY_PREFIX}:${resolvedUserId}`;
   const [workoutInput, setWorkoutInput] = useState<WorkoutInputState>(() => {
-    const persisted = readPersistedWorkoutInput(workoutInputStorageKey);
-    return persisted ?? getDefaultWorkoutInput();
+    const persisted = readPersistedWorkoutInput(workoutInputStorageKey, selectedTimeZone);
+    return persisted ?? getDefaultWorkoutInput(selectedTimeZone);
   });
   const [fitToScreenMode, setFitToScreenMode] = useState<boolean>(() => {
     const persisted = readPersistedTableModes(tableModeStorageKey);
@@ -780,10 +779,10 @@ function TrainingLogTable({
 
   useEffect(() => {
     if (loadedWorkoutInputKey === workoutInputStorageKey) return;
-    const persisted = readPersistedWorkoutInput(workoutInputStorageKey);
-    setWorkoutInput(persisted ?? getDefaultWorkoutInput());
+    const persisted = readPersistedWorkoutInput(workoutInputStorageKey, selectedTimeZone);
+    setWorkoutInput(persisted ?? getDefaultWorkoutInput(selectedTimeZone));
     setLoadedWorkoutInputKey(workoutInputStorageKey);
-  }, [loadedWorkoutInputKey, workoutInputStorageKey]);
+  }, [loadedWorkoutInputKey, selectedTimeZone, workoutInputStorageKey]);
 
   useEffect(() => {
     if (loadedTableModeKey !== tableModeStorageKey) return;
@@ -846,8 +845,8 @@ function TrainingLogTable({
   const variationDisplay = settings.progressionVariationDisplay ?? "abbreviation";
   const dateFormat = settings.dateFormat || "dd-mmm-yyyy";
   const workoutInputDateDisplay = useMemo(
-    () => formatWorkoutInputDateDisplay(workoutInput.date, dateFormat),
-    [dateFormat, workoutInput.date],
+    () => formatWorkoutInputDateDisplay(workoutInput.date, dateFormat, selectedTimeZone),
+    [dateFormat, selectedTimeZone, workoutInput.date],
   );
   const dateInputPlaceholder = useMemo(() => {
     if (dateFormat === "dd-mm-yyyy") return "dd-mm-yyyy";
@@ -2088,7 +2087,7 @@ function TrainingLogTable({
         return;
       }
 
-      const createdAt = buildCreatedAtFromDateInput(workoutInput.date);
+      const createdAt = buildCreatedAtFromDateInput(workoutInput.date, selectedTimeZone);
 
       setIsSaving(true);
       try {
@@ -2109,6 +2108,7 @@ function TrainingLogTable({
 
         await api.post(`/api/progressions/${exerciseId}/log`, {
           level: 1,
+          trainingDate: workoutInput.date,
           weight1: toStoredWeightKg(val1),
           reps1,
           weight2: toStoredWeightKg(val2),
@@ -2175,12 +2175,13 @@ function TrainingLogTable({
       ? selectedLevel
       : (selectedExercise.userProgress?.[0]?.currentLevel ?? 1);
     const modifier = workoutInput.modifierKg ? formatSignedModifierKg(parseFloat(workoutInput.modifierKg)) : null;
-    const createdAt = buildCreatedAtFromDateInput(workoutInput.date);
+    const createdAt = buildCreatedAtFromDateInput(workoutInput.date, selectedTimeZone);
 
     setIsSaving(true);
     try {
       await api.post(`/api/progressions/${workoutInput.exerciseId}/log`, {
         level,
+        trainingDate: workoutInput.date,
         weight1: toStoredWeightKg(val1),
         reps1,
         weight2: toStoredWeightKg(val2),

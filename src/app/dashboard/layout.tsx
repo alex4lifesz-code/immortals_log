@@ -7,6 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence, MotionConfig, useReducedMotion } from "framer-motion";
 import MobileNavBar from "@/components/navigation/MobileNavBar";
+import FloatingMobileSidebar from "@/components/navigation/FloatingMobileSidebar";
 import SwipeNavigation from "@/components/navigation/SwipeNavigation";
 import NyaaTopNav from "@/components/navigation/NyaaTopNav";
 import DiscordFriendsRail from "@/components/navigation/DiscordFriendsRail";
@@ -31,10 +32,13 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     && Boolean(searchParams.get("targetUserId"))
     && Boolean(searchParams.get("friendView"));
   const hideFriendsRail =
-    pathname?.startsWith(DASHBOARD_ROUTES.overview)
-    || pathname?.startsWith(DASHBOARD_ROUTES.rankUp)
-    || pathname?.startsWith(DASHBOARD_ROUTES.exercises)
+    pathname === DASHBOARD_ROUTES.overview
+    || pathname === DASHBOARD_ROUTES.rankUp
+    || pathname?.startsWith(`${DASHBOARD_ROUTES.rankUp}/`)
+    || pathname === DASHBOARD_ROUTES.exercises
+    || pathname?.startsWith(`${DASHBOARD_ROUTES.exercises}/`)
     || false;
+  const mobileRootScrollEnabled = !(isMobile && isFriendDrawerRoute);
   const showMobileNav = !isWorkoutInputFullscreen && !isTrainExerciseHistoryOpen;
 
   useEffect(() => {
@@ -70,8 +74,8 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
           <div className="flex-1 flex min-w-0 flex-col overflow-hidden nyaa-content-area">
             <SwipeNavigation>
               <div
-                data-mobile-scroll-container={isMobile ? "true" : undefined}
-                className="h-full min-w-0 overflow-y-auto"
+                data-mobile-scroll-container={isMobile && mobileRootScrollEnabled ? "true" : undefined}
+                className={`h-full min-w-0 ${isMobile && !mobileRootScrollEnabled ? "overflow-hidden" : "overflow-y-auto"}`}
               >
                 <AnimatePresence mode="wait" initial={false}>
                   <motion.div
@@ -85,11 +89,12 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                     {children}
                   </motion.div>
                 </AnimatePresence>
-                {isMobile && showMobileNav ? <div aria-hidden="true" className="h-[calc(env(safe-area-inset-bottom,0px)+4.25rem)]" /> : null}
+                {isMobile && showMobileNav && mobileRootScrollEnabled ? <div aria-hidden="true" className="h-[calc(env(safe-area-inset-bottom,0px)+4.25rem)]" /> : null}
               </div>
             </SwipeNavigation>
           </div>
         </div>
+        <FloatingMobileSidebar />
         {showMobileNav && (
           <MobileNavBar
             incomingFriendRequestCount={incomingFriendRequestCount}

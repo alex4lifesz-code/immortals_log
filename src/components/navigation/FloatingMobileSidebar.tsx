@@ -9,7 +9,7 @@ import { memo, useCallback, useEffect, useRef } from "react";
 import { t, tHint } from "@/lib/terminology";
 import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
 
-const ADMIN_NAV_IDS = new Set(["admin", "checkin", "website-information"]);
+const ADMIN_NAV_IDS = new Set(["admin", "website-information"]);
 
 function FloatingMobileSidebar() {
   const { getSortedNavItems, isMobile, mobileSidebarOpen, setMobileSidebarOpen } = useAppContext();

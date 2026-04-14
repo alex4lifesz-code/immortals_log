@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import PageLayout from "@/components/layout/PageLayout";
 import GlowCard from "@/components/ui/GlowCard";
 import GlowButton from "@/components/ui/GlowButton";
@@ -11,7 +11,7 @@ import { useIsMobile } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { api } from "@/lib/api-client";
-import { DASHBOARD_ROUTES } from "@/lib/navigation";
+import { formatDateWithPreference } from "@/lib/constants";
 import { getExerciseDisplayName } from "@/lib/exercise-name";
 import { isDeletedExerciseDescription } from "@/lib/pending-exercises";
 import { DEFAULT_USER_PHYSIQUE, loadUserPhysique } from "@/lib/user-physique";
@@ -45,15 +45,12 @@ export default function TrainingLogHistoryPage() {
     ? "normal"
     : settings.terminologyMode;
   const searchParams = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname();
 
   const [exercises, setExercises] = useState<ProgressionExercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [physique, setPhysique] = useState<UserPhysiqueSettings>(DEFAULT_USER_PHYSIQUE);
   const [visibleUsers, setVisibleUsers] = useState<Array<{ id: string; name: string; username: string }>>([]);
   const [filters, setFilters] = useState<HistoryFilters>(DEFAULT_FILTERS);
-  const [mobileUserPickerOpen, setMobileUserPickerOpen] = useState(false);
   const [mobileFilterPicker, setMobileFilterPicker] = useState<null | { field: MobileFilterPickerField; title: string }>(null);
   const fromDateInputRef = useRef<HTMLInputElement | null>(null);
   const toDateInputRef = useRef<HTMLInputElement | null>(null);
@@ -135,12 +132,6 @@ export default function TrainingLogHistoryPage() {
     if (!targetUserId) return null;
     return orderedVisibleUsers.find((u) => u.id === targetUserId) ?? null;
   }, [orderedVisibleUsers, targetUserId]);
-
-  const activeUserLabel = useMemo(() => {
-    const activeUser = orderedVisibleUsers.find((u) => u.id === activeUserId || (!activeUserId && u.id === userId));
-    if (activeUser) return activeUser.name || activeUser.username || "Me";
-    return user?.name || user?.username || "Me";
-  }, [activeUserId, orderedVisibleUsers, user?.name, user?.username, userId]);
 
   const categoryOptions = useMemo(() => {
     const unique = new Set<string>();
@@ -260,21 +251,6 @@ export default function TrainingLogHistoryPage() {
     }, 0);
   }, [exercises]);
 
-  const handleUserScopeChange = (nextUserId: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (!nextUserId || nextUserId === userId) {
-      params.delete("targetUserId");
-    } else {
-      params.set("targetUserId", nextUserId);
-    }
-    const next = params.toString();
-    router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
-  };
-
-  useEffect(() => {
-    setMobileUserPickerOpen(false);
-  }, [activeUserId]);
-
   const openDatePicker = (ref: React.RefObject<HTMLInputElement | null>) => {
     const input = ref.current;
     if (!input) return;
@@ -293,9 +269,7 @@ export default function TrainingLogHistoryPage() {
 
   const formatFilterDate = (value: string) => {
     if (!value) return "";
-    const date = new Date(`${value}T00:00:00`);
-    if (Number.isNaN(date.getTime())) return value;
-    return date.toLocaleDateString("en-GB");
+    return formatDateWithPreference(value, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone);
   };
 
   return (
@@ -317,29 +291,10 @@ export default function TrainingLogHistoryPage() {
                 hoverable={false}
                 className="rounded-2xl border border-[#3b3f48] bg-[#2b2d31] shadow-[0_0_0_1px_rgba(88,101,242,0.2),0_12px_24px_rgba(0,0,0,0.35)]"
               >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">Friend Profile</p>
-                    <h3 className="mt-1 truncate text-lg font-semibold text-[#f2f3f5]">{selectedTargetUser.name || "Friend"}</h3>
-                    <p className="text-xs text-[#b5bac1]">@{selectedTargetUser.username || "unknown"}</p>
-                    <p className="mt-1 text-[11px] text-[#949ba4]">ID: {selectedTargetUser.id}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => router.push(DASHBOARD_ROUTES.friends)}
-                      className="rounded-lg border border-[#3b3f48] bg-[#1e1f22] px-3 py-1.5 text-xs font-medium text-[#dbdee1] hover:text-[#f2f3f5]"
-                    >
-                      Open Friends
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleUserScopeChange(userId)}
-                      className="rounded-lg border border-[#5865f2]/55 bg-[#5865f2]/18 px-3 py-1.5 text-xs font-semibold text-[#dee1ff] hover:bg-[#5865f2]/28"
-                    >
-                      View My History
-                    </button>
-                  </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">Viewing History</p>
+                  <h3 className="mt-1 truncate text-lg font-semibold text-[#f2f3f5]">{selectedTargetUser.name || "Friend"}</h3>
+                  <p className="text-xs text-[#b5bac1]">@{selectedTargetUser.username || "unknown"}</p>
                 </div>
               </GlowCard>
             )}
@@ -349,62 +304,18 @@ export default function TrainingLogHistoryPage() {
               hoverable={false}
               className="rounded-2xl border border-ink-light/70 bg-ink-deep/80 shadow-[0_0_0_1px_color-mix(in_srgb,var(--jade-glow)_10%,transparent),var(--shadow-elev-1)]"
             >
-              <h3 className="text-sm text-jade-glow uppercase tracking-wider mb-3">Filters</h3>
-              <div className="grid gap-2 lg:grid-cols-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <label htmlFor="history-user-scope-dedicated" className="text-[11px] text-jade-light uppercase tracking-[0.08em]">
-                    View user
-                  </label>
-                  {isMobile ? (
-                    <button
-                      type="button"
-                      onClick={() => setMobileUserPickerOpen(true)}
-                      className="flex min-w-[170px] items-center justify-between rounded-lg border px-3 py-2 text-sm font-medium text-cloud-white"
-                      style={{
-                        borderColor: "color-mix(in srgb, var(--jade-glow) 28%, var(--border))",
-                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 84%, var(--ink-deep))",
-                      }}
-                      aria-label="Pick user"
-                    >
-                      <span className="truncate">{activeUserLabel}</span>
-                      <span className="ml-2 text-xs text-mist-dark">▾</span>
-                    </button>
-                  ) : (
-                    <select
-                      id="history-user-scope-dedicated"
-                      value={activeUserId || userId}
-                      onChange={(event) => handleUserScopeChange(event.target.value)}
-                      className="rounded-lg border px-2 py-1 text-xs text-cloud-white outline-none"
-                      style={{
-                        borderColor: "color-mix(in srgb, var(--jade-glow) 30%, var(--border))",
-                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 84%, var(--ink-deep))",
-                      }}
-                    >
-                      {orderedVisibleUsers.length === 0 ? (
-                        <option value={userId}>{user?.name || "Me"}</option>
-                      ) : (
-                        orderedVisibleUsers.map((u) => (
-                          <option key={u.id} value={u.id}>
-                            {u.id === userId ? `* ${u.name || u.username}` : (u.name || u.username)}
-                          </option>
-                        ))
-                      )}
-                    </select>
-                  )}
-                </div>
-
-                <div className="flex flex-wrap items-center justify-start gap-2 lg:justify-end">
-                  <span className="text-xs text-mist-dark">
-                    Showing {visibleLogCount} / {totalLogCount} logs
-                  </span>
-                  <GlowButton
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setFilters(DEFAULT_FILTERS)}
-                  >
-                    Reset filters
-                  </GlowButton>
-                </div>
+              <h3 className="mb-3 text-sm uppercase tracking-wider text-jade-glow">Filters</h3>
+              <div className="flex flex-wrap items-center justify-start gap-2 lg:justify-end">
+                <span className="text-xs text-mist-dark">
+                  Showing {visibleLogCount} / {totalLogCount} logs
+                </span>
+                <GlowButton
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setFilters(DEFAULT_FILTERS)}
+                >
+                  Reset filters
+                </GlowButton>
               </div>
 
               <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
@@ -419,8 +330,7 @@ export default function TrainingLogHistoryPage() {
                 {isMobile ? (
                   <button
                     type="button"
-                    onClick={() => setMobileFilterPicker({ field: "category", title: "Category" })
-}
+                    onClick={() => setMobileFilterPicker({ field: "category", title: "Category" })}
                     className="flex items-center justify-between rounded-lg border border-ink-light/30 bg-ink-dark px-3 py-2 text-sm font-medium text-cloud-white"
                     aria-label="Pick category"
                   >
@@ -529,63 +439,6 @@ export default function TrainingLogHistoryPage() {
           </>
         )}
       </div>
-      {isMobile && mobileUserPickerOpen && typeof document !== "undefined" && createPortal(
-        <>
-          <div
-            className="fixed inset-0 z-[95] bg-black/65"
-            onClick={() => setMobileUserPickerOpen(false)}
-          />
-          <div
-            className="fixed left-1/2 top-1/2 z-[96] max-h-[72vh] w-[min(82vw,30rem)] -translate-x-1/2 -translate-y-1/2 overflow-hidden border border-ink-light/30 bg-ink-deep"
-            style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.7), 0 2px 8px rgba(0,0,0,0.4)" }}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-ink-light/30 px-4 py-3">
-              <p className="text-xs text-jade-glow font-semibold uppercase tracking-wider">
-                View user
-              </p>
-              <GlowButton
-                variant="ghost"
-                size="sm"
-                onClick={() => setMobileUserPickerOpen(false)}
-              >
-                Close
-              </GlowButton>
-            </div>
-            <div className="relative px-3 pb-3 pt-2">
-              <div
-                className="pointer-events-none absolute left-3 right-3 top-1/2 h-11 -translate-y-1/2 border border-jade-glow/40 bg-jade-glow/10"
-              />
-              <div
-                className="h-56 overflow-y-auto snap-y snap-mandatory"
-                style={{ paddingTop: "90px", paddingBottom: "90px", scrollbarWidth: "none" }}
-              >
-                {(orderedVisibleUsers.length === 0
-                  ? [{ id: userId, name: user?.name || "Me", username: user?.username || "" }]
-                  : orderedVisibleUsers
-                ).map((u) => {
-                  const isActive = u.id === (activeUserId || userId);
-                  const displayName = u.name || u.username || "Unknown";
-                  return (
-                    <button
-                      key={`mobile-user-option-${u.id}`}
-                      type="button"
-                      onClick={() => {
-                        handleUserScopeChange(u.id);
-                        setMobileUserPickerOpen(false);
-                      }}
-                      className={`flex h-11 w-full snap-center items-center justify-center text-sm ${isActive ? "text-cloud-white font-bold" : "text-mist-dark font-medium"}`}
-                    >
-                      {displayName}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </>,
-        document.body,
-      )}
       {isMobile && mobileFilterPicker && typeof document !== "undefined" && createPortal(
         <>
           <div

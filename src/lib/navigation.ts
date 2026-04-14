@@ -1,14 +1,16 @@
 export const DASHBOARD_ROUTES = {
   root: "/dashboard",
   main: "/dashboard/main",
-  overview: "/dashboard/check-in",
+  overview: "/dashboard",
   community: "/dashboard/community",
   rankUp: "/dashboard/completionist",
   workoutHistory: "/dashboard/train",
   trainingLogHistory: "/dashboard/training-log-history",
+  checkIn: "/dashboard/check-in",
   attendance: "/dashboard/attendance",
   exercises: "/dashboard/exercises",
   friends: "/dashboard/friends",
+  profile: "/dashboard/profile",
   settings: "/dashboard/settings",
   admin: "/dashboard/admin",
   websiteInformation: "/dashboard/website-information",
@@ -25,12 +27,12 @@ export const MOBILE_DASHBOARD_ROUTES = {
 
 export const NAV_LABELS: Record<string, string> = {
   main: "Navigation Hub",
-  dashboard: "Check-In",
+  dashboard: "Home",
   newsfeed: "Community Feed",
   "rank-up": "Completionist",
   history: "Train",
   "training-log-history": "History",
-  checkin: "Attendance",
+  checkin: "Check-In",
   "exercise-db": "Exercise Library",
   friends: "Friends",
   settings: "Settings",
@@ -40,6 +42,7 @@ export const NAV_LABELS: Record<string, string> = {
 
 export const MOBILE_PRIMARY_NAV_IDS: readonly string[] = [
   "dashboard",
+  "checkin",
   "history",
 ];
 
@@ -54,6 +57,7 @@ export const MOBILE_MORE_NAV_IDS_ORDER: readonly string[] = [
 
 export const MAIN_NAV_IDS_ORDER: readonly string[] = [
   "dashboard",
+  "checkin",
   "history",
   "rank-up",
   "training-log-history",
@@ -64,7 +68,6 @@ export const MAIN_NAV_IDS_ORDER: readonly string[] = [
 ];
 
 export const ADMIN_NAV_IDS_ORDER: readonly string[] = [
-  "checkin",
   "website-information",
   "admin",
 ];

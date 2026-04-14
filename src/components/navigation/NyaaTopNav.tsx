@@ -9,6 +9,7 @@ import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import Link from "next/link";
 import { t, tHint } from "@/lib/terminology";
 import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
+import { getPreferredLocaleForTimeZone } from "@/lib/constants";
 import { loadUserPhysique } from "@/lib/user-physique";
 import { kgToLbs } from "@/lib/unit-conversion";
 import { api } from "@/lib/api-client";
@@ -18,7 +19,7 @@ interface NyaaTopNavProps {
   incomingFriendRequestCount?: number;
 }
 
-function NyaaTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount = 0 }: NyaaTopNavProps) {
+function NyaaTopNav({ incomingFriendRequestCount = 0 }: NyaaTopNavProps) {
   const isMobile = useIsMobile();
   const { user, logout } = useAuth();
   const { settings } = useDisplaySettings();
@@ -29,7 +30,7 @@ function NyaaTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount = 
   const items = useSortedNavItems();
 
   const mainItems = useMemo(
-    () => sortNavItemsByIdOrder(items.filter((item) => item.id !== "main" && !ADMIN_NAV_IDS.has(item.id)), MAIN_NAV_IDS_ORDER),
+    () => sortNavItemsByIdOrder(items.filter((item) => item.id !== "main" && item.id !== "friends" && !ADMIN_NAV_IDS.has(item.id)), MAIN_NAV_IDS_ORDER),
     [items]
   );
   const adminItems = useMemo(
@@ -43,6 +44,7 @@ function NyaaTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount = 
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [bodyWeightKg, setBodyWeightKg] = useState<number | null>(null);
   const [weightTrendLabel, setWeightTrendLabel] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
   const userMenuRef = useRef<HTMLDivElement>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
 
@@ -80,6 +82,11 @@ function NyaaTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount = 
     setUserMenuOpen(false);
     setMoreMenuOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    const timerId = window.setInterval(() => setCurrentTime(Date.now()), 1000);
+    return () => window.clearInterval(timerId);
+  }, []);
 
   useEffect(() => {
     if (!user?.id || typeof window === "undefined") {
@@ -172,6 +179,21 @@ function NyaaTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount = 
     if (weightTrendLabel.startsWith("-")) return "down";
     return "neutral";
   }, [weightTrendLabel]);
+
+  const clockLabel = useMemo(() => {
+    const timeZone = settings.timeZone || "UTC";
+    try {
+      return new Intl.DateTimeFormat(getPreferredLocaleForTimeZone(timeZone), {
+        timeZone,
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+        timeZoneName: "short",
+      }).format(new Date(currentTime));
+    } catch {
+      return new Date(currentTime).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    }
+  }, [currentTime, settings.timeZone]);
 
   const navigateToPath = (path: string) => {
     if (path === DASHBOARD_ROUTES.workoutHistory && typeof window !== "undefined") {
@@ -311,6 +333,18 @@ function NyaaTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount = 
         {/* Spacer */}
         <div className="flex-1" />
 
+        <span
+          className="mr-2 hidden lg:inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-semibold"
+          style={{
+            borderColor: "color-mix(in srgb, var(--accent) 35%, var(--border))",
+            color: "var(--text-secondary)",
+            backgroundColor: "color-mix(in srgb, var(--surface-elevated, var(--surface)) 92%, transparent)",
+          }}
+          title={`Current time in ${settings.timeZone || "UTC"}`}
+        >
+          {clockLabel}
+        </span>
+
         {/* Admin badge */}
         {isAdmin && (
           <span className="nyaa-badge mr-2 hidden sm:inline text-[10px] px-1.5 py-0.5 rounded">
@@ -381,9 +415,21 @@ function NyaaTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount = 
               >
                 <UserPhysiqueButton
                   userId={user?.id || ""}
-                  userName={user?.name || ""}
+                  userName={user?.name || "Account"}
                   className="nyaa-dropdown-item block min-h-[44px] w-full text-left px-3 py-2 text-sm"
                 />
+                <button
+                  type="button"
+                  onClick={() => navigateAndCloseUserMenu(DASHBOARD_ROUTES.friends)}
+                  className="nyaa-dropdown-item flex min-h-[44px] w-full items-center justify-between px-3 py-2 text-left text-sm"
+                >
+                  <span>{t("Friends", "normal")}</span>
+                  {incomingFriendRequestCount > 0 ? (
+                    <span className="ml-2 min-w-[18px] rounded-full bg-crimson-light px-1 text-[10px] font-bold text-void-black">
+                      {incomingFriendRequestCount > 99 ? "99+" : incomingFriendRequestCount}
+                    </span>
+                  ) : null}
+                </button>
 
                 {/* Mobile: show all nav items in user menu */}
                 {isMobile && (

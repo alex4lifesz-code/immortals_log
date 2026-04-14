@@ -10,7 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useIsMobile } from "@/context/AppContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { useRouter } from "next/navigation";
-import { formatDateWithPreference } from "@/lib/constants";
+import { formatDateLocal as formatDateLocalForZone, formatDateWithPreference } from "@/lib/constants";
 import { syncWeightFromLatestCheckin } from "@/lib/user-physique";
 import { api } from "@/lib/api-client";
 
@@ -46,10 +46,7 @@ interface MemberStats {
 }
 
 function formatDateLocal(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  return formatDateLocalForZone(date);
 }
 
 function formatDateDisplay(dateStr: string): string {

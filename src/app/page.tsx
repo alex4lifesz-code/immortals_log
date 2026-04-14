@@ -97,7 +97,7 @@ export default function LoginPage() {
       // API returns { success, data: { user } } via apiSuccess wrapper
       const userData = data.data?.user ?? data.user;
       if (userData) {
-        login(userData);
+        login(userData, rememberMe);
       }
 
       // New registrations go to onboarding, logins go to dashboard

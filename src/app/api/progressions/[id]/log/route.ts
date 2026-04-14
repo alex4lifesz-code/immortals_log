@@ -42,6 +42,9 @@ export const POST = withAuth(async (request, { auth, params }) => {
 
     const createdAt = body.createdAt ? new Date(String(body.createdAt)) : null;
     const validCreatedAt = createdAt && !Number.isNaN(createdAt.getTime()) ? createdAt : null;
+    const trainingDate = typeof body.trainingDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.trainingDate)
+      ? body.trainingDate
+      : null;
 
     const log = await prisma.progressionLog.create({
       data: {
@@ -64,6 +67,31 @@ export const POST = withAuth(async (request, { auth, params }) => {
         createdAt: validCreatedAt ?? undefined,
       },
     });
+
+    const autoCheckInDate = trainingDate
+      ? new Date(`${trainingDate}T00:00:00.000Z`)
+      : validCreatedAt
+        ? new Date(`${validCreatedAt.toISOString().slice(0, 10)}T00:00:00.000Z`)
+        : null;
+
+    if (autoCheckInDate && !Number.isNaN(autoCheckInDate.getTime())) {
+      await prisma.checkIn.upsert({
+        where: {
+          date_userId: {
+            date: autoCheckInDate,
+            userId,
+          },
+        },
+        create: {
+          date: autoCheckInDate,
+          userId,
+          present: true,
+        },
+        update: {
+          present: true,
+        },
+      });
+    }
 
     // If marking as completed and this is the current level, advance
     if (body.completed === true && userProgress.currentLevel === level) {

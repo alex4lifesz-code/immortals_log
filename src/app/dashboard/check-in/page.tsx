@@ -1,1 +1,7 @@
-export { default } from "../dao-hall/page";
+"use client";
+
+import DaoHallPage from "../dao-hall/page";
+
+export default function CheckInEntryPage() {
+  return <DaoHallPage />;
+}

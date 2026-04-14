@@ -1827,9 +1827,9 @@ html.discord textarea:focus-visible {
   content: "";
   position: absolute;
   inset: -0.5rem 0 auto;
-  height: 14rem;
+  height: 10rem;
   pointer-events: none;
-  background: radial-gradient(82% 90% at 50% 0%, color-mix(in srgb, var(--jade-glow) 14%, transparent), transparent 72%);
+  background: radial-gradient(82% 90% at 50% 0%, color-mix(in srgb, var(--jade-glow) 6%, transparent), transparent 72%);
 }
 
 .dao-modern-calendar,
@@ -1838,17 +1838,13 @@ html.discord textarea:focus-visible {
 .dao-modern-monthly-chart,
 .dao-modern-weight-trend,
 .dao-modern-cultivation-view {
-  border: 1px solid color-mix(in srgb, var(--jade-glow) 30%, var(--border)) !important;
-  background:
-    radial-gradient(120% 86% at 50% -24%, color-mix(in srgb, var(--jade-glow) 10%, transparent), transparent 64%),
-    linear-gradient(165deg, color-mix(in srgb, var(--ink-deep) 95%, transparent) 0%, color-mix(in srgb, var(--ink-mid) 88%, transparent) 100%) !important;
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--jade-glow) 14%, transparent) inset,
-    0 14px 28px color-mix(in srgb, black 28%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--border) 92%, var(--text-muted)) !important;
+  background: color-mix(in srgb, var(--ink-mid) 18%, var(--ink-deep)) !important;
+  box-shadow: 0 8px 18px color-mix(in srgb, black 24%, transparent) !important;
 }
 
 .dao-modern-calendar-day {
-  border-radius: 0.8rem !important;
+  border-radius: 0.45rem !important;
 }
 
 .dao-modern-calendar-day:hover {
@@ -1862,10 +1858,10 @@ html.discord textarea:focus-visible {
 }
 
 .dao-modern-monthly-stats-user {
-  border: 1px solid color-mix(in srgb, var(--jade-glow) 22%, transparent);
-  border-radius: 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--border) 88%, var(--text-muted));
+  border-radius: 0.5rem;
   padding: 0.5rem 0.55rem;
-  background: color-mix(in srgb, var(--ink-mid) 24%, var(--ink-deep));
+  background: color-mix(in srgb, var(--ink-mid) 14%, var(--ink-deep));
 }
 
 .dao-modern-cultivation-view table thead th {
@@ -1878,18 +1874,14 @@ html.discord textarea:focus-visible {
 }
 
 .dao-modern-cultivation-card {
-  border: 1px solid color-mix(in srgb, var(--jade-glow) 28%, var(--border)) !important;
-  border-radius: 0.9rem;
-  background:
-    radial-gradient(120% 82% at 50% -24%, color-mix(in srgb, var(--jade-glow) 10%, transparent), transparent 64%),
-    linear-gradient(165deg, color-mix(in srgb, var(--ink-deep) 95%, transparent) 0%, color-mix(in srgb, var(--ink-mid) 88%, transparent) 100%) !important;
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--jade-glow) 12%, transparent) inset,
-    0 10px 22px color-mix(in srgb, black 28%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 92%, var(--text-muted)) !important;
+  border-radius: 0.55rem;
+  background: color-mix(in srgb, var(--ink-mid) 12%, var(--ink-deep)) !important;
+  box-shadow: none;
 }
 
 .dao-modern-cultivation-card-head {
-  border-bottom: 1px dashed color-mix(in srgb, var(--jade-glow) 22%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 86%, transparent);
   padding-bottom: 0.35rem;
 }
 
@@ -1898,7 +1890,7 @@ html.discord textarea:focus-visible {
 }
 
 .dao-modern-cultivation-status {
-  border-radius: 999px;
+  border-radius: 0.4rem;
   font-weight: 700;
   letter-spacing: 0.02em;
 }
@@ -1912,28 +1904,28 @@ html.discord textarea:focus-visible {
 }
 
 .dao-modern-cultivation-member {
-  border: 1px solid color-mix(in srgb, var(--jade-glow) 18%, transparent);
-  border-radius: 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--border) 86%, transparent);
+  border-radius: 0.45rem;
   padding: 0.35rem 0.45rem;
-  background: color-mix(in srgb, var(--ink-mid) 30%, var(--ink-deep));
+  background: color-mix(in srgb, var(--ink-mid) 18%, var(--ink-deep));
 }
 
 .dao-modern-cultivation-switch {
-  border-radius: 999px;
+  border-radius: 0.5rem;
   padding-inline: 0.7rem;
-  background: color-mix(in srgb, var(--ink-mid) 75%, var(--ink-deep));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--jade-glow) 12%, transparent) inset;
+  background: color-mix(in srgb, var(--ink-mid) 68%, var(--ink-deep));
+  box-shadow: none;
 }
 
 .dao-modern-scope-group {
-  border-radius: 999px;
+  border-radius: 0.5rem;
   background: color-mix(in srgb, var(--ink-mid) 70%, var(--ink-deep));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--jade-glow) 10%, transparent) inset;
+  box-shadow: none;
   padding: 0.2rem;
 }
 
 .dao-modern-scope-btn {
-  border-radius: 999px;
+  border-radius: 0.4rem;
   border: 1px solid transparent;
   min-width: 3.4rem;
   font-weight: 600;
@@ -1944,7 +1936,7 @@ html.discord textarea:focus-visible {
 }
 
 .dao-modern-cultivation-open-btn {
-  border-radius: 999px;
+  border-radius: 0.45rem;
   border-color: color-mix(in srgb, var(--jade-glow) 35%, var(--border)) !important;
   background: color-mix(in srgb, var(--ink-mid) 68%, var(--ink-deep));
   color: var(--cloud-white) !important;
@@ -1957,12 +1949,10 @@ html.discord textarea:focus-visible {
 }
 
 .dao-checkin-modal {
-  border: 1px solid color-mix(in srgb, var(--jade-glow) 28%, var(--border));
-  border-radius: 0.95rem;
+  border: 1px solid color-mix(in srgb, var(--border) 92%, var(--text-muted));
+  border-radius: 0.6rem;
   padding: 0.6rem;
-  background:
-    radial-gradient(130% 90% at 50% -25%, color-mix(in srgb, var(--jade-glow) 10%, transparent), transparent 64%),
-    linear-gradient(165deg, color-mix(in srgb, var(--ink-deep) 95%, transparent) 0%, color-mix(in srgb, var(--ink-mid) 88%, transparent) 100%);
+  background: color-mix(in srgb, var(--ink-mid) 14%, var(--ink-deep));
 }
 
 .dao-checkin-modal-head {

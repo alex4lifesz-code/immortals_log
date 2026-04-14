@@ -14,6 +14,7 @@ interface PageLayoutProps {
   contentWidth?: "centered" | "fluid";
   contentMaxWidthClass?: string;
   mobileContentPaddingClass?: string;
+  mobileScrollContainerEnabled?: boolean;
 }
 
 function PageLayout({
@@ -25,6 +26,7 @@ function PageLayout({
   contentWidth = "centered",
   contentMaxWidthClass = "max-w-[1400px]",
   mobileContentPaddingClass = "p-4 pb-24",
+  mobileScrollContainerEnabled = true,
 }: PageLayoutProps) {
   const { panelPosition, isMobile, mobileSidebarOpen, setMobileSidebarOpen, themeStyle } = useAppContext();
   const prefersReducedMotion = useReducedMotion();
@@ -170,8 +172,8 @@ function PageLayout({
       {/* Main Content — full width on mobile */}
       <div className="flex-1 min-w-0">
         <div
-          data-mobile-scroll-container={isMobile ? "true" : undefined}
-          className={`flex-1 min-w-0 overflow-y-auto ${isMobile ? `${mobileContentPaddingClass} scrollbar-hide overflow-x-hidden` : "h-full overscroll-contain [scrollbar-gutter:stable] overflow-x-auto p-2"}`}
+          data-mobile-scroll-container={isMobile && mobileScrollContainerEnabled ? "true" : undefined}
+          className={`flex-1 min-w-0 ${isMobile ? `${mobileScrollContainerEnabled ? "overflow-y-auto scrollbar-hide" : "overflow-hidden"} ${mobileContentPaddingClass} overflow-x-hidden` : "h-full overscroll-contain [scrollbar-gutter:stable] overflow-x-auto p-2"}`}
         >
           <motion.div
             initial={disableMotion ? false : { opacity: 0 }}

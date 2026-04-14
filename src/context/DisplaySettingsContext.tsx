@@ -15,6 +15,8 @@ export type ActiveCardStyle = "default" | "scroll-card";
 
 export type DateFormatOption = "dd-mm-yyyy" | "dd-mmm-yyyy" | "dd-mm-yy" | "dd-mmm-yy";
 
+export type CalendarWeekStartOption = "auto" | "sunday" | "monday";
+
 export type TerminologyMode = "fantasy" | "normal";
 
 export type VariationDisplayMode = "abbreviation" | "full";
@@ -61,6 +63,10 @@ export const DEFAULT_UNIFIED_VISIBLE_COLUMNS: UnifiedVisibleColumnKey[] = [
 export interface DisplaySettings {
   // Date display format preference
   dateFormat: DateFormatOption;
+  // Preferred timezone for all date and calendar calculations
+  timeZone: string;
+  // Calendar week start behaviour
+  calendarWeekStart: CalendarWeekStartOption;
   // Terminology mode: fantasy (wuxia) or normal (fitness)
   terminologyMode: TerminologyMode;
   // Progression log variation display mode
@@ -73,8 +79,18 @@ export interface DisplaySettings {
   showExerciseForeignLanguage: boolean;
 }
 
+function getBrowserTimeZone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  } catch {
+    return "UTC";
+  }
+}
+
 const DEFAULT_SETTINGS: DisplaySettings = {
   dateFormat: "dd-mmm-yyyy",
+  timeZone: getBrowserTimeZone(),
+  calendarWeekStart: "auto",
   terminologyMode: "normal",
   progressionVariationDisplay: "abbreviation",
   defaultWeightUnit: "kg",
@@ -82,7 +98,7 @@ const DEFAULT_SETTINGS: DisplaySettings = {
   showExerciseForeignLanguage: true,
 };
 
-const STORAGE_KEY = "cultivateos-display-settings";
+export const DISPLAY_SETTINGS_STORAGE_KEY = "cultivateos-display-settings";
 
 // Non-user-configurable display defaults — single source of truth for all
 // layout and presentation values that are fixed (not exposed in the settings UI).
@@ -128,7 +144,7 @@ const DisplaySettingsContext = createContext<DisplaySettingsContextType | null>(
 function loadSettings(): DisplaySettings {
   if (typeof window === "undefined") return DEFAULT_SETTINGS;
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = localStorage.getItem(DISPLAY_SETTINGS_STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
       return { ...DEFAULT_SETTINGS, ...parsed };
@@ -142,7 +158,7 @@ function loadSettings(): DisplaySettings {
 function saveSettings(settings: DisplaySettings) {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    localStorage.setItem(DISPLAY_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
   } catch {
     // Ignore storage errors
   }

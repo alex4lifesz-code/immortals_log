@@ -28,6 +28,23 @@ export function getUserPhysiqueStorageKey(userId: string): string {
   return `cultivateos-user-physique-${userId}`;
 }
 
+export function extractLatestWeightPayload(payload: unknown): { weight: number | null; date: string | null } {
+  const source =
+    payload && typeof payload === "object" && "data" in payload && payload.data && typeof payload.data === "object"
+      ? payload.data
+      : payload;
+
+  if (!source || typeof source !== "object") {
+    return { weight: null, date: null };
+  }
+
+  const candidate = source as { weight?: unknown; date?: unknown };
+  return {
+    weight: normalizeBodyWeight(candidate.weight),
+    date: typeof candidate.date === "string" && candidate.date.trim().length > 0 ? candidate.date : null,
+  };
+}
+
 export function loadUserPhysique(userId: string): UserPhysiqueSettings {
   if (typeof window === "undefined") return DEFAULT_USER_PHYSIQUE;
 
@@ -71,7 +88,7 @@ export async function syncWeightFromLatestCheckin(userId: string): Promise<numbe
 
   try {
     const res = await fetch(`/api/checkins/latest-weight?userId=${encodeURIComponent(userId)}`);
-    const data = await res.json();
+    const data = extractLatestWeightPayload(await res.json());
     if (data.weight != null) {
       saveUserPhysique(userId, { ...current, bodyWeightKg: data.weight });
       return data.weight;

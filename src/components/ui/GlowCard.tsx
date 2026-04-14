@@ -103,7 +103,7 @@ export function GlowModal({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-void-black/80 z-[110]"
+            className="fixed inset-0 bg-void-black/80 z-[250]"
             onClick={onClose}
           />
           <motion.div
@@ -111,7 +111,7 @@ export function GlowModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className="fixed inset-0 z-[120] flex items-center justify-center p-4 pointer-events-none"
+            className="fixed inset-0 z-[260] flex items-center justify-center p-4 pointer-events-none"
           >
             <div
               ref={trapRef}
@@ -119,30 +119,32 @@ export function GlowModal({
               aria-modal="true"
               aria-label={title}
               onClick={(e) => e.stopPropagation()}
-              className={`surface-panel surface-panel-strong w-full max-w-lg max-h-[80vh] overflow-y-auto pointer-events-auto glow-modal-container ${panelClassName}`}
-              style={{
-                borderRadius: '2px',
-                border: '1px solid var(--border)',
-                boxShadow: '0 8px 40px rgba(0,0,0,0.7), 0 2px 8px rgba(0,0,0,0.4)'
-              }}
+              className={`surface-panel surface-panel-strong w-full max-w-lg max-h-[84vh] overflow-hidden pointer-events-auto glow-modal-container rounded-lg border border-[#32353b] bg-[#2b2d31] shadow-[0_12px_32px_rgba(0,0,0,0.48)] ${panelClassName}`}
+              style={glowColor ? { boxShadow: `0 18px 48px rgba(0,0,0,0.55), 0 0 0 1px ${glowColor} inset` } : undefined}
             >
               {!hideHeader && (
-                <div className="flex items-center justify-between p-4 border-b border-ink-light">
-                  <h2 className="text-sm text-jade-glow uppercase tracking-wider" title={titleHint ?? undefined}>
+                <div
+                  className="flex items-center justify-between gap-3 border-b px-3 py-2.5"
+                  style={{
+                    borderBottomColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
+                    backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))",
+                  }}
+                >
+                  <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-mist-light" title={titleHint ?? undefined}>
                     {title}
                   </h2>
                   <motion.button
-                    whileHover={{ scale: 1.1, rotate: 90 }}
-                    whileTap={{ scale: 0.9 }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.94 }}
                     onClick={onClose}
                     aria-label="Close dialog"
-                    className="text-mist-dark hover:text-crimson-light transition-colors text-lg"
+                    className="flex h-8 w-8 items-center justify-center rounded-md border border-[#3b3f48] bg-[#383a40]/65 text-[#b5bac1] transition-colors hover:border-[#5865f2]/60 hover:text-[#f2f3f5]"
                   >
                     ✕
                   </motion.button>
                 </div>
               )}
-              <div className={`${hideHeader ? "p-5" : "p-4"} ${contentClassName}`}>{children}</div>
+              <div className={`${hideHeader ? "p-0" : "p-4"} ${contentClassName}`}>{children}</div>
             </div>
           </motion.div>
         </>

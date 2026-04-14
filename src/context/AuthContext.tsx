@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { getPersistedUser, persistUser, clearPersistedUser } from "@/lib/storage";
 
 type User = {
   id: string;
@@ -17,7 +18,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (user: User) => void;
+  login: (user: User, rememberMe?: boolean) => void;
   logout: () => Promise<void>;
 }
 
@@ -40,28 +41,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     async function hydrate() {
       try {
+        const persisted = await getPersistedUser();
+        if (persisted && !cancelled) {
+          try {
+            setUser(JSON.parse(persisted) as User);
+          } catch {
+            await clearPersistedUser();
+          }
+        }
+
         const res = await fetch("/api/auth/me", {
           credentials: "include",
+          cache: "no-store",
         });
+
         if (!res.ok) {
-          if (!cancelled) setUser(null);
+          if (res.status === 401 || res.status === 403) {
+            await clearPersistedUser();
+            if (!cancelled) {
+              setUser(null);
+            }
+          }
           return;
         }
+
         const data = await res.json();
-        if (data.user && !cancelled) {
-          setUser(data.user);
+        const hydratedUser = data.data?.user ?? data.user;
+        if (hydratedUser && !cancelled) {
+          setUser(hydratedUser);
+          const rememberMe = typeof window !== "undefined" && localStorage.getItem("cultivation-remember") === "1";
+          await persistUser(JSON.stringify(hydratedUser), rememberMe);
         }
       } catch {
-        // Network error — leave user as null
+        // Network error — keep any previously persisted user instead of forcing logout
       } finally {
         if (!cancelled) setIsLoading(false);
       }
     }
 
-    // Hard timeout: if hydration hasn't completed in 5 s, force-finish
+    // Fail open after 5 s so a slow auth check does not trap the UI in a loading state.
     const timeout = setTimeout(() => {
       if (!cancelled) {
-        cancelled = true;
         setIsLoading(false);
       }
     }, 5000);
@@ -74,12 +94,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const login = useCallback((userData: User) => {
+  const login = useCallback((userData: User, rememberMe = false) => {
     setUser(userData);
+    void persistUser(JSON.stringify(userData), rememberMe);
   }, []);
 
   const logout = useCallback(async () => {
     setUser(null);
+    await clearPersistedUser();
     try {
       await fetch("/api/auth/logout", {
         method: "POST",

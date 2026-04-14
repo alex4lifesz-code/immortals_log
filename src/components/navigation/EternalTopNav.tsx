@@ -9,13 +9,14 @@ import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import Link from "next/link";
 import { t, tHint } from "@/lib/terminology";
 import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
+import { getPreferredLocaleForTimeZone } from "@/lib/constants";
 import { ADMIN_NAV_IDS, ADMIN_NAV_IDS_ORDER, DASHBOARD_ROUTES, MAIN_NAV_IDS_ORDER, sortNavItemsByIdOrder } from "@/lib/navigation";
 
 interface EternalTopNavProps {
   incomingFriendRequestCount?: number;
 }
 
-function EternalTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount = 0 }: EternalTopNavProps) {
+function EternalTopNav({ incomingFriendRequestCount = 0 }: EternalTopNavProps) {
   const isMobile = useIsMobile();
   const { user, logout } = useAuth();
   const { settings } = useDisplaySettings();
@@ -25,7 +26,7 @@ function EternalTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount
   const isAdmin = user?.role === "admin";
   const items = useSortedNavItems();
   const mainItems = useMemo(
-    () => sortNavItemsByIdOrder(items.filter((item) => !ADMIN_NAV_IDS.has(item.id)), MAIN_NAV_IDS_ORDER),
+    () => sortNavItemsByIdOrder(items.filter((item) => item.id !== "friends" && !ADMIN_NAV_IDS.has(item.id)), MAIN_NAV_IDS_ORDER),
     [items]
   );
   const adminItems = useMemo(
@@ -44,6 +45,7 @@ function EternalTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount
   );
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [navMenuOpen, setNavMenuOpen] = useState(false);
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
   const userMenuRef = useRef<HTMLDivElement>(null);
   const navMenuRef = useRef<HTMLDivElement>(null);
 
@@ -67,6 +69,26 @@ function EternalTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount
       return () => document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [userMenuOpen, navMenuOpen]);
+
+  useEffect(() => {
+    const timerId = window.setInterval(() => setCurrentTime(Date.now()), 1000);
+    return () => window.clearInterval(timerId);
+  }, []);
+
+  const clockLabel = useMemo(() => {
+    const timeZone = settings.timeZone || "UTC";
+    try {
+      return new Intl.DateTimeFormat(getPreferredLocaleForTimeZone(timeZone), {
+        timeZone,
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+        timeZoneName: "short",
+      }).format(new Date(currentTime));
+    } catch {
+      return new Date(currentTime).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    }
+  }, [currentTime, settings.timeZone]);
 
   return (
     <nav className="sticky top-0 z-40 w-full border-b bg-surface safe-area-top" style={{ borderBottomColor: 'var(--neon-border)' }}>
@@ -181,6 +203,9 @@ function EternalTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount
 
           {/* Right Section - User Menu */}
           <div className="flex items-center gap-3">
+            <span className="hidden lg:inline-flex rounded-full border border-accent/30 bg-surface-hover px-2.5 py-1 text-xs font-semibold text-text-secondary">
+              {clockLabel}
+            </span>
             {isAdmin && (
               <span className="hidden sm:inline px-2 py-1 rounded-full border border-accent/40 text-xs uppercase tracking-wide text-accent font-semibold">
                 {t("Admin", "normal")}
@@ -211,9 +236,24 @@ function EternalTopNav({ incomingFriendRequestCount: _incomingFriendRequestCount
                   >
                     <UserPhysiqueButton
                       userId={user?.id || ""}
-                      userName={user?.name || ""}
+                      userName={user?.name || "Account"}
                       className="block min-h-[44px] w-full text-left rounded-t-xl px-4 py-2 text-sm font-medium text-text-primary hover:bg-surface-hover"
                     />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        router.push(DASHBOARD_ROUTES.friends);
+                      }}
+                      className="flex min-h-[44px] w-full items-center justify-between px-4 py-2 text-left text-sm text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+                    >
+                      <span>{t("Friends", "normal")}</span>
+                      {incomingFriendRequestCount > 0 ? (
+                        <span className="ml-2 min-w-[18px] rounded-full bg-crimson px-1 text-[10px] font-bold text-white">
+                          {incomingFriendRequestCount > 99 ? "99+" : incomingFriendRequestCount}
+                        </span>
+                      ) : null}
+                    </button>
                     {isMobile && (
                       <div className="border-t border-border">
                         {mainItems.map((item) => {

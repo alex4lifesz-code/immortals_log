@@ -7,7 +7,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import GlowButton from "@/components/ui/GlowButton";
 import PageSkeleton from "@/components/ui/PageSkeleton";
 import GlowCard, { GlowModal } from "@/components/ui/GlowCard";
-import MobileFocusOverlay, { MobileFocusTrigger } from "@/components/ui/MobileFocusOverlay";
 import dynamic from "next/dynamic";
 
 const MonthlyComparisonChart = dynamic(() => import("@/components/dashboard/MonthlyComparisonChart"), { ssr: false });
@@ -19,7 +18,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { useIsMobile } from "@/context/AppContext";
-import { formatDateWithPreference } from "@/lib/constants";
+import { createCalendarMonthAnchor, formatDateWithPreference } from "@/lib/constants";
 import { t } from "@/lib/terminology";
 import { syncWeightFromLatestCheckin } from "@/lib/user-physique";
 import { api } from "@/lib/api-client";
@@ -133,21 +132,12 @@ export default function DaoHallPage() {
     if (typeof window === "undefined") return true;
     try { return localStorage.getItem("dao-charts-open") !== "false"; } catch { return true; }
   });
-  const [cultivationViewOpen, setCultivationViewOpen] = useState(() => {
-    if (typeof window === "undefined") return false;
-    try { return localStorage.getItem("dao-cultivation-open") === "true"; } catch { return false; }
-  });
-  const [cultivationFocusMode, setCultivationFocusMode] = useState(false);
 
   // Persist charts toggle
   useEffect(() => {
     try { localStorage.setItem("dao-charts-open", String(chartsOpen)); } catch {}
   }, [chartsOpen]);
 
-  // Persist cultivation view open toggle
-  useEffect(() => {
-    try { localStorage.setItem("dao-cultivation-open", String(cultivationViewOpen)); } catch {}
-  }, [cultivationViewOpen]);
   const dayNotesStorageKey = useMemo(
     () => (user?.id ? `cultivation-day-notes:${user.id}` : "cultivation-day-notes"),
     [user?.id]
@@ -214,14 +204,14 @@ export default function DaoHallPage() {
 
   const refreshFutureNotes = useCallback(async () => {
     try {
-      const todayStr = formatDateLocal(new Date());
+      const todayStr = formatDateLocal(new Date(), settings.timeZone);
       const apiScope = "friends";
       const data = await api.get<{ notes: CommunityNote[] }>(`/api/checkins/notes?future=true&scope=${apiScope}&today=${todayStr}`);
       setFutureNotes(data.notes || []);
     } catch (err) {
       console.error("Failed to fetch future notes:", err);
     }
-  }, []);
+  }, [settings.timeZone]);
 
   const handleDeleteRow = useCallback(async (date: string) => {
     try {
@@ -240,8 +230,10 @@ export default function DaoHallPage() {
   }, [broadcastNotesUpdated]);
 
   const handleDayClick = (dateStr: string) => {
-    const selectedDate = new Date(`${dateStr}T00:00:00`);
-    setCurrentMonth(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      const [year, month] = dateStr.split("-").map((value) => Number.parseInt(value, 10));
+      setCurrentMonth(createCalendarMonthAnchor(year, month));
+    }
 
     // Open check-in modal for the selected day
     const existingRow = checkInRows.find(r => r.date === dateStr);
@@ -268,17 +260,17 @@ export default function DaoHallPage() {
     try {
       const dismissed = localStorage.getItem("weight-prompt-dismissed");
       if (dismissed) {
-        const today = formatDateLocal(new Date());
+        const today = formatDateLocal(new Date(), settings.timeZone);
         if (dismissed === today) return true;
       }
       const hiddenUntil = localStorage.getItem("weight-prompt-hidden-until");
       if (hiddenUntil && Date.now() < Number(hiddenUntil)) return true;
       return false;
     } catch { return false; }
-  }, []);
+  }, [settings.timeZone]);
 
   const dismissWeightToday = () => {
-    const today = formatDateLocal(new Date());
+    const today = formatDateLocal(new Date(), settings.timeZone);
     localStorage.setItem("weight-prompt-dismissed", today);
   };
 
@@ -289,12 +281,9 @@ export default function DaoHallPage() {
   const proceedWithSaveCheckIn = async () => {
     if (!checkInModal || !user) return;
     try {
-      // Determine if this is a far-future date (2+ days ahead)
-      const modalDate = new Date(checkInModal.date + 'T00:00:00');
-      const todayDate = new Date();
-      todayDate.setHours(0, 0, 0, 0);
-      const diffDays = Math.floor((modalDate.getTime() - todayDate.getTime()) / 86400000);
-      const isFarFuture = diffDays >= 2;
+      // Restrict full check-ins to the user's timezone-aware "today" only.
+      const todayKey = formatDateLocal(new Date(), settings.timeZone);
+      const isFarFuture = checkInModal.date > todayKey;
 
       // Only send the current user's entry to enforce ownership
       const ownEntry = checkInModal.entries[user.id];
@@ -359,14 +348,6 @@ export default function DaoHallPage() {
 
   const handleSaveCheckIn = async () => {
     if (!checkInModal || !user) return;
-
-    // Check if the current user is checked in but hasn't entered weight
-    const currentUserEntry = checkInModal.entries[user.id];
-    if (currentUserEntry?.present && !currentUserEntry.weight && !isWeightDismissedToday()) {
-      setShowWeightPrompt(true);
-      return;
-    }
-
     await proceedWithSaveCheckIn();
   };
 
@@ -716,7 +697,7 @@ export default function DaoHallPage() {
       return futureNotes.filter((note) => note.user.id === user?.id);
     }
 
-    const today = formatDateLocal(new Date());
+    const today = formatDateLocal(new Date(), settings.timeZone);
     const allCommentNotes = checkInRows.flatMap((row) => {
       if (row.date <= today) return [];
 
@@ -740,7 +721,7 @@ export default function DaoHallPage() {
     });
 
     return allCommentNotes.sort((a, b) => a.date.localeCompare(b.date));
-  }, [allUsers, calendarScope, checkInRows, futureNotes, user?.id]);
+  }, [allUsers, calendarScope, checkInRows, futureNotes, settings.timeZone, user?.id]);
 
   const useMobileTableStyling = isMobile;
   const compactSectRegister = useMobileTableStyling && !isSectEditMode && !isAdmin;
@@ -777,7 +758,7 @@ export default function DaoHallPage() {
   }, [allUsers.length, compactSectRegister, isSectEditMode]);
 
   const daoHallDataQuery = useQuery({
-    queryKey: ["dao-hall-data", user?.id],
+    queryKey: ["dao-hall-data", user?.id, settings.timeZone],
     enabled: Boolean(user?.id),
     staleTime: 30_000,
     queryFn: async () => {
@@ -786,7 +767,7 @@ export default function DaoHallPage() {
         api.get<{ checkins: Array<{ date: string; userId: string; present: boolean; weight?: number; comment?: string }> }>(`/api/checkins?scope=${apiScope}`),
         api.get<{ users: User[] }>(`/api/users/public?scope=${apiScope}`),
         api.get<{ exercises: unknown[] }>("/api/exercises"),
-        api.get<{ notes: CommunityNote[] }>(`/api/checkins/notes?future=true&scope=${apiScope}&today=${formatDateLocal(new Date())}`),
+        api.get<{ notes: CommunityNote[] }>(`/api/checkins/notes?future=true&scope=${apiScope}&today=${formatDateLocal(new Date(), settings.timeZone)}`),
       ]);
 
       return { checkinsData, usersData, exerciseData, futureNotesData };
@@ -967,6 +948,8 @@ export default function DaoHallPage() {
                 userColors={userColors}
                 upcomingNotes={[]}
                 dateFormat={dateFormat}
+                timeZone={settings.timeZone}
+                calendarWeekStart={settings.calendarWeekStart}
                 onManageNotes={undefined}
                 forceCompact
               />
@@ -1066,655 +1049,386 @@ export default function DaoHallPage() {
             </div>
           )}
 
-          {/* User View — Personal cultivation history */}
+          {/* Check-In Feed — clean scrolling timeline */}
           <GlowCard glow="jade" hoverable={false} className="dao-modern-cultivation-view">
             <div ref={sectRegisterRef} className="space-y-4">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <h3 className="text-sm text-jade-glow uppercase tracking-wider">{t("My Cultivation View", "normal")}</h3>
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                  <h3 className="text-sm uppercase tracking-wider text-jade-glow">{t("Check-In Feed", "normal")}</h3>
+                  <p className="mt-1 text-xs text-mist-dark">
+                    {t("A clean, mobile-friendly timeline for recent check-ins and notes.", "normal")}
+                  </p>
+                </div>
+
                 <div className="flex flex-wrap items-center gap-2">
-                  {isMobile && (
-                    <MobileFocusTrigger onClick={() => setCultivationFocusMode(true)} />
-                  )}
-                  {!isMobile && (
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={cultivationViewOpen}
-                      onClick={() => setCultivationViewOpen((prev) => !prev)}
-                      className="dao-modern-cultivation-switch inline-flex items-center gap-2 border px-2 py-1 text-[11px] transition-colors"
-                      style={{
-                        borderColor: cultivationViewOpen ? "color-mix(in srgb, var(--accent) 35%, var(--border))" : "var(--border)",
-                        color: cultivationViewOpen ? "var(--accent)" : "var(--text-muted)",
-                      }}
-                      title={cultivationViewOpen ? t("Full-width table", "normal") : t("Fit-to-screen table", "normal")}
-                    >
-                      <span>{t("Open", "normal")}</span>
-                      <span
-                        className="relative inline-flex h-4 w-8 items-center rounded-full transition-colors"
-                        style={{
-                          backgroundColor: cultivationViewOpen
-                            ? "color-mix(in srgb, var(--accent) 40%, transparent)"
-                            : "color-mix(in srgb, var(--border) 55%, transparent)",
-                        }}
-                      >
-                        <span
-                          className="absolute h-3 w-3 rounded-full transition-all"
-                          style={{
-                            left: cultivationViewOpen ? "16px" : "2px",
-                            backgroundColor: cultivationViewOpen ? "var(--accent)" : "var(--text-muted)",
-                          }}
-                        />
-                      </span>
-                    </button>
-                  )}
+                  <span className="rounded-md border border-ink-light/50 bg-ink-dark/30 px-2.5 py-1 text-[11px] text-mist-light">
+                    {renderedCheckInRows.length} {t("entries", "normal")}
+                  </span>
                   <div
-                    className="dao-modern-scope-group flex items-center gap-1 border border-ink-light/50 p-0.5"
+                    className="flex items-center gap-1 border border-ink-light/50 p-0.5"
                     style={{
                       borderColor: "color-mix(in srgb, var(--jade-glow) 32%, var(--border))",
                       background: "linear-gradient(135deg, color-mix(in srgb, var(--ink-mid) 78%, var(--ink-deep)) 0%, color-mix(in srgb, var(--jade-glow) 8%, var(--ink-deep)) 100%)",
                     }}
                   >
-                    <button
-                      onClick={() => setCalendarScope("all")}
-                      className={`dao-modern-scope-btn text-xs px-2 py-1 transition-all ${
-                        calendarScope === "all"
-                          ? "dao-modern-scope-btn-active bg-jade-deep/20 border border-jade/40 text-jade-light"
-                          : "text-mist-light hover:text-jade-light"
-                      }`}
-                      style={{
-                        borderColor: calendarScope === "all" ? "color-mix(in srgb, var(--jade-glow) 45%, var(--border))" : "transparent",
-                        color: calendarScope === "all" ? "var(--cloud-white)" : "var(--text-secondary)",
-                        background: calendarScope === "all"
-                          ? "linear-gradient(135deg, color-mix(in srgb, var(--jade-glow) 24%, var(--ink-mid)) 0%, color-mix(in srgb, var(--jade) 20%, var(--ink-deep)) 100%)"
-                          : "transparent",
-                      }}
-                    >
-                      {t("All", "normal")}
-                    </button>
-                    <button
-                      onClick={() => setCalendarScope("mine")}
-                      className={`dao-modern-scope-btn text-xs px-2 py-1 transition-all ${
-                        calendarScope === "mine"
-                          ? "dao-modern-scope-btn-active bg-jade-deep/20 border border-jade/40 text-jade-light"
-                          : "text-mist-light hover:text-jade-light"
-                      }`}
-                      style={{
-                        borderColor: calendarScope === "mine" ? "color-mix(in srgb, var(--jade-glow) 45%, var(--border))" : "transparent",
-                        color: calendarScope === "mine" ? "var(--cloud-white)" : "var(--text-secondary)",
-                        background: calendarScope === "mine"
-                          ? "linear-gradient(135deg, color-mix(in srgb, var(--jade-glow) 24%, var(--ink-mid)) 0%, color-mix(in srgb, var(--jade) 20%, var(--ink-deep)) 100%)"
-                          : "transparent",
-                      }}
-                    >
-                      {t("Mine", "normal")}
-                    </button>
-                    <button
-                      onClick={() => setCalendarScope("friends")}
-                      className={`dao-modern-scope-btn text-xs px-2 py-1 transition-all ${
-                        calendarScope === "friends"
-                          ? "dao-modern-scope-btn-active bg-jade-deep/20 border border-jade/40 text-jade-light"
-                          : "text-mist-light hover:text-jade-light"
-                      }`}
-                      style={{
-                        borderColor: calendarScope === "friends" ? "color-mix(in srgb, var(--jade-glow) 45%, var(--border))" : "transparent",
-                        color: calendarScope === "friends" ? "var(--cloud-white)" : "var(--text-secondary)",
-                        background: calendarScope === "friends"
-                          ? "linear-gradient(135deg, color-mix(in srgb, var(--jade-glow) 24%, var(--ink-mid)) 0%, color-mix(in srgb, var(--jade) 20%, var(--ink-deep)) 100%)"
-                          : "transparent",
-                      }}
-                    >
-                      {t("Friends", "normal")}
-                    </button>
+                    {(["all", "mine", "friends"] as const).map((scope) => {
+                      const active = calendarScope === scope;
+                      return (
+                        <button
+                          key={scope}
+                          onClick={() => setCalendarScope(scope)}
+                          className="text-xs px-2.5 py-1 transition-all"
+                          style={{
+                            borderColor: active ? "color-mix(in srgb, var(--jade-glow) 45%, var(--border))" : "transparent",
+                            color: active ? "var(--cloud-white)" : "var(--text-secondary)",
+                            background: active
+                              ? "linear-gradient(135deg, color-mix(in srgb, var(--jade-glow) 24%, var(--ink-mid)) 0%, color-mix(in srgb, var(--jade) 20%, var(--ink-deep)) 100%)"
+                              : "transparent",
+                          }}
+                        >
+                          {t(scope === "all" ? "All" : scope === "mine" ? "Mine" : "Friends", "normal")}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
 
               {renderedCheckInRows.length === 0 ? (
-                <div className="flex flex-col items-center py-10 text-center border border-ink-light/40 bg-ink-mid/10">
-                  <div className="text-2xl opacity-30 mb-2">🧭</div>
+                <div className="flex flex-col items-center border border-ink-light/40 bg-ink-mid/10 py-10 text-center">
+                  <div className="mb-2 text-2xl opacity-30">🧭</div>
                   <p className="text-xs text-mist-dark">{t("No entries for this view", "normal")}</p>
-                  <p className="text-[10px] text-mist-dark/60 mt-1">{t("Use the calendar above to check in and add notes", "normal")}</p>
+                  <p className="mt-1 text-[10px] text-mist-dark/60">{t("Use the calendar above to check in and add notes", "normal")}</p>
                 </div>
               ) : (
-                isMobile ? (
-                  <div className={`space-y-1.5 ${cultivationViewOpen ? "" : "max-h-[600px] overflow-y-auto"}`}>
-                    {visibleRenderedCheckInRows.map(({ date, mine, mineWeight, presentCount, everyoneDetails }) => {
-                      return (
-                        <div
-                          key={date}
-                          className="dao-modern-cultivation-card border border-ink-light/40 bg-ink-dark/20 px-3 py-2.5 flex flex-col gap-2.5 overflow-hidden"
-                        >
-                          {/* Date + status row */}
-                          <div className="dao-modern-cultivation-card-head flex items-center justify-between gap-2">
+                <div className={isMobile ? "space-y-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)]" : "grid grid-cols-1 gap-3 xl:grid-cols-2"}>
+                  {visibleRenderedCheckInRows.map(({ date, mine, mineWeight, presentCount, everyoneDetails }) => {
+                    const hasCheckin = calendarScope === "mine" ? mine.present : presentCount > 0;
+
+                    return (
+                      <article
+                        key={date}
+                        className="rounded-lg border border-[#3b3f48] bg-[#313338] p-3 shadow-[0_8px_24px_rgba(0,0,0,0.18)]"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">{t("Check-In", "normal")}</p>
                             <button
                               onClick={() => handleDayClick(date)}
-                              className="dao-modern-cultivation-date text-xs font-medium text-mist-light hover:text-jade-glow transition-colors text-left"
+                              className="mt-1 text-left text-sm font-semibold text-[#f2f3f5] transition-colors hover:text-[#8ea1e1]"
                               title={t("Open this day", "normal")}
                             >
                               {formatDateWithPreference(date, dateFormat)}
                             </button>
-                            <span
-                              className={`dao-modern-cultivation-status text-[10px] px-1.5 py-0.5 border ${
-                                (calendarScope === "mine" ? mine.present : presentCount > 0)
-                                  ? "border-jade-glow/40 text-jade-glow bg-jade-deep/15"
-                                  : "border-ink-light/40 text-mist-dark"
-                              }`}
-                            >
-                              {calendarScope === "mine"
-                                ? (mine.present ? `✓ ${t("In", "normal")}` : t("Not In", "normal"))
-                                : `${presentCount} ${t("In", "normal")}`}
-                            </span>
                           </div>
 
-                          {calendarScope === "mine" ? (
-                            <div className="dao-modern-cultivation-summary flex flex-wrap items-center gap-2 sm:gap-4 text-[11px] text-mist-light">
-                              <span>{t("Weight:", "normal")} <span className="text-cloud-white">{mineWeight}</span></span>
-                              {mine.comment?.trim() && (
-                                <span className="truncate text-mist-light/80">{mine.comment.trim()}</span>
-                              )}
-                            </div>
-                          ) : (
-                            <div className="dao-modern-cultivation-members flex flex-col gap-1">
-                              {everyoneDetails.map((detail) => {
-                                const c = getUserCultivatorColor(detail.id, userColors);
-                                return (
-                                  <div key={detail.id} className="dao-modern-cultivation-member flex flex-wrap items-center gap-1.5 sm:gap-2 text-[11px] min-w-0">
-                                    {/* Color dot + name */}
-                                    <span className="flex items-center gap-1.5 shrink-0">
-                                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: c }} />
-                                      <span className="font-medium" style={{ color: c }}>{detail.name}</span>
-                                    </span>
-
-                                    {/* Check status */}
-                                    {detail.present ? (
-                                      <span className="text-jade-glow text-[10px]">✓</span>
-                                    ) : (
-                                      <span className="text-mist-dark text-[10px]">✗</span>
-                                    )}
-
-                                    {/* Weight (if any) */}
-                                    {detail.weight && (
-                                      <span className="text-mist-light/70">{detail.weight}kg</span>
-                                    )}
-
-                                    <span className="text-mist-light/70">{detail.totalCheckIns} {t("In", "normal")}</span>
-
-                                    {/* Comment (truncated) */}
-                                    {detail.comment && (
-                                      <span className="text-mist-light/60 truncate min-w-0 flex-1" title={detail.comment}>
-                                        {detail.comment}
-                                      </span>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
+                          <button
+                            onClick={() => handleDayClick(date)}
+                            className="rounded-md border border-[#3b3f48] bg-[#2b2d31] px-2.5 py-1 text-[11px] font-medium text-[#dbdee1] transition-colors hover:border-[#5865f2]/60 hover:text-[#f2f3f5]"
+                          >
+                            {t("Open", "normal")}
+                          </button>
                         </div>
-                      );
-                    })}
 
-                    {(hasMoreRows || isLoadingMoreRows) && (
-                      <div
-                        ref={rowsObserverTargetRef}
-                        className="flex justify-center py-2"
-                      >
-                        <span className="text-[11px] text-mist-dark">
-                          {isLoadingMoreRows ? "Loading more rows..." : "Scroll to load more"}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className={`overflow-x-auto border border-ink-light/35 bg-ink-dark/20 ${cultivationViewOpen ? "" : "max-h-[520px] overflow-y-auto"}`}>
-                    <table className="w-full min-w-[900px] text-xs border-collapse">
-                      <thead>
-                        <tr className="border-b border-ink-light bg-ink-dark/35">
-                          <th className="px-3 py-2 text-center text-xs text-jade-glow uppercase">Date</th>
-                          <th className="px-3 py-2 text-center text-xs text-jade-glow uppercase">Status</th>
-                          <th className="px-3 py-2 text-center text-xs text-jade-glow uppercase">Participants</th>
-                          <th className="px-3 py-2 text-center text-xs text-jade-glow uppercase">Weight</th>
-                          <th className="px-3 py-2 text-center text-xs text-jade-glow uppercase">Comment</th>
-                          <th className="px-3 py-2 text-center text-xs text-jade-glow uppercase">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {visibleRenderedCheckInRows.map(({ date, mine, mineWeight, presentCount, everyoneDetails }) => {
-                          const hasCheckin = calendarScope === "mine" ? mine.present : presentCount > 0;
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <span className={`rounded-md border px-2 py-1 text-[11px] ${hasCheckin ? "border-[#5865f2]/60 bg-[#383a40] text-[#f2f3f5]" : "border-[#3b3f48] bg-[#2b2d31] text-[#949ba4]"}`}>
+                            {calendarScope === "mine"
+                              ? (mine.present ? t("Checked in", "normal") : t("Rest day", "normal"))
+                              : `${presentCount} ${t("active", "normal")}`}
+                          </span>
+                          <span className="rounded-md border border-[#3b3f48] bg-[#2b2d31] px-2 py-1 text-[11px] text-[#b5bac1]">
+                            {calendarScope === "mine" ? mineWeight : `${everyoneDetails.length} ${t("people", "normal")}`}
+                          </span>
+                        </div>
 
-                          return (
-                            <tr key={date} className="border-b border-ink-light/25 last:border-b-0 hover:bg-ink-mid/15">
-                              <td className="px-3 py-2 text-cloud-white whitespace-nowrap">{formatDateWithPreference(date, dateFormat)}</td>
-                              <td className="px-3 py-2 whitespace-nowrap">
-                                <span
-                                  className={`inline-flex items-center rounded border px-2 py-0.5 text-[11px] ${
-                                    hasCheckin
-                                      ? "border-jade-glow/40 text-jade-glow bg-jade-deep/20"
-                                      : "border-ink-light/50 text-mist-dark"
-                                  }`}
-                                >
-                                  {calendarScope === "mine"
-                                    ? (mine.present ? "Checked In" : "Not Checked In")
-                                    : `${presentCount} Checked In`}
-                                </span>
-                              </td>
-                              <td className="px-3 py-2">
-                                {calendarScope === "mine"
-                                  ? <span className="text-mist-dark text-[11px]">-</span>
-                                  : (
-                                    <div className="flex flex-wrap gap-1">
-                                      {everyoneDetails.filter((d) => d.present).map((d) => {
-                                        const c = getUserCultivatorColor(d.id, userColors);
-                                        return (
-                                          <span key={d.id} className="inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px]" style={{ borderColor: c, color: c, backgroundColor: `color-mix(in srgb, ${c} 10%, transparent)` }}>
-                                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: c }} />
-                                            {d.name}
-                                          </span>
-                                        );
-                                      })}
-                                      {everyoneDetails.filter((d) => d.present).length === 0 && <span className="text-mist-dark text-[11px]">-</span>}
-                                    </div>
-                                  )}
-                              </td>
-                              <td className="px-3 py-2">
-                                {calendarScope === "mine"
-                                  ? <span className="text-mist-light whitespace-nowrap">{mineWeight}</span>
-                                  : (
-                                    <div className="flex flex-wrap gap-1">
-                                      {everyoneDetails
-                                        .filter((d) => d.weight)
-                                        .map((d) => {
-                                          const c = getUserCultivatorColor(d.id, userColors);
-                                          return (
-                                            <span key={`${d.id}-weight`} className="inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px]" style={{ borderColor: `color-mix(in srgb, ${c} 40%, var(--border))`, color: "var(--text-secondary)" }}>
-                                              <span className="font-semibold shrink-0" style={{ color: c }}>{d.name}:</span>
-                                              <span className="whitespace-nowrap">{d.weight} kg</span>
-                                            </span>
-                                          );
-                                        })}
-                                      {everyoneDetails.filter((d) => d.weight).length === 0 && <span className="text-mist-dark text-[11px]">-</span>}
-                                    </div>
-                                  )}
-                              </td>
-                              <td className="px-3 py-2 max-w-[380px]">
-                                {calendarScope === "mine"
-                                  ? <span className="text-mist-light truncate block" title={mine.comment?.trim() || "-"}>{mine.comment?.trim() || "-"}</span>
-                                  : (
-                                    <div className="flex flex-wrap gap-1">
-                                      {everyoneDetails
-                                        .filter((d) => d.comment)
-                                        .map((d) => {
-                                          const c = getUserCultivatorColor(d.id, userColors);
-                                          return (
-                                            <span key={d.id} className="inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px]" style={{ borderColor: `color-mix(in srgb, ${c} 40%, var(--border))`, color: "var(--text-secondary)" }}>
-                                              <span className="font-semibold shrink-0" style={{ color: c }}>{d.name}:</span>
-                                              <span className="truncate max-w-[160px]" title={d.comment}>{d.comment}</span>
-                                            </span>
-                                          );
-                                        })}
-                                      {everyoneDetails.filter((d) => d.comment).length === 0 && <span className="text-mist-dark text-[11px]">-</span>}
-                                    </div>
-                                  )}
-                              </td>
-                              <td className="px-3 py-2 text-right">
-                                <button
-                                  onClick={() => handleDayClick(date)}
-                                  className="dao-modern-cultivation-open-btn text-xs px-2 py-1 border border-ink-light/45 text-mist-light hover:text-jade-glow hover:border-jade-glow/45 transition-colors"
-                                  title="Open this day"
-                                  style={{
-                                    borderColor: "color-mix(in srgb, var(--jade-glow) 36%, var(--border))",
-                                    color: "var(--cloud-white)",
-                                    background: "linear-gradient(135deg, color-mix(in srgb, var(--ink-mid) 82%, var(--ink-deep)) 0%, color-mix(in srgb, var(--jade-glow) 12%, var(--ink-deep)) 100%)",
-                                  }}
-                                >
-                                  Open
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                        {calendarScope === "mine" ? (
+                          <div className="mt-3 rounded-md border border-[#3b3f48] bg-[#2b2d31] px-3 py-2.5">
+                            <div className="flex items-center gap-2 text-[11px]">
+                              <span className="h-2 w-2 rounded-full bg-[#5865f2]" />
+                              <span className="font-medium text-[#f2f3f5]">{t("You", "normal")}</span>
+                              <span className="ml-auto text-[#949ba4]">
+                                {mine.present ? t("In", "normal") : t("Rest", "normal")}
+                              </span>
+                            </div>
+                            <p className="mt-1 pl-4 text-sm leading-6 text-[#dbdee1]">
+                              {mine.comment?.trim() || t("No note added for this day.", "normal")}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="mt-3 space-y-1.5">
+                            {everyoneDetails.slice(0, isMobile ? 4 : 5).map((detail) => {
+                              const c = getUserCultivatorColor(detail.id, userColors);
+                              return (
+                                <div key={detail.id} className="rounded-md border border-[#3b3f48] bg-[#2b2d31] px-2.5 py-2">
+                                  <div className="flex items-center gap-2 text-[11px]">
+                                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: c }} />
+                                    <span className="min-w-0 truncate font-medium" style={{ color: c }}>{detail.name}</span>
+                                    <span className="ml-auto shrink-0 text-[#949ba4]">
+                                      {detail.present ? t("In", "normal") : t("Rest", "normal")}
+                                    </span>
+                                    {detail.weight ? <span className="shrink-0 text-[#b5bac1]">{detail.weight} kg</span> : null}
+                                  </div>
+                                  {detail.comment ? (
+                                    <p className="mt-1 pl-4 text-[11px] leading-5 text-[#dbdee1]">
+                                      {detail.comment}
+                                    </p>
+                                  ) : null}
+                                </div>
+                              );
+                            })}
+                            {everyoneDetails.length > (isMobile ? 4 : 5) && (
+                              <p className="text-[11px] text-mist-dark">
+                                +{everyoneDetails.length - (isMobile ? 4 : 5)} {t("more people", "normal")}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </article>
+                    );
+                  })}
 
-                    {(hasMoreRows || isLoadingMoreRows) && (
-                      <div
-                        ref={rowsObserverTargetRef}
-                        className="flex justify-center py-2 border-t border-ink-light/25"
-                      >
-                        <span className="text-[11px] text-mist-dark">
-                          {isLoadingMoreRows ? "Loading more rows..." : "Scroll to load more"}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )
+                  {(hasMoreRows || isLoadingMoreRows) && (
+                    <div ref={rowsObserverTargetRef} className="flex justify-center py-2 xl:col-span-2">
+                      <span className="text-[11px] text-mist-dark">
+                        {isLoadingMoreRows ? t("Loading more rows...", "normal") : t("Scroll for more", "normal")}
+                      </span>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </GlowCard>
-
-          <MobileFocusOverlay
-            isOpen={cultivationFocusMode}
-            onDismiss={() => setCultivationFocusMode(false)}
-            label={t("My Cultivation View", "normal")}
-          >
-            <div className="space-y-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <div
-                  className="dao-modern-scope-group flex items-center gap-1 border border-ink-light/50 p-0.5"
-                  style={{
-                    borderColor: "color-mix(in srgb, var(--jade-glow) 32%, var(--border))",
-                    background: "linear-gradient(135deg, color-mix(in srgb, var(--ink-mid) 78%, var(--ink-deep)) 0%, color-mix(in srgb, var(--jade-glow) 8%, var(--ink-deep)) 100%)",
-                  }}
-                >
-                  <button
-                    onClick={() => setCalendarScope("all")}
-                    className={`dao-modern-scope-btn text-xs px-2 py-1 transition-all ${calendarScope === "all" ? "dao-modern-scope-btn-active bg-jade-deep/20 border border-jade/40 text-jade-light" : "text-mist-light hover:text-jade-light"}`}
-                    style={{
-                      borderColor: calendarScope === "all" ? "color-mix(in srgb, var(--jade-glow) 45%, var(--border))" : "transparent",
-                      color: calendarScope === "all" ? "var(--cloud-white)" : "var(--text-secondary)",
-                      background: calendarScope === "all"
-                        ? "linear-gradient(135deg, color-mix(in srgb, var(--jade-glow) 24%, var(--ink-mid)) 0%, color-mix(in srgb, var(--jade) 20%, var(--ink-deep)) 100%)"
-                        : "transparent",
-                    }}
-                  >
-                    {t("All", "normal")}
-                  </button>
-                  <button
-                    onClick={() => setCalendarScope("mine")}
-                    className={`dao-modern-scope-btn text-xs px-2 py-1 transition-all ${calendarScope === "mine" ? "dao-modern-scope-btn-active bg-jade-deep/20 border border-jade/40 text-jade-light" : "text-mist-light hover:text-jade-light"}`}
-                    style={{
-                      borderColor: calendarScope === "mine" ? "color-mix(in srgb, var(--jade-glow) 45%, var(--border))" : "transparent",
-                      color: calendarScope === "mine" ? "var(--cloud-white)" : "var(--text-secondary)",
-                      background: calendarScope === "mine"
-                        ? "linear-gradient(135deg, color-mix(in srgb, var(--jade-glow) 24%, var(--ink-mid)) 0%, color-mix(in srgb, var(--jade) 20%, var(--ink-deep)) 100%)"
-                        : "transparent",
-                    }}
-                  >
-                    {t("Mine", "normal")}
-                  </button>
-                  <button
-                    onClick={() => setCalendarScope("friends")}
-                    className={`dao-modern-scope-btn text-xs px-2 py-1 transition-all ${calendarScope === "friends" ? "dao-modern-scope-btn-active bg-jade-deep/20 border border-jade/40 text-jade-light" : "text-mist-light hover:text-jade-light"}`}
-                    style={{
-                      borderColor: calendarScope === "friends" ? "color-mix(in srgb, var(--jade-glow) 45%, var(--border))" : "transparent",
-                      color: calendarScope === "friends" ? "var(--cloud-white)" : "var(--text-secondary)",
-                      background: calendarScope === "friends"
-                        ? "linear-gradient(135deg, color-mix(in srgb, var(--jade-glow) 24%, var(--ink-mid)) 0%, color-mix(in srgb, var(--jade) 20%, var(--ink-deep)) 100%)"
-                        : "transparent",
-                    }}
-                  >
-                    {t("Friends", "normal")}
-                  </button>
-                </div>
-              </div>
-
-              {renderedCheckInRows.length === 0 ? (
-                <div className="flex flex-col items-center py-10 text-center border border-ink-light/40 bg-ink-mid/10">
-                  <div className="text-2xl opacity-30 mb-2">🧭</div>
-                  <p className="text-xs text-mist-dark">{t("No entries for this view", "normal")}</p>
-                </div>
-              ) : (
-                <div className="space-y-1.5">
-                  {renderedCheckInRows.map(({ date, mine, mineWeight, presentCount, everyoneDetails }) => (
-                    <div
-                      key={date}
-                      className="dao-modern-cultivation-card border border-ink-light/40 bg-ink-dark/20 px-3 py-2.5 flex flex-col gap-2.5 overflow-hidden"
-                    >
-                      <div className="dao-modern-cultivation-card-head flex items-center justify-between gap-2">
-                        <button
-                          onClick={() => handleDayClick(date)}
-                          className="dao-modern-cultivation-date text-xs font-medium text-mist-light hover:text-jade-glow transition-colors text-left"
-                          title={t("Open this day", "normal")}
-                        >
-                          {formatDateWithPreference(date, dateFormat)}
-                        </button>
-                        <span
-                          className={`dao-modern-cultivation-status text-[10px] px-1.5 py-0.5 border ${
-                            (calendarScope === "mine" ? mine.present : presentCount > 0)
-                              ? "border-jade-glow/40 text-jade-glow bg-jade-deep/15"
-                              : "border-ink-light/40 text-mist-dark"
-                          }`}
-                        >
-                          {calendarScope === "mine"
-                            ? (mine.present ? `✓ ${t("In", "normal")}` : t("Not In", "normal"))
-                            : `${presentCount} ${t("In", "normal")}`}
-                        </span>
-                      </div>
-
-                      {calendarScope === "mine" ? (
-                        <div className="dao-modern-cultivation-summary flex flex-wrap items-center gap-2 text-[11px] text-mist-light">
-                          <span>{t("Weight:", "normal")} <span className="text-cloud-white">{mineWeight}</span></span>
-                          {mine.comment?.trim() && (
-                            <span className="truncate text-mist-light/80">{mine.comment.trim()}</span>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="dao-modern-cultivation-members flex flex-col gap-1">
-                          {everyoneDetails.map((detail) => {
-                            const c = getUserCultivatorColor(detail.id, userColors);
-                            return (
-                              <div key={detail.id} className="dao-modern-cultivation-member flex flex-wrap items-center gap-1.5 text-[11px] min-w-0">
-                                <span className="flex items-center gap-1.5 shrink-0">
-                                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: c }} />
-                                  <span className="font-medium" style={{ color: c }}>{detail.name}</span>
-                                </span>
-                                {detail.present ? (
-                                  <span className="text-jade-glow text-[10px]">✓</span>
-                                ) : (
-                                  <span className="text-mist-dark text-[10px]">✗</span>
-                                )}
-                                {detail.weight && <span className="text-mist-light/70">{detail.weight}kg</span>}
-                                <span className="text-mist-light/70">{detail.totalCheckIns} {t("In", "normal")}</span>
-                                {detail.comment && (
-                                  <span className="text-mist-light/60 truncate min-w-0 flex-1" title={detail.comment}>
-                                    {detail.comment}
-                                  </span>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </MobileFocusOverlay>
         </div>
       )}
       <GlowModal
         isOpen={!!checkInModal}
         onClose={() => { setCheckInModal(null); }}
         title={`Day Check-In — ${checkInModal ? formatDateWithPreference(checkInModal.date, dateFormat) : ""}`}
+        hideHeader
+        panelClassName="!max-w-2xl !max-h-[86vh] !overflow-hidden"
+        contentClassName="!p-0"
       >
-        <div className="space-y-4">
-          {checkInModal && (() => {
-            const modalDate = new Date(checkInModal.date + 'T00:00:00');
-            const todayDate = new Date();
-            todayDate.setHours(0, 0, 0, 0);
-            const diffDays = Math.floor((modalDate.getTime() - todayDate.getTime()) / 86400000);
-            const isFarFuture = diffDays >= 2;
+        {checkInModal && (() => {
+          const todayKey = formatDateLocal(new Date(), settings.timeZone);
+          const isFarFuture = checkInModal.date > todayKey;
 
-            return (
-            <>
-              <div className="dao-checkin-modal-head flex items-center justify-between gap-2">
-                <p className="dao-checkin-modal-date text-xs text-mist-dark">
-                  {modalDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
-                </p>
-                <span className={`dao-checkin-modal-state text-[10px] uppercase tracking-wider ${isFarFuture ? "dao-checkin-modal-state-note" : "dao-checkin-modal-state-checkin"}`}>
-                  {isFarFuture ? "Notes Mode" : "Check-In Mode"}
-                </span>
+          return (
+            <div
+              className="border overflow-hidden rounded-lg"
+              style={{
+                borderColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
+                background: "#2b2d31",
+              }}
+            >
+              <div
+                className="flex items-center justify-between gap-3 border-b px-3 py-2"
+                style={{
+                  borderBottomColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
+                  backgroundColor: "#232428",
+                }}
+              >
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Day Check-In</p>
+                  <h2 className="truncate text-sm font-semibold text-[#f2f3f5]">
+                    {formatDateWithPreference(checkInModal.date, dateFormat)}
+                  </h2>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`rounded-md border px-2 py-1 text-[10px] font-semibold ${isFarFuture ? "border-[#f0b96a]/55 bg-[#383533] text-[#ffe0a8]" : "border-[#5865f2]/60 bg-[#383a40] text-[#f2f3f5]"}`}>
+                    {isFarFuture ? "Notes Mode" : "Check-In Mode"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setCheckInModal(null)}
+                    aria-label="Close dialog"
+                    className="flex h-8 w-8 items-center justify-center rounded-md border border-[#3b3f48] bg-[#383a40]/65 text-[#b5bac1] transition-colors hover:border-[#5865f2]/60 hover:text-[#f2f3f5]"
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
 
-              {isFarFuture && (
-                <div className="dao-checkin-future-note px-3 py-2 rounded-lg border border-gold/35 bg-gold-dim/15 text-[11px] text-gold/90">
-                  Save a personal note for this future day. Full check-in is available only for today and tomorrow.
-                </div>
-              )}
+              <div className="max-h-[calc(86vh-3.25rem)] overflow-y-auto px-2.5 pt-2.5 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] scrollbar-hide" style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain", touchAction: "pan-y" }}>
+                <div className="space-y-2.5">
+                  {isFarFuture && (
+                    <div className="rounded-md border border-[#f0b96a]/35 bg-[#383533] px-2.5 py-1.5 text-[11px] text-[#ffe0a8]">
+                      Save a personal note for this future day. Full check-in is available only for today.
+                    </div>
+                  )}
 
-              {/* Check-In Section — Horizontal cultivator boxes (hidden for far-future dates) */}
-              {!isFarFuture && (
-              <div className="dao-checkin-section">
-                <div className="dao-checkin-section-header mb-3">
-                  <label className="dao-checkin-section-title block text-xs text-jade-glow uppercase tracking-wider">
-                    Cultivator Check-In
-                  </label>
-                  <p className="dao-checkin-section-help text-[11px] text-mist-mid mt-1">
-                    Tap your card to mark presence. Weight is optional and only editable on your own card.
-                  </p>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                  {allUsers.map((u) => {
-                    const entry = checkInModal.entries[u.id] || { present: false, weight: "", comment: "" };
-                    const color = getUserCultivatorColor(u.id, userColors);
-                    return (
-                      <motion.div
-                        key={u.id}
-                        whileHover={u.id === user.id ? { scale: 1.04 } : {}}
-                        whileTap={u.id === user.id ? { scale: 0.96 } : {}}
-                        className={`dao-checkin-cultivator-card rounded-lg border-2 transition-all duration-200 select-none ${
-                          entry.present
-                            ? "dao-checkin-cultivator-card-active bg-jade-deep/30"
-                            : "border-ink-light bg-ink-dark/60"
-                        } ${
-                          u.id === user.id
-                            ? "dao-checkin-cultivator-card-self hover:bg-ink-mid/40 hover:border-mist-dark"
-                            : "opacity-60 cursor-default"
-                        }`}
-                        style={entry.present ? { borderColor: color, boxShadow: `0 0 14px ${getCultivatorGlowColor(color, 0.31)}` } : {}}
-                      >
-                        <div
-                          className={`p-3 text-center ${u.id === user.id ? 'cursor-pointer' : 'cursor-default'}`}
-                          onClick={() => { if (u.id === user.id) updateCheckInModalEntry(u.id, "present", !entry.present); }}
-                        >
-                          <div className="flex items-center justify-between gap-2 mb-2">
-                            <span className="text-[11px] font-semibold text-cloud-white truncate">{u.name}</span>
-                            {u.id === user.id && (
-                              <span className="dao-checkin-cultivator-me text-[9px] uppercase tracking-wide">Me</span>
-                            )}
-                          </div>
-                          <div className="flex flex-col items-center gap-1">
-                            <span
-                              className="dao-checkin-cultivator-mark text-xl font-bold transition-all drop-shadow-[0_0_4px_currentColor]"
-                              style={{ color: entry.present ? color : 'var(--mist-dark)' }}
+                  {!isFarFuture && (
+                    <section className="rounded-md border border-[#3b3f48] bg-[#232428] p-3">
+                      <div className="mb-3">
+                        <label className="block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">
+                          Cultivator Check-In
+                        </label>
+                        <p className="mt-1 text-[11px] text-[#b5bac1]">
+                          Check-in and weight are tracked separately. Logging at least one workout for this day will auto-mark you as present.
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        {allUsers.map((u) => {
+                          const entry = checkInModal.entries[u.id] || { present: false, weight: "", comment: "" };
+                          const color = getUserCultivatorColor(u.id, userColors);
+                          const isSelf = u.id === user.id;
+                          return (
+                            <motion.div
+                              key={u.id}
+                              whileHover={isSelf ? { scale: 1.01 } : {}}
+                              whileTap={isSelf ? { scale: 0.99 } : {}}
+                              className={`rounded-md border p-2.5 transition-all ${
+                                entry.present
+                                  ? "bg-[#313338]"
+                                  : "bg-[#232428]"
+                              } ${isSelf ? "" : "opacity-70 cursor-default"}`}
+                              style={{
+                                borderColor: entry.present
+                                  ? `color-mix(in srgb, ${color} 55%, var(--ink-light))`
+                                  : "#3b3f48",
+                                boxShadow: "none",
+                              }}
                             >
-                              {entry.present ? '✓' : '○'}
-                            </span>
-                            <span className={`text-[10px] font-medium transition-colors ${entry.present ? 'text-cloud-white' : 'text-mist-mid'}`}>
-                              {entry.present ? 'Present' : 'Not marked'}
-                            </span>
-                          </div>
-                        </div>
-                        {entry.present && u.id === user.id && (
-                          <div className="px-2 pb-2">
-                            <input
-                              type="number"
-                              placeholder="Weight (kg)"
-                              value={entry.weight}
-                              onClick={(e) => e.stopPropagation()}
-                              onChange={(e) => updateCheckInModalEntry(u.id, "weight", e.target.value)}
-                              className="dao-checkin-weight-input w-full bg-ink-deep/80 border border-ink-light rounded px-2 py-1 text-[10px] text-cloud-white placeholder-mist-dark outline-none focus:border-jade-glow transition-colors text-center"
-                              min="0"
-                              max="500"
-                              step="0.1"
-                            />
-                          </div>
-                        )}
-                        {entry.present && u.id !== user.id && entry.weight && (
-                          <div className="px-2 pb-2 text-center">
-                            <span className="text-[10px] text-mist-mid">{entry.weight} kg</span>
-                          </div>
-                        )}
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </div>
-              )}
+                              <div>
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="truncate text-[12px] font-semibold text-[#f2f3f5]">{u.name}</span>
+                                  {isSelf ? <span className="rounded-md border border-[#5865f2]/45 bg-[#5865f2]/12 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.08em] text-[#c8cdfa]">Me</span> : null}
+                                </div>
+                                <div className="mt-2 flex items-center gap-2">
+                                  <span className="text-lg font-bold" style={{ color: entry.present ? color : "var(--mist-dark)" }}>
+                                    {entry.present ? "✓" : "○"}
+                                  </span>
+                                  <span className={`text-[11px] font-medium ${entry.present ? "text-[#f2f3f5]" : "text-[#949ba4]"}`}>
+                                    {entry.present ? "Checked in" : "Not checked in"}
+                                  </span>
+                                  {entry.weight ? <span className="ml-auto text-[10px] text-[#b5bac1]">{entry.weight} kg</span> : null}
+                                </div>
+                              </div>
 
-                {/* Personal comment */}
-                <div className={`dao-checkin-comment ${isFarFuture ? "" : "mt-4"}`}>
-                  <label className="block text-[10px] text-mist-dark uppercase mb-1">Personal Note</label>
-                  <input
-                    type="text"
-                    placeholder="Add a short note for this day"
-                    value={user?.id ? checkInModal.entries[user.id]?.comment || "" : ""}
-                    onChange={(e) => {
-                      if (user?.id) {
-                        updateCheckInModalEntry(user.id, "comment", e.target.value);
-                      }
-                    }}
-                    className="dao-checkin-comment-input w-full bg-ink-deep border border-ink-light rounded px-3 py-2 text-xs text-cloud-white placeholder-mist-dark outline-none focus:border-jade-glow transition-colors"
-                  />
-                </div>
+                              {isSelf && (
+                                <div className="mt-3 space-y-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => updateCheckInModalEntry(u.id, "present", !entry.present)}
+                                    className={`w-full rounded-md border px-2.5 py-2 text-[11px] font-medium transition-colors ${entry.present ? "border-[#5865f2]/60 bg-[#5865f2]/12 text-[#c8cdfa]" : "border-[#3b3f48] bg-[#2b2d31] text-[#dbdee1] hover:border-[#5865f2]/45"}`}
+                                  >
+                                    {entry.present ? "Checked In" : "Mark Check-In"}
+                                  </button>
 
-                {isFarFuture ? (
-                  <div className="dao-checkin-actions flex gap-2 mt-4">
-                    <GlowButton
-                      variant="jade"
-                      glow
-                      className="dao-checkin-action-primary flex-1"
-                      onClick={handleSaveCheckIn}
-                      size="sm"
-                    >
-                      Save Note
-                    </GlowButton>
-                    {futureNotes.some(n => n.date === checkInModal.date && n.user.id === user.id) && (
+                                  <div>
+                                    <label className="mb-1 block text-[10px] uppercase tracking-[0.08em] text-[#949ba4]">Weight</label>
+                                    <input
+                                      type="number"
+                                      placeholder="Weight (kg)"
+                                      value={entry.weight}
+                                      onChange={(e) => updateCheckInModalEntry(u.id, "weight", e.target.value)}
+                                      className="w-full rounded-md border px-2.5 py-2 text-[11px] outline-none"
+                                      style={{
+                                        borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
+                                        color: "var(--cloud-white)",
+                                      }}
+                                      min="0"
+                                      max="500"
+                                      step="0.1"
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </motion.div>
+                          );
+                        })}
+                      </div>
+                    </section>
+                  )}
+
+                  <section className="rounded-md border border-[#3b3f48] bg-[#232428] p-3">
+                    <label className="block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Personal Note</label>
+                    <p className="mt-1 text-[11px] text-[#b5bac1]">Add a short update for this day.</p>
+                    <textarea
+                      placeholder="Add a short note for this day"
+                      value={user?.id ? checkInModal.entries[user.id]?.comment || "" : ""}
+                      onChange={(e) => {
+                        if (user?.id) {
+                          updateCheckInModalEntry(user.id, "comment", e.target.value);
+                        }
+                      }}
+                      rows={3}
+                      className="mt-2 w-full resize-none rounded-md border px-2.5 py-2 text-xs outline-none"
+                      style={{
+                        borderColor: "#3b3f48",
+                        backgroundColor: "#313338",
+                        color: "var(--cloud-white)",
+                      }}
+                    />
+                  </section>
+
+                  <div className="sticky bottom-0 -mx-2.5 mt-1 border-t border-[#32353b] bg-[#2b2d31]/95 px-2.5 pt-2.5 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] backdrop-blur-sm">
+                    {isFarFuture ? (
+                      <div className="flex gap-2">
+                        <GlowButton
+                          variant="jade"
+                          glow
+                          className="flex-1"
+                          onClick={handleSaveCheckIn}
+                          size="sm"
+                        >
+                          Save Note
+                        </GlowButton>
+                        {futureNotes.some(n => n.date === checkInModal.date && n.user.id === user.id) && (
+                          <GlowButton
+                            variant="crimson"
+                            className="flex-1"
+                            onClick={async () => {
+                              const existingNote = futureNotes.find(n => n.date === checkInModal.date && n.user.id === user.id);
+                              if (existingNote) {
+                                await api.delete("/api/checkins/notes", { noteId: existingNote.id });
+                                await api.post("/api/checkins", {
+                                  date: checkInModal.date,
+                                  entries: { [user.id]: { present: false, weight: "", comment: "" } },
+                                });
+                                refreshFutureNotes();
+                                broadcastNotesUpdated();
+                                if (user?.id) updateCheckInModalEntry(user.id, "comment", "");
+                                setCheckInRows(prev => {
+                                  return prev.map(r => {
+                                    if (r.date !== checkInModal.date) return r;
+                                    const updatedEntries = { ...r.entries };
+                                    if (updatedEntries[user.id]) {
+                                      updatedEntries[user.id] = { ...updatedEntries[user.id], comment: "" };
+                                    }
+                                    const hasData = Object.values(updatedEntries).some(
+                                      e => e.present || e.weight || e.comment?.trim()
+                                    );
+                                    if (!hasData) return null;
+                                    return { ...r, entries: updatedEntries };
+                                  }).filter(Boolean) as typeof prev;
+                                });
+                              }
+                            }}
+                            size="sm"
+                          >
+                            Clear Note
+                          </GlowButton>
+                        )}
+                      </div>
+                    ) : (
                       <GlowButton
-                        variant="crimson"
-                        className="dao-checkin-action-danger flex-1"
-                        onClick={async () => {
-                          const existingNote = futureNotes.find(n => n.date === checkInModal.date && n.user.id === user.id);
-                          if (existingNote) {
-                            await api.delete("/api/checkins/notes", { noteId: existingNote.id });
-                            // Also clear the comment from the check-in entry on the server
-                            await api.post("/api/checkins", {
-                              date: checkInModal.date,
-                              entries: { [user.id]: { present: false, weight: "", comment: "" } },
-                            });
-                            refreshFutureNotes();
-                            broadcastNotesUpdated();
-                            if (user?.id) updateCheckInModalEntry(user.id, "comment", "");
-                            // Update local checkInRows to clear the comment
-                            setCheckInRows(prev => {
-                              return prev.map(r => {
-                                if (r.date !== checkInModal.date) return r;
-                                const updatedEntries = { ...r.entries };
-                                if (updatedEntries[user.id]) {
-                                  updatedEntries[user.id] = { ...updatedEntries[user.id], comment: "" };
-                                }
-                                // Remove row if no meaningful data remains
-                                const hasData = Object.values(updatedEntries).some(
-                                  e => e.present || e.weight || e.comment?.trim()
-                                );
-                                if (!hasData) return null;
-                                return { ...r, entries: updatedEntries };
-                              }).filter(Boolean) as typeof prev;
-                            });
-                          }
-                        }}
+                        variant="jade"
+                        glow
+                        className="w-full"
+                        onClick={handleSaveCheckIn}
                         size="sm"
                       >
-                        Clear Note
+                        Save Check-In
                       </GlowButton>
                     )}
                   </div>
-                ) : (
-                  <GlowButton
-                    variant="jade"
-                    glow
-                    className="dao-checkin-action-primary w-full mt-4"
-                    onClick={handleSaveCheckIn}
-                    size="sm"
-                  >
-                    Save Check-In
-                  </GlowButton>
-                )}
-            </>
-            );
-          })()}
-        </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </GlowModal>
 
       {/* Weight Prompt Modal */}

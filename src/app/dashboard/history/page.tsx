@@ -75,6 +75,31 @@ function formatRelativeRecentDate(dateLike: string): string {
   return new Date(timestamp).toLocaleDateString();
 }
 
+function getRecentExerciseTextColor(dateLike: string | null | undefined, isSelected = false): string {
+  const defaultColor = isSelected ? "var(--cloud-white)" : "var(--text-muted)";
+  if (!dateLike) return defaultColor;
+
+  const timestamp = new Date(dateLike).getTime();
+  if (!Number.isFinite(timestamp)) return defaultColor;
+
+  const diffMs = Math.max(0, Date.now() - timestamp);
+  const dayMs = 24 * 60 * 60 * 1000;
+
+  if (diffMs <= 7 * dayMs) {
+    return isSelected
+      ? "color-mix(in srgb, var(--cultivator-amber) 78%, white 22%)"
+      : "color-mix(in srgb, var(--cultivator-amber) 82%, var(--mist-light) 18%)";
+  }
+
+  if (diffMs <= 14 * dayMs) {
+    return isSelected
+      ? "color-mix(in srgb, var(--cultivator-amber) 68%, var(--mist-light) 32%)"
+      : "color-mix(in srgb, var(--cultivator-amber) 58%, var(--mist-dark) 42%)";
+  }
+
+  return defaultColor;
+}
+
 export default function HistoryPage() {
   const { user } = useAuth();
   const isMobile = useIsMobile();
@@ -388,11 +413,13 @@ export default function HistoryPage() {
   }, [router, searchParams, targetUserId]);
 
   return (
-    <PageLayout
-      title={trainPageTitle}
-      subtitle={isFriendTrainOverlay ? undefined : subtitle}
-      mobileContentPaddingClass={isFriendTrainOverlay ? "p-0 pb-0" : "p-2 pb-0"}
-    >
+    <>
+      <PageLayout
+        title={trainPageTitle}
+        subtitle={isFriendTrainOverlay ? undefined : subtitle}
+        mobileContentPaddingClass={isFriendTrainOverlay ? "p-0 pb-0" : "p-2 pb-0"}
+        mobileScrollContainerEnabled={!isFriendTrainOverlay}
+      >
       <div className={`nyaa-history-page px-0 ${isFriendTrainOverlay ? "space-y-0" : "space-y-4"}`}>
         {loading ? (
           <GlowCard glow="jade" hoverable={false}>
@@ -407,21 +434,22 @@ export default function HistoryPage() {
                   initial={isFriendTrainOverlay ? { x: "100%" } : false}
                   animate={isFriendTrainOverlay ? { x: "0%" } : { x: 0 }}
                   transition={isFriendTrainOverlay ? { duration: 0.26, ease: [0.22, 1, 0.36, 1] } : undefined}
-                  className={isFriendTrainOverlay ? "relative z-[72]" : ""}
+                  className={isFriendTrainOverlay ? "relative z-[72]" : "flex min-h-[calc(var(--app-viewport-height)-2rem)] flex-col"}
                   style={isFriendTrainOverlay ? { backgroundColor: "color-mix(in srgb, var(--ink-deep) 98%, var(--ink-mid))", minHeight: "var(--app-viewport-height)" } : undefined}
                 >
                   <div
-                    className={`border overflow-hidden ${isFriendTrainOverlay ? "rounded-none h-full" : "rounded-tl-2xl"}`}
+                    className={`border overflow-hidden flex min-h-0 flex-1 flex-col ${isFriendTrainOverlay ? "rounded-none h-full" : "rounded-tl-2xl"}`}
                     style={{
                       borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
                       backgroundColor: "color-mix(in srgb, var(--ink-mid) 20%, var(--ink-deep))",
                     }}
                   >
                     <div
-                      className={`${isFriendTrainOverlay ? "h-app safe-area-top safe-area-bottom" : "h-[calc(100dvh-5rem)]"} min-h-0 overflow-y-auto scrollbar-hide`}
-                      style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorY: "auto", touchAction: "pan-y" }}
+                      data-mobile-scroll-container={isFriendTrainOverlay ? "true" : undefined}
+                      className={`${isFriendTrainOverlay ? "h-app safe-area-top safe-area-bottom overflow-y-auto scrollbar-hide" : "flex min-h-0 flex-1 flex-col"}`}
+                      style={isFriendTrainOverlay ? { WebkitOverflowScrolling: "touch", overscrollBehaviorY: "auto", touchAction: "pan-y" } : undefined}
                     >
-                      <div className="sticky top-0 z-20 safe-area-top" style={{ backgroundColor: "color-mix(in srgb, var(--ink-deep) 94%, var(--ink-mid))" }}>
+                      <div className={`sticky top-0 z-20 ${isFriendTrainOverlay ? "safe-area-top" : ""}`} style={{ backgroundColor: "color-mix(in srgb, var(--ink-deep) 94%, var(--ink-mid))" }}>
                         <div
                           className="px-3 py-2.5"
                           style={{
@@ -449,30 +477,6 @@ export default function HistoryPage() {
                               {trainPageTitle}
                             </h2>
                           </div>
-
-                          {isFriendTrainOverlay && (
-                            <div className="mt-2 rounded-2xl border border-[#3b3f48] bg-[#1e1f22] p-3.5">
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Friend Profile</p>
-                                  <p className="mt-0.5 truncate text-[13px] font-semibold text-[#f2f3f5]">{activeUserProfile.name}</p>
-                                  <p className="truncate text-[11px] text-[#dbdee1]">@{activeUserProfile.username}</p>
-                                  <p className="mt-1 truncate text-[10px] text-[#949ba4]">ID: {activeUserProfile.id || "-"}</p>
-                                </div>
-
-                                <span className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[#5865f2]/40 bg-[#5865f2]/15 text-[#c8cdfa]">
-                                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 20a8 8 0 0116 0" />
-                                  </svg>
-                                  <span
-                                    className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border"
-                                    style={{ backgroundColor: "#3ba55d", borderColor: "#1e1f22" }}
-                                  />
-                                </span>
-                              </div>
-                            </div>
-                          )}
 
                           {friendView === "history" && (
                             <>
@@ -520,7 +524,7 @@ export default function HistoryPage() {
                       </div>
 
                       {friendView === "history" ? (
-                      <div className={isFriendTrainOverlay ? "pb-2" : "pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)]"}>
+                      <div className={isFriendTrainOverlay ? "flex-1 pb-[calc(var(--mobile-nav-offset)+0.5rem)]" : "flex-1 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)]"}>
                         {filteredMobileExerciseRows.length === 0 ? (
                           <div
                             className="px-3 py-4 text-center text-xs"
@@ -561,7 +565,7 @@ export default function HistoryPage() {
                               <div className="flex items-start justify-between gap-2">
                                 <p
                                   className="text-sm font-semibold leading-tight"
-                                  style={{ color: isPreviouslySelected ? "var(--cloud-white)" : "var(--text-muted)" }}
+                                  style={{ color: getRecentExerciseTextColor(row.date, isPreviouslySelected) }}
                                 >
                                   {row.exerciseName}
                                 </p>
@@ -593,406 +597,9 @@ export default function HistoryPage() {
                   </div>
               </motion.section>
 
-              <AnimatePresence>
-              {!mobileExerciseDrawerExerciseId ? (
-                <motion.button
-                  key="train-log-fab"
-                  type="button"
-                  onClick={() => setMobileLogFabOpen(true)}
-                  initial={{ opacity: 0, y: 18, scale: 0.92 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 18, scale: 0.92 }}
-                  transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                  className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+5.75rem)] right-[max(env(safe-area-inset-right,0px),1rem)] z-[72] flex h-14 w-14 items-center justify-center rounded-full border"
-                  style={{
-                    borderColor: "color-mix(in srgb, var(--accent) 42%, var(--ink-light))",
-                    backgroundColor: "color-mix(in srgb, var(--accent) 64%, var(--ink-mid))",
-                    color: "var(--cloud-white)",
-                    boxShadow: "0 10px 28px color-mix(in srgb, var(--accent) 30%, transparent)",
-                  }}
-                  aria-label="Log workout"
-                >
-                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.9}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
-                  </svg>
-                </motion.button>
-              ) : null}
-
-              {mobileLogFabOpen ? (
-                <>
-                  <motion.div
-                    key="train-log-fab-backdrop"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-                    className="fixed inset-0 z-[236]"
-                    style={{ backgroundColor: "color-mix(in srgb, var(--void-black) 74%, transparent)" }}
-                    onClick={() => setMobileLogFabOpen(false)}
-                  />
-                  <motion.aside
-                    key="train-log-fab-sheet"
-                    initial={{ y: "100%" }}
-                    animate={{ y: "0%" }}
-                    exit={{ y: "100%" }}
-                    transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-                    className="fixed inset-x-0 bottom-0 z-[238] rounded-t-3xl border-t border-x overflow-hidden safe-area-left safe-area-right safe-area-top safe-area-bottom"
-                    style={{
-                      height: "calc(100dvh - 4.5rem)",
-                      borderColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
-                      backgroundColor: "color-mix(in srgb, var(--ink-deep) 97%, var(--ink-mid))",
-                    }}
-                  >
-                    <div className="h-full min-h-0 flex flex-col overflow-hidden">
-                      <div className="sticky top-0 z-10 border-b safe-area-top" style={{
-                        "--safe-area-top-offset": "10px",
-                        borderBottomColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
-                        backgroundColor: "color-mix(in srgb, var(--ink-deep) 97%, var(--ink-mid))",
-                      } as React.CSSProperties}>
-                        <div className="px-3 py-2.5">
-                          <div className="flex items-center justify-between gap-2">
-                            <h2 className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--mist-light)" }}>
-                              New Workout Log
-                            </h2>
-                            <button
-                              type="button"
-                              onClick={() => setMobileLogFabOpen(false)}
-                              className="h-8 w-8 rounded-md border text-sm"
-                              style={{
-                                borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                                color: "var(--mist-light)",
-                                backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
-                              }}
-                              aria-label="Close workout logger chooser"
-                            >
-                              x
-                            </button>
-                          </div>
-                        </div>
-                        <div className="px-3 py-2.5 border-t" style={{ borderTopColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)" }}>
-                          <input
-                            type="text"
-                            value={mobileLogFabSearchQuery}
-                            onChange={(event) => setMobileLogFabSearchQuery(event.target.value)}
-                            placeholder="Search exercises"
-                            className="h-8 w-full rounded-md border px-2.5 text-sm outline-none"
-                            style={{
-                              borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                              backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
-                              color: "var(--cloud-white)",
-                            }}
-                          />
-                          <div className="mt-2 grid grid-cols-2 gap-2">
-                            <select
-                              value={mobileLogFabCategory}
-                              onChange={(event) => setMobileLogFabCategory(event.target.value)}
-                              className="h-8 rounded-md border px-2 text-xs outline-none"
-                              style={{
-                                borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                                backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
-                                color: "var(--cloud-white)",
-                              }}
-                              aria-label="Filter by category"
-                            >
-                              {mobileFabCategoryOptions.map((category) => (
-                                <option key={`mobile-fab-category-${category}`} value={category}>
-                                  {category === "all" ? "All categories" : category}
-                                </option>
-                              ))}
-                            </select>
-                            <select
-                              value={mobileLogFabSort}
-                              onChange={(event) => setMobileLogFabSort(event.target.value as "recent" | "oldest" | "name-az")}
-                              className="h-8 rounded-md border px-2 text-xs outline-none"
-                              style={{
-                                borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                                backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
-                                color: "var(--cloud-white)",
-                              }}
-                              aria-label="Sort exercises"
-                            >
-                              <option value="recent">Recent first</option>
-                              <option value="oldest">Oldest first</option>
-                              <option value="name-az">Name A-Z</option>
-                            </select>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div
-                        className="min-h-0 flex-1 overflow-y-auto scrollbar-hide pb-[max(env(safe-area-inset-bottom,0px),12px)]"
-                        style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain", touchAction: "pan-y" }}
-                      >
-                        {filteredMobileLogFabRows.length === 0 ? (
-                          <div className="px-3 py-4 text-center text-xs" style={{ color: "var(--text-muted)" }}>
-                            No exercises match your search or filters.
-                          </div>
-                        ) : (
-                          filteredMobileLogFabRows.map((row) => (
-                            <button
-                              key={`mobile-log-fab-row-${row.exerciseId}`}
-                              type="button"
-                              className="block w-full px-3 py-2.5 text-left"
-                              style={{ borderTop: "1px solid color-mix(in srgb, var(--ink-light) 72%, transparent)" }}
-                              onClick={() => {
-                                const pathId = `${row.exerciseId}-quick`;
-                                const href = `/dashboard/train/input/${encodeURIComponent(pathId)}?prefillExerciseId=${encodeURIComponent(row.exerciseId)}&prefillExercise=${encodeURIComponent(row.exerciseName)}&prefillProgression=${encodeURIComponent(row.progression)}&prefillVariant=${encodeURIComponent(row.variant || "")}`;
-                                setMobileLogFabOpen(false);
-                                router.push(href);
-                              }}
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <p className="text-sm font-semibold leading-tight" style={{ color: row.date ? "var(--cloud-white)" : "var(--text-muted)" }}>
-                                  {row.exerciseName}
-                                </p>
-                                <span className="shrink-0 text-[11px]" style={{ color: "var(--text-muted)" }}>
-                                  {row.date ? formatRelativeRecentDate(row.date) : "Never"}
-                                </span>
-                              </div>
-                              {row.date ? (
-                                <p className="mt-0.5 text-[11px] italic" style={{ color: "var(--text-muted)" }}>
-                                  {`Recent: ${row.variant ? `${row.variant} ` : ""}${row.progression} ${row.exerciseName}`}
-                                </p>
-                              ) : null}
-                            </button>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  </motion.aside>
-                </>
-              ) : null}
-
-              {mobileExerciseDrawerExerciseId ? (
-                <>
-                    <motion.div
-                      key="mobile-exercise-drawer-backdrop"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-                      className="fixed inset-0 z-[235]"
-                      style={{ backgroundColor: "color-mix(in srgb, var(--void-black) 76%, transparent)" }}
-                      onClick={() => setMobileExerciseDrawerExerciseId(null)}
-                    />
-                    <motion.aside
-                      key="mobile-exercise-drawer-panel"
-                      initial={{ x: "100%" }}
-                      animate={{ x: "0%" }}
-                      exit={{ x: "100%" }}
-                      transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-                      className="fixed inset-y-0 right-0 z-[240] w-full border-l overflow-hidden safe-area-top safe-area-bottom safe-area-right"
-                      style={{
-                        borderLeftColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
-                        backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))",
-                      }}
-                    >
-                      <div className="h-full overflow-y-auto scrollbar-hide">
-                        <div className="sticky top-0 z-10 border-b px-3 py-2.5 safe-area-top" style={{
-                          "--safe-area-top-offset": "10px",
-                          borderBottomColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
-                          backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))",
-                        } as React.CSSProperties}>
-                          <div className="flex items-start gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setMobileExerciseDrawerExerciseId(null)}
-                              className="inline-flex h-9 w-9 items-center justify-center rounded-md"
-                              style={{
-                                color: "var(--mist-light)",
-                                backgroundColor: "transparent",
-                              }}
-                              aria-label="Back to exercise list"
-                            >
-                              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                              </svg>
-                            </button>
-                            <div className="min-w-0">
-                              <h3 className="truncate text-sm font-semibold" style={{ color: "var(--cloud-white)" }}>
-                                {selectedMobileExercise?.name || "Exercise"}
-                              </h3>
-                              <p className="mt-0.5 text-[9px] uppercase tracking-[0.1em]" style={{ color: "var(--mist-light)" }}>
-                                Workout History
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div>
-                          {selectedMobileExerciseLogs.length === 0 ? (
-                            <div className="px-3 py-4 text-center text-xs" style={{ color: "var(--text-muted)" }}>
-                              No workout history for this exercise yet.
-                            </div>
-                          ) : (
-                            <>
-                              {selectedMobileExerciseLogs.map((log) => {
-                              const tierName = selectedMobileExercise?.tiers.find((tier) => tier.level === log.level)?.name ?? `Lv ${log.level}`;
-                              const variationValue = log.variant?.trim() || "-";
-                              const modValue = log.modifier?.trim() || "-";
-                              const notesValue = log.notes?.trim() || "-";
-                              const weightValues = [log.weight1, log.weight2, log.weight3]
-                                .filter((value): value is number => value != null)
-                                .map((value) => `${value} kg`);
-                              const repsValues = [log.reps1, log.reps2, log.reps3]
-                                .filter((value): value is number => value != null)
-                                .map((value) => String(value));
-                              const timedValues = [log.holdTime, log.holdTime2, log.holdTime3]
-                                .filter((value): value is number => value != null)
-                                .map((value) => `${value}s`)
-                                .join(", ");
-                              const hasWeightValues = weightValues.length > 0;
-                              const hasTimedValues = Boolean(timedValues);
-                              const repsFallback = log.reps != null ? String(log.reps) : "";
-                              const displayedReps = repsValues.length > 0 ? repsValues : repsFallback ? [repsFallback] : [];
-                              const alignedMetricRowCount = Math.max(weightValues.length, displayedReps.length, 1);
-                              const alignedMetricRows = Array.from({ length: alignedMetricRowCount }, (_, index) => ({
-                                weight: weightValues[index] ?? "-",
-                                reps: displayedReps[index] ?? "-",
-                              }));
-                              const leftDetailRows = [
-                                { label: "Variation:", value: variationValue, valueColor: "var(--mountain-blue-glow)" },
-                                { label: "Mod:", value: modValue, valueColor: "var(--gold-glow)" },
-                                { label: "Notes:", value: notesValue, valueColor: "var(--text-secondary)" },
-                              ];
-                              const alignedDetailRowCount = Math.max(leftDetailRows.length, alignedMetricRows.length);
-                              return (
-                                <article
-                                  key={`mobile-drawer-log-${log.id}`}
-                                  className="px-3 py-2.5"
-                                  style={{ borderTop: "1px solid color-mix(in srgb, var(--ink-light) 72%, transparent)" }}
-                                >
-                                  <div className="flex items-start justify-between gap-2">
-                                    <p className="text-sm font-semibold leading-tight" style={{ color: "var(--jade-light)" }}>
-                                      {tierName}
-                                    </p>
-                                    <span className="shrink-0 text-[11px]" style={{ color: "var(--text-muted)" }}>
-                                      {formatRelativeRecentDate(log.createdAt)}
-                                    </span>
-                                  </div>
-                                  <div className="mt-1.5 space-y-0.5 text-[11px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-                                    {Array.from({ length: alignedDetailRowCount }, (_, index) => {
-                                      const left = leftDetailRows[index];
-                                      const metric = alignedMetricRows[index] ?? { weight: "-", reps: "-" };
-                                      return (
-                                        <div key={`detail-row-${log.id}-${index}`} className="grid grid-cols-2 gap-x-3">
-                                          <div className="min-w-0 truncate">
-                                            {left ? (
-                                              <>
-                                                <span style={{ color: "var(--text-muted)" }}>{left.label}</span>{" "}
-                                                <span style={{ color: left.valueColor }}>{left.value}</span>
-                                              </>
-                                            ) : (
-                                              <span aria-hidden="true">&nbsp;</span>
-                                            )}
-                                          </div>
-                                          <div className="min-w-0 grid grid-cols-2 gap-x-3">
-                                            <span className="truncate" style={{ color: "var(--mountain-blue-glow)" }}>
-                                              <span style={{ color: "var(--text-muted)" }}>Weight:</span> {metric.weight}
-                                            </span>
-                                            <span className="truncate" style={{ color: "var(--forest)" }}>
-                                              <span style={{ color: "var(--text-muted)" }}>Reps:</span> {metric.reps}
-                                            </span>
-                                          </div>
-                                        </div>
-                                      );
-                                    })}
-
-                                    {hasTimedValues && !hasWeightValues ? (
-                                      <div className="grid grid-cols-2 gap-x-3">
-                                        <div aria-hidden="true">&nbsp;</div>
-                                        <div className="min-w-0 truncate">
-                                          <span style={{ color: "var(--mist-light)" }}>Timed:</span>{" "}
-                                          <span style={{ color: "var(--text-secondary)" }}>{timedValues}</span>
-                                        </div>
-                                      </div>
-                                    ) : null}
-                                  </div>
-                                </article>
-                              );
-                              })}
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </motion.aside>
-                </>
-              ) : null}
-              </AnimatePresence>
               </>
             ) : (
               <>
-                <section
-                  className="w-full rounded-2xl relative overflow-hidden"
-                  style={{
-                    border: "1px solid color-mix(in srgb, var(--jade-glow) 30%, var(--border))",
-                    background: "linear-gradient(160deg, color-mix(in srgb, var(--ink-deep) 96%, transparent) 0%, color-mix(in srgb, var(--ink-mid) 90%, transparent) 100%)",
-                    boxShadow: "0 0 0 1px color-mix(in srgb, var(--jade-glow) 10%, transparent), var(--shadow-elev-1)",
-                  }}
-                >
-                  <div
-                    className="flex flex-wrap items-center justify-between gap-2.5 px-3 py-2.5 border-b"
-                    style={{
-                      borderColor: "color-mix(in srgb, var(--jade-glow) 30%, var(--border))",
-                      backgroundColor: "color-mix(in srgb, var(--jade-glow) 9%, var(--ink-dark))",
-                    }}
-                  >
-                    <span
-                      className="text-[11px] font-semibold uppercase tracking-[0.09em] shrink-0"
-                      style={{ color: "var(--jade-light)" }}
-                    >
-                      Friends Scope
-                    </span>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const href = targetUserId
-                          ? `${DASHBOARD_ROUTES.trainingLogHistory}?targetUserId=${encodeURIComponent(targetUserId)}`
-                          : DASHBOARD_ROUTES.trainingLogHistory;
-                        router.push(href);
-                      }}
-                      className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-[12px] font-semibold transition-all duration-150 hover:scale-[1.02] active:scale-[0.98]"
-                      style={{
-                        color: "var(--cloud-white)",
-                        borderColor: "color-mix(in srgb, var(--jade-glow) 25%, var(--border))",
-                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 84%, var(--ink-deep))",
-                      }}
-                    >
-                      <span>Open history page</span>
-                      <span aria-hidden="true" className="text-[13px] leading-none">↗</span>
-                    </button>
-                  </div>
-
-                  <div className="px-3 py-3">
-                    <div className="space-y-1.5">
-                      <label className="block text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--jade-light)" }}>
-                        View friends
-                      </label>
-                      <select
-                        value={activeUserId || userId}
-                        onChange={(event) => handleUserScopeChange(event.target.value)}
-                        className="min-w-[240px] rounded-md border px-3 py-2 text-[15px] font-medium outline-none"
-                        style={{
-                          borderColor: "color-mix(in srgb, var(--jade-glow) 25%, var(--border))",
-                          backgroundColor: "color-mix(in srgb, var(--ink-mid) 84%, var(--ink-deep))",
-                          color: "var(--cloud-white)",
-                        }}
-                      >
-                        {orderedVisibleUsers.length === 0 ? (
-                          <option value={userId}>{user?.name || "Me"}</option>
-                        ) : (
-                          orderedVisibleUsers.map((u) => (
-                            <option key={u.id} value={u.id}>
-                              {u.id === userId ? `* ${u.name || u.username}` : (u.name || u.username)}
-                            </option>
-                          ))
-                        )}
-                      </select>
-                    </div>
-                  </div>
-                </section>
-
                 <div className="nyaa-history-table-shell">
                   <MemoTrainingLogTable
                     exercises={exercises}
@@ -1012,6 +619,348 @@ export default function HistoryPage() {
           </>
         )}
       </div>
-    </PageLayout>
+      </PageLayout>
+
+      <AnimatePresence>
+        {isMobile && mobileLogFabOpen ? (
+          <>
+            <motion.div
+              key="train-log-fab-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+              className="fixed inset-0 z-[236]"
+              style={{ backgroundColor: "color-mix(in srgb, var(--void-black) 74%, transparent)" }}
+              onClick={() => setMobileLogFabOpen(false)}
+            />
+            <motion.aside
+              key="train-log-fab-sheet"
+              initial={{ y: "100%" }}
+              animate={{ y: "0%" }}
+              exit={{ y: "100%" }}
+              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+              className="fixed inset-x-0 bottom-0 z-[238] rounded-t-3xl border-t border-x overflow-hidden safe-area-left safe-area-right safe-area-top safe-area-bottom"
+              style={{
+                top: "max(env(safe-area-inset-top,0px),0.5rem)",
+                borderColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
+                backgroundColor: "color-mix(in srgb, var(--ink-deep) 97%, var(--ink-mid))",
+              }}
+            >
+              <div className="h-full min-h-0 flex flex-col overflow-hidden">
+                <div className="sticky top-0 z-10 border-b safe-area-top" style={{
+                  "--safe-area-top-offset": "10px",
+                  borderBottomColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
+                  backgroundColor: "color-mix(in srgb, var(--ink-deep) 97%, var(--ink-mid))",
+                } as React.CSSProperties}>
+                  <div className="px-3 py-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <h2 className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--mist-light)" }}>
+                        New Workout Log
+                      </h2>
+                      <button
+                        type="button"
+                        onClick={() => setMobileLogFabOpen(false)}
+                        className="h-8 w-8 rounded-md border text-sm"
+                        style={{
+                          borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                          color: "var(--mist-light)",
+                          backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
+                        }}
+                        aria-label="Close workout logger chooser"
+                      >
+                        x
+                      </button>
+                    </div>
+                  </div>
+                  <div className="px-3 py-2.5 border-t" style={{ borderTopColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)" }}>
+                    <input
+                      type="text"
+                      value={mobileLogFabSearchQuery}
+                      onChange={(event) => setMobileLogFabSearchQuery(event.target.value)}
+                      placeholder="Search exercises"
+                      className="h-8 w-full rounded-md border px-2.5 text-sm outline-none"
+                      style={{
+                        borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
+                        color: "var(--cloud-white)",
+                      }}
+                    />
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      <select
+                        value={mobileLogFabCategory}
+                        onChange={(event) => setMobileLogFabCategory(event.target.value)}
+                        className="h-8 rounded-md border px-2 text-xs outline-none"
+                        style={{
+                          borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                          backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
+                          color: "var(--cloud-white)",
+                        }}
+                        aria-label="Filter by category"
+                      >
+                        {mobileFabCategoryOptions.map((category) => (
+                          <option key={`mobile-fab-category-${category}`} value={category}>
+                            {category === "all" ? "All categories" : category}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        value={mobileLogFabSort}
+                        onChange={(event) => setMobileLogFabSort(event.target.value as "recent" | "oldest" | "name-az")}
+                        className="h-8 rounded-md border px-2 text-xs outline-none"
+                        style={{
+                          borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                          backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
+                          color: "var(--cloud-white)",
+                        }}
+                        aria-label="Sort exercises"
+                      >
+                        <option value="recent">Recent first</option>
+                        <option value="oldest">Oldest first</option>
+                        <option value="name-az">Name A-Z</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  data-mobile-scroll-container="true"
+                  className="min-h-0 flex-1 overflow-y-auto scrollbar-hide overflow-x-hidden px-2 pb-[calc(env(safe-area-inset-bottom,0px)+5rem)]"
+                  style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorY: "auto", touchAction: "pan-y" }}
+                >
+                  {filteredMobileLogFabRows.length === 0 ? (
+                    <div className="px-3 py-4 text-center text-xs" style={{ color: "var(--text-muted)" }}>
+                      No exercises match your search or filters.
+                    </div>
+                  ) : (
+                    filteredMobileLogFabRows.map((row) => (
+                      <button
+                        key={`mobile-log-fab-row-${row.exerciseId}`}
+                        type="button"
+                        className="mx-1 my-0.5 block w-[calc(100%-0.5rem)] rounded-md px-3 py-2.5 text-left"
+                        style={{
+                          borderTop: "1px solid color-mix(in srgb, var(--ink-light) 72%, transparent)",
+                          backgroundColor: "transparent",
+                        }}
+                        onClick={() => {
+                          const pathId = `${row.exerciseId}-quick`;
+                          const href = `/dashboard/train/input/${encodeURIComponent(pathId)}?prefillExerciseId=${encodeURIComponent(row.exerciseId)}&prefillExercise=${encodeURIComponent(row.exerciseName)}&prefillProgression=${encodeURIComponent(row.progression)}&prefillVariant=${encodeURIComponent(row.variant || "")}`;
+                          setMobileLogFabOpen(false);
+                          router.push(href);
+                        }}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-sm font-semibold leading-tight" style={{ color: getRecentExerciseTextColor(row.date) }}>
+                            {row.exerciseName}
+                          </p>
+                          <span className="shrink-0 text-[11px]" style={{ color: "var(--text-muted)" }}>
+                            {row.date ? formatRelativeRecentDate(row.date) : "Never"}
+                          </span>
+                        </div>
+                        {row.date ? (
+                          <p className="mt-0.5 text-[11px] italic" style={{ color: "var(--text-muted)" }}>
+                            {`Recent: ${row.variant ? `${row.variant} ` : ""}${row.progression} ${row.exerciseName}`}
+                          </p>
+                        ) : null}
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            </motion.aside>
+          </>
+        ) : null}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isMobile && mobileExerciseDrawerExerciseId ? (
+          <>
+            <motion.div
+              key="mobile-exercise-drawer-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+              className="fixed inset-0 z-[235]"
+              style={{ backgroundColor: "color-mix(in srgb, var(--void-black) 76%, transparent)" }}
+              onClick={() => setMobileExerciseDrawerExerciseId(null)}
+            />
+            <motion.aside
+              key="mobile-exercise-drawer-panel"
+              initial={{ x: "100%" }}
+              animate={{ x: "0%" }}
+              exit={{ x: "100%" }}
+              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+              className="fixed inset-y-0 right-0 z-[240] w-full border-l overflow-hidden safe-area-top safe-area-bottom safe-area-right"
+              style={{
+                borderLeftColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
+                backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))",
+              }}
+            >
+              <div
+                data-mobile-scroll-container="true"
+                className="h-full overflow-y-auto scrollbar-hide overflow-x-hidden pb-[calc(env(safe-area-inset-bottom,0px)+5rem)]"
+                style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorY: "auto", touchAction: "pan-y" }}
+              >
+                <div className="sticky top-0 z-10 border-b px-3 py-2.5 safe-area-top" style={{
+                  "--safe-area-top-offset": "10px",
+                  borderBottomColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
+                  backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))",
+                } as React.CSSProperties}>
+                  <div className="flex items-start gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setMobileExerciseDrawerExerciseId(null)}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-md"
+                      style={{
+                        color: "var(--mist-light)",
+                        backgroundColor: "transparent",
+                      }}
+                      aria-label="Back to exercise list"
+                    >
+                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    <div className="min-w-0">
+                      <h3
+                        className="truncate text-sm font-semibold"
+                        style={{ color: getRecentExerciseTextColor(selectedMobileExerciseLogs[0]?.createdAt, true) }}
+                      >
+                        {selectedMobileExercise?.name || "Exercise"}
+                      </h3>
+                      <p className="mt-0.5 text-[9px] uppercase tracking-[0.1em]" style={{ color: "var(--mist-light)" }}>
+                        Workout History
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  {selectedMobileExerciseLogs.length === 0 ? (
+                    <div className="px-3 py-4 text-center text-xs" style={{ color: "var(--text-muted)" }}>
+                      No workout history for this exercise yet.
+                    </div>
+                  ) : (
+                    <>
+                      {selectedMobileExerciseLogs.map((log) => {
+                      const tierName = selectedMobileExercise?.tiers.find((tier) => tier.level === log.level)?.name ?? `Lv ${log.level}`;
+                      const variationValue = log.variant?.trim() || "-";
+                      const modValue = log.modifier?.trim() || "-";
+                      const notesValue = log.notes?.trim() || "-";
+                      const weightValues = [log.weight1, log.weight2, log.weight3]
+                        .filter((value): value is number => value != null)
+                        .map((value) => `${value} kg`);
+                      const repsValues = [log.reps1, log.reps2, log.reps3]
+                        .filter((value): value is number => value != null)
+                        .map((value) => String(value));
+                      const timedValues = [log.holdTime, log.holdTime2, log.holdTime3]
+                        .filter((value): value is number => value != null)
+                        .map((value) => `${value}s`)
+                        .join(", ");
+                      const hasWeightValues = weightValues.length > 0;
+                      const hasTimedValues = Boolean(timedValues);
+                      const repsFallback = log.reps != null ? String(log.reps) : "";
+                      const displayedReps = repsValues.length > 0 ? repsValues : repsFallback ? [repsFallback] : [];
+                      const alignedMetricRowCount = Math.max(weightValues.length, displayedReps.length, 1);
+                      const alignedMetricRows = Array.from({ length: alignedMetricRowCount }, (_, index) => ({
+                        weight: weightValues[index] ?? "-",
+                        reps: displayedReps[index] ?? "-",
+                      }));
+                      const leftDetailRows = [
+                        { label: "Variation:", value: variationValue, valueColor: "var(--mountain-blue-glow)" },
+                        { label: "Mod:", value: modValue, valueColor: "var(--gold-glow)" },
+                        { label: "Notes:", value: notesValue, valueColor: "var(--text-secondary)" },
+                      ];
+                      const alignedDetailRowCount = Math.max(leftDetailRows.length, alignedMetricRows.length);
+                      return (
+                        <article
+                          key={`mobile-drawer-log-${log.id}`}
+                          className="px-3 py-2.5"
+                          style={{ borderTop: "1px solid color-mix(in srgb, var(--ink-light) 72%, transparent)" }}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-sm font-semibold leading-tight" style={{ color: "var(--jade-light)" }}>
+                              {tierName}
+                            </p>
+                            <span className="shrink-0 text-[11px]" style={{ color: "var(--text-muted)" }}>
+                              {formatRelativeRecentDate(log.createdAt)}
+                            </span>
+                          </div>
+                          <div className="mt-1.5 space-y-0.5 text-[11px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                            {Array.from({ length: alignedDetailRowCount }, (_, index) => {
+                              const left = leftDetailRows[index];
+                              const metric = alignedMetricRows[index] ?? { weight: "-", reps: "-" };
+                              return (
+                                <div key={`detail-row-${log.id}-${index}`} className="grid grid-cols-2 gap-x-3">
+                                  <div className="min-w-0 truncate">
+                                    {left ? (
+                                      <>
+                                        <span style={{ color: "var(--text-muted)" }}>{left.label}</span>{" "}
+                                        <span style={{ color: left.valueColor }}>{left.value}</span>
+                                      </>
+                                    ) : (
+                                      <span aria-hidden="true">&nbsp;</span>
+                                    )}
+                                  </div>
+                                  <div className="min-w-0 grid grid-cols-2 gap-x-3">
+                                    <span className="truncate" style={{ color: "var(--mountain-blue-glow)" }}>
+                                      <span style={{ color: "var(--text-muted)" }}>Weight:</span> {metric.weight}
+                                    </span>
+                                    <span className="truncate" style={{ color: "var(--forest)" }}>
+                                      <span style={{ color: "var(--text-muted)" }}>Reps:</span> {metric.reps}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+
+                            {hasTimedValues && !hasWeightValues ? (
+                              <div className="grid grid-cols-2 gap-x-3">
+                                <div aria-hidden="true">&nbsp;</div>
+                                <div className="min-w-0 truncate">
+                                  <span style={{ color: "var(--mist-light)" }}>Timed:</span>{" "}
+                                  <span style={{ color: "var(--text-secondary)" }}>{timedValues}</span>
+                                </div>
+                              </div>
+                            ) : null}
+                          </div>
+                        </article>
+                      );
+                      })}
+                    </>
+                  )}
+                </div>
+              </div>
+            </motion.aside>
+          </>
+        ) : null}
+      </AnimatePresence>
+
+      {isMobile && !mobileExerciseDrawerExerciseId && !mobileLogFabOpen ? (
+        <motion.button
+          key="train-log-fab"
+          type="button"
+          onClick={() => setMobileLogFabOpen(true)}
+          initial={{ opacity: 0, y: 18, scale: 0.92 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 18, scale: 0.92 }}
+          transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+          className="fixed right-[max(env(safe-area-inset-right,0px),0.95rem)] z-[210] flex h-12 w-12 items-center justify-center rounded-2xl border backdrop-blur-sm"
+          style={{
+            bottom: "var(--mobile-nav-offset, calc(env(safe-area-inset-bottom,0px) + 4.85rem))",
+            borderColor: "color-mix(in srgb, var(--accent) 32%, var(--ink-light))",
+            backgroundColor: "color-mix(in srgb, var(--accent) 40%, var(--ink-mid))",
+            color: "var(--cloud-white)",
+            boxShadow: "0 8px 18px color-mix(in srgb, var(--accent) 18%, transparent)",
+          }}
+          aria-label="Log workout"
+        >
+          <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.9}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
+          </svg>
+        </motion.button>
+      ) : null}
+    </>
   );
 }
