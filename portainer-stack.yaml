@@ -19,7 +19,7 @@
 services:
   # ── Application ──────────────────────────────
   app:
-    image: ghcr.io/alex4lifesz-code/immortals_log:3.0.2
+    image: "ghcr.io/alex4lifesz-code/immortals_log@sha256:2a50bea78d1219896b243417b390288f5eadad629f81f6502ba41459bdf58de0"
     pull_policy: always
     container_name: wuxia-cultivation-tracker
     restart: always
