@@ -5,7 +5,8 @@
 
 services:
   app:
-    image: ghcr.io/alex4lifesz-code/immortals_log:${APP_VERSION:-ver9}
+    image: ghcr.io/alex4lifesz-code/immortals_log:3.0.2
+    pull_policy: always
     container_name: wuxia-cultivation-tracker
     restart: always
     ports:
@@ -52,7 +53,7 @@ services:
         tag: "immortals-log-{{.Name}}"
     labels:
       com.centurylabs.description: "Immortals Log"
-      com.centurylabs.version: "${APP_VERSION:-ver9}"
+      com.centurylabs.version: "3.0.2"
       com.centurylabs.maintainer: "Century Labs"
       com.centurylabs.environment: "production"
 
