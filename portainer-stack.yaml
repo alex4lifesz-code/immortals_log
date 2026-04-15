@@ -20,7 +20,7 @@ services:
     environment:
       NODE_ENV: production
       DATABASE_URL: file:/app/data/cultivation.db
-      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in Portainer}
+      JWT_SECRET: ${JWT_SECRET:-change-this-jwt-secret-in-portainer}
       NEXT_TELEMETRY_DISABLED: "1"
       PORT: "3000"
       HOSTNAME: 0.0.0.0
