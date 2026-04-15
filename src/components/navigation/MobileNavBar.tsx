@@ -621,7 +621,7 @@ function MobileNavBar({
         {/* ── Main Bottom Navigation Bar ── */}
         <nav
           data-mobile-bottom-nav="true"
-          className="relative flex items-end justify-around gap-0.5 border-t border-[#32353b] bg-[#2b2d31] px-1 pb-1.5 safe-area-bottom"
+          className="relative flex items-end justify-around gap-0.5 border-t border-[#32353b] bg-[#23252b]/95 px-1 pt-1 pb-1.5 shadow-[0_-10px_28px_rgba(0,0,0,0.4)] backdrop-blur-md safe-area-bottom"
         >
           <div className="absolute inset-x-0 top-0 h-px bg-[#32353b]" />
 
