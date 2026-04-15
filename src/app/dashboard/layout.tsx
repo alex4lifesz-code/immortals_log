@@ -14,6 +14,7 @@ import DiscordFriendsRail from "@/components/navigation/DiscordFriendsRail";
 import ConnectivityBanner from "@/components/system/ConnectivityBanner";
 import AtmosphericBackground from "@/components/atmosphere/AtmosphericBackground";
 import { useIncomingFriendRequestsCount } from "@/hooks/useIncomingFriendRequestsCount";
+import { SystemBarsProvider } from "@/providers/SystemBarsProvider";
 import { DASHBOARD_ROUTES } from "@/lib/navigation";
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
@@ -37,6 +38,10 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     || pathname?.startsWith(`${DASHBOARD_ROUTES.rankUp}/`)
     || pathname === DASHBOARD_ROUTES.exercises
     || pathname?.startsWith(`${DASHBOARD_ROUTES.exercises}/`)
+    || pathname === DASHBOARD_ROUTES.profile
+    || pathname?.startsWith(`${DASHBOARD_ROUTES.profile}/`)
+    || pathname === "/dashboard/mobile/profile"
+    || pathname?.startsWith("/dashboard/mobile/profile/")
     || false;
   const mobileRootScrollEnabled = !(isMobile && isFriendDrawerRoute);
   const showMobileNav = !isWorkoutInputFullscreen && !isTrainExerciseHistoryOpen;
@@ -140,7 +145,9 @@ export default function DashboardLayout({
   return (
     <AppProvider>
       <DisplaySettingsProvider>
-        <DashboardContent>{children}</DashboardContent>
+        <SystemBarsProvider>
+          <DashboardContent>{children}</DashboardContent>
+        </SystemBarsProvider>
       </DisplaySettingsProvider>
     </AppProvider>
   );

@@ -89,8 +89,8 @@ export default function MobileCheckinPage() {
               }}
             >
               <div
-                className="h-[calc(100dvh-5rem)] min-h-0 overflow-y-auto scrollbar-hide"
-                style={{ overscrollBehaviorY: "auto", touchAction: "pan-y" }}
+                className="min-h-0 overflow-y-auto scrollbar-hide"
+                style={{ height: "calc(var(--app-viewport-height) - 5rem)", overscrollBehaviorY: "auto", touchAction: "pan-y" }}
               >
                 <div className="sticky top-0 z-20 safe-area-top" style={{ backgroundColor: "color-mix(in srgb, var(--ink-deep) 94%, var(--ink-mid))" }}>
                   <div

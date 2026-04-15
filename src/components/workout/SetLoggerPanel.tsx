@@ -636,10 +636,11 @@ export function SetLoggerPanel({
     >
       <div
         className={isMobile
-          ? `relative flex h-[100dvh] min-h-0 flex-col overflow-hidden overscroll-contain rounded-2xl border pt-[max(env(safe-area-inset-top,0px),12px)] ${isCompact ? 'px-2 pb-2' : 'px-3 pb-3 sm:px-4 sm:pb-4'}`
+          ? `relative flex min-h-0 flex-col overflow-hidden overscroll-contain rounded-2xl border pt-[max(env(safe-area-inset-top,0px),12px)] ${isCompact ? 'px-2 pb-2' : 'px-3 pb-3 sm:px-4 sm:pb-4'}`
           : `relative overflow-hidden rounded-lg border shadow-[var(--shadow-elev-1)] ${isCompact ? 'p-2' : 'p-3 sm:p-4'}`
         }
         style={{
+          height: isMobile ? "var(--app-viewport-height)" : undefined,
           background: "color-mix(in srgb, var(--ink-deep) 86%, transparent)",
           borderColor: `${diffStyle.glowColor}35`,
           boxShadow: isMobile

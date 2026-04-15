@@ -1,27 +1,27 @@
 # ============================================
 # Immortals Log — Docker Compose
-# Production-grade deployment for Portainer
+# Works locally and in Portainer
 # ============================================
 
 services:
   app:
-    image: "ghcr.io/alex4lifesz-code/immortals_log@sha256:2a50bea78d1219896b243417b390288f5eadad629f81f6502ba41459bdf58de0"
+    image: "${IMAGE_NAME:-ghcr.io/alex4lifesz-code/immortals_log}:${IMAGE_TAG:-latest}"
     pull_policy: always
-    container_name: wuxia-cultivation-tracker
-    restart: always
+    restart: unless-stopped
     ports:
       - "${APP_PORT:-3000}:3000"
     environment:
-      - NODE_ENV=production
-      - DATABASE_URL=file:/app/data/cultivation.db
-      - JWT_SECRET=${JWT_SECRET}
-      - NEXT_TELEMETRY_DISABLED=1
+      NODE_ENV: production
+      DATABASE_URL: file:/app/data/cultivation.db
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET before deploy}
+      NEXT_TELEMETRY_DISABLED: "1"
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+      RESET_DB: ${RESET_DB:-false}
     volumes:
       - wuxia_data:/app/data
     tmpfs:
       - /tmp:noexec,nosuid,size=64M
-    networks:
-      - wuxia_network
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/api/health"]
       interval: 30s
@@ -32,43 +32,12 @@ services:
     security_opt:
       - no-new-privileges:true
     read_only: true
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: 512M
-        reservations:
-          cpus: "0.25"
-          memory: 128M
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 5
-        window: 120s
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "5"
-        tag: "immortals-log-{{.Name}}"
-    labels:
-      com.centurylabs.description: "Immortals Log"
-      com.centurylabs.version: "3.0.2"
-      com.centurylabs.maintainer: "Century Labs"
-      com.centurylabs.environment: "production"
 
 volumes:
   wuxia_data:
     driver: local
-    name: wuxia_cultivation_data
-    labels:
-      com.centurylabs.description: "Persistent SQLite database storage"
-
-networks:
-  wuxia_network:
-    driver: bridge
-    name: wuxia_network
-    driver_opts:
-      com.docker.network.bridge.enable_icc: "false"
-    labels:
-      com.centurylabs.description: "Internal application network"

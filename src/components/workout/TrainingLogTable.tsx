@@ -740,6 +740,24 @@ function TrainingLogTable({
   const desktopDateInputRef = useRef<HTMLInputElement | null>(null);
   const exerciseDropdownListRef = useRef<HTMLDivElement | null>(null);
 
+  const syncExerciseDropdownPosition = useCallback(() => {
+    if (typeof window === "undefined") return;
+
+    const input = exerciseInputRef.current;
+    if (!input) return;
+
+    const rect = input.getBoundingClientRect();
+    const viewport = window.visualViewport;
+    const viewportWidth = Math.round(viewport?.width ?? window.innerWidth);
+    const viewportTop = Math.round(viewport?.offsetTop ?? 0);
+    const viewportLeft = Math.round(viewport?.offsetLeft ?? 0);
+    const width = Math.max(180, Math.min(Math.round(rect.width), viewportWidth - 16));
+    const left = Math.max(8, Math.min(Math.round(rect.left + viewportLeft), viewportWidth - width - 8));
+    const top = Math.max(8, Math.round(rect.bottom + viewportTop));
+
+    setExerciseDropdownRect({ top, left, width });
+  }, []);
+
   const openExerciseHistoryFromMobileCard = useCallback((entry: UnifiedFlatLogEntry) => {
     const query = new URLSearchParams();
     if (historyTargetUserId) {
@@ -826,6 +844,37 @@ function TrainingLogTable({
       setMobileInputOpen(true);
     }
   }, [forceMobileInputOpen, isMobile]);
+
+  useEffect(() => {
+    if (!exerciseDropdownOpen) return;
+
+    const handleViewportRefresh = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        setExerciseDropdownOpen(false);
+        return;
+      }
+
+      syncExerciseDropdownPosition();
+    };
+
+    const visualViewport = window.visualViewport;
+    handleViewportRefresh();
+    window.addEventListener("resize", handleViewportRefresh);
+    window.addEventListener("orientationchange", handleViewportRefresh);
+    window.addEventListener("scroll", handleViewportRefresh, true);
+    document.addEventListener("visibilitychange", handleViewportRefresh);
+    visualViewport?.addEventListener("resize", handleViewportRefresh);
+    visualViewport?.addEventListener("scroll", handleViewportRefresh);
+
+    return () => {
+      window.removeEventListener("resize", handleViewportRefresh);
+      window.removeEventListener("orientationchange", handleViewportRefresh);
+      window.removeEventListener("scroll", handleViewportRefresh, true);
+      document.removeEventListener("visibilitychange", handleViewportRefresh);
+      visualViewport?.removeEventListener("resize", handleViewportRefresh);
+      visualViewport?.removeEventListener("scroll", handleViewportRefresh);
+    };
+  }, [exerciseDropdownOpen, syncExerciseDropdownPosition]);
 
   // Body scroll lock removed — mobile input is now in normal flow, not a modal.
 
@@ -2592,14 +2641,12 @@ function TrainingLogTable({
                                 value={exerciseSearchTerm}
                                 onFocus={() => {
                                   if (workoutInput.exerciseId) setExerciseSearchTerm("");
-                                  const rect = exerciseInputRef.current?.getBoundingClientRect();
-                                  if (rect) setExerciseDropdownRect({ top: rect.bottom + window.scrollY, left: rect.left + window.scrollX, width: rect.width });
+                                  syncExerciseDropdownPosition();
                                   setExerciseDropdownOpen(true);
                                 }}
                                 onClick={() => {
                                   if (workoutInput.exerciseId) setExerciseSearchTerm("");
-                                  const rect = exerciseInputRef.current?.getBoundingClientRect();
-                                  if (rect) setExerciseDropdownRect({ top: rect.bottom + window.scrollY, left: rect.left + window.scrollX, width: rect.width });
+                                  syncExerciseDropdownPosition();
                                   setExerciseDropdownOpen(true);
                                 }}
                                 onBlur={() => {
@@ -2940,14 +2987,12 @@ function TrainingLogTable({
                     value={exerciseSearchTerm}
                     onFocus={() => {
                       if (workoutInput.exerciseId) setExerciseSearchTerm("");
-                      const rect = exerciseInputRef.current?.getBoundingClientRect();
-                      if (rect) setExerciseDropdownRect({ top: rect.bottom + window.scrollY, left: rect.left + window.scrollX, width: rect.width });
+                      syncExerciseDropdownPosition();
                       setExerciseDropdownOpen(true);
                     }}
                     onClick={() => {
                       if (workoutInput.exerciseId) setExerciseSearchTerm("");
-                      const rect = exerciseInputRef.current?.getBoundingClientRect();
-                      if (rect) setExerciseDropdownRect({ top: rect.bottom + window.scrollY, left: rect.left + window.scrollX, width: rect.width });
+                      syncExerciseDropdownPosition();
                       setExerciseDropdownOpen(true);
                     }}
                     onBlur={() => {
@@ -4932,12 +4977,14 @@ function TrainingLogTable({
         createPortal(
           <div
             ref={exerciseDropdownListRef}
-            className="fixed z-[200] overflow-y-auto rounded border shadow-lg"
+            className="fixed z-[320] overflow-y-auto rounded border shadow-lg"
             style={{
               top: exerciseDropdownRect.top + 4,
               left: exerciseDropdownRect.left,
               width: exerciseDropdownRect.width,
-              maxHeight: "14rem",
+              maxWidth: "calc(100vw - 1rem)",
+              maxHeight: "min(14rem, calc(var(--app-viewport-height) - 1rem))",
+              overscrollBehavior: "contain",
               backgroundColor: "var(--surface)",
               borderColor: "var(--border)",
             }}

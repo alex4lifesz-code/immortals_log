@@ -580,7 +580,7 @@ export function InlineLogForm({
         </div>
 
         {useSetPanelLayout ? (
-          <div className={`pl-2 ${isMobile ? "flex min-h-[calc(100dvh-150px)] flex-col" : "space-y-2"}`}>
+          <div className={`pl-2 ${isMobile ? "flex flex-col" : "space-y-2"}`} style={isMobile ? { minHeight: "calc(var(--app-viewport-height) - 150px)" } : undefined}>
             <div className={isMobile ? "flex-1 min-h-0 overflow-y-auto pr-1 space-y-3" : "space-y-2"}>
             <div className="grid gap-2">
               <div className="grid gap-2 grid-cols-2">

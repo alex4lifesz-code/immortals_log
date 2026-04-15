@@ -1,122 +1,49 @@
 # ============================================
 # Immortals Log — Portainer Stack
-# Production deployment with Portainer agent
+# Paste into Portainer Stacks and deploy
 # ============================================
-#
-# Deploy via Portainer UI:
-#   Stacks → Add Stack → Upload or paste this file
-#   Set environment variables in the Portainer UI
-#
-# Required environment variables (set in Portainer):
-#   APP_PORT       — Host port for the application (default: 3000)
-#   JWT_SECRET     — Secret key for JWT token signing (generate: openssl rand -base64 32)
-#
-# Optional environment variables:
-#   RESET_DB       — Set to "true" to wipe and rebuild the database from scratch
-#                    (remove after first successful restart!)
+# Required environment variables in Portainer:
+#   JWT_SECRET   - strong random secret
+# Optional:
+#   APP_PORT     - defaults to 3000
+#   IMAGE_TAG    - defaults to latest
+#   RESET_DB     - set true only for a clean reset
 # ============================================
 
 services:
-  # ── Application ──────────────────────────────
   app:
-    image: "ghcr.io/alex4lifesz-code/immortals_log@sha256:2a50bea78d1219896b243417b390288f5eadad629f81f6502ba41459bdf58de0"
+    image: "ghcr.io/alex4lifesz-code/immortals_log:${IMAGE_TAG:-latest}"
     pull_policy: always
-    container_name: wuxia-cultivation-tracker
-    restart: always
+    restart: unless-stopped
     ports:
       - "${APP_PORT:-3000}:3000"
     environment:
-      - NODE_ENV=production
-      - DATABASE_URL=file:/app/data/cultivation.db
-      - JWT_SECRET=${JWT_SECRET}
-      - NEXT_TELEMETRY_DISABLED=1
-      - RESET_DB=${RESET_DB:-false}
+      NODE_ENV: production
+      DATABASE_URL: file:/app/data/cultivation.db
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in Portainer}
+      NEXT_TELEMETRY_DISABLED: "1"
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+      RESET_DB: ${RESET_DB:-false}
     volumes:
       - wuxia_data:/app/data
     tmpfs:
       - /tmp:noexec,nosuid,size=64M
-    networks:
-      - wuxia_internal
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-    stop_grace_period: 30s
     security_opt:
       - no-new-privileges:true
     read_only: true
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: 512M
-        reservations:
-          cpus: "0.25"
-          memory: 128M
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 5
-        window: 120s
     logging:
-      driver: "json-file"
+      driver: json-file
       options:
         max-size: "10m"
         max-file: "5"
-        tag: "immortals-log-{{.Name}}"
-    labels:
-      com.centurylabs.description: "Immortals Log"
-      com.centurylabs.version: "3.0.2"
-      com.centurylabs.maintainer: "Century Labs"
-      com.centurylabs.environment: "production"
-      # Portainer metadata
-      io.portainer.accesscontrol.teams: "developers"
-
-  # ── Portainer Agent ──────────────────────────
-  portainer-agent:
-    image: portainer/agent:2.24.1
-    container_name: wuxia-portainer-agent
-    restart: always
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /var/lib/docker/volumes:/var/lib/docker/volumes:ro
-    ports:
-      - "9001:9001"
-    networks:
-      - wuxia_internal
-    security_opt:
-      - no-new-privileges:true
-    deploy:
-      resources:
-        limits:
-          cpus: "0.25"
-          memory: 128M
-        reservations:
-          cpus: "0.1"
-          memory: 32M
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "5m"
-        max-file: "3"
-    labels:
-      com.centurylabs.description: "Portainer Agent for container management"
-      com.centurylabs.environment: "production"
 
 volumes:
   wuxia_data:
     driver: local
-    name: wuxia_cultivation_data
-    labels:
-      com.centurylabs.description: "Persistent SQLite database storage"
-
-networks:
-  wuxia_internal:
-    driver: bridge
-    name: wuxia_internal
-    driver_opts:
-      com.docker.network.bridge.enable_icc: "false"
-    labels:
-      com.centurylabs.description: "Internal application network"

@@ -428,7 +428,7 @@ function MobileNavBar({
               transition={{ duration: 0.18, ease: "easeOut" }}
               className="border-x border-t border-[#32353b] bg-[#2b2d31] px-2 pt-2 shadow-[0_-10px_26px_rgba(0,0,0,0.42)]"
               style={{
-                maxHeight: "calc(100dvh - 72px)",
+                maxHeight: "calc(var(--app-viewport-height) - 72px)",
                 overflowY: "auto",
                 WebkitOverflowScrolling: "touch",
               }}
@@ -662,19 +662,18 @@ function MobileNavBar({
             );
           })}
 
-          {/* More / Hamburger button */}
+          {/* Me page button */}
           <motion.button
             whileTap={{ scale: 0.9 }}
-            onClick={handleMenuToggle}
-            aria-label={menuOpen ? "Close Me menu" : "Open Me menu"}
-            aria-expanded={menuOpen || undefined}
+            onClick={() => handleNavigate(DASHBOARD_ROUTES.profile)}
+            aria-label="Open Me page"
             className={`relative flex min-h-[60px] min-w-[68px] flex-col items-center justify-center gap-0.5 rounded-md pt-2 pb-1.5 transition-colors ${
               isMeSectionActive ? "text-[#f2f3f5]" : "text-[#949ba4] active:text-[#dbdee1]"
             }`}
             style={{ WebkitTapHighlightColor: 'transparent' }}
           >
             <motion.div
-              animate={{ scale: menuOpen ? 1.05 : 1 }}
+              animate={{ scale: isMeSectionActive ? 1.05 : 1 }}
               transition={{ duration: 0.18 }}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
