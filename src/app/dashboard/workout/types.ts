@@ -30,6 +30,11 @@ export interface ProgressionModifier {
   notes: string;
 }
 
+export interface DynamicSetRow {
+  weight: string;
+  reps: string;
+}
+
 export interface ProgressionLog {
   id: string;
   level: number;
@@ -46,6 +51,7 @@ export interface ProgressionLog {
   modifier: string | null;
   variant: string | null;
   notes: string | null;
+  dynamicSetRows?: DynamicSetRow[];
   completed: boolean;
   createdAt: string;
 }

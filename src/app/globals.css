@@ -14,35 +14,35 @@
   --safe-area-inset-left: var(--safe-area-inset-left-raw);
   --app-viewport-height: 100dvh;
 
-  /* Core palette aligned to workout-history (Nyaa blue/green language) */
-  --void-black: #edf2f8;
-  --ink-deep: #ffffff;
-  --ink-dark: #f7f9fc;
-  --ink-mid: #eef3f9;
-  --ink-light: #c8d7ea;
-  --mist-dark: #627898;
-  --mist-mid: #4f6788;
-  --mist-light: #3b4f6b;
-  --mist-pale: #2a3f5f;
-  --cloud-white: #1f2f46;
-  --pure-white: #14243a;
+  /* Core palette aligned to the unified Discord canvas */
+  --void-black: #1e1f22;
+  --ink-deep: #2b2d31;
+  --ink-dark: #313338;
+  --ink-mid: #383a40;
+  --ink-light: #32353b;
+  --mist-dark: #949ba4;
+  --mist-mid: #b5bac1;
+  --mist-light: #dbdee1;
+  --mist-pale: #e3e5e8;
+  --cloud-white: #f2f3f5;
+  --pure-white: #ffffff;
 
   /* Accent colours */
-  --jade-deep: #d3ebe6;
-  --jade: #2f8f9d;
-  --jade-glow: #257986;
-  --jade-light: #1d6570;
-  --crimson-deep: #f6d9d9;
-  --crimson: #c94848;
-  --crimson-glow: #b23d3d;
-  --crimson-light: #9a3333;
-  --mountain-blue: #3d5ea8;
-  --mountain-blue-glow: #2e51a2;
-  --forest-deep: #dff1d0;
-  --forest: #6fa94c;
-  --gold-dim: #b79d52;
-  --gold: #a98f45;
-  --gold-glow: #927b39;
+  --jade-deep: #243d5f;
+  --jade: #5865f2;
+  --jade-glow: #7289da;
+  --jade-light: #8ea1e1;
+  --crimson-deep: #492728;
+  --crimson: #ed4245;
+  --crimson-glow: #ff5d60;
+  --crimson-light: #ff7b7d;
+  --mountain-blue: #00a8fc;
+  --mountain-blue-glow: #33b9ff;
+  --forest-deep: #1f4130;
+  --forest: #57f287;
+  --gold-dim: #7a6c2b;
+  --gold: #fee75c;
+  --gold-glow: #ffe982;
 
   /* Difficulty colors */
   --difficulty-green: #22c55e;
@@ -70,12 +70,12 @@
   --text-primary: var(--cloud-white);
   --text-secondary: var(--mist-light);
   --text-muted: var(--mist-dark);
-  --accent: var(--jade);
-  --accent-hover: var(--jade-glow);
-  --category-cali: #22c55e;
-  --category-gym: #f59e0b;
-  --category-yoga: #3b82f6;
-  --category-cardio: #ef4444;
+  --accent: var(--jade-glow);
+  --accent-hover: var(--jade-light);
+  --category-cali: #5865f2;
+  --category-gym: #fee75c;
+  --category-yoga: #57f287;
+  --category-cardio: #ed4245;
   --label-progression: #a855f7;
   --label-variant: #06b6d4;
   --link: color-mix(in srgb, var(--accent) 88%, var(--text-primary));
@@ -87,12 +87,12 @@
   --header-border: var(--nyaa-table-grid);
 
   /* Glow effects */
-  --glow-jade: 0 0 12px rgba(106, 168, 79, 0.2), 0 0 24px rgba(106, 168, 79, 0.1);
-  --glow-crimson: 0 0 12px rgba(201, 72, 72, 0.2), 0 0 24px rgba(201, 72, 72, 0.1);
-  --glow-gold: 0 0 12px rgba(169, 143, 69, 0.2), 0 0 24px rgba(169, 143, 69, 0.1);
-  --glow-blue: 0 0 12px rgba(46, 81, 162, 0.22), 0 0 24px rgba(46, 81, 162, 0.1);
-  --glow-subtle: 0 0 8px rgba(46, 81, 162, 0.12);
-  --glow-modal: 0 0 30px rgba(46, 81, 162, 0.22), 0 0 60px rgba(46, 81, 162, 0.1), inset 0 0 20px rgba(46, 81, 162, 0.05);
+  --glow-jade: 0 0 14px rgba(88, 101, 242, 0.36), 0 0 30px rgba(88, 101, 242, 0.18);
+  --glow-crimson: 0 0 14px rgba(237, 66, 69, 0.32), 0 0 30px rgba(237, 66, 69, 0.14);
+  --glow-gold: 0 0 14px rgba(254, 231, 92, 0.28), 0 0 30px rgba(254, 231, 92, 0.12);
+  --glow-blue: 0 0 14px rgba(0, 168, 252, 0.34), 0 0 30px rgba(0, 168, 252, 0.14);
+  --glow-subtle: 0 0 8px rgba(88, 101, 242, 0.22);
+  --glow-modal: 0 0 34px rgba(88, 101, 242, 0.4), 0 0 68px rgba(88, 101, 242, 0.22), inset 0 0 30px rgba(114, 137, 218, 0.08);
 
   /* Column colours for W/R differentiation */
   --col-weight: var(--mountain-blue-glow);
@@ -249,15 +249,23 @@
     --neon-glow: none;
     --neon-glow-strong: 0 0 8px color-mix(in srgb, var(--accent) 18%, transparent);
     --surface-panel: linear-gradient(
-      160deg,
-      color-mix(in srgb, var(--ink-deep) 94%, transparent) 0%,
-      color-mix(in srgb, var(--ink-dark) 90%, transparent) 100%
+      180deg,
+      color-mix(in srgb, var(--ink-deep) 98%, transparent) 0%,
+      color-mix(in srgb, var(--ink-dark) 94%, transparent) 100%
     );
     --surface-panel-strong: linear-gradient(
-      165deg,
-      color-mix(in srgb, var(--ink-deep) 96%, transparent) 0%,
+      180deg,
+      color-mix(in srgb, var(--ink-dark) 98%, transparent) 0%,
       color-mix(in srgb, var(--ink-mid) 92%, transparent) 100%
     );
+    --page-gutter-bg: var(--background);
+    --sidebar-canvas-bg: var(--page-gutter-bg);
+    --sidebar-canvas-card: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--ink-mid) 82%, var(--ink-deep)) 0%,
+      color-mix(in srgb, var(--ink-dark) 92%, var(--ink-deep)) 100%
+    );
+    --sidebar-canvas-border: color-mix(in srgb, var(--accent) 18%, var(--border));
 
   /* Difficulty glows */
   --glow-difficulty-green: 0 0 15px rgba(34, 197, 94, 0.3), 0 0 30px rgba(34, 197, 94, 0.1);
@@ -470,6 +478,28 @@ main {
   50% {
     box-shadow: 0 0 28px color-mix(in srgb, var(--glow-color, #3a8f8f) 55%, transparent),
       0 0 75px color-mix(in srgb, var(--glow-color, #3a8f8f) 35%, transparent);
+  }
+}
+
+@keyframes exerciseEditorFieldFocus {
+  0% {
+    opacity: 0.84;
+    box-shadow:
+      0 0 0 1px rgba(87, 242, 135, 0.06) inset,
+      0 0 0 0 rgba(87, 242, 135, 0);
+  }
+  30% {
+    opacity: 1;
+    box-shadow:
+      0 0 0 1px rgba(87, 242, 135, 0.22) inset,
+      0 0 0 4px rgba(87, 242, 135, 0.08),
+      0 0 28px rgba(87, 242, 135, 0.16);
+  }
+  100% {
+    opacity: 0.96;
+    box-shadow:
+      0 0 0 1px rgba(87, 242, 135, 0.18) inset,
+      0 0 20px rgba(87, 242, 135, 0.10);
   }
 }
 
@@ -944,7 +974,7 @@ tbody tr:hover {
 }
 
 .surface-panel {
-  background: var(--surface-gradient-strong);
+  background: var(--surface-panel);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   border: 1px solid var(--neon-border);
@@ -958,7 +988,7 @@ tbody tr:hover {
 }
 
 .surface-panel-strong {
-  background: var(--surface-gradient-strong);
+  background: var(--surface-panel-strong);
 }
 
 .interactive-panel {
@@ -1507,16 +1537,17 @@ html.discord textarea:focus-visible {
 
 .training-log-modern-shell {
   border: 1px solid color-mix(in srgb, var(--jade-glow) 32%, var(--border)) !important;
+  border-left-color: transparent !important;
   background: linear-gradient(160deg, color-mix(in srgb, var(--ink-deep) 96%, transparent) 0%, color-mix(in srgb, var(--ink-mid) 90%, transparent) 100%) !important;
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--jade-glow) 12%, transparent), var(--shadow-elev-1) !important;
+  box-shadow: var(--shadow-elev-1) !important;
 }
 
 /* Beat .nyaa-history-table-shell .rounded-2xl !important and make edge visibly modern */
 .nyaa-layout .nyaa-history-page .training-log-modern-shell {
   border: 1px solid color-mix(in srgb, var(--jade-glow) 60%, var(--border)) !important;
+  border-left-color: transparent !important;
   box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--jade-glow) 26%, transparent) inset,
-    0 0 0 1px color-mix(in srgb, var(--jade-glow) 18%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--jade-glow) 20%, transparent),
     0 14px 30px color-mix(in srgb, black 34%, transparent) !important;
 }
 
@@ -1778,42 +1809,40 @@ html.discord textarea:focus-visible {
 }
 
 .dashboard-modern-feed::before {
-  content: "";
-  position: absolute;
-  inset: -0.5rem 0 auto;
-  height: 12rem;
-  pointer-events: none;
-  background: radial-gradient(85% 90% at 50% 0%, color-mix(in srgb, var(--jade-glow) 12%, transparent), transparent 72%);
+  content: none;
 }
 
 .dashboard-modern-hero,
 .dashboard-modern-member,
 .dashboard-modern-empty {
-  border: 1px solid color-mix(in srgb, var(--jade-glow) 28%, var(--border)) !important;
-  background: linear-gradient(165deg, color-mix(in srgb, var(--ink-deep) 95%, transparent) 0%, color-mix(in srgb, var(--ink-mid) 88%, transparent) 100%) !important;
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--jade-glow) 12%, transparent) inset,
-    0 12px 24px color-mix(in srgb, black 26%, transparent) !important;
+  border: 1px solid #32353b !important;
+  border-radius: 0.8rem !important;
+  background: #2b2d31 !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset !important;
 }
 
 .dashboard-modern-member-trigger {
-  border-radius: 0.85rem;
-  padding: 0.2rem;
+  border-radius: 0.5rem;
+  padding: 0;
 }
 
 .dashboard-modern-exercise {
-  border-color: color-mix(in srgb, var(--jade-glow) 24%, var(--border)) !important;
-  background: color-mix(in srgb, var(--ink-mid) 26%, var(--ink-deep)) !important;
+  border-top: 1px solid #3b3f48 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
 }
 
 .dashboard-modern-log {
-  border-color: color-mix(in srgb, var(--mountain-blue-glow) 20%, var(--border)) !important;
-  background: linear-gradient(165deg, color-mix(in srgb, var(--ink-deep) 92%, transparent), color-mix(in srgb, var(--ink-mid) 80%, transparent)) !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 .dashboard-modern-loadmore-btn {
-  border-color: color-mix(in srgb, var(--jade-glow) 42%, var(--border)) !important;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--ink-mid) 76%, var(--ink-deep)), color-mix(in srgb, var(--jade-glow) 12%, var(--ink-deep))) !important;
+  border-color: #3b3f48 !important;
+  background: #2b2d31 !important;
+  color: var(--mist-light) !important;
 }
 
 .completionist-modern-hero-mobile,
@@ -1823,22 +1852,18 @@ html.discord textarea:focus-visible {
 .completionist-modern-filters,
 .completionist-modern-skill-mobile,
 .completionist-modern-skill-desktop {
-  border: 1px solid color-mix(in srgb, var(--jade-glow) 30%, var(--border)) !important;
-  background:
-    radial-gradient(130% 88% at 50% -28%, color-mix(in srgb, var(--jade-glow) 10%, transparent), transparent 66%),
-    linear-gradient(165deg, color-mix(in srgb, var(--ink-deep) 95%, transparent) 0%, color-mix(in srgb, var(--ink-mid) 88%, transparent) 100%) !important;
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--jade-glow) 12%, transparent) inset,
-    0 12px 24px color-mix(in srgb, black 26%, transparent) !important;
+  border: 1px solid #3b3f48 !important;
+  background: color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid)) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cloud-white) 2%, transparent) !important;
 }
 
 .completionist-modern-skill-mobile button[aria-expanded="true"] {
-  background: color-mix(in srgb, var(--jade-glow) 10%, var(--ink-deep)) !important;
+  background: color-mix(in srgb, var(--ink-mid) 62%, var(--ink-deep)) !important;
 }
 
 .completionist-modern-skill-desktop table thead th {
-  background: color-mix(in srgb, var(--ink-mid) 68%, var(--ink-deep)) !important;
-  border-bottom: 1px solid color-mix(in srgb, var(--jade-glow) 30%, var(--border)) !important;
+  background: color-mix(in srgb, var(--ink-mid) 82%, var(--ink-deep)) !important;
+  border-bottom: 1px solid #3b3f48 !important;
 }
 
 .dao-modern-page {
@@ -1846,12 +1871,7 @@ html.discord textarea:focus-visible {
 }
 
 .dao-modern-page::before {
-  content: "";
-  position: absolute;
-  inset: -0.5rem 0 auto;
-  height: 10rem;
-  pointer-events: none;
-  background: radial-gradient(82% 90% at 50% 0%, color-mix(in srgb, var(--jade-glow) 6%, transparent), transparent 72%);
+  content: none;
 }
 
 .dao-modern-calendar,
@@ -1860,9 +1880,9 @@ html.discord textarea:focus-visible {
 .dao-modern-monthly-chart,
 .dao-modern-weight-trend,
 .dao-modern-cultivation-view {
-  border: 1px solid color-mix(in srgb, var(--border) 92%, var(--text-muted)) !important;
-  background: color-mix(in srgb, var(--ink-mid) 18%, var(--ink-deep)) !important;
-  box-shadow: 0 8px 18px color-mix(in srgb, black 24%, transparent) !important;
+  border: 1px solid #3b3f48 !important;
+  background: #2b2d31 !important;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.22) !important;
 }
 
 .dao-modern-calendar-day {
@@ -1870,7 +1890,7 @@ html.discord textarea:focus-visible {
 }
 
 .dao-modern-calendar-day:hover {
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--jade-glow) 26%, transparent) inset;
+  box-shadow: 0 0 0 1px rgba(88, 101, 242, 0.18) inset;
 }
 
 .dao-modern-monthly-stats-panel,
@@ -1880,10 +1900,10 @@ html.discord textarea:focus-visible {
 }
 
 .dao-modern-monthly-stats-user {
-  border: 1px solid color-mix(in srgb, var(--border) 88%, var(--text-muted));
+  border: 1px solid #3b3f48;
   border-radius: 0.5rem;
-  padding: 0.5rem 0.55rem;
-  background: color-mix(in srgb, var(--ink-mid) 14%, var(--ink-deep));
+  padding: 0.65rem 0.7rem;
+  background: #232428;
 }
 
 .dao-modern-cultivation-view table thead th {

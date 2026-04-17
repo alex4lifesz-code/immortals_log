@@ -1,5 +1,23 @@
 // src/lib/config.ts — Centralized application configuration
 
+export const THEME_CLASS_NAMES = [
+  "midnight-ink",
+  "mountain-mist",
+  "calligraphy",
+  "sakura",
+  "sakura-dark",
+  "eternal",
+  "discord",
+  "document",
+  "nyaa",
+  "emerald-lotus",
+  "gilded-bamboo",
+  "crane-peak",
+  "obsidian-void",
+  "crimson-gate",
+  "frost-sanctuary",
+] as const;
+
 export const CONFIG = {
   auth: {
     minPasswordLength: 4,
@@ -37,23 +55,7 @@ export const CONFIG = {
     timeoutMs: 7000,
   },
 
-  themes: [
-    "midnight-ink",
-    "mountain-mist",
-    "calligraphy",
-    "sakura",
-    "sakura-dark",
-    "eternal",
-    "discord",
-    "document",
-    "nyaa",
-    "emerald-lotus",
-    "gilded-bamboo",
-    "crane-peak",
-    "obsidian-void",
-    "crimson-gate",
-    "frost-sanctuary",
-  ] as const,
+  themes: THEME_CLASS_NAMES,
 
   bandResistance: {
     options: [2.5, 5, 7.5, 10, 12.5, 15, 20, 25, 30] as const,
@@ -85,4 +87,4 @@ export const CONFIG = {
   },
 } as const;
 
-export type Theme = (typeof CONFIG.themes)[number];
+export type Theme = (typeof THEME_CLASS_NAMES)[number];

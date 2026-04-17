@@ -144,7 +144,6 @@ export default function TrainingLogHistoryPage() {
   const exerciseOptions = useMemo(() => {
     return exercises
       .filter((exercise) => {
-        if (isDeletedExerciseDescription(exercise.story)) return false;
         return (exercise.userProgress ?? []).some((progress) => (progress.logs?.length ?? 0) > 0);
       })
       .map((exercise) => ({
@@ -195,9 +194,6 @@ export default function TrainingLogHistoryPage() {
 
     return exercises
       .map((exercise) => {
-        // Status filtering should only include known exercises from history.
-        if (isDeletedExerciseDescription(exercise.story)) return null;
-
         const displayName = stripBwPercentHint(
           getExerciseDisplayName(exercise, displayTerminologyMode, settings.showExerciseForeignLanguage),
         );

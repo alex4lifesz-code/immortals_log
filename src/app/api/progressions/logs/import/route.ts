@@ -2,6 +2,7 @@ import { apiSuccess, ApiErrors } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 import { importLimiter } from "@/lib/auth/rate-limiters";
+import { ensureAppExerciseLibraryOwner } from "@/lib/exercise-library-owner";
 import { getClientIdentifier } from "@/lib/rate-limit";
 
 type ImportedLog = {
@@ -301,12 +302,13 @@ export const POST = withAuth(async (request, { auth }) => {
     let createdExercises = 0;
     let createdVariations = 0;
     let createdTiers = 0;
+    const libraryOwnerId = await ensureAppExerciseLibraryOwner();
     const skippedDetails: string[] = [];
 
     const createTargetExerciseFromLibrary = async (lib: LibraryExercise): Promise<TargetExercise> => {
       const created = await prisma.progressionExercise.create({
         data: {
-          userId,
+          userId: libraryOwnerId,
           name: lib.name,
           wuxiaName: lib.wuxiaName || "",
           difficulty: lib.difficulty || "",
@@ -342,7 +344,7 @@ export const POST = withAuth(async (request, { auth }) => {
     const createTargetExerciseFromSource = async (src: SourceProgressionExercise): Promise<TargetExercise> => {
       const created = await prisma.progressionExercise.create({
         data: {
-          userId,
+          userId: libraryOwnerId,
           name: src.name,
           wuxiaName: src.wuxiaName || "",
           difficulty: src.difficulty || "",
@@ -382,7 +384,7 @@ export const POST = withAuth(async (request, { auth }) => {
       const inferred = inferImportedExerciseShape(rawLog);
       const created = await prisma.progressionExercise.create({
         data: {
-          userId,
+          userId: libraryOwnerId,
           name: trimmedName.slice(0, 200),
           wuxiaName: trimmedName.slice(0, 200),
           difficulty: inferred.difficulty,

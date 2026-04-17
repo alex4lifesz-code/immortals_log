@@ -33,6 +33,8 @@ export default function WeightTrendChart({
 }: Props) {
   const { chartData, avgWeights, minW, maxW } = useMemo(() => {
     const sorted = [...checkInRows].sort((a, b) => a.date.localeCompare(b.date));
+    const years = new Set(sorted.map((row) => row.date.slice(0, 4)));
+    const showYearInLabel = years.size > 1;
 
     const points: Record<string, unknown>[] = [];
     const sums: Record<string, number> = {};
@@ -41,8 +43,9 @@ export default function WeightTrendChart({
     for (const row of sorted) {
       let hasWeight = false;
       const point: Record<string, unknown> = { date: row.date };
-      const parts = row.date.split("-");
-      point.label = `${parts[2]}/${parts[1]}`;
+      const [year, month, rawDay] = row.date.split("-");
+      const day = rawDay.slice(0, 2);
+      point.label = showYearInLabel ? `${day}/${month}/${year}` : `${day}/${month}`;
 
       for (const uid of selectedUserIds) {
         const entry = row.entries[uid];
@@ -141,7 +144,11 @@ export default function WeightTrendChart({
                 color: "var(--text-primary)",
               }}
               formatter={(value, name) => [`${value} kg`, userNames[name as string] || name]}
-              labelFormatter={(label) => `${t("Date:", "normal")} ${label}`}
+              labelFormatter={(_, payload) => {
+                const fullDate = payload?.[0]?.payload?.date;
+                const label = typeof fullDate === "string" ? fullDate.slice(0, 10) : "-";
+                return `${t("Date:", "normal")} ${label}`;
+              }}
             />
             {selectedUserIds.length > 1 && (
               <Legend

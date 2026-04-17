@@ -135,148 +135,147 @@ export default function ExerciseStatsCarousel({
     railScrollRef.current.scrollBy({ left: delta, behavior: "smooth" });
   };
 
+  const segmentButtonBase = "rounded-md border px-3 py-1.5 text-[11px] font-medium whitespace-nowrap transition-colors duration-150";
+  const activeControlButton = `${segmentButtonBase} border-[#4e5058] bg-[#404249] text-[#ffffff]`;
+  const inactiveControlButton = `${segmentButtonBase} border-transparent bg-transparent text-[#b5bac1] hover:bg-[#35373c] hover:text-[#ffffff]`;
+  const chipButtonBase = "rounded-md border px-3 py-1.5 text-[11px] font-medium whitespace-nowrap transition-colors duration-150";
+  const activeChipButton = `${chipButtonBase} border-[#4e5058] bg-[#404249] text-[#ffffff]`;
+  const inactiveChipButton = `${chipButtonBase} border-[#32353b] bg-[#2b2d31] text-[#dbdee1] hover:bg-[#35373c] hover:text-[#ffffff]`;
+
   return (
-    <div className="flex flex-col bg-transparent">
-      {/* Filter toggle */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between px-4 py-3">
-        <div className="inline-flex items-center rounded-lg border border-ink-light/30 bg-ink-dark/40 p-0.5">
+    <div className="flex flex-col gap-3 bg-transparent px-3 py-2.5 sm:px-4 sm:py-3">
+      <div className="flex flex-col gap-2 border-b border-[#32353b] pb-3">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#949ba4]">
+              Feed controls
+            </p>
+            <p className="mt-1 text-[12px] text-[#dbdee1]">
+              {selectedFilter
+                ? `Showing ${selectedFilter} activity in ${scope === "friends" ? "friends" : "community"}.`
+                : scope === "friends"
+                  ? "Browse recent activity from your circle."
+                  : "Browse recent activity from the wider community."}
+            </p>
+          </div>
+
+          <div className="text-[11px] text-[#949ba4] sm:text-right">
+            {communityLogsWithoutUser.length} entries • {new Set(communityLogsWithoutUser.map((log) => log.userId)).size} athletes
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
           <button
+            type="button"
             onClick={() => onScopeChange("friends")}
-            className={`px-2.5 py-1 text-xs rounded transition-all ${
-              scope === "friends"
-                ? "bg-ink-dark border border-jade-glow/45 text-jade-glow"
-                : "text-mist-light hover:text-jade-glow"
-            }`}
+            className={scope === "friends" ? activeControlButton : inactiveControlButton}
           >
             Friends
           </button>
           <button
+            type="button"
             onClick={() => onScopeChange("community")}
-            className={`px-2.5 py-1 text-xs rounded transition-all ${
-              scope === "community"
-                ? "bg-ink-dark border border-jade-glow/45 text-jade-glow"
-                : "text-mist-light hover:text-jade-glow"
-            }`}
+            className={scope === "community" ? activeControlButton : inactiveControlButton}
           >
             Community
           </button>
-        </div>
-
-        <div className="inline-flex items-center rounded-lg border border-ink-light/30 bg-ink-dark/40 p-0.5">
+          <span className="mx-1 hidden h-4 w-px bg-[#3b3f48] sm:block" />
           {["category", "muscle-group"].map((mode) => (
             <button
               key={mode}
+              type="button"
               onClick={() => handleFilterModeChange(mode as FilterMode)}
-              className={`px-2.5 py-1 text-xs rounded transition-all ${
-                filterMode === mode
-                  ? "bg-ink-dark border border-jade-glow/45 text-jade-glow"
-                  : "text-mist-light hover:text-jade-glow"
-              }`}
+              className={filterMode === mode ? activeControlButton : inactiveControlButton}
             >
               {mode === "category" ? "Category" : "Muscle"}
             </button>
           ))}
+          {selectedFilter ? (
+            <button
+              type="button"
+              onClick={() => handleFilterSelect("")}
+              className={inactiveChipButton}
+            >
+              Clear
+            </button>
+          ) : null}
         </div>
       </div>
 
-      {/* Carousel - no rounded corners on container */}
-      <div className="relative px-4">
-        {/* Left gradient overlay */}
-        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-transparent to-transparent" />
-        
-        {/* Right gradient overlay */}
-        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-transparent to-transparent" />
+      <div>
+        <div className="mb-2 flex items-center justify-between gap-2 px-1">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#949ba4]">
+            {filterMode === "category" ? "Exercise categories" : "Primary muscles"}
+          </span>
+          <span className="text-[10px] text-[#949ba4]">{filterOptions.length} options</span>
+        </div>
 
-        {/* Scroll hint buttons */}
-        {railCanScroll && railCanScrollLeft && (
-          <button
-            type="button"
-            onClick={() => handleRailHintClick("left")}
-            aria-label="Scroll carousel left"
-            className="absolute inset-y-0 left-1 z-20 flex items-center px-1.5 transition-opacity duration-150 opacity-90"
+        <div className="relative">
+          {railCanScroll && railCanScrollLeft && (
+            <button
+              type="button"
+              onClick={() => handleRailHintClick("left")}
+              aria-label="Scroll filters left"
+              className="absolute inset-y-0 left-0 z-20 flex items-center px-1 text-[#b5bac1]"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 5l-7 7 7 7" />
+              </svg>
+            </button>
+          )}
+
+          {railCanScroll && railCanScrollRight && (
+            <button
+              type="button"
+              onClick={() => handleRailHintClick("right")}
+              aria-label="Scroll filters right"
+              className="absolute inset-y-0 right-0 z-20 flex items-center px-1 text-[#b5bac1]"
+            >
+              <svg className="h-4 w-4 animate-[swipe-hint_1.2s_ease-in-out_infinite]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          )}
+
+          <div
+            ref={railScrollRef}
+            onScroll={handleRailScroll}
+            className="overflow-x-auto scrollbar-hide scroll-smooth pb-1"
+            style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: "contain", touchAction: "pan-x" }}
           >
-            <svg
-              className="h-5 w-5 text-mist-light/70"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 5l-7 7 7 7" />
-            </svg>
-          </button>
-        )}
+            <div className="flex min-w-max gap-2 px-1">
+              <motion.button
+                type="button"
+                initial={{ opacity: 0, x: 12 }}
+                animate={{ opacity: 1, x: 0 }}
+                onClick={() => handleFilterSelect("")}
+                className={selectedFilter === "" ? activeChipButton : inactiveChipButton}
+              >
+                All activity <span className="ml-1 text-[#949ba4]">{communityLogsWithoutUser.length}</span>
+              </motion.button>
 
-        {railCanScroll && railCanScrollRight && (
-          <button
-            type="button"
-            onClick={() => handleRailHintClick("right")}
-            aria-label="Scroll carousel right"
-            className="absolute inset-y-0 right-1 z-20 flex items-center px-1.5 transition-opacity duration-150 opacity-90"
-          >
-            <svg
-              className="h-5 w-5 text-mist-light/70 animate-[swipe-hint_1.2s_ease-in-out_infinite]"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        )}
+              {filterOptions.map((option, idx) => {
+                const matchingLogs = communityLogsWithoutUser.filter((log) => {
+                  const exercise = exerciseMap[log.exerciseName];
+                  if (!exercise) return false;
+                  return (filterMode === "category" ? exercise.category : exercise.primaryMuscles) === option;
+                });
 
-        {/* Carousel container - reaches side borders */}
-        <div
-          ref={railScrollRef}
-          onScroll={handleRailScroll}
-          className="overflow-x-auto scrollbar-hide pb-1.5 scroll-smooth"
-          style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: "contain", touchAction: "pan-x" }}
-        >
-          <div className="flex min-w-max gap-2.5 px-1.5 snap-x snap-mandatory [scroll-padding-inline:.5rem]">
-            {/* All filter button */}
-            <motion.button
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              onClick={() => handleFilterSelect("")}
-              className={`snap-start flex h-20 min-w-[140px] max-w-[140px] flex-col items-center justify-center rounded-lg border transition-all duration-200 ${
-                selectedFilter === ""
-                  ? "border-jade-glow/45 bg-ink-dark"
-                  : "border-ink-light/30 bg-ink-dark/40 hover:border-ink-light/50"
-              }`}
-            >
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-jade-glow">All</span>
-              <span className="mt-1 text-[11px] text-mist-light">{communityLogsWithoutUser.length}</span>
-            </motion.button>
-
-            {/* Filter options */}
-            {filterOptions.map((option, idx) => {
-              const matchingLogs = communityLogsWithoutUser.filter((log) => {
-                const exercise = exerciseMap[log.exerciseName];
-                if (!exercise) return false;
-                return (filterMode === "category" ? exercise.category : exercise.primaryMuscles) === option;
-              });
-              
-              return (
-                <motion.button
-                  key={option}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.03 }}
-                  onClick={() => handleFilterSelect(option)}
-                  className={`snap-start flex h-20 min-w-[140px] max-w-[140px] flex-col items-center justify-center rounded-lg border transition-all duration-200 ${
-                    selectedFilter === option
-                      ? "border-jade-glow/45 bg-ink-dark"
-                      : "border-ink-light/30 bg-ink-dark/40 hover:border-ink-light/50"
-                  }`}
-                >
-                  <span className="line-clamp-1 text-center text-[10px] font-semibold uppercase tracking-wide text-cloud-white px-1">
-                    {option}
-                  </span>
-                  <span className="mt-1 text-[11px] text-mist-light">{matchingLogs.length}</span>
-                </motion.button>
-              );
-            })}
+                return (
+                  <motion.button
+                    key={option}
+                    type="button"
+                    initial={{ opacity: 0, x: 12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.02 }}
+                    onClick={() => handleFilterSelect(option)}
+                    className={selectedFilter === option ? activeChipButton : inactiveChipButton}
+                  >
+                    {option} <span className="ml-1 text-[#949ba4]">{matchingLogs.length}</span>
+                  </motion.button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

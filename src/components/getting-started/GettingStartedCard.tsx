@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { getCopy } from "@/lib/copy";
 import type { LanguageMode } from "@/lib/language";
+import { useAuth } from "@/context/AuthContext";
 import { useGettingStarted, type GettingStartedTasks } from "@/hooks/useGettingStarted";
 
 interface GettingStartedCardProps {
@@ -28,9 +29,14 @@ const TASK_ORDER: (keyof GettingStartedTasks)[] = [
 ];
 
 export default function GettingStartedCard({ lang = "english", onTaskNavigate }: GettingStartedCardProps) {
-  const { tasks, dismissed, loading, completedCount, totalCount, allComplete, dismiss } = useGettingStarted();
+  const { tasks, dismissed, loading, dismiss } = useGettingStarted();
+  const { user } = useAuth();
   const router = useRouter();
   const copy = getCopy(lang).gettingStarted;
+  const visibleTaskOrder = user?.role === "admin" ? TASK_ORDER : TASK_ORDER.filter((taskId) => taskId !== "exploreLibrary");
+  const visibleCompletedCount = visibleTaskOrder.filter((taskId) => tasks[taskId]).length;
+  const visibleTotalCount = visibleTaskOrder.length;
+  const visibleAllComplete = visibleCompletedCount === visibleTotalCount;
 
   if (loading || dismissed) return null;
 
@@ -68,19 +74,19 @@ export default function GettingStartedCard({ lang = "english", onTaskNavigate }:
         <div className="mb-4">
           <div className="flex justify-between text-xs text-mist-mid mb-1">
             <span>
-              {completedCount}/{totalCount}
+              {visibleCompletedCount}/{visibleTotalCount}
             </span>
           </div>
           <div className="w-full h-1.5 bg-ink-deep rounded-full overflow-hidden">
             <motion.div
               className="h-full bg-gradient-to-r from-jade-deep to-jade-glow rounded-full"
-              animate={{ width: `${(completedCount / totalCount) * 100}%` }}
+              animate={{ width: `${visibleTotalCount > 0 ? (visibleCompletedCount / visibleTotalCount) * 100 : 100}%` }}
               transition={{ duration: 0.4 }}
             />
           </div>
         </div>
 
-        {allComplete ? (
+        {visibleAllComplete ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -90,7 +96,7 @@ export default function GettingStartedCard({ lang = "english", onTaskNavigate }:
           </motion.div>
         ) : (
           <div className="space-y-1.5">
-            {TASK_ORDER.map((taskId) => {
+            {visibleTaskOrder.map((taskId) => {
               const taskCopy = copy.tasks[taskId];
               const completed = tasks[taskId];
 

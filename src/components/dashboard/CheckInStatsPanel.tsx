@@ -161,7 +161,7 @@ export default function CheckInStatsPanel({
       <div className="flex items-center justify-between px-1">
         <h4
           className="text-xs font-semibold uppercase tracking-wide"
-          style={{ color: "var(--text-primary)" }}
+          style={{ color: "#f2f3f5" }}
           title={tHint("Statistics", "normal") ?? undefined}
         >
           {monthName} {t("Statistics", "normal")}
@@ -182,42 +182,42 @@ export default function CheckInStatsPanel({
             <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[11px]">
               {/* Month check-in rate */}
               <div className="flex justify-between">
-                <span style={{ color: "var(--text-muted)" }} title={tHint("Check-in Rate", "normal") ?? undefined}>{t("Check-in Rate", "normal")}</span>
-                <span className="font-semibold" style={{ color: s.monthRate >= 80 ? "var(--jade-glow)" : s.monthRate >= 50 ? "var(--chart-secondary)" : "var(--crimson-glow)" }}>
+                <span style={{ color: "#b5bac1" }} title={tHint("Check-in Rate", "normal") ?? undefined}>{t("Check-in Rate", "normal")}</span>
+                <span className="font-semibold" style={{ color: s.monthRate >= 80 ? "#8ea1ff" : s.monthRate >= 50 ? "#f0b96a" : "#ff8fa3" }}>
                   {s.monthRate}%
                 </span>
               </div>
 
               {/* Month check-ins */}
               <div className="flex justify-between">
-                <span style={{ color: "var(--text-muted)" }} title={tHint("Days Checked In", "normal") ?? undefined}>{t("Days Checked In", "normal")}</span>
-                <span style={{ color: "var(--text-primary)" }}>{s.monthCheckIns}/{s.monthDays}</span>
+                <span style={{ color: "#b5bac1" }} title={tHint("Days Checked In", "normal") ?? undefined}>{t("Days Checked In", "normal")}</span>
+                <span style={{ color: "#f2f3f5" }}>{s.monthCheckIns}/{s.monthDays}</span>
               </div>
 
               {/* Current streak */}
               <div className="flex justify-between">
-                <span style={{ color: "var(--text-muted)" }} title={tHint("Streak", "normal") ?? undefined}>{t("Streak", "normal")}</span>
-                <span className="font-semibold" style={{ color: "var(--jade-glow)" }}>
+                <span style={{ color: "#b5bac1" }} title={tHint("Streak", "normal") ?? undefined}>{t("Streak", "normal")}</span>
+                <span className="font-semibold" style={{ color: "#8ea1ff" }}>
                   {s.currentStreak}d
                 </span>
               </div>
 
               {/* Best streak */}
               <div className="flex justify-between">
-                <span style={{ color: "var(--text-muted)" }} title={tHint("Best Streak", "normal") ?? undefined}>{t("Best Streak", "normal")}</span>
-                <span style={{ color: "var(--text-primary)" }}>{s.bestStreak}d</span>
+                <span style={{ color: "#b5bac1" }} title={tHint("Best Streak", "normal") ?? undefined}>{t("Best Streak", "normal")}</span>
+                <span style={{ color: "#f2f3f5" }}>{s.bestStreak}d</span>
               </div>
 
               {/* Total all-time */}
               <div className="flex justify-between">
-                <span style={{ color: "var(--text-muted)" }} title={tHint("All-time", "normal") ?? undefined}>{t("All-time", "normal")}</span>
-                <span style={{ color: "var(--text-primary)" }}>{s.totalCheckIns} {t("days", "normal")}</span>
+                <span style={{ color: "#b5bac1" }} title={tHint("All-time", "normal") ?? undefined}>{t("All-time", "normal")}</span>
+                <span style={{ color: "#f2f3f5" }}>{s.totalCheckIns} {t("days", "normal")}</span>
               </div>
 
               {/* Latest weight */}
               <div className="flex justify-between">
-                <span style={{ color: "var(--text-muted)" }} title={tHint("Weight", "normal") ?? undefined}>{t("Weight", "normal")}</span>
-                <span style={{ color: "var(--text-primary)" }}>
+                <span style={{ color: "#b5bac1" }} title={tHint("Weight", "normal") ?? undefined}>{t("Weight", "normal")}</span>
+                <span style={{ color: "#f2f3f5" }}>
                   {s.latestWeight || "–"}
                   {s.weightChange && (
                     <span className="ml-1" style={{ color: s.weightChange.startsWith("+") ? "var(--crimson-glow)" : "var(--jade-glow)" }}>

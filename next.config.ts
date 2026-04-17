@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "standalone",
   serverExternalPackages: ["@libsql/client", "@prisma/adapter-libsql"],
   async redirects() {
     return [
@@ -39,6 +38,16 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/dashboard/exericse-library",
+        destination: "/dashboard/exercise-db",
+        permanent: false,
+      },
+      {
+        source: "/dashboard/exercise-db/settings",
+        destination: "/dashboard/exercise-db",
+        permanent: false,
+      },
+      {
+        source: "/dashboard/exercises/db-settings",
         destination: "/dashboard/exercise-db",
         permanent: false,
       },

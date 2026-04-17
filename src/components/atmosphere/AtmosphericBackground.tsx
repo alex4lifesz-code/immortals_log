@@ -6,13 +6,12 @@ import { useAppContext } from "@/context/AppContext";
 /**
  * Subtle animated mist orbs + floating particles that give the dashboard
  * the same ethereal, zen atmosphere as the login screen.
- * Respects reduced-motion and the eternal/discord theme disable flag.
+ * Respects reduced-motion and the single Discord canvas behavior.
  */
 export default function AtmosphericBackground() {
   const prefersReducedMotion = useReducedMotion();
   const { themeStyle } = useAppContext();
-  const disableMotion =
-    themeStyle === "eternal" || themeStyle === "discord" || prefersReducedMotion;
+  const disableMotion = themeStyle === "discord" || prefersReducedMotion;
 
   if (disableMotion) return null;
 

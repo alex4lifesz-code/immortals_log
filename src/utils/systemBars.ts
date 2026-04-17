@@ -23,14 +23,11 @@ function getSystemBarBridges() {
   const globalAny = window as unknown as {
     NavigationBar?: NavigationBarBridge;
     StatusBar?: StatusBarBridge;
-    Capacitor?: {
-      Plugins?: Record<string, NavigationBarBridge | StatusBarBridge | undefined>;
-    };
   };
 
   return {
-    navBridge: (globalAny.NavigationBar || globalAny.Capacitor?.Plugins?.NavigationBar) as NavigationBarBridge | undefined,
-    statusBridge: (globalAny.StatusBar || globalAny.Capacitor?.Plugins?.StatusBar) as StatusBarBridge | undefined,
+    navBridge: globalAny.NavigationBar,
+    statusBridge: globalAny.StatusBar,
   };
 }
 

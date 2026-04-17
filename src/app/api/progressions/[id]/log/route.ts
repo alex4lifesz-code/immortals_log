@@ -41,10 +41,37 @@ export const POST = withAuth(async (request, { auth, params }) => {
     }
 
     const createdAt = body.createdAt ? new Date(String(body.createdAt)) : null;
-    const validCreatedAt = createdAt && !Number.isNaN(createdAt.getTime()) ? createdAt : null;
+    const validCreatedAt = createdAt && !Number.isNaN(createdAt.getTime())
+      ? (createdAt.getTime() > Date.now() ? new Date() : createdAt)
+      : null;
     const trainingDate = typeof body.trainingDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.trainingDate)
       ? body.trainingDate
       : null;
+
+    const dynamicSetSummary = Array.isArray(body.sets)
+      ? body.sets
+          .slice(3)
+          .map((entry: unknown, index: number) => {
+            const source = typeof entry === "object" && entry ? entry as Record<string, unknown> : {};
+            const rawValue = source.value != null ? Number(source.value) : null;
+            const rawReps = source.reps != null ? Number(source.reps) : null;
+            const metric = source.metric === "time" ? "s" : "kg";
+            const hasValue = typeof rawValue === "number" && Number.isFinite(rawValue);
+            const hasReps = typeof rawReps === "number" && Number.isFinite(rawReps);
+            const valueLabel = hasValue ? `${rawValue}${metric}` : "-";
+            const repsLabel = hasReps ? `${Math.trunc(rawReps)} reps` : "-";
+            return `Set ${index + 4}: ${valueLabel} / ${repsLabel}`;
+          })
+          .join(" | ")
+      : "";
+
+    const sanitizedNotes = body.notes ? String(body.notes).trim() : "";
+    const notesWithDynamicSets = [
+      sanitizedNotes,
+      dynamicSetSummary ? `Extra sets: ${dynamicSetSummary}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
 
     const log = await prisma.progressionLog.create({
       data: {
@@ -62,7 +89,7 @@ export const POST = withAuth(async (request, { auth, params }) => {
         reps: body.reps != null ? Number(body.reps) : null,
         modifier: body.modifier ? String(body.modifier).trim().slice(0, 100) : null,
         variant: body.variant ? String(body.variant).trim().slice(0, 200) : null,
-        notes: body.notes ? String(body.notes).trim().slice(0, 1000) : null,
+        notes: notesWithDynamicSets ? notesWithDynamicSets.slice(0, 1000) : null,
         completed: body.completed === true,
         createdAt: validCreatedAt ?? undefined,
       },

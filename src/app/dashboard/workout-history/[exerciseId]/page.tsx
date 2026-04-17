@@ -28,6 +28,7 @@ export default function WorkoutHistoryDetailPage() {
   const targetUserId = searchParams.get("targetUserId") || "";
   const source = searchParams.get("from") || "";
   const fromHistoryPage = source === "history";
+  const fromExercisesPage = source === "exercises";
   const { settings } = useDisplaySettings();
   const displayTerminologyMode = !settings.showExerciseForeignLanguage && settings.languageMode === "english"
     ? "normal"
@@ -187,12 +188,16 @@ export default function WorkoutHistoryDetailPage() {
   }, [lastLogDate]);
 
   const backHref = useMemo(() => {
-    const base = fromHistoryPage ? DASHBOARD_ROUTES.trainingLogHistory : DASHBOARD_ROUTES.workoutHistory;
+    const base = fromExercisesPage
+      ? DASHBOARD_ROUTES.exercises
+      : fromHistoryPage
+        ? DASHBOARD_ROUTES.trainingLogHistory
+        : DASHBOARD_ROUTES.workoutHistory;
     if (!targetUserId) return base;
     return `${base}?targetUserId=${encodeURIComponent(targetUserId)}`;
-  }, [fromHistoryPage, targetUserId]);
+  }, [fromExercisesPage, fromHistoryPage, targetUserId]);
 
-  const backLabel = fromHistoryPage ? "Back to History" : "Back to Train";
+  const backLabel = fromExercisesPage ? "Back to Exercises" : fromHistoryPage ? "Back to History" : "Back to Train";
 
   return (
     <PageLayout

@@ -30,6 +30,23 @@ interface SystemStats {
   totalCheckIns: number;
 }
 
+interface RecycleBinUser {
+  archiveId: string;
+  id: string;
+  username: string;
+  name: string;
+  role: string;
+  createdAt: string;
+  deletedAt: string;
+  summary: {
+    progressionLogCount: number;
+    progressionLevelCount: number;
+    checkInCount: number;
+    noteCount: number;
+    ownedExerciseCount: number;
+  };
+}
+
 interface AdminFriendRequest {
   id: string;
   status: string;
@@ -57,6 +74,7 @@ export default function AdminPanelPage() {
   const { user, login } = useAuth();
   const router = useRouter();
   const [users, setUsers] = useState<AdminUser[]>([]);
+  const [recycleBinUsers, setRecycleBinUsers] = useState<RecycleBinUser[]>([]);
   const [stats, setStats] = useState<SystemStats>({
     totalUsers: 0,
     totalProgressionLogs: 0,
@@ -74,17 +92,20 @@ export default function AdminPanelPage() {
   const [loading, setLoading] = useState(true);
   const [pendingFriendRequests, setPendingFriendRequests] = useState<AdminFriendRequest[]>([]);
   const [moderatingRequestId, setModeratingRequestId] = useState<string | null>(null);
+  const [recycleBinActionId, setRecycleBinActionId] = useState<string | null>(null);
+  const [actionNotice, setActionNotice] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   // Check if user is admin based on role
   const isAdmin = user?.role === "admin";
 
   const fetchData = useCallback(async () => {
     try {
-      const [usersData, exercisesData, checkinsData, friendRequestsData] = await Promise.all([
+      const [usersData, exercisesData, checkinsData, friendRequestsData, recycleBinData] = await Promise.all([
         api.get<{ users: AdminUser[] }>("/api/users"),
         api.get<{ exercises: unknown[] }>("/api/exercises"),
         api.get<{ checkins: unknown[] }>("/api/checkins"),
         api.get<{ requests: AdminFriendRequest[] }>("/api/admin/friend-requests?status=pending"),
+        api.get<{ users: RecycleBinUser[] }>("/api/admin/recycle-bin/users"),
       ]);
 
       const usersList = usersData.users || [];
@@ -97,6 +118,7 @@ export default function AdminPanelPage() {
         totalCheckIns: (checkinsData.checkins || []).length,
       });
       setPendingFriendRequests(friendRequestsData.requests || []);
+      setRecycleBinUsers(recycleBinData.users || []);
     } catch (err) {
       console.error("Failed to fetch admin data:", err);
     } finally {
@@ -133,21 +155,25 @@ export default function AdminPanelPage() {
       setNewUsername("");
       setNewPassword("");
       setNewName("");
-      fetchData();
+      setActionNotice({ type: "success", message: "User created successfully." });
+      await fetchData();
     } catch (err) {
       console.error("Failed to create user:", err);
+      setActionNotice({ type: "error", message: err instanceof Error ? err.message : "Failed to create user." });
     }
   };
 
   const deleteUser = async (userId: string) => {
-    if (!confirm("Are you sure you want to delete this user?")) return;
+    if (!confirm("Send this user to the recycle bin? Their active records will be removed from the app until restored.")) return;
 
     try {
-      await api.delete(`/api/users/${userId}`);
+      const result = await api.delete<{ message?: string }>(`/api/users/${userId}`);
       setShowUserDetailModal(false);
-      fetchData();
+      setActionNotice({ type: "success", message: result.message || "User moved to the recycle bin." });
+      await fetchData();
     } catch (err) {
       console.error("Failed to delete user:", err);
+      setActionNotice({ type: "error", message: err instanceof Error ? err.message : "Failed to move user to the recycle bin." });
     }
   };
 
@@ -156,18 +182,49 @@ export default function AdminPanelPage() {
     setIsSavingName(true);
     try {
       const data = await api.patch<{ user: { name: string } }>(`/api/users/${userId}`, { name: newDisplayName.trim() });
-      // If updating own name, refresh auth state
       if (user && userId === user.id) {
         login({ ...user, name: data.user.name });
       }
-      fetchData();
+      setActionNotice({ type: "success", message: "Display name updated." });
+      await fetchData();
       if (selectedUser && selectedUser.id === userId) {
         setSelectedUser({ ...selectedUser, name: data.user.name });
       }
     } catch (err) {
       console.error("Failed to update display name:", err);
+      setActionNotice({ type: "error", message: err instanceof Error ? err.message : "Failed to update display name." });
     } finally {
       setIsSavingName(false);
+    }
+  };
+
+  const restoreRecycleBinUser = async (archiveId: string) => {
+    setRecycleBinActionId(archiveId);
+    try {
+      const result = await api.post<{ message?: string }>("/api/admin/recycle-bin/users", { archiveId });
+      setActionNotice({ type: "success", message: result.message || "User restored from recycle bin." });
+      await fetchData();
+    } catch (err) {
+      console.error("Failed to restore recycle bin user:", err);
+      setActionNotice({ type: "error", message: err instanceof Error ? err.message : "Failed to restore user." });
+    } finally {
+      setRecycleBinActionId(null);
+    }
+  };
+
+  const permanentlyDeleteRecycleBinUser = async (archiveId: string) => {
+    if (!confirm("Permanently delete this archived user? This cannot be undone.")) return;
+
+    setRecycleBinActionId(archiveId);
+    try {
+      const result = await api.delete<{ message?: string }>("/api/admin/recycle-bin/users", { archiveId, confirm: true });
+      setActionNotice({ type: "success", message: result.message || "Archived user permanently deleted." });
+      await fetchData();
+    } catch (err) {
+      console.error("Failed to permanently delete recycle bin user:", err);
+      setActionNotice({ type: "error", message: err instanceof Error ? err.message : "Failed to permanently delete archived user." });
+    } finally {
+      setRecycleBinActionId(null);
     }
   };
 
@@ -236,6 +293,14 @@ export default function AdminPanelPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" />
           </div>
 
+          {actionNotice ? (
+            <div
+              className={`rounded-lg border px-3 py-2 text-xs ${actionNotice.type === "success" ? "border-jade-glow/40 bg-jade-deep/10 text-jade-light" : "border-crimson-light/40 bg-crimson-deep/10 text-crimson-light"}`}
+            >
+              {actionNotice.message}
+            </div>
+          ) : null}
+
           {/* User Management */}
           <GlowCard glow="jade" hoverable={false}>
             <div className="flex items-center justify-between mb-4">
@@ -291,11 +356,57 @@ export default function AdminPanelPage() {
             </div>
           </GlowCard>
 
+          <GlowCard glow="crimson" hoverable={false}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm text-crimson-light uppercase tracking-wider">Recycle Bin</h3>
+              <span className="text-xs text-mist-dark">{recycleBinUsers.length} archived</span>
+            </div>
+
+            <p className="text-xs text-mist-dark mb-3">
+              Deleted users are removed from the live app and stored here until an admin restores them or permanently deletes the archive.
+            </p>
+
+            {recycleBinUsers.length === 0 ? (
+              <p className="text-xs text-mist-dark">No deleted users are waiting in the recycle bin.</p>
+            ) : (
+              <div className="space-y-2">
+                {recycleBinUsers.map((entry) => (
+                  <div key={entry.archiveId} className="rounded-lg border border-ink-light/50 bg-ink-mid/20 p-3 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm text-cloud-white">{entry.name} (@{entry.username})</p>
+                      <p className="text-xs text-mist-dark">
+                        Deleted {new Date(entry.deletedAt).toLocaleString()} • {entry.summary.progressionLogCount} logs • {entry.summary.checkInCount} check-ins • {entry.summary.ownedExerciseCount} owned exercises
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <GlowButton
+                        variant="jade"
+                        size="sm"
+                        disabled={recycleBinActionId === entry.archiveId}
+                        onClick={() => restoreRecycleBinUser(entry.archiveId)}
+                      >
+                        Restore
+                      </GlowButton>
+                      <GlowButton
+                        variant="crimson"
+                        size="sm"
+                        disabled={recycleBinActionId === entry.archiveId}
+                        onClick={() => permanentlyDeleteRecycleBinUser(entry.archiveId)}
+                      >
+                        Permanent Delete
+                      </GlowButton>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </GlowCard>
+
           {/* Data Management Section */}
           <div>
-            <h3 className="text-sm text-jade-glow uppercase mb-3">Library And Records Control</h3>
+            <h3 className="text-sm text-jade-glow uppercase mb-3">Backup Studio</h3>
             <p className="text-xs text-mist-dark mb-3">
-              Upload, export, and purge operations for the shared Exercise Library are now managed here.
+              The rebuilt studio now handles unified backup export and restore for user records and the Exercise DB.
             </p>
           </div>
 
@@ -439,7 +550,7 @@ export default function AdminPanelPage() {
                 size="sm"
                 onClick={() => deleteUser(selectedUser.id)}
               >
-                Delete User
+                Send to Recycle Bin
               </GlowButton>
               <GlowButton variant="ghost" size="sm" onClick={() => setShowUserDetailModal(false)}>
                 Close

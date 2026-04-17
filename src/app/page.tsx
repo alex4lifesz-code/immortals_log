@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import GlowButton from "@/components/ui/GlowButton";
 import GlowInput from "@/components/ui/GlowInput";
 import { useAuth } from "@/context/AuthContext";
-import { CONFIG } from "@/lib/config";
+import { THEME_CLASS_NAMES } from "@/lib/config";
 import ConnectivityBanner from "@/components/system/ConnectivityBanner";
 import type { LanguageMode } from "@/lib/language";
 import { translateEnglishToLanguage } from "@/lib/language";
@@ -22,22 +22,20 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [languageMode, setLanguageMode] = useState<LanguageMode>("english");
-  const [currentTheme, setCurrentTheme] = useState<string>("");
   const router = useRouter();
   const { login } = useAuth();
 
-  // Apply saved theme on mount so login screen matches user's chosen theme
+  // Apply the saved palette while keeping the same shared canvas.
   useEffect(() => {
     try {
       const savedTheme = localStorage.getItem("cultivation-theme-style");
-      if (savedTheme) {
-        const themes: readonly string[] = CONFIG.themes;
-        document.documentElement.classList.remove(...themes);
-        if (themes.includes(savedTheme)) {
-          document.documentElement.classList.add(savedTheme);
-          setCurrentTheme(savedTheme);
-        }
-      }
+      const appliedTheme = savedTheme && THEME_CLASS_NAMES.includes(savedTheme as (typeof THEME_CLASS_NAMES)[number])
+        ? savedTheme
+        : "discord";
+
+      document.documentElement.classList.remove(...THEME_CLASS_NAMES);
+      document.documentElement.classList.add(appliedTheme);
+      localStorage.setItem("cultivation-theme-style", appliedTheme);
 
       const rawDisplaySettings = localStorage.getItem(DISPLAY_SETTINGS_STORAGE_KEY);
       if (rawDisplaySettings) {
@@ -112,7 +110,7 @@ export default function LoginPage() {
         }
       }
     } catch {
-      setError("Cannot connect to server/database. If using the Android APK, ensure the app URL is reachable and WireGuard or Tailscale VPN is connected.");
+      setError("Cannot connect to server/database. Please verify the server URL and your network connection.");
     } finally {
       setLoading(false);
     }
@@ -169,43 +167,6 @@ export default function LoginPage() {
         );
       })}
 
-      {/* Document theme — ink wash mountain silhouettes */}
-      {currentTheme === "document" && (
-        <>
-          {/* Distant mountain range — bottom of viewport */}
-          <svg
-            className="absolute bottom-0 left-0 w-full pointer-events-none opacity-[0.08]"
-            viewBox="0 0 1200 200"
-            preserveAspectRatio="none"
-            style={{ height: "30vh" }}
-          >
-            <path
-              d="M0 200 L0 140 Q60 80 120 110 Q180 60 250 90 Q320 40 400 70 Q450 30 520 60 Q580 20 650 55 Q720 35 800 65 Q860 25 930 50 Q980 40 1050 70 Q1120 50 1200 80 L1200 200 Z"
-              fill="rgba(80, 60, 40, 0.6)"
-            />
-            <path
-              d="M0 200 L0 160 Q80 120 160 140 Q240 100 340 125 Q420 85 500 110 Q560 70 650 95 Q740 80 840 105 Q920 75 1000 100 Q1080 85 1200 110 L1200 200 Z"
-              fill="rgba(58, 88, 160, 0.3)"
-            />
-          </svg>
-
-          {/* Calligraphic seal stamp — top right corner */}
-          <div
-            className="absolute top-[12%] right-[8%] pointer-events-none opacity-[0.07] rotate-[-8deg]"
-          >
-            <svg viewBox="0 0 80 80" className="w-20 h-20">
-              <rect x="4" y="4" width="72" height="72" rx="4" fill="none" stroke="#903030" strokeWidth="3" />
-              <rect x="10" y="10" width="60" height="60" rx="2" fill="none" stroke="#903030" strokeWidth="1" />
-              {/* Abstract seal characters */}
-              <line x1="25" y1="28" x2="55" y2="28" stroke="#903030" strokeWidth="2.5" strokeLinecap="round" />
-              <line x1="25" y1="40" x2="55" y2="40" stroke="#903030" strokeWidth="2.5" strokeLinecap="round" />
-              <line x1="25" y1="52" x2="55" y2="52" stroke="#903030" strokeWidth="2.5" strokeLinecap="round" />
-              <line x1="33" y1="22" x2="33" y2="58" stroke="#903030" strokeWidth="2" strokeLinecap="round" />
-              <line x1="47" y1="22" x2="47" y2="58" stroke="#903030" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-          </div>
-        </>
-      )}
 
       {/* Login Card */}
       <motion.div
@@ -215,31 +176,6 @@ export default function LoginPage() {
         className="relative z-10 w-full max-w-md mx-4"
       >
         <div className="login-panel rounded-2xl p-8 glow-subtle">
-          {/* Document theme — scroll corner ornaments */}
-          {currentTheme === "document" && (
-            <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
-              {/* Top-left corner ornament */}
-              <svg className="absolute top-2 left-2 w-8 h-8 opacity-20" viewBox="0 0 32 32">
-                <path d="M2 2 L2 14 Q2 2 14 2" fill="none" stroke="#8a7040" strokeWidth="1.5" />
-                <circle cx="2" cy="2" r="1.5" fill="#8a7040" />
-              </svg>
-              {/* Top-right corner ornament */}
-              <svg className="absolute top-2 right-2 w-8 h-8 opacity-20" viewBox="0 0 32 32">
-                <path d="M30 2 L30 14 Q30 2 18 2" fill="none" stroke="#8a7040" strokeWidth="1.5" />
-                <circle cx="30" cy="2" r="1.5" fill="#8a7040" />
-              </svg>
-              {/* Bottom-left corner ornament */}
-              <svg className="absolute bottom-2 left-2 w-8 h-8 opacity-20" viewBox="0 0 32 32">
-                <path d="M2 30 L2 18 Q2 30 14 30" fill="none" stroke="#8a7040" strokeWidth="1.5" />
-                <circle cx="2" cy="30" r="1.5" fill="#8a7040" />
-              </svg>
-              {/* Bottom-right corner ornament */}
-              <svg className="absolute bottom-2 right-2 w-8 h-8 opacity-20" viewBox="0 0 32 32">
-                <path d="M30 30 L30 18 Q30 30 18 30" fill="none" stroke="#8a7040" strokeWidth="1.5" />
-                <circle cx="30" cy="30" r="1.5" fill="#8a7040" />
-              </svg>
-            </div>
-          )}
 
           {/* Title - bilingual */}
           <motion.div

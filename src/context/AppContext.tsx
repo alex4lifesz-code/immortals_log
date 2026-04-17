@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { NavItem, defaultNavItems } from "@/lib/constants";
 import { useAuth } from "@/context/AuthContext";
-import { CONFIG, type Theme } from "@/lib/config";
+import { CONFIG, THEME_CLASS_NAMES, type Theme } from "@/lib/config";
 import { api } from "@/lib/api-client";
 
 type ThemeMode = "dark" | "light";
@@ -59,7 +59,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [theme, setThemeState] = useState<ThemeMode>("dark");
-  const [themeStyle, setThemeStyleState] = useState<ThemeStyle>("midnight-ink");
+  const [themeStyle, setThemeStyleState] = useState<ThemeStyle>("discord");
   const [navigationMode, setNavigationModeState] = useState<NavigationMode>("side");
   const [topPanelExpanded, setTopPanelExpandedState] = useState(true);
   const [trainingMode, setTrainingModeState] = useState<TrainingMode>("simplified");
@@ -140,11 +140,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [theme, setTheme]);
 
   const setThemeStyle = useCallback((style: ThemeStyle) => {
-    setThemeStyleState(style);
+    const normalizedStyle: ThemeStyle = (THEME_CLASS_NAMES as readonly string[]).includes(style)
+      ? style
+      : "discord";
+    setThemeStyleState(normalizedStyle);
     if (typeof window !== "undefined") {
-      document.documentElement.classList.remove(...CONFIG.themes);
-      document.documentElement.classList.add(style);
-      localStorage.setItem("cultivation-theme-style", style);
+      document.documentElement.classList.remove(...THEME_CLASS_NAMES);
+      document.documentElement.classList.add(normalizedStyle);
+      localStorage.setItem("cultivation-theme-style", normalizedStyle);
     }
   }, []);
 
@@ -156,15 +159,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setTheme(saved);
     }
     const savedStyle = localStorage.getItem("cultivation-theme-style") as ThemeStyle | null;
-    if (savedStyle && (CONFIG.themes as readonly string[]).includes(savedStyle)) {
+    if (savedStyle && (THEME_CLASS_NAMES as readonly string[]).includes(savedStyle)) {
       setThemeStyle(savedStyle);
+    } else {
+      setThemeStyle("discord");
     }
     // Layout selection removed: always use Layout 1 shell.
     localStorage.removeItem("cultivation-layout-style");
   }, [setTheme, setThemeStyle]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // Hydrate shared theme preferences per user (desktop/web + APK)
+  // Hydrate shared theme preferences per user (desktop/web)
   useEffect(() => {
     let cancelled = false;
 
@@ -191,11 +196,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           localStorage.setItem("cultivation-theme", remoteTheme);
         }
 
-        if (typeof remoteThemeStyle === "string" && (CONFIG.themes as readonly string[]).includes(remoteThemeStyle)) {
-          setThemeStyleState(remoteThemeStyle as ThemeStyle);
-          document.documentElement.classList.remove(...CONFIG.themes);
-          document.documentElement.classList.add(remoteThemeStyle);
-          localStorage.setItem("cultivation-theme-style", remoteThemeStyle);
+        if (typeof remoteThemeStyle === "string") {
+          const normalizedStyle: ThemeStyle = (THEME_CLASS_NAMES as readonly string[]).includes(remoteThemeStyle)
+            ? (remoteThemeStyle as ThemeStyle)
+            : "discord";
+          setThemeStyleState(normalizedStyle);
+          document.documentElement.classList.remove(...THEME_CLASS_NAMES);
+          document.documentElement.classList.add(normalizedStyle);
+          localStorage.setItem("cultivation-theme-style", normalizedStyle);
         }
       } catch {
         // Ignore remote sync errors; local settings remain usable.

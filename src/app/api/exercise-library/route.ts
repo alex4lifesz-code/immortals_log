@@ -4,6 +4,7 @@ import type { SimpleExercise, TrainingCategory, SimpleExerciseType, MuscleGroup,
 import { ALL_DIFFICULTIES } from "@/lib/exercise-types";
 import { withAuth } from "@/lib/auth/middleware";
 import { getExerciseDbOptionsFromAppPrefs } from "@/lib/exercise-db-settings";
+import { ensureAppExerciseLibraryOwner } from "@/lib/exercise-library-owner";
 import {
   applyProgressionExerciseTranslation,
   getUserLanguageMode,
@@ -246,7 +247,8 @@ export const GET = withAuth(async (_req, { auth }) => {
 export const POST = withAuth(async (req, { auth }) => {
   try {
     const body = await req.json();
-    const userId = auth.userId;
+    const creatorUserId = auth.userId;
+    const libraryOwnerId = await ensureAppExerciseLibraryOwner();
     const {
       name,
       category,
@@ -260,7 +262,7 @@ export const POST = withAuth(async (req, { auth }) => {
       variations,
       pendingReview,
     } = body;
-    const dbOptions = await getUserExerciseDbOptions(userId);
+    const dbOptions = await getUserExerciseDbOptions(creatorUserId);
 
     const trimmedName = String(name || "").trim().slice(0, 200);
     if (!trimmedName || trimmedName.length < 2) {
@@ -346,7 +348,7 @@ export const POST = withAuth(async (req, { auth }) => {
         })(),
         tips: instructions ? JSON.stringify(instructions) : '[]',
         progression: JSON.stringify(progressionStages),
-        userId,
+        userId: libraryOwnerId,
         variations: normalizedVariations.length > 0
           ? {
               create: normalizedVariations.map((variationName) => ({
@@ -436,7 +438,7 @@ export const POST = withAuth(async (req, { auth }) => {
     // Create UserProgressionLevel so logging works
     await prisma.userProgressionLevel.create({
       data: {
-        userId,
+        userId: creatorUserId,
         exerciseId: dbExercise.id,
         currentLevel: 1,
       },

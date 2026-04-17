@@ -57,7 +57,7 @@ const EN_TO_VI_MAP: Record<string, string> = {
   "New cultivator?": "Người mới?",
   "Join the sect": "Đăng ký",
   "Heaven rewards the diligent": "Trời không phụ người có công",
-  "Cannot connect to server/database. If using the Android APK, ensure the app URL is reachable and WireGuard or Tailscale VPN is connected.": "Không thể kết nối máy chủ/cơ sở dữ liệu. Nếu đang dùng APK Android, hãy đảm bảo URL ứng dụng có thể truy cập và WireGuard hoặc Tailscale VPN đã kết nối.",
+  "Cannot connect to server/database. Please verify the server URL and your network connection.": "Không thể kết nối máy chủ/cơ sở dữ liệu. Vui lòng kiểm tra URL máy chủ và kết nối mạng của bạn.",
   "An error occurred": "Đã xảy ra lỗi",
 
   "Dao Name": "Tên đăng nhập",

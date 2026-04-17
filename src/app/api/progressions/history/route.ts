@@ -41,6 +41,36 @@ function encodeExerciseCursor(createdAt: Date, id: string): string {
   return Buffer.from(JSON.stringify({ createdAt: createdAt.toISOString(), id }), "utf8").toString("base64url");
 }
 
+function extractDynamicSetRows(notes: string | null | undefined): { cleanedNotes: string | null; dynamicSetRows: Array<{ weight: string; reps: string }> } {
+  const rawNotes = typeof notes === "string" ? notes.trim() : "";
+  if (!rawNotes) {
+    return { cleanedNotes: null, dynamicSetRows: [] };
+  }
+
+  const summaryMatch = rawNotes.match(/(?:^|\n\n?)(?:Extra sets:|Session sets:)\s*([\s\S]+)$/i);
+  if (!summaryMatch) {
+    return { cleanedNotes: rawNotes, dynamicSetRows: [] };
+  }
+
+  const dynamicSetRows = summaryMatch[1]
+    .split(/\s+\|\s+/)
+    .map((segment) => {
+      const match = segment.trim().match(/^Set\s+\d+:\s*(.*?)\s*\/\s*(.*?)$/i);
+      if (!match) return null;
+      return {
+        weight: match[1]?.trim() || "-",
+        reps: (match[2] || "-").replace(/\s*reps?$/i, "").trim() || "-",
+      };
+    })
+    .filter((row): row is { weight: string; reps: string } => Boolean(row));
+
+  const cleanedNotes = rawNotes.replace(/(?:\n\n?)(?:Extra sets:|Session sets:)\s*[\s\S]+$/i, "").trim();
+  return {
+    cleanedNotes: cleanedNotes || null,
+    dynamicSetRows,
+  };
+}
+
 // GET /api/progressions/history?logLimit=<n> — fetch history-ready progression exercises with capped logs
 export const GET = withAuth(async (request, { auth }) => {
   try {
@@ -155,7 +185,7 @@ export const GET = withAuth(async (request, { auth }) => {
                 completed: true,
                 createdAt: true,
               },
-              orderBy: { createdAt: "desc" },
+              orderBy: [{ createdAt: "desc" }, { id: "desc" }],
               take: logLimit,
             },
           },
@@ -166,7 +196,20 @@ export const GET = withAuth(async (request, { auth }) => {
     });
 
     const hasMore = page.length > exerciseLimit;
-    const exercises = hasMore ? page.slice(0, exerciseLimit) : page;
+    const exercises = (hasMore ? page.slice(0, exerciseLimit) : page).map((exercise) => ({
+      ...exercise,
+      userProgress: exercise.userProgress.map((progress) => ({
+        ...progress,
+        logs: progress.logs.map((log) => {
+          const { cleanedNotes, dynamicSetRows } = extractDynamicSetRows(log.notes);
+          return {
+            ...log,
+            notes: cleanedNotes,
+            dynamicSetRows,
+          };
+        }),
+      })),
+    }));
     const last = exercises[exercises.length - 1];
     const nextCursor = hasMore && last ? encodeExerciseCursor(last.createdAt, last.id) : null;
 

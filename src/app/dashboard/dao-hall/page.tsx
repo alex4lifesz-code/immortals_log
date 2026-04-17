@@ -20,6 +20,11 @@ import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { useIsMobile } from "@/context/AppContext";
 import { createCalendarMonthAnchor, formatDateWithPreference } from "@/lib/constants";
 import { t } from "@/lib/terminology";
+import {
+  getCheckInHistoryPreviewLimit,
+  getDetailLabelVisibility,
+  type CheckInHistoryViewMode,
+} from "@/lib/checkin-history-view";
 import { syncWeightFromLatestCheckin } from "@/lib/user-physique";
 import { api } from "@/lib/api-client";
 import GettingStartedCard from "@/components/getting-started/GettingStartedCard";
@@ -51,6 +56,38 @@ interface CommunityNote {
 }
 
 const ITEMS_PER_PAGE = 7;
+
+function formatRelativeRecentDate(dateLike: string): string {
+  const timestamp = new Date(dateLike).getTime();
+  if (!Number.isFinite(timestamp)) return "";
+
+  const diffMs = Date.now() - timestamp;
+  if (diffMs < 0) {
+    return new Date(timestamp).toLocaleDateString();
+  }
+
+  const minuteMs = 60 * 1000;
+  const hourMs = 60 * minuteMs;
+  const dayMs = 24 * hourMs;
+  const fourteenDaysMs = 14 * dayMs;
+
+  if (diffMs < hourMs) {
+    const mins = Math.max(1, Math.floor(diffMs / minuteMs));
+    return `${mins}m ago`;
+  }
+
+  if (diffMs < dayMs) {
+    const hours = Math.max(1, Math.floor(diffMs / hourMs));
+    return `${hours}h ago`;
+  }
+
+  if (diffMs < fourteenDaysMs) {
+    const days = Math.max(1, Math.floor(diffMs / dayMs));
+    return `${days} day${days === 1 ? "" : "s"} ago`;
+  }
+
+  return new Date(timestamp).toLocaleDateString();
+}
 
 export default function DaoHallPage() {
   const { user } = useAuth();
@@ -158,6 +195,16 @@ export default function DaoHallPage() {
     if (saved === "friends") return "friends";
     return "mine";
   });
+  const [historyViewMode, setHistoryViewMode] = useState<CheckInHistoryViewMode>(() => {
+    if (typeof window === "undefined") return "detailed";
+    try {
+      return localStorage.getItem("dao-hall-history-view") === "compact" ? "compact" : "detailed";
+    } catch {
+      return "detailed";
+    }
+  });
+  const [isHistoryViewMenuOpen, setIsHistoryViewMenuOpen] = useState(false);
+  const historyViewMenuRef = useRef<HTMLDivElement | null>(null);
   const [isSectEditMode, setIsSectEditMode] = useState(false);
   const [sectEditData, setSectEditData] = useState<Record<string, Record<string, { weight: string; comment: string }>>>({});
   const [deletingRowDate, setDeletingRowDate] = useState<string | null>(null);
@@ -166,6 +213,24 @@ export default function DaoHallPage() {
     if (typeof window === "undefined") return;
     localStorage.setItem("dao-hall-calendar-scope", calendarScope);
   }, [calendarScope]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem("dao-hall-history-view", historyViewMode);
+  }, [historyViewMode]);
+
+  useEffect(() => {
+    if (!isHistoryViewMenuOpen) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (historyViewMenuRef.current && !historyViewMenuRef.current.contains(event.target as Node)) {
+        setIsHistoryViewMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [isHistoryViewMenuOpen]);
 
   const handleColorChange = useCallback(async (userId: string, color: string) => {
     if (!user) return;
@@ -641,11 +706,12 @@ export default function DaoHallPage() {
     [displayCount, renderedCheckInRows],
   );
 
+  const historyPreviewLimit = getCheckInHistoryPreviewLimit(isMobile, historyViewMode);
   const hasMoreRows = displayCount < renderedCheckInRows.length;
 
   useEffect(() => {
     setDisplayCount(ITEMS_PER_PAGE);
-  }, [calendarScope]);
+  }, [calendarScope, historyViewMode]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -879,6 +945,10 @@ export default function DaoHallPage() {
 
   if (!user) return null;
 
+  const controlButtonBase = "rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-colors";
+  const activeControlButton = `${controlButtonBase} border-[#5865f2]/70 bg-[#5865f2]/18 text-[#f2f3f5]`;
+  const inactiveControlButton = `${controlButtonBase} border-[#3b3f48] bg-[#383a40]/65 text-[#b5bac1] hover:border-[#5865f2]/60 hover:text-[#f2f3f5]`;
+
   return (
     <PageLayout
       title="Dao Hall"
@@ -889,17 +959,17 @@ export default function DaoHallPage() {
       {loading ? (
         <PageSkeleton statCards={4} wideBlock rows={3} />
       ) : (
-        <div className="dao-modern-page space-y-6 px-0 py-2 sm:py-3">
+        <div className="dao-modern-page space-y-4 px-0 py-2 sm:py-3">
           {/* Getting Started checklist for new users */}
           <GettingStartedCard />
 
           {/* Upcoming Notes */}
           {scopedFutureNotes.length > 0 && (
-            <GlowCard glow="gold" hoverable={false}>
+            <GlowCard glow="none" hoverable={false} className="rounded-xl border border-[#3b3f48] bg-[#2b2d31] shadow-[0_10px_20px_rgba(0,0,0,0.22)]">
               <div className="space-y-2.5">
                 <div className="flex items-center gap-2">
-                  <h4 className="text-sm text-gold-glow uppercase tracking-wider font-semibold">Upcoming Notes</h4>
-                  <span className="text-[9px] text-gold-glow bg-gold-dim/20 px-2 py-0.5 rounded-full font-medium">{scopedFutureNotes.length}</span>
+                  <h4 className="text-sm font-semibold uppercase tracking-wider text-[#f2f3f5]">Upcoming Notes</h4>
+                  <span className="rounded-md border border-[#3b3f48] bg-[#232428] px-2 py-0.5 text-[9px] font-medium text-[#b5bac1]">{scopedFutureNotes.length}</span>
                 </div>
                 <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
                   {scopedFutureNotes.map((note) => {
@@ -908,7 +978,7 @@ export default function DaoHallPage() {
                       <button
                         key={note.id}
                         onClick={() => handleDayClick(note.date)}
-                        className="w-full text-left p-2 border border-ink-light/45 bg-ink-dark/20 hover:bg-ink-mid/20 hover:border-gold-dim/45 transition-all duration-200"
+                        className="w-full border border-[#3b3f48] bg-[#232428] p-2 text-left transition-colors duration-200 hover:bg-[#313338]"
                         title="Jump to this date"
                       >
                         <div className="flex items-start gap-2">
@@ -919,11 +989,11 @@ export default function DaoHallPage() {
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5 mb-0.5">
                               <span className="text-[11px] font-semibold truncate" style={{ color: noteColor }}>{note.user.name}</span>
-                              <span className="text-[9px] text-mist-mid bg-ink-mid/40 px-1.5 py-0.5 rounded">
+                              <span className="rounded-md border border-[#3b3f48] bg-[#313338] px-1.5 py-0.5 text-[9px] text-[#949ba4]">
                                 {formatDateWithPreference(note.date, dateFormat)}
                               </span>
                             </div>
-                            <p className="text-[10px] text-mist-light leading-relaxed line-clamp-2">{note.content}</p>
+                            <p className="line-clamp-2 text-[10px] leading-relaxed text-[#b5bac1]">{note.content}</p>
                           </div>
                         </div>
                       </button>
@@ -951,13 +1021,13 @@ export default function DaoHallPage() {
                 timeZone={settings.timeZone}
                 calendarWeekStart={settings.calendarWeekStart}
                 onManageNotes={undefined}
-                forceCompact
+                forceCompact={isMobile}
               />
             </div>
 
             {/* Stats panel — always visible beside calendar on desktop */}
             {!isMobile && (
-              <GlowCard glow="jade" hoverable={false} className="dao-modern-monthly-stats flex flex-col min-h-[260px]">
+              <GlowCard glow="none" hoverable={false} className="dao-modern-monthly-stats flex min-h-[260px] flex-col rounded-xl border border-[#3b3f48] bg-[#2b2d31] shadow-[0_10px_20px_rgba(0,0,0,0.22)]">
                 {user && effectiveChartUserIds.length > 0 && (
                   <CheckInStatsPanel
                     checkInRows={checkInRows}
@@ -974,49 +1044,25 @@ export default function DaoHallPage() {
 
           {/* Charts + cultivation stats are desktop-only */}
           {!isMobile && (
-            <GlowCard glow="jade" hoverable={false} className="dao-modern-chart-toolbar flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={chartsOpen}
-                  onClick={() => setChartsOpen((prev) => !prev)}
-                  className="inline-flex items-center gap-2 border px-2.5 py-1 text-xs font-medium transition-colors"
-                  style={{
-                    borderColor: chartsOpen ? "var(--jade-glow)" : "var(--border)",
-                    color: chartsOpen ? "var(--jade-glow)" : "var(--text-secondary)",
-                    backgroundColor: chartsOpen ? "rgba(0,255,128,0.06)" : "transparent",
-                  }}
-                >
-                  <span>{chartsOpen ? t("Hide Charts", "normal") : t("Show Charts", "normal")}</span>
-                  <span
-                    className="relative inline-flex h-4 w-8 items-center rounded-full transition-colors"
-                    style={{
-                      backgroundColor: chartsOpen
-                        ? "color-mix(in srgb, var(--jade-glow) 40%, transparent)"
-                        : "color-mix(in srgb, var(--border) 55%, transparent)",
-                    }}
-                  >
-                    <span
-                      className="absolute h-3 w-3 rounded-full transition-all"
-                      style={{
-                        left: chartsOpen ? "16px" : "2px",
-                        backgroundColor: chartsOpen ? "var(--jade-glow)" : "var(--text-muted)",
-                      }}
-                    />
-                  </span>
-                </button>
+            <GlowCard glow="none" hoverable={false} className="dao-modern-chart-toolbar flex flex-wrap items-center gap-3 rounded-xl border border-[#3b3f48] bg-[#2b2d31] shadow-[0_10px_20px_rgba(0,0,0,0.22)]">
+              <button
+                type="button"
+                aria-pressed={chartsOpen}
+                onClick={() => setChartsOpen((prev) => !prev)}
+                className={chartsOpen ? activeControlButton : inactiveControlButton}
+              >
+                {chartsOpen ? t("Hide Charts", "normal") : t("Show Charts", "normal")}
+              </button>
 
-                {user && allUsers.length > 0 && (
-                  <ChartUserFilter
-                    currentUserId={user.id}
-                    allUsers={allUsers}
-                    selectedUserIds={effectiveChartUserIds}
-                    onSelectionChange={setChartUserIds}
-                    userColors={userColors}
-                  />
-                )}
-              </div>
+              {user && allUsers.length > 0 && (
+                <ChartUserFilter
+                  currentUserId={user.id}
+                  allUsers={allUsers}
+                  selectedUserIds={effectiveChartUserIds}
+                  onSelectionChange={setChartUserIds}
+                  userColors={userColors}
+                />
+              )}
             </GlowCard>
           )}
 
@@ -1050,146 +1096,251 @@ export default function DaoHallPage() {
           )}
 
           {/* Check-In Feed — clean scrolling timeline */}
-          <GlowCard glow="jade" hoverable={false} className="dao-modern-cultivation-view">
+          <GlowCard glow="none" hoverable={false} className="dao-modern-cultivation-view rounded-xl border border-[#3b3f48] bg-[#2b2d31] shadow-[0_10px_20px_rgba(0,0,0,0.22)]">
             <div ref={sectRegisterRef} className="space-y-4">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                  <h3 className="text-sm uppercase tracking-wider text-jade-glow">{t("Check-In Feed", "normal")}</h3>
-                  <p className="mt-1 text-xs text-mist-dark">
-                    {t("A clean, mobile-friendly timeline for recent check-ins and notes.", "normal")}
+                  <h3 className="text-sm uppercase tracking-wider text-[#f2f3f5]">{t("Check-In History", "normal")}</h3>
+                  <p className="mt-1 text-xs text-[#b5bac1]">
+                    {t("All recorded check-ins, displayed in the same cleaner history style as the train log.", "normal")}
                   </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-md border border-ink-light/50 bg-ink-dark/30 px-2.5 py-1 text-[11px] text-mist-light">
+                <div className="flex flex-wrap items-center justify-end gap-2 lg:ml-auto">
+                  <span className="rounded-md border border-[#3b3f48] bg-[#383a40]/45 px-3 py-1.5 text-[11px] font-semibold text-[#b5bac1]">
                     {renderedCheckInRows.length} {t("entries", "normal")}
                   </span>
-                  <div
-                    className="flex items-center gap-1 border border-ink-light/50 p-0.5"
-                    style={{
-                      borderColor: "color-mix(in srgb, var(--jade-glow) 32%, var(--border))",
-                      background: "linear-gradient(135deg, color-mix(in srgb, var(--ink-mid) 78%, var(--ink-deep)) 0%, color-mix(in srgb, var(--jade-glow) 8%, var(--ink-deep)) 100%)",
-                    }}
-                  >
-                    {(["all", "mine", "friends"] as const).map((scope) => {
-                      const active = calendarScope === scope;
-                      return (
-                        <button
-                          key={scope}
-                          onClick={() => setCalendarScope(scope)}
-                          className="text-xs px-2.5 py-1 transition-all"
-                          style={{
-                            borderColor: active ? "color-mix(in srgb, var(--jade-glow) 45%, var(--border))" : "transparent",
-                            color: active ? "var(--cloud-white)" : "var(--text-secondary)",
-                            background: active
-                              ? "linear-gradient(135deg, color-mix(in srgb, var(--jade-glow) 24%, var(--ink-mid)) 0%, color-mix(in srgb, var(--jade) 20%, var(--ink-deep)) 100%)"
-                              : "transparent",
-                          }}
-                        >
-                          {t(scope === "all" ? "All" : scope === "mine" ? "Mine" : "Friends", "normal")}
-                        </button>
-                      );
-                    })}
+                  <div className="relative" ref={historyViewMenuRef}>
+                    <button
+                      type="button"
+                      aria-haspopup="menu"
+                      aria-expanded={isHistoryViewMenuOpen}
+                      onClick={() => setIsHistoryViewMenuOpen((prev) => !prev)}
+                      className={`${historyViewMode === "compact" ? activeControlButton : inactiveControlButton} inline-flex items-center gap-1.5`}
+                    >
+                      <svg viewBox="0 0 20 20" aria-hidden="true" className="h-3.5 w-3.5 fill-none stroke-current stroke-[1.7]">
+                        <path d="M1.75 10s3-5.25 8.25-5.25S18.25 10 18.25 10s-3 5.25-8.25 5.25S1.75 10 1.75 10Z" />
+                        <circle cx="10" cy="10" r="2.5" />
+                      </svg>
+                      <span>{t("View", "normal")}</span>
+                    </button>
+
+                    {isHistoryViewMenuOpen && (
+                      <div
+                        role="menu"
+                        className="absolute right-0 top-full z-20 mt-2 min-w-[170px] rounded-lg border border-[#3b3f48] bg-[#232428] p-1.5 shadow-[0_10px_24px_rgba(0,0,0,0.35)]"
+                      >
+                        {([
+                          { id: "detailed", label: "Detailed" },
+                          { id: "compact", label: "Compact" },
+                        ] as const).map((option) => {
+                          const active = historyViewMode === option.id;
+                          return (
+                            <button
+                              key={option.id}
+                              type="button"
+                              role="menuitemradio"
+                              aria-checked={active}
+                              onClick={() => {
+                                setHistoryViewMode(option.id);
+                                setIsHistoryViewMenuOpen(false);
+                              }}
+                              className={`flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left text-[11px] transition-colors ${active ? "bg-[#5865f2]/18 text-[#f2f3f5]" : "text-[#b5bac1] hover:bg-[#383a40]/70 hover:text-[#f2f3f5]"}`}
+                            >
+                              <span>{t(option.label, "normal")}</span>
+                              {active ? <span className="text-[#8ea1ff]">✓</span> : null}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
+                  {(["all", "mine", "friends"] as const).map((scope) => {
+                    const active = calendarScope === scope;
+                    return (
+                      <button
+                        key={scope}
+                        type="button"
+                        onClick={() => setCalendarScope(scope)}
+                        className={active ? activeControlButton : inactiveControlButton}
+                      >
+                        {t(scope === "all" ? "All" : scope === "mine" ? "Mine" : "Friends", "normal")}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
               {renderedCheckInRows.length === 0 ? (
-                <div className="flex flex-col items-center border border-ink-light/40 bg-ink-mid/10 py-10 text-center">
+                <div className="flex flex-col items-center border border-[#3b3f48] bg-[#232428] py-10 text-center">
                   <div className="mb-2 text-2xl opacity-30">🧭</div>
-                  <p className="text-xs text-mist-dark">{t("No entries for this view", "normal")}</p>
-                  <p className="mt-1 text-[10px] text-mist-dark/60">{t("Use the calendar above to check in and add notes", "normal")}</p>
+                  <p className="text-xs text-[#b5bac1]">{t("No entries for this view", "normal")}</p>
+                  <p className="mt-1 text-[10px] text-[#949ba4]">{t("Start checking in to build your history timeline", "normal")}</p>
                 </div>
               ) : (
-                <div className={isMobile ? "space-y-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)]" : "grid grid-cols-1 gap-3 xl:grid-cols-2"}>
+                <div className="space-y-3">
                   {visibleRenderedCheckInRows.map(({ date, mine, mineWeight, presentCount, everyoneDetails }) => {
-                    const hasCheckin = calendarScope === "mine" ? mine.present : presentCount > 0;
+                      const hasCheckin = calendarScope === "mine" ? mine.present : presentCount > 0;
 
-                    return (
-                      <article
-                        key={date}
-                        className="rounded-lg border border-[#3b3f48] bg-[#313338] p-3 shadow-[0_8px_24px_rgba(0,0,0,0.18)]"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">{t("Check-In", "normal")}</p>
-                            <button
-                              onClick={() => handleDayClick(date)}
-                              className="mt-1 text-left text-sm font-semibold text-[#f2f3f5] transition-colors hover:text-[#8ea1e1]"
-                              title={t("Open this day", "normal")}
-                            >
-                              {formatDateWithPreference(date, dateFormat)}
-                            </button>
-                          </div>
-
-                          <button
-                            onClick={() => handleDayClick(date)}
-                            className="rounded-md border border-[#3b3f48] bg-[#2b2d31] px-2.5 py-1 text-[11px] font-medium text-[#dbdee1] transition-colors hover:border-[#5865f2]/60 hover:text-[#f2f3f5]"
-                          >
-                            {t("Open", "normal")}
-                          </button>
-                        </div>
-
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <span className={`rounded-md border px-2 py-1 text-[11px] ${hasCheckin ? "border-[#5865f2]/60 bg-[#383a40] text-[#f2f3f5]" : "border-[#3b3f48] bg-[#2b2d31] text-[#949ba4]"}`}>
-                            {calendarScope === "mine"
-                              ? (mine.present ? t("Checked in", "normal") : t("Rest day", "normal"))
-                              : `${presentCount} ${t("active", "normal")}`}
-                          </span>
-                          <span className="rounded-md border border-[#3b3f48] bg-[#2b2d31] px-2 py-1 text-[11px] text-[#b5bac1]">
-                            {calendarScope === "mine" ? mineWeight : `${everyoneDetails.length} ${t("people", "normal")}`}
-                          </span>
-                        </div>
-
-                        {calendarScope === "mine" ? (
-                          <div className="mt-3 rounded-md border border-[#3b3f48] bg-[#2b2d31] px-3 py-2.5">
-                            <div className="flex items-center gap-2 text-[11px]">
-                              <span className="h-2 w-2 rounded-full bg-[#5865f2]" />
-                              <span className="font-medium text-[#f2f3f5]">{t("You", "normal")}</span>
-                              <span className="ml-auto text-[#949ba4]">
-                                {mine.present ? t("In", "normal") : t("Rest", "normal")}
+                      return (
+                        <article
+                          key={date}
+                          className="rounded-lg border border-[#34373f] bg-[#26272c] px-3 py-2.5 shadow-[0_6px_14px_rgba(0,0,0,0.12)] transition-colors cursor-pointer"
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => handleDayClick(date)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              handleDayClick(date);
+                            }
+                          }}
+                        >
+                          {historyViewMode !== "compact" && (
+                            <div className="flex items-start justify-between gap-2">
+                              <p
+                                className="text-sm font-semibold leading-tight"
+                                style={{ color: hasCheckin ? "var(--jade-light)" : "var(--cloud-white)" }}
+                              >
+                                {formatDateWithPreference(date, dateFormat)}
+                              </p>
+                              <span className="shrink-0 text-[11px]" style={{ color: "var(--text-muted)" }}>
+                                {formatRelativeRecentDate(date)}
                               </span>
                             </div>
-                            <p className="mt-1 pl-4 text-sm leading-6 text-[#dbdee1]">
-                              {mine.comment?.trim() || t("No note added for this day.", "normal")}
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="mt-3 space-y-1.5">
-                            {everyoneDetails.slice(0, isMobile ? 4 : 5).map((detail) => {
-                              const c = getUserCultivatorColor(detail.id, userColors);
-                              return (
-                                <div key={detail.id} className="rounded-md border border-[#3b3f48] bg-[#2b2d31] px-2.5 py-2">
-                                  <div className="flex items-center gap-2 text-[11px]">
-                                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: c }} />
-                                    <span className="min-w-0 truncate font-medium" style={{ color: c }}>{detail.name}</span>
-                                    <span className="ml-auto shrink-0 text-[#949ba4]">
-                                      {detail.present ? t("In", "normal") : t("Rest", "normal")}
-                                    </span>
-                                    {detail.weight ? <span className="shrink-0 text-[#b5bac1]">{detail.weight} kg</span> : null}
-                                  </div>
-                                  {detail.comment ? (
-                                    <p className="mt-1 pl-4 text-[11px] leading-5 text-[#dbdee1]">
-                                      {detail.comment}
-                                    </p>
-                                  ) : null}
+                          )}
+
+                          <div
+                            className={`${historyViewMode === "compact" ? "mt-0" : "mt-1.5"} space-y-0.5 text-[11px] leading-relaxed`}
+                            style={{ color: "var(--text-secondary)" }}
+                          >
+                            {calendarScope === "mine" ? (
+                              historyViewMode === "compact" ? (
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                  <span className="shrink-0 text-[11px] font-semibold" style={{ color: hasCheckin ? "var(--jade-light)" : "var(--cloud-white)" }}>
+                                    {formatDateWithPreference(date, dateFormat)}
+                                  </span>
+                                  <span className="truncate">
+                                    {getDetailLabelVisibility(historyViewMode, "Name:") ? (
+                                      <span style={{ color: "var(--text-muted)" }}>{t("Name:", "normal")}</span>
+                                    ) : null}{" "}
+                                    <span style={{ color: "var(--cloud-white)" }}>{t("You", "normal")}</span>
+                                  </span>
+                                  <span className="truncate" style={{ color: mine.present ? "var(--forest)" : "var(--gold-glow)" }}>
+                                    {mine.present ? t("In", "normal") : t("Rest", "normal")}
+                                  </span>
+                                  <span className="truncate" style={{ color: mineWeight === "-" ? "var(--gold-glow)" : "var(--mountain-blue-glow)" }}>
+                                    {mineWeight === "-" ? "-" : mineWeight}
+                                  </span>
+                                  <span className="min-w-0 flex-1 truncate" style={{ color: mine.comment?.trim() ? "var(--text-secondary)" : "var(--text-muted)" }}>
+                                    {mine.comment?.trim() || "-"}
+                                  </span>
                                 </div>
-                              );
-                            })}
-                            {everyoneDetails.length > (isMobile ? 4 : 5) && (
-                              <p className="text-[11px] text-mist-dark">
-                                +{everyoneDetails.length - (isMobile ? 4 : 5)} {t("more people", "normal")}
-                              </p>
+                              ) : (
+                                <>
+                                  <div className="grid grid-cols-2 gap-x-3">
+                                    <div className="min-w-0 truncate">
+                                      <span style={{ color: "var(--text-muted)" }}>{t("Status:", "normal")}</span>{" "}
+                                      <span style={{ color: mine.present ? "var(--forest)" : "var(--gold-glow)" }}>
+                                        {mine.present ? t("In", "normal") : t("Rest", "normal")}
+                                      </span>
+                                    </div>
+                                    <div className="min-w-0 truncate">
+                                      <span style={{ color: "var(--text-muted)" }}>{t("Weight:", "normal")}</span>{" "}
+                                      <span style={{ color: mineWeight === "-" ? "var(--gold-glow)" : "var(--mountain-blue-glow)" }}>
+                                        {mineWeight === "-" ? "-" : mineWeight}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="grid grid-cols-1 gap-x-3">
+                                    <div className="min-w-0 truncate">
+                                      <span style={{ color: "var(--text-muted)" }}>{t("Notes:", "normal")}</span>{" "}
+                                      <span style={{ color: "var(--text-secondary)" }}>{mine.comment?.trim() || "-"}</span>
+                                    </div>
+                                  </div>
+                                </>
+                              )
+                            ) : (
+                              <>
+                                {everyoneDetails.slice(0, historyPreviewLimit).map((detail, detailIndex) => {
+                                  const c = getUserCultivatorColor(detail.id, userColors);
+                                  return (
+                                    <div
+                                      key={detail.id}
+                                      className="space-y-0.5"
+                                      style={{
+                                        borderTop: detailIndex === 0 ? "none" : "1px solid color-mix(in srgb, var(--ink-light) 48%, transparent)",
+                                        paddingTop: detailIndex === 0 ? 0 : "0.35rem",
+                                        marginTop: detailIndex === 0 ? 0 : "0.35rem",
+                                      }}
+                                    >
+                                      {historyViewMode === "compact" ? (
+                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                          {detailIndex === 0 ? (
+                                            <span className="shrink-0 text-[11px] font-semibold" style={{ color: hasCheckin ? "var(--jade-light)" : "var(--cloud-white)" }}>
+                                              {formatDateWithPreference(date, dateFormat)}
+                                            </span>
+                                          ) : null}
+                                          <span className="min-w-0 truncate">
+                                            {getDetailLabelVisibility(historyViewMode, "Name:") ? (
+                                              <span style={{ color: "var(--text-muted)" }}>{t("Name:", "normal")}</span>
+                                            ) : null}{" "}
+                                            <span style={{ color: c }}>{detail.name}</span>
+                                          </span>
+                                          <span className="truncate" style={{ color: detail.weight ? "var(--mountain-blue-glow)" : "var(--gold-glow)" }}>
+                                            {detail.weight ? `${detail.weight} kg` : "-"}
+                                          </span>
+                                          <span className="truncate" style={{ color: detail.present ? "var(--forest)" : "var(--text-secondary)" }}>
+                                            {detail.present ? t("In", "normal") : t("Rest", "normal")}
+                                          </span>
+                                          <span className="min-w-0 flex-1 truncate" style={{ color: detail.comment ? "var(--text-secondary)" : "var(--text-muted)" }}>
+                                            {detail.comment || "-"}
+                                          </span>
+                                        </div>
+                                      ) : (
+                                        <>
+                                          <div className="grid grid-cols-2 gap-x-3">
+                                            <div className="min-w-0 truncate">
+                                              <span style={{ color: "var(--text-muted)" }}>{t("Name:", "normal")}</span>{" "}
+                                              <span style={{ color: c }}>{detail.name}</span>
+                                            </div>
+                                            <div className="min-w-0 grid grid-cols-2 gap-x-3">
+                                              <span className="truncate" style={{ color: detail.weight ? "var(--mountain-blue-glow)" : "var(--gold-glow)" }}>
+                                                <span style={{ color: "var(--text-muted)" }}>{t("Weight:", "normal")}</span>{" "}
+                                                {detail.weight ? `${detail.weight} kg` : "-"}
+                                              </span>
+                                              <span className="truncate" style={{ color: detail.present ? "var(--forest)" : "var(--text-secondary)" }}>
+                                                <span style={{ color: "var(--text-muted)" }}>{t("Status:", "normal")}</span>{" "}
+                                                {detail.present ? t("In", "normal") : t("Rest", "normal")}
+                                              </span>
+                                            </div>
+                                          </div>
+                                          <div className="grid grid-cols-1 gap-x-3">
+                                            <div className="min-w-0 truncate">
+                                              <span style={{ color: "var(--text-muted)" }}>{t("Notes:", "normal")}</span>{" "}
+                                              <span style={{ color: "var(--text-secondary)" }}>{detail.comment || "-"}</span>
+                                            </div>
+                                          </div>
+                                        </>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                                {everyoneDetails.length > historyPreviewLimit && (
+                                  <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>
+                                    +{everyoneDetails.length - historyPreviewLimit} {t("more people", "normal")}
+                                  </p>
+                                )}
+                              </>
                             )}
                           </div>
-                        )}
-                      </article>
-                    );
+                        </article>
+                      );
                   })}
 
                   {(hasMoreRows || isLoadingMoreRows) && (
-                    <div ref={rowsObserverTargetRef} className="flex justify-center py-2 xl:col-span-2">
-                      <span className="text-[11px] text-mist-dark">
+                    <div ref={rowsObserverTargetRef} className="flex justify-center px-3 py-2">
+                      <span className="text-[11px] text-[#949ba4]">
                         {isLoadingMoreRows ? t("Loading more rows...", "normal") : t("Scroll for more", "normal")}
                       </span>
                     </div>
@@ -1214,19 +1365,10 @@ export default function DaoHallPage() {
 
           return (
             <div
-              className="border overflow-hidden rounded-lg"
-              style={{
-                borderColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
-                background: "#2b2d31",
-              }}
+              className="overflow-hidden rounded-lg border border-[#32353b] bg-[#2b2d31]"
+              style={{ boxShadow: "0 1px 0 rgba(255,255,255,0.03) inset" }}
             >
-              <div
-                className="flex items-center justify-between gap-3 border-b px-3 py-2"
-                style={{
-                  borderBottomColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
-                  backgroundColor: "#232428",
-                }}
-              >
+              <div className="flex items-center justify-between gap-3 border-b border-[#32353b] px-3 py-2.5">
                 <div className="min-w-0">
                   <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Day Check-In</p>
                   <h2 className="truncate text-sm font-semibold text-[#f2f3f5]">
@@ -1234,14 +1376,14 @@ export default function DaoHallPage() {
                   </h2>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={`rounded-md border px-2 py-1 text-[10px] font-semibold ${isFarFuture ? "border-[#f0b96a]/55 bg-[#383533] text-[#ffe0a8]" : "border-[#5865f2]/60 bg-[#383a40] text-[#f2f3f5]"}`}>
+                  <span className={`rounded-md border px-2 py-1 text-[10px] font-semibold ${isFarFuture ? "border-[#5b4d34] bg-[#3a3328] text-[#f3cd8c]" : "border-[#4e5058] bg-[#404249] text-[#ffffff]"}`}>
                     {isFarFuture ? "Notes Mode" : "Check-In Mode"}
                   </span>
                   <button
                     type="button"
                     onClick={() => setCheckInModal(null)}
                     aria-label="Close dialog"
-                    className="flex h-8 w-8 items-center justify-center rounded-md border border-[#3b3f48] bg-[#383a40]/65 text-[#b5bac1] transition-colors hover:border-[#5865f2]/60 hover:text-[#f2f3f5]"
+                    className="flex h-8 w-8 items-center justify-center rounded-md border border-[#3b3f48] bg-[#2b2d31] text-[#b5bac1] transition-colors hover:bg-[#35373c] hover:text-[#f2f3f5]"
                   >
                     ✕
                   </button>
@@ -1251,13 +1393,13 @@ export default function DaoHallPage() {
               <div className="max-h-[calc(86vh-3.25rem)] overflow-y-auto px-2.5 pt-2.5 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] scrollbar-hide" style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain", touchAction: "pan-y" }}>
                 <div className="space-y-2.5">
                   {isFarFuture && (
-                    <div className="rounded-md border border-[#f0b96a]/35 bg-[#383533] px-2.5 py-1.5 text-[11px] text-[#ffe0a8]">
+                    <div className="rounded-md border border-[#5b4d34] bg-[#312b22] px-2.5 py-1.5 text-[11px] text-[#f3cd8c]">
                       Save a personal note for this future day. Full check-in is available only for today.
                     </div>
                   )}
 
                   {!isFarFuture && (
-                    <section className="rounded-md border border-[#3b3f48] bg-[#232428] p-3">
+                    <section className="border-b border-[#32353b] pb-3">
                       <div className="mb-3">
                         <label className="block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">
                           Cultivator Check-In
@@ -1280,11 +1422,11 @@ export default function DaoHallPage() {
                               className={`rounded-md border p-2.5 transition-all ${
                                 entry.present
                                   ? "bg-[#313338]"
-                                  : "bg-[#232428]"
-                              } ${isSelf ? "" : "opacity-70 cursor-default"}`}
+                                  : "bg-[#2b2d31]"
+                              } ${isSelf ? "" : "opacity-75 cursor-default"}`}
                               style={{
                                 borderColor: entry.present
-                                  ? `color-mix(in srgb, ${color} 55%, var(--ink-light))`
+                                  ? `color-mix(in srgb, ${color} 45%, #3b3f48)`
                                   : "#3b3f48",
                                 boxShadow: "none",
                               }}
@@ -1310,9 +1452,9 @@ export default function DaoHallPage() {
                                   <button
                                     type="button"
                                     onClick={() => updateCheckInModalEntry(u.id, "present", !entry.present)}
-                                    className={`w-full rounded-md border px-2.5 py-2 text-[11px] font-medium transition-colors ${entry.present ? "border-[#5865f2]/60 bg-[#5865f2]/12 text-[#c8cdfa]" : "border-[#3b3f48] bg-[#2b2d31] text-[#dbdee1] hover:border-[#5865f2]/45"}`}
+                                    className={`w-full rounded-md border px-2.5 py-2 text-[11px] font-semibold transition-colors ${entry.present ? "border-[#2f8f63] bg-[#1f4d3d] text-[#d9fff0]" : "border-[#5865f2]/55 bg-[#2f355f] text-[#eef1ff] hover:bg-[#39427a]"}`}
                                   >
-                                    {entry.present ? "Checked In" : "Mark Check-In"}
+                                    {entry.present ? "✓ Checked In" : "Mark Check-In"}
                                   </button>
 
                                   <div>
@@ -1322,12 +1464,7 @@ export default function DaoHallPage() {
                                       placeholder="Weight (kg)"
                                       value={entry.weight}
                                       onChange={(e) => updateCheckInModalEntry(u.id, "weight", e.target.value)}
-                                      className="w-full rounded-md border px-2.5 py-2 text-[11px] outline-none"
-                                      style={{
-                                        borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
-                                        color: "var(--cloud-white)",
-                                      }}
+                                      className="w-full rounded-md border border-[#4f6aa8] bg-[#263248] px-2.5 py-2 text-[11px] text-[#f2f3f5] outline-none placeholder:text-[#9fb2d9]"
                                       min="0"
                                       max="500"
                                       step="0.1"
@@ -1342,7 +1479,7 @@ export default function DaoHallPage() {
                     </section>
                   )}
 
-                  <section className="rounded-md border border-[#3b3f48] bg-[#232428] p-3">
+                  <section className="pt-1">
                     <label className="block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Personal Note</label>
                     <p className="mt-1 text-[11px] text-[#b5bac1]">Add a short update for this day.</p>
                     <textarea
@@ -1354,31 +1491,23 @@ export default function DaoHallPage() {
                         }
                       }}
                       rows={3}
-                      className="mt-2 w-full resize-none rounded-md border px-2.5 py-2 text-xs outline-none"
-                      style={{
-                        borderColor: "#3b3f48",
-                        backgroundColor: "#313338",
-                        color: "var(--cloud-white)",
-                      }}
+                      className="mt-2 w-full resize-none rounded-md border border-[#7b5aa6] bg-[#312848] px-2.5 py-2 text-xs text-[#f2f3f5] outline-none placeholder:text-[#c8b3e6]"
                     />
                   </section>
 
-                  <div className="sticky bottom-0 -mx-2.5 mt-1 border-t border-[#32353b] bg-[#2b2d31]/95 px-2.5 pt-2.5 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] backdrop-blur-sm">
+                  <div className="sticky bottom-0 -mx-2.5 mt-2 border-t border-[#32353b] bg-[#2b2d31]/98 px-2.5 pt-2.5 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] backdrop-blur-sm">
                     {isFarFuture ? (
                       <div className="flex gap-2">
-                        <GlowButton
-                          variant="jade"
-                          glow
-                          className="flex-1"
+                        <button
+                          type="button"
                           onClick={handleSaveCheckIn}
-                          size="sm"
+                          className="flex-1 rounded-md border border-[#3d6f5d] bg-[#24503f] px-3 py-2.5 text-sm font-semibold text-[#e8fff5] transition-colors hover:bg-[#2c644e]"
                         >
                           Save Note
-                        </GlowButton>
+                        </button>
                         {futureNotes.some(n => n.date === checkInModal.date && n.user.id === user.id) && (
-                          <GlowButton
-                            variant="crimson"
-                            className="flex-1"
+                          <button
+                            type="button"
                             onClick={async () => {
                               const existingNote = futureNotes.find(n => n.date === checkInModal.date && n.user.id === user.id);
                               if (existingNote) {
@@ -1406,22 +1535,20 @@ export default function DaoHallPage() {
                                 });
                               }
                             }}
-                            size="sm"
+                            className="flex-1 rounded-md border border-[#6b3b42] bg-[#4a2a30] px-3 py-2.5 text-sm font-semibold text-[#ffd8dc] transition-colors hover:bg-[#5a3239]"
                           >
                             Clear Note
-                          </GlowButton>
+                          </button>
                         )}
                       </div>
                     ) : (
-                      <GlowButton
-                        variant="jade"
-                        glow
-                        className="w-full"
+                      <button
+                        type="button"
                         onClick={handleSaveCheckIn}
-                        size="sm"
+                        className="w-full rounded-md border border-[#5b6ee1] bg-[#3d4ec9] px-3 py-2.5 text-sm font-semibold text-white shadow-[0_6px_18px_rgba(88,101,242,0.28)] transition-colors hover:bg-[#5063e6]"
                       >
                         Save Check-In
-                      </GlowButton>
+                      </button>
                     )}
                   </div>
                 </div>
@@ -1438,11 +1565,11 @@ export default function DaoHallPage() {
         title="⚖️ Log Your Weight"
       >
         <div className="space-y-5">
-          <p className="text-xs text-mist-mid">
+          <p className="text-xs text-[#b5bac1]">
             You haven&apos;t logged your weight for this check-in. Tracking your weight helps monitor your cultivation progress.
           </p>
           <div>
-            <label className="block text-[10px] text-jade-glow uppercase tracking-wider mb-2">Body Weight (kg)</label>
+            <label className="mb-2 block text-[10px] uppercase tracking-wider text-[#f2f3f5]">Body Weight (kg)</label>
             <input
               type="number"
               placeholder="Enter your weight..."
@@ -1451,7 +1578,7 @@ export default function DaoHallPage() {
               onKeyDown={(e) => {
                 if (e.key === "Enter" && weightPromptValue) handleWeightPromptSubmit();
               }}
-              className="w-full bg-ink-deep border border-ink-light rounded-lg px-4 py-4 text-lg text-cloud-white placeholder-mist-dark outline-none focus:border-jade-glow transition-colors text-center font-medium"
+              className="w-full rounded-md border border-[#3b3f48] bg-[#232428] px-4 py-4 text-center text-lg font-medium text-[#f2f3f5] placeholder:text-[#949ba4] outline-none transition-colors focus:border-[#5865f2]/60"
               min="0"
               max="500"
               step="0.1"
@@ -1487,7 +1614,7 @@ export default function DaoHallPage() {
           </div>
           <button
             onClick={handleWeightPromptDismissToday}
-            className="w-full text-[11px] text-mist-dark hover:text-mist-mid transition-colors py-2 text-center"
+            className="w-full py-2 text-center text-[11px] text-[#949ba4] transition-colors hover:text-[#f2f3f5]"
           >
             Don&apos;t remind me today
           </button>
@@ -1498,16 +1625,16 @@ export default function DaoHallPage() {
         <div className="fixed bottom-0 right-3 z-50">
           {statsTabOpen ? (
             <div
-              className="w-[min(320px,calc(100vw-0.75rem))] rounded-t-xl border border-ink-light shadow-2xl overflow-hidden bg-ink-deep"
+              className="w-[min(320px,calc(100vw-0.75rem))] overflow-hidden rounded-t-xl border border-[#3b3f48] bg-[#2b2d31] shadow-2xl"
             >
               <div
-                className="flex items-center justify-between px-3 py-2 border-b border-ink-light"
+                className="flex items-center justify-between border-b border-[#3b3f48] px-3 py-2"
               >
                 <div className="min-w-0">
-                  <p className="text-sm text-jade-glow uppercase tracking-wider">
+                  <p className="text-sm uppercase tracking-wider text-[#f2f3f5]">
                     Cultivation Stats
                   </p>
-                  <p className="text-[11px] truncate text-mist-dark">
+                  <p className="truncate text-[11px] text-[#949ba4]">
                     Overview sidebar
                   </p>
                 </div>
@@ -1516,7 +1643,7 @@ export default function DaoHallPage() {
                   aria-label="Close cultivation stats"
                   title="Close"
                   onClick={() => setStatsTabOpen(false)}
-                  className="inline-flex h-6 w-6 items-center justify-center rounded border border-ink-light text-xs font-bold text-mist-dark transition-colors hover:bg-ink-mid/35"
+                  className="inline-flex h-6 w-6 items-center justify-center rounded border border-[#3b3f48] text-xs font-bold text-[#949ba4] transition-colors hover:bg-[#313338] hover:text-[#f2f3f5]"
                 >
                   x
                 </button>
@@ -1537,7 +1664,7 @@ export default function DaoHallPage() {
             <button
               type="button"
               onClick={() => setStatsTabOpen(true)}
-              className="w-[min(220px,calc(100vw-0.75rem))] rounded-t-xl border border-ink-light border-b-0 px-4 py-2 text-xs font-semibold uppercase tracking-wider shadow-lg transition-all duration-200 bg-ink-deep text-cloud-white hover:bg-ink-mid/30 hover:shadow-[0_16px_36px_rgb(0_0_0_/_0.35)] hover:border-jade-glow/55"
+              className="w-[min(220px,calc(100vw-0.75rem))] rounded-t-xl border border-[#3b3f48] border-b-0 bg-[#232428] px-4 py-2 text-xs font-semibold uppercase tracking-wider text-[#f2f3f5] shadow-lg transition-colors duration-200 hover:bg-[#313338]"
             >
               Cultivation Stats
             </button>

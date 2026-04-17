@@ -48,7 +48,7 @@ export default function ConnectivityBanner() {
 
   return (
     <div className="px-4 py-2 bg-amber-500/15 border-b border-amber-400/30 text-amber-100 text-xs sm:text-sm">
-      Unable to connect to the app database right now. If you are on Android, verify your app URL/network and ensure WireGuard or Tailscale is connected.
+      Unable to connect to the app database right now. Verify the server is reachable and your network connection is stable.
     </div>
   );
 }

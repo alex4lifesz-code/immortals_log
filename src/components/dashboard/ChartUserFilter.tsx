@@ -23,6 +23,10 @@ export default function ChartUserFilter({
   onSelectionChange,
   userColors,
 }: Props) {
+  const controlButtonBase = "rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-colors";
+  const activeControlButton = `${controlButtonBase} border-[#5865f2]/70 bg-[#5865f2]/18 text-[#f2f3f5]`;
+  const inactiveControlButton = `${controlButtonBase} border-[#3b3f48] bg-[#383a40]/65 text-[#b5bac1] hover:border-[#5865f2]/60 hover:text-[#f2f3f5]`;
+
   const toggleUser = (id: string) => {
     if (selectedUserIds.includes(id)) {
       if (selectedUserIds.length === 1) return;
@@ -36,34 +40,22 @@ export default function ChartUserFilter({
   const isAll = selectedUserIds.length === allUsers.length;
 
   return (
-    <div className="flex items-center gap-1.5 flex-wrap">
+    <div className="flex items-center gap-2 flex-wrap">
       <span className="text-[11px] mr-1" style={{ color: "var(--text-muted)" }}>
         {t("Show:", "normal")}
       </span>
       <button
+        type="button"
         onClick={() => onSelectionChange([currentUserId])}
-        className={`px-2 py-0.5 text-[11px] rounded border transition-colors ${
-          isOnlyMe ? "font-semibold" : "opacity-60 hover:opacity-80"
-        }`}
-        style={{
-          borderColor: isOnlyMe ? "var(--jade-glow)" : "var(--border)",
-          color: isOnlyMe ? "var(--jade-glow)" : "var(--text-secondary)",
-          backgroundColor: isOnlyMe ? "rgba(0,255,128,0.08)" : "transparent",
-        }}
+        className={isOnlyMe ? activeControlButton : inactiveControlButton}
       >
         {t("Just Me", "normal")}
       </button>
       {allUsers.length > 1 && (
         <button
+          type="button"
           onClick={() => onSelectionChange(allUsers.map((u) => u.id))}
-          className={`px-2 py-0.5 text-[11px] rounded border transition-colors ${
-            isAll ? "font-semibold" : "opacity-60 hover:opacity-80"
-          }`}
-          style={{
-            borderColor: isAll ? "var(--text-primary)" : "var(--border)",
-            color: isAll ? "var(--text-primary)" : "var(--text-secondary)",
-            backgroundColor: isAll ? "rgba(255,255,255,0.05)" : "transparent",
-          }}
+          className={isAll ? activeControlButton : inactiveControlButton}
         >
           {t("All", "normal")}
         </button>
@@ -72,20 +64,18 @@ export default function ChartUserFilter({
         .filter((u) => u.id !== currentUserId)
         .map((u) => {
           const selected = selectedUserIds.includes(u.id);
-          const color = userColors[u.id] || "var(--text-secondary)";
+          const color = userColors[u.id] || "#b5bac1";
           return (
             <button
               key={u.id}
+              type="button"
               onClick={() => toggleUser(u.id)}
-              className={`px-2 py-0.5 text-[11px] rounded border transition-colors ${
-                selected ? "font-semibold" : "opacity-50 hover:opacity-75"
-              }`}
-              style={{
-                borderColor: selected ? color : "var(--border)",
-                color: selected ? color : "var(--text-muted)",
-              }}
+              className={selected ? activeControlButton : inactiveControlButton}
             >
-              {u.name}
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
+                <span>{u.name}</span>
+              </span>
             </button>
           );
         })}

@@ -8,7 +8,8 @@ import { useDisplaySettings, DEFAULT_UNIFIED_VISIBLE_COLUMNS, DISPLAY_DEFAULTS }
 import { useIsMobile } from "@/context/AppContext";
 import { getTypeColor, formatDateWithPreference } from "@/lib/constants";
 import { api, ApiRequestError } from "@/lib/api-client";
-import { getExerciseDisplayName, getTypeDisplayName, getTypeColorKey } from "@/lib/exercise-name";
+import { getDeletedExerciseLabel, getExerciseDisplayName, getTypeDisplayName, getTypeColorKey } from "@/lib/exercise-name";
+import { isDeletedExerciseDescription } from "@/lib/pending-exercises";
 import { t, tHint } from "@/lib/terminology";
 import { inferExerciseType, formatSetValue, formatSetReps, getColumnHeaders, kgToLbs, type ExerciseType } from "@/lib/unit-conversion";
 import { UserPhysiqueSettings } from "@/lib/user-physique";
@@ -164,7 +165,7 @@ function flattenLogsUnified(exercises: ProgressionExercise[]): UnifiedFlatLogEnt
       entries.push({
         logId: log.id,
         date: log.createdAt,
-        exerciseName: ex.name,
+        exerciseName: isDeletedExerciseDescription(ex.story) ? getDeletedExerciseLabel(ex) : ex.name,
         exerciseId: ex.id,
         level: log.level,
         levelNameLevel: parsed.displayLevelOverride ?? log.level,
@@ -638,6 +639,7 @@ function UnifiedTrainingLogTable({
                     const entryDisplayName = ex
                       ? stripBwPercentHint(getExerciseDisplayName(ex, displayTerminologyMode, settings.showExerciseForeignLanguage))
                       : stripBwPercentHint(entry.exerciseName);
+                    const isDeletedEntry = entryDisplayName.toLowerCase().startsWith("deleted exercise");
                     const exerciseVariantOptions = (ex?.variations ?? []).map((v) => v.name).filter(Boolean);
                     const selectedVariantValue = editData?.variant ?? "";
                     const variantSelectOptions =

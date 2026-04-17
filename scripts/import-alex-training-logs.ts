@@ -337,7 +337,7 @@ function inferMapping(sourceExercise: string, notes: string): Inference | null {
   if (name === "dumbbell forearm curl") return { canonicalExercise: "Forearm curl", progressionHint: "Dumbbell" };
 
   // --- Legs ---
-  if (name === "barbell squat") return { canonicalExercise: "Gym Squat", progressionHint: "Barbell", variantHint: "Back" };
+  if (name === "barbell squat") return { canonicalExercise: "Squat", progressionHint: "Barbell", variantHint: "Back" };
   if (name === "deadlift") return { canonicalExercise: "Deadlift", progressionHint: "Conventional" };
   if (name === "seated leg extension") return { canonicalExercise: "Leg extension", progressionHint: "Seated" };
   if (name === "seated leg curl") return { canonicalExercise: "Leg curl", progressionHint: "Seated" };
@@ -427,7 +427,6 @@ async function main() {
     console.log(`Admin user: ${admin.username || admin.name} (${admin.id})`);
 
     const exercises = await prisma.progressionExercise.findMany({
-      where: { userId: admin.id },
       include: {
         tiers: { select: { level: true, name: true }, orderBy: { level: "asc" } },
         variations: { select: { name: true }, orderBy: { name: "asc" } },

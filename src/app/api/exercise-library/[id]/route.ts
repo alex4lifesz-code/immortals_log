@@ -3,12 +3,13 @@ import { prisma } from "@/lib/prisma";
 import {
   ALL_DIFFICULTIES,
 } from "@/lib/exercise-types";
-import { withAuth } from "@/lib/auth/middleware";
+import { withAdmin } from "@/lib/auth/middleware";
 import { getExerciseDbOptionsFromAppPrefs } from "@/lib/exercise-db-settings";
 import { resolveVietnameseValue } from "@/lib/auto-vietnamese";
 import {
   isPendingExerciseDescription,
   markPendingExerciseAsEdited,
+  markExerciseAsDeleted,
   markExerciseAsPending,
   stripExerciseStatusMarkers,
 } from "@/lib/pending-exercises";
@@ -53,7 +54,7 @@ function normalizeTypeForFlags(typeLabel: string): "weighted" | "timed" | "bodyw
 }
 
 /** PATCH /api/exercise-library/[id] — Update an exercise */
-export const PATCH = withAuth(async (req, { auth, params }) => {
+export const PATCH = withAdmin(async (req, { auth, params }) => {
   try {
     const id = params.id as string;
     const body = await req.json();
@@ -309,21 +310,32 @@ export const PATCH = withAuth(async (req, { auth, params }) => {
   }
 });
 
-/** DELETE /api/exercise-library/[id] — Delete an exercise */
-export const DELETE = withAuth(async (_req, { auth, params }) => {
+/** DELETE /api/exercise-library/[id] — Move an exercise to the recycle bin */
+export const DELETE = withAdmin(async (_req, { auth, params }) => {
   try {
     const id = params.id as string;
 
     const existing = await prisma.progressionExercise.findUnique({
       where: { id },
+      select: {
+        id: true,
+        name: true,
+        story: true,
+        userId: true,
+      },
     });
     if (!existing) {
       return ApiErrors.notFound("Exercise not found");
     }
 
-    await prisma.progressionExercise.delete({ where: { id } });
+    await prisma.progressionExercise.update({
+      where: { id },
+      data: {
+        story: markExerciseAsDeleted(existing.story),
+      },
+    });
 
-    return apiSuccess({ message: "Exercise deleted" });
+    return apiSuccess({ message: `${existing.name} was moved to the recycle bin.` });
   } catch (error) {
     console.error("Exercise delete error:", error);
     return ApiErrors.internal("Failed to delete exercise");

@@ -1,4 +1,5 @@
 import { TerminologyMode } from "@/context/DisplaySettingsContext";
+import { isDeletedExerciseDescription } from "@/lib/pending-exercises";
 import { t } from "@/lib/terminology";
 
 export interface ExerciseNameLike {
@@ -6,6 +7,7 @@ export interface ExerciseNameLike {
   wuxiaName?: string | null;
   englishName?: string | null;
   vietnameseName?: string | null;
+  story?: string | null;
 }
 
 export interface ExerciseTypeLike {
@@ -38,11 +40,25 @@ function tokenVariants(token: string): string[] {
   return Array.from(new Set([token, singular]));
 }
 
+export function getDeletedExerciseLabel(exercise: ExerciseNameLike): string {
+  const originalName = exercise.englishName?.trim()
+    || exercise.name?.trim()
+    || exercise.vietnameseName?.trim()
+    || exercise.wuxiaName?.trim()
+    || "";
+
+  return originalName ? `Deleted exercise — ${originalName}` : "Deleted exercise";
+}
+
 export function getExerciseDisplayName(
   exercise: ExerciseNameLike,
   terminologyMode: TerminologyMode,
   showForeignLanguage = true
 ): string {
+  if (isDeletedExerciseDescription(exercise.story)) {
+    return getDeletedExerciseLabel(exercise);
+  }
+
   const englishName = exercise.englishName?.trim() || "";
   const vietnameseName = exercise.vietnameseName?.trim() || "";
   const canonicalName = exercise.name?.trim() || "";
@@ -148,6 +164,10 @@ export function getExerciseNameTooltip(
   story?: string | null,
   showForeignLanguage = true
 ): string {
+  if (isDeletedExerciseDescription(story ?? exercise.story)) {
+    return getDeletedExerciseLabel(exercise);
+  }
+
   const normalName = exercise.englishName?.trim() || exercise.name?.trim() || "";
   const fantasyName = exercise.vietnameseName?.trim() || exercise.wuxiaName?.trim() || "";
   const conventionalName = normalName || fantasyName;

@@ -196,8 +196,9 @@ function MobileNavBar({
   }, [router, setMobileSidebarOpen]);
 
   const handleMenuToggle = useCallback(() => {
-    setMenuOpen(prev => !prev);
-  }, []);
+    setMobileSidebarOpen(false);
+    setMenuOpen((prev) => !prev);
+  }, [setMobileSidebarOpen]);
 
   const isPathActive = useCallback((path: string) => {
     if (!pathname) return false;
@@ -217,15 +218,17 @@ function MobileNavBar({
   }, [pathname]);
 
   const isMeSectionActive = useMemo(
-    () => menuOpen || !primaryItems.some((item) => isPathActive(item.path)),
-    [isPathActive, menuOpen, primaryItems]
+    () => isPathActive(DASHBOARD_ROUTES.profile),
+    [isPathActive]
   );
 
   useEffect(() => {
     if (!effectiveMobile || typeof document === "undefined") return;
 
+    const scrollContainerSelector = "[data-mobile-scroll-container='true']";
+
     const getScrollContainers = () => Array.from(
-      document.querySelectorAll<HTMLElement>("[data-mobile-scroll-container='true']")
+      document.querySelectorAll<HTMLElement>(scrollContainerSelector)
     );
 
     const readScrollTop = (target?: EventTarget | null) => {
@@ -235,8 +238,27 @@ function MobileNavBar({
       return window.scrollY || document.documentElement.scrollTop || 0;
     };
 
+    const resolveActiveContainer = (target?: EventTarget | null) => {
+      if (!(target instanceof HTMLElement)) return null;
+      return target.matches(scrollContainerSelector)
+        ? target
+        : target.closest<HTMLElement>(scrollContainerSelector);
+    };
+
+    const getCurrentScrollTop = (target?: EventTarget | null) => {
+      const activeContainer = resolveActiveContainer(target);
+      if (activeContainer) {
+        return readScrollTop(activeContainer);
+      }
+
+      const containerTops = getScrollContainers().map((container) => container.scrollTop || 0);
+      const windowTop = readScrollTop(window);
+      return Math.max(windowTop, ...containerTops, 0);
+    };
+
     const scrollContainers = getScrollContainers();
-    lastScrollYRef.current = readScrollTop(scrollContainers[scrollContainers.length - 1] ?? window);
+    lastScrollYRef.current = getCurrentScrollTop();
+    setNavVisible(true);
     let ticking = false;
 
     const onScroll = (event?: Event) => {
@@ -244,21 +266,14 @@ function MobileNavBar({
 
       ticking = true;
       window.requestAnimationFrame(() => {
-        const eventTarget = event?.target;
-        const activeContainer = eventTarget instanceof HTMLElement
-          ? eventTarget.closest("[data-mobile-scroll-container='true']")
-          : null;
-        const fallbackContainer = getScrollContainers().at(-1) ?? window;
-        const currentY = readScrollTop(activeContainer ?? fallbackContainer);
+        const currentY = getCurrentScrollTop(event?.target ?? null);
         const delta = currentY - lastScrollYRef.current;
-        const threshold = 8;
+        const threshold = 6;
 
-        if (currentY <= 16) {
+        if (currentY <= 24 || delta < -threshold) {
           setNavVisible(true);
         } else if (delta > threshold) {
           setNavVisible(false);
-        } else if (delta < -threshold) {
-          setNavVisible(true);
         }
 
         lastScrollYRef.current = currentY;
@@ -267,23 +282,17 @@ function MobileNavBar({
     };
 
     const listenerOptions: AddEventListenerOptions = { passive: true };
-    if (scrollContainers.length === 0) {
-      window.addEventListener("scroll", onScroll as EventListener, listenerOptions);
-    } else {
-      scrollContainers.forEach((container) => {
-        container.addEventListener("scroll", onScroll as EventListener, listenerOptions);
-      });
-    }
+    window.addEventListener("scroll", onScroll as EventListener, listenerOptions);
+    scrollContainers.forEach((container) => {
+      container.addEventListener("scroll", onScroll as EventListener, listenerOptions);
+    });
     document.addEventListener("scroll", onScroll as EventListener, { passive: true, capture: true });
 
     return () => {
-      if (scrollContainers.length === 0) {
-        window.removeEventListener("scroll", onScroll as EventListener);
-      } else {
-        scrollContainers.forEach((container) => {
-          container.removeEventListener("scroll", onScroll as EventListener);
-        });
-      }
+      window.removeEventListener("scroll", onScroll as EventListener);
+      scrollContainers.forEach((container) => {
+        container.removeEventListener("scroll", onScroll as EventListener);
+      });
       document.removeEventListener("scroll", onScroll as EventListener, true);
     };
   }, [effectiveMobile, pathname]);
@@ -393,231 +402,17 @@ function MobileNavBar({
     };
   }, [pathname, user?.id]);
 
-  // Show the APK-style bottom nav whenever mobile viewport is active.
+  // Show the bottom nav whenever mobile viewport is active.
   if (!effectiveMobile) return null;
 
   // Build nav button order: [check-in, train, me]
   return (
     <>
-      {/* Overlay for expanded menu */}
-      <AnimatePresence>
-        {menuOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-40 bg-black/55"
-            onClick={() => setMenuOpen(false)}
-          />
-        )}
-      </AnimatePresence>
-
       <motion.div
         className={`fixed bottom-0 left-0 right-0 safe-area-left safe-area-right ${isTrainExerciseHistoryOpen ? "z-[120]" : "z-[200]"}`}
-        animate={{ y: navVisible || menuOpen ? 0 : 120 }}
+        animate={{ y: navVisible ? 0 : 120 }}
         transition={{ type: "tween", duration: 0.2, ease: "easeOut" }}
       >
-        {/* Expanded menu drawer */}
-        <AnimatePresence>
-          {menuOpen && (
-            <motion.div
-              initial={{ y: 28, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 28, opacity: 0 }}
-              transition={{ duration: 0.18, ease: "easeOut" }}
-              className="border-x border-t border-[#32353b] bg-[#2b2d31] px-2 pt-2 shadow-[0_-10px_26px_rgba(0,0,0,0.42)]"
-              style={{
-                maxHeight: "calc(var(--app-viewport-height) - 72px)",
-                overflowY: "auto",
-                WebkitOverflowScrolling: "touch",
-              }}
-            >
-              <div className="mx-auto max-w-xl pb-[max(env(safe-area-inset-bottom,0px),8px)]" role="menu" aria-label="Navigation menu">
-                <div className="mb-3 flex items-start justify-between border-b border-[#32353b] pb-3">
-                  <div className="min-w-0">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#b5bac1]">{t("Me", "normal")}</span>
-                    <p className="mt-1 text-[13px] text-[#949ba4]">{t("Profile, settings and personal pages", "normal")}</p>
-                  </div>
-                  <button
-                    onClick={() => setMenuOpen(false)}
-                    aria-label="Close navigation menu"
-                    className="flex min-h-[40px] min-w-[40px] items-center justify-center rounded-md border border-[#3b3f48] bg-[#383a40]/65 text-[#b5bac1] transition-colors active:border-[#5865f2]/60 active:text-[#f2f3f5]"
-                  >
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-
-                {user && (
-                  <div className="mb-3 rounded-md border border-[#3b3f48] bg-[#313338] p-3">
-                    <div className="flex items-start gap-3">
-                      <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md border border-[#3b3f48] bg-[#383a40] text-[#f2f3f5]">
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 20a8 8 0 0116 0" />
-                        </svg>
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[13px] font-semibold text-[#f2f3f5]">{user.name}</p>
-                        <p className="truncate text-[11px] text-[#949ba4]">@{user.username}</p>
-                        <p className="mt-1 text-[12px] text-[#b5bac1]">{t("Open your profile and manage personal preferences.", "normal")}</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleNavigate(DASHBOARD_ROUTES.profile)}
-                        className="min-h-[40px] rounded-md border border-[#3b3f48] bg-[#383a40]/65 px-3 text-[12px] font-semibold text-[#f2f3f5] active:border-[#5865f2]/60"
-                      >
-                        {t("Profile", "normal")}
-                      </button>
-                    </div>
-
-                    <div className="mt-3 grid grid-cols-3 gap-2">
-                      <div className="rounded-md border border-[#3b3f48] bg-[#2b2d31] px-2.5 py-2">
-                        <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">{t("Weight", "normal")}</p>
-                        <p className="mt-1 text-[12px] font-semibold text-[#f2f3f5]">{bodyWeightLabel ?? "--"}</p>
-                      </div>
-                      <div className="rounded-md border border-[#3b3f48] bg-[#2b2d31] px-2.5 py-2">
-                        <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">{t("Trend", "normal")}</p>
-                        <p
-                          className="mt-1 text-[12px] font-semibold"
-                          style={{
-                            color:
-                              trendTone === "up"
-                                ? "var(--difficulty-green)"
-                                : trendTone === "down"
-                                  ? "var(--difficulty-red)"
-                                  : "#f2f3f5",
-                          }}
-                        >
-                          {weightTrendLabel ?? "--"}
-                        </p>
-                      </div>
-                      <div className="rounded-md border border-[#3b3f48] bg-[#2b2d31] px-2.5 py-2">
-                        <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">{t("Check-ins", "normal")}</p>
-                        <p className="mt-1 text-[12px] font-semibold text-[#f2f3f5]">{checkInTotalCount ?? 0}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="mb-2">
-                  <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">{t("Quick access", "normal")}</p>
-                </div>
-                <div className="mb-3 grid grid-cols-2 gap-2">
-                  {quickAccessItems.map((item) => {
-                    const isActive = isPathActive(item.path);
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => handleNavigate(item.path)}
-                        className={`flex min-h-[44px] items-center gap-2 rounded-md border px-3 py-2 text-left text-[12px] font-medium transition-colors ${
-                          isActive
-                            ? "border-[#5865f2]/60 bg-[#383a40] text-[#f2f3f5]"
-                            : "border-[#3b3f48] bg-[#313338] text-[#dbdee1] active:border-[#5865f2]/60 active:bg-[#383a40]"
-                        }`}
-                      >
-                        <span className="flex h-7 w-7 items-center justify-center rounded-md border border-[#3b3f48] bg-[#2b2d31] text-[13px]">
-                          {typeof item.icon === "string" ? item.icon : item.icon}
-                        </span>
-                        <span className="truncate">{item.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {menuPageItems.length > 0 && (
-                  <div className="mb-2">
-                    <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">{t("Pages", "normal")}</p>
-                  </div>
-                )}
-                <div className="grid grid-cols-1 gap-2">
-                  {menuPageItems.map((item, index) => (
-                    <motion.button
-                      key={item.id}
-                      initial={{ y: 8, opacity: 0 }}
-                      animate={{ y: 0, opacity: 1 }}
-                      transition={{ delay: index * 0.03 }}
-                      whileTap={{ scale: 0.985 }}
-                      role="menuitem"
-                      className={`flex min-h-[46px] items-center gap-2.5 rounded-md border px-3 py-2.5 transition-colors ${
-                        isPathActive(item.path)
-                          ? "border-[#5865f2]/60 bg-[#383a40] text-[#f2f3f5]"
-                          : "border-[#3b3f48] bg-[#313338] text-[#dbdee1] active:border-[#5865f2]/60 active:bg-[#383a40]"
-                      }`}
-                      onClick={() => handleNavigate(item.path)}
-                    >
-                      <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md border ${
-                        isPathActive(item.path)
-                          ? "border-[#5865f2]/55 bg-[#383a40]"
-                          : "border-[#3b3f48] bg-[#2b2d31]"
-                      }`}>
-                        {NAV_ICON_MAP[item.path] ?? <span className="text-base">{item.icon}</span>}
-                      </span>
-                      <span className="truncate text-[13px] font-medium" title={tHint(item.label, terminologyMode) ?? undefined}>{t(item.label, terminologyMode)}</span>
-                      {item.id === "friends" && incomingFriendRequestCount > 0 && (
-                        <span className="ml-auto inline-flex min-w-[18px] items-center justify-center rounded-md bg-crimson-light px-1 text-[10px] font-bold text-void-black">
-                          {incomingFriendRequestCount > 99 ? "99+" : incomingFriendRequestCount}
-                        </span>
-                      )}
-                    </motion.button>
-                  ))}
-                </div>
-
-                {adminMoreItems.length > 0 && (
-                  <>
-                    <div className="mb-2 mt-3">
-                      <p className="text-[10px] uppercase tracking-[0.1em] text-[#f0b96a]">{t("Admin", "normal")}</p>
-                    </div>
-                    <div className="grid grid-cols-1 gap-2">
-                      {adminMoreItems.map((item, index) => (
-                        <motion.button
-                          key={item.id}
-                          initial={{ y: 8, opacity: 0 }}
-                          animate={{ y: 0, opacity: 1 }}
-                          transition={{ delay: (menuPageItems.length + index) * 0.03 }}
-                          whileTap={{ scale: 0.985 }}
-                          role="menuitem"
-                          className={`flex min-h-[46px] items-center gap-2.5 rounded-md border px-3 py-2.5 transition-colors ${
-                            isPathActive(item.path)
-                              ? "border-[#f0b96a]/55 bg-[#383533] text-[#ffe0a8]"
-                              : "border-[#4c4030] bg-[#313338] text-[#f0c991]"
-                          }`}
-                          onClick={() => handleNavigate(item.path)}
-                        >
-                          <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md border ${
-                            isPathActive(item.path)
-                              ? "border-[#f0b96a]/55 bg-[#383533]"
-                              : "border-[#4c4030] bg-[#2b2d31]"
-                          }`}>
-                            {NAV_ICON_MAP[item.path] ?? <span className="text-base">{item.icon}</span>}
-                          </span>
-                          <span className="truncate text-[13px] font-medium" title={tHint(item.label, terminologyMode) ?? undefined}>{t(item.label, terminologyMode)}</span>
-                        </motion.button>
-                      ))}
-                    </div>
-                  </>
-                )}
-
-                <motion.button
-                  initial={{ y: 8, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: (menuPageItems.length + adminMoreItems.length) * 0.03 }}
-                  whileTap={{ scale: 0.985 }}
-                  role="menuitem"
-                  className="mt-3 flex min-h-[46px] items-center gap-2.5 rounded-md border border-[#5a2b31] bg-[#3a2328] px-3 py-2.5 text-[#ffb3b8] transition-colors active:bg-[#49292f]"
-                  onClick={() => { setMenuOpen(false); logout(); }}
-                >
-                  <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md border border-[#6a343b] bg-[#49292f]">{LOGOUT_ICON}</span>
-                  <span className="text-[13px] font-medium">{t("Logout", "normal")}</span>
-                </motion.button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         {/* ── Main Bottom Navigation Bar ── */}
         <nav
           data-mobile-bottom-nav="true"
@@ -662,11 +457,11 @@ function MobileNavBar({
             );
           })}
 
-          {/* Me page button */}
+          {/* Me/profile button */}
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => handleNavigate(DASHBOARD_ROUTES.profile)}
-            aria-label="Open Me page"
+            aria-label="Open profile"
             className={`relative flex min-h-[60px] min-w-[68px] flex-col items-center justify-center gap-0.5 rounded-md pt-2 pb-1.5 transition-colors ${
               isMeSectionActive ? "text-[#f2f3f5]" : "text-[#949ba4] active:text-[#dbdee1]"
             }`}

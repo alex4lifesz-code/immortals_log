@@ -142,6 +142,7 @@ export function ProgressionSidebar({
         primaryCategory: string;
         logCount: number;
         latestLogTs: number;
+        latestLogId: string;
         searchFields: string[];
         nameFields: string[];
       }
@@ -152,10 +153,12 @@ export function ProgressionSidebar({
       const equipmentTags = getEquipmentTags(ex);
       const assignedDays = new Set(parseDayAssignments(ex.assignedDays || ""));
       const logs = ex.userProgress[0]?.logs ?? [];
-      const latestLogTs = logs.reduce((max, log) => {
-        const ts = new Date(log.createdAt).getTime();
-        return ts > max ? ts : max;
-      }, 0);
+      const latestLog = [...logs].sort((a, b) => {
+        const timeDiff = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        if (timeDiff !== 0) return timeDiff;
+        return b.id.localeCompare(a.id);
+      })[0];
+      const latestLogTs = latestLog ? new Date(latestLog.createdAt).getTime() : 0;
       const nameFields = [ex.name, ex.wuxiaName].filter(Boolean) as string[];
       const searchFields = [
         ex.name,
@@ -174,6 +177,7 @@ export function ProgressionSidebar({
         primaryCategory: categoryTags[0] || "Uncategorised",
         logCount: logs.length,
         latestLogTs,
+        latestLogId: latestLog?.id ?? "",
         searchFields,
         nameFields,
       });
@@ -233,8 +237,11 @@ export function ProgressionSidebar({
             return nameA.localeCompare(nameB);
           case "z-a":
             return nameB.localeCompare(nameA);
-          case "recent":
-            return (bDerived?.latestLogTs ?? 0) - (aDerived?.latestLogTs ?? 0);
+          case "recent": {
+            const timeDiff = (bDerived?.latestLogTs ?? 0) - (aDerived?.latestLogTs ?? 0);
+            if (timeDiff !== 0) return timeDiff;
+            return (bDerived?.latestLogId ?? "").localeCompare(aDerived?.latestLogId ?? "");
+          }
           case "most-logged":
             return (bDerived?.logCount ?? 0) - (aDerived?.logCount ?? 0);
           case "selected": {

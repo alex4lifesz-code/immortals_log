@@ -1,6 +1,7 @@
 import { apiSuccess, ApiErrors } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
+import { archiveUserAndDelete } from "@/lib/user-recycle-bin";
 
 export const PATCH = withAuth(async (req, { auth, params }) => {
   try {
@@ -52,17 +53,13 @@ export const DELETE = withAuth(async (_req, { auth, params }) => {
       return ApiErrors.notFound("User not found");
     }
 
-    await prisma.$transaction(async (tx) => {
-      // Remove directly-related rows that may not be configured with cascade.
-      await tx.userProgressionLevel.deleteMany({ where: { userId: id } });
-      await tx.progressionExercise.deleteMany({ where: { userId: id } });
-      await tx.checkInNote.deleteMany({ where: { userId: id } });
-      await tx.checkIn.deleteMany({ where: { userId: id } });
-      await tx.userSettings.deleteMany({ where: { userId: id } });
-      await tx.user.delete({ where: { id } });
-    });
+    const archivedUser = await archiveUserAndDelete(id, auth.userId);
 
-    return apiSuccess({ success: true });
+    return apiSuccess({
+      success: true,
+      archivedUser,
+      message: `${targetUser.name} was moved to the recycle bin.`,
+    });
   } catch (error) {
     console.error("User delete error:", error);
     return ApiErrors.internal("Failed to delete user");

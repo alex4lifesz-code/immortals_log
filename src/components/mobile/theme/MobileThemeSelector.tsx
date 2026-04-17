@@ -10,6 +10,17 @@ type ThemeStyle = Theme;
 
 const themePreviews: { id: ThemeStyle; title: string; colors: string[]; favorite?: boolean }[] = [
   {
+    id: "discord",
+    title: "Discord Default",
+    colors: [
+      "var(--theme-preview-discord-1)",
+      "var(--theme-preview-discord-2)",
+      "var(--theme-preview-discord-3)",
+      "var(--theme-preview-discord-4)",
+    ],
+    favorite: true,
+  },
+  {
     id: "midnight-ink",
     title: "Midnight Ink",
     colors: [
@@ -69,17 +80,6 @@ const themePreviews: { id: ThemeStyle; title: string; colors: string[]; favorite
       "var(--theme-preview-eternal-3)",
       "var(--theme-preview-eternal-4)",
     ],
-    favorite: true,
-  },
-  {
-    id: "discord",
-    title: "Discord",
-    colors: [
-      "var(--theme-preview-discord-1)",
-      "var(--theme-preview-discord-2)",
-      "var(--theme-preview-discord-3)",
-      "var(--theme-preview-discord-4)",
-    ],
   },
   {
     id: "document",
@@ -104,7 +104,7 @@ const themePreviews: { id: ThemeStyle; title: string; colors: string[]; favorite
   },
   {
     id: "emerald-lotus",
-    title: "Emerald Lotus Pavilion",
+    title: "Emerald Lotus",
     colors: [
       "var(--theme-preview-emerald-lotus-1)",
       "var(--theme-preview-emerald-lotus-2)",
@@ -114,7 +114,7 @@ const themePreviews: { id: ThemeStyle; title: string; colors: string[]; favorite
   },
   {
     id: "gilded-bamboo",
-    title: "Gilded Bamboo Grove",
+    title: "Gilded Bamboo",
     colors: [
       "var(--theme-preview-gilded-bamboo-1)",
       "var(--theme-preview-gilded-bamboo-2)",
@@ -124,7 +124,7 @@ const themePreviews: { id: ThemeStyle; title: string; colors: string[]; favorite
   },
   {
     id: "crane-peak",
-    title: "Heavenly Crane Peak",
+    title: "Crane Peak",
     colors: [
       "var(--theme-preview-crane-peak-1)",
       "var(--theme-preview-crane-peak-2)",
@@ -134,7 +134,7 @@ const themePreviews: { id: ThemeStyle; title: string; colors: string[]; favorite
   },
   {
     id: "obsidian-void",
-    title: "Obsidian Void Scripture",
+    title: "Obsidian Void",
     colors: [
       "var(--theme-preview-obsidian-void-1)",
       "var(--theme-preview-obsidian-void-2)",
@@ -144,7 +144,7 @@ const themePreviews: { id: ThemeStyle; title: string; colors: string[]; favorite
   },
   {
     id: "crimson-gate",
-    title: "Crimson Demon Gate",
+    title: "Crimson Gate",
     colors: [
       "var(--theme-preview-crimson-gate-1)",
       "var(--theme-preview-crimson-gate-2)",
@@ -154,7 +154,7 @@ const themePreviews: { id: ThemeStyle; title: string; colors: string[]; favorite
   },
   {
     id: "frost-sanctuary",
-    title: "Silent Frost Sanctuary",
+    title: "Frost Sanctuary",
     colors: [
       "var(--theme-preview-frost-sanctuary-1)",
       "var(--theme-preview-frost-sanctuary-2)",

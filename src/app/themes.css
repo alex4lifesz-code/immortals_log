@@ -358,9 +358,10 @@
 }
 
 .dashboard-sidebar-card {
-  border: 1px solid color-mix(in srgb, var(--ink-light) 55%, transparent);
+  border: 1px solid var(--sidebar-canvas-border);
   border-radius: 0.75rem;
-  background: color-mix(in srgb, var(--ink-dark) 88%, transparent);
+  background: var(--sidebar-canvas-card);
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--void-black) 24%, transparent);
   padding: 0.75rem;
 }
 

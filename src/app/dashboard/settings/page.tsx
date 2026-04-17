@@ -17,21 +17,21 @@ import type { LanguageMode } from "@/lib/language";
 import LearningText from "@/components/ui/LearningText";
 
 const THEME_OPTIONS: Array<{ value: Theme; label: string; desc: string }> = [
-  { value: "midnight-ink", label: "Midnight Ink", desc: "Deep void + jade accents" },
-  { value: "mountain-mist", label: "Mountain Mist", desc: "Ink wash + mist" },
-  { value: "calligraphy", label: "Calligraphy", desc: "Monochrome scroll style" },
-  { value: "sakura", label: "Sakura", desc: "Light blossom palette" },
-  { value: "sakura-dark", label: "Sakura Dark", desc: "Deep rose dusk" },
-  { value: "eternal", label: "Eternal", desc: "Clean minimalist" },
-  { value: "discord", label: "Discord", desc: "Discord-inspired dark" },
-  { value: "document", label: "Document", desc: "Paper + slate" },
-  { value: "nyaa", label: "Nyaa", desc: "Nyaa blue-green" },
-  { value: "emerald-lotus", label: "Emerald Lotus", desc: "Jade temple at dawn" },
-  { value: "gilded-bamboo", label: "Gilded Bamboo", desc: "Golden scripture hall" },
-  { value: "crane-peak", label: "Crane Peak", desc: "Celestial silver-blue" },
-  { value: "obsidian-void", label: "Obsidian Void", desc: "Cosmic purple void" },
-  { value: "crimson-gate", label: "Crimson Gate", desc: "Demonic crimson ember" },
-  { value: "frost-sanctuary", label: "Frost Sanctuary", desc: "Glacial ice aurora" },
+  { value: "discord", label: "Discord Default", desc: "Original Discord-style canvas" },
+  { value: "midnight-ink", label: "Midnight Ink", desc: "Discord canvas with deep void + jade accents" },
+  { value: "mountain-mist", label: "Mountain Mist", desc: "Discord canvas with misty parchment blues" },
+  { value: "calligraphy", label: "Calligraphy", desc: "Discord canvas with monochrome ink tones" },
+  { value: "sakura", label: "Sakura", desc: "Discord canvas with light blossom colors" },
+  { value: "sakura-dark", label: "Sakura Dark", desc: "Discord canvas with dusk rose tones" },
+  { value: "eternal", label: "Eternal", desc: "Discord canvas with clean minimal greens" },
+  { value: "document", label: "Document", desc: "Discord canvas with paper and slate tones" },
+  { value: "nyaa", label: "Nyaa", desc: "Discord canvas with blue-green contrast" },
+  { value: "emerald-lotus", label: "Emerald Lotus", desc: "Discord canvas with jade temple colors" },
+  { value: "gilded-bamboo", label: "Gilded Bamboo", desc: "Discord canvas with warm gold accents" },
+  { value: "crane-peak", label: "Crane Peak", desc: "Discord canvas with silver-blue highlights" },
+  { value: "obsidian-void", label: "Obsidian Void", desc: "Discord canvas with cosmic purple hues" },
+  { value: "crimson-gate", label: "Crimson Gate", desc: "Discord canvas with ember-red contrast" },
+  { value: "frost-sanctuary", label: "Frost Sanctuary", desc: "Discord canvas with icy aurora tones" },
 ];
 
 const DATE_OPTIONS: Array<{ value: DateFormatOption; label: string; sample: string }> = [
@@ -81,35 +81,31 @@ function SettingsChoice({
     <button
       type="button"
       onClick={onClick}
-      className="w-full rounded-lg border p-3 text-left transition-colors duration-150"
+      className="w-full min-w-0 overflow-hidden rounded-xl border p-3 text-left transition-colors duration-150"
       style={{
-        borderColor: active
-          ? "color-mix(in srgb, var(--accent) 55%, var(--border))"
-          : "color-mix(in srgb, var(--border) 88%, transparent)",
-        background: active
-          ? "linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, var(--surface)), color-mix(in srgb, var(--surface-hover) 90%, var(--surface)))"
-          : "linear-gradient(180deg, color-mix(in srgb, var(--surface) 96%, transparent), color-mix(in srgb, var(--surface-hover) 86%, transparent))",
-        boxShadow: active ? "0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent)" : "none",
+        borderColor: active ? "rgba(88, 101, 242, 0.6)" : "#3b3f48",
+        backgroundColor: active ? "#383a40" : "#313338",
+        boxShadow: "none",
       }}
     >
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold break-words" style={{ color: "#f2f3f5" }}>
             <LearningText text={title} languageMode={languageMode} enabled={learningEnabled} />
           </p>
           {subtitle ? (
-            <p className="mt-1 text-xs" style={{ color: "var(--text-secondary)" }}>
+            <p className="mt-1 text-[11px] break-words" style={{ color: "#b5bac1" }}>
               <LearningText text={subtitle} languageMode={languageMode} enabled={learningEnabled} />
             </p>
           ) : null}
         </div>
         {badge ? (
           <span
-            className="rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em]"
+            className="shrink-0 rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em]"
             style={{
-              borderColor: "color-mix(in srgb, var(--accent) 42%, transparent)",
-              backgroundColor: "color-mix(in srgb, var(--accent) 16%, transparent)",
-              color: "var(--text-primary)",
+              borderColor: "rgba(88, 101, 242, 0.45)",
+              backgroundColor: "rgba(88, 101, 242, 0.12)",
+              color: "#c8cdfa",
             }}
           >
             {badge}
@@ -120,44 +116,115 @@ function SettingsChoice({
   );
 }
 
+function SettingsSelectField({
+  label,
+  helper,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  helper?: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: Array<{ value: string; label: string; desc?: string }>;
+}) {
+  const selected = options.find((option) => option.value === value);
+
+  return (
+    <div
+      className="rounded-xl border p-3"
+      style={{
+        borderColor: "#3b3f48",
+        backgroundColor: "#313338",
+        boxShadow: "none",
+      }}
+    >
+      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">{label}</p>
+      {helper ? <p className="mt-1 text-[11px]" style={{ color: "#b5bac1" }}>{helper}</p> : null}
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="mt-2 h-10 w-full rounded-lg border px-3 text-sm outline-none"
+        style={{
+          borderColor: "#3b3f48",
+          backgroundColor: "#232428",
+          color: "#f2f3f5",
+        }}
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      {selected?.desc ? (
+        <p className="mt-2 text-[11px]" style={{ color: "#b5bac1" }}>{selected.desc}</p>
+      ) : null}
+    </div>
+  );
+}
+
 function SettingsSection({
   id,
   eyebrow,
   title,
   description,
   children,
+  active,
+  onToggle,
 }: {
   id: SectionId;
   eyebrow: string;
   title: string;
   description: string;
   children: ReactNode;
+  active: boolean;
+  onToggle: () => void;
 }) {
   return (
     <section
       id={id}
       className="scroll-mt-24 rounded-xl border p-3 sm:p-4"
       style={{
-        borderColor: "color-mix(in srgb, var(--border) 92%, var(--accent) 8%)",
-        background: "linear-gradient(180deg, color-mix(in srgb, var(--surface) 96%, transparent), color-mix(in srgb, var(--surface-hover) 88%, transparent))",
-        boxShadow: "0 8px 18px rgba(0,0,0,0.18)",
+        borderColor: active ? "rgba(88, 101, 242, 0.55)" : "#3b3f48",
+        backgroundColor: "#2b2d31",
+        boxShadow: "none",
       }}
     >
-      <div className="mb-4">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.24em]" style={{ color: "var(--accent)" }}>{eyebrow}</p>
-        <h2 className="mt-1 text-lg font-semibold sm:text-xl" style={{ color: "var(--text-primary)" }}>{title}</h2>
-        <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>{description}</p>
-      </div>
-      {children}
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-start justify-between gap-3 text-left"
+        aria-expanded={active}
+      >
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: "#949ba4" }}>{eyebrow}</p>
+          <h2 className="mt-1 text-sm font-semibold uppercase tracking-[0.08em] sm:text-base" style={{ color: "#f2f3f5" }}>{title}</h2>
+          <p className="mt-1 text-[11px]" style={{ color: "#b5bac1" }}>{description}</p>
+        </div>
+        <span
+          className="mt-1 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border text-sm"
+          style={{
+            borderColor: active ? "rgba(88, 101, 242, 0.55)" : "#3b3f48",
+            backgroundColor: active ? "#383a40" : "#313338",
+            color: active ? "#f2f3f5" : "#b5bac1",
+          }}
+        >
+          {active ? "−" : "+"}
+        </span>
+      </button>
+
+      {active ? <div className="mt-4">{children}</div> : null}
     </section>
   );
 }
 
 export default function SettingsPage() {
   const { logout, user } = useAuth();
-  const { themeStyle, setThemeStyle } = useAppContext();
+  const { themeStyle, setThemeStyle, isMobile } = useAppContext();
   const { settings, updateSettings, resetSettings } = useDisplaySettings();
-  const [activeSection, setActiveSection] = useState<SectionId>("overview");
+  const [activeSection, setActiveSection] = useState<SectionId | null>("overview");
   const [exerciseLanguageAutoSelectedNotice, setExerciseLanguageAutoSelectedNotice] = useState("");
 
   const themeLabel = useMemo(
@@ -167,6 +234,16 @@ export default function SettingsPage() {
 
   const timeZoneLabel = useMemo(
     () => TIMEZONE_OPTIONS.find((option) => option.value === settings.timeZone)?.label ?? settings.timeZone,
+    [settings.timeZone],
+  );
+
+  const themeDescription = useMemo(
+    () => THEME_OPTIONS.find((theme) => theme.value === themeStyle)?.desc ?? "",
+    [themeStyle],
+  );
+
+  const timeZoneDescription = useMemo(
+    () => TIMEZONE_OPTIONS.find((option) => option.value === settings.timeZone)?.desc ?? "",
     [settings.timeZone],
   );
 
@@ -190,9 +267,12 @@ export default function SettingsPage() {
   };
 
   const scrollToSection = (sectionId: SectionId) => {
-    setActiveSection(sectionId);
-    if (typeof document === "undefined") return;
-    document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const nextSection = activeSection === sectionId ? null : sectionId;
+    setActiveSection(nextSection);
+    if (!nextSection || typeof window === "undefined") return;
+    window.requestAnimationFrame(() => {
+      document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   };
 
   const languageMode = settings.languageMode ?? "english";
@@ -205,30 +285,30 @@ export default function SettingsPage() {
       mobileContentPaddingClass="p-2 pb-24"
     >
       <div
-        className="relative overflow-hidden rounded-xl border p-2 sm:p-3"
+        className="relative overflow-visible rounded-xl border p-2 sm:overflow-hidden sm:p-3"
         style={{
-          borderColor: "color-mix(in srgb, var(--border) 92%, var(--accent) 8%)",
-          background: "linear-gradient(145deg, color-mix(in srgb, var(--background) 72%, var(--surface)), color-mix(in srgb, var(--surface) 94%, transparent))",
-          boxShadow: "0 10px 24px rgba(0,0,0,0.2)",
+          borderColor: "#3b3f48",
+          backgroundColor: "#2b2d31",
+          boxShadow: "none",
         }}
       >
         <div className="pointer-events-none absolute inset-x-4 top-0 h-px" style={{ background: "color-mix(in srgb, var(--accent) 28%, transparent)" }} />
 
-        <div className="relative grid gap-3 xl:grid-cols-[260px_minmax(0,1fr)]">
+        <div className={`relative min-w-0 gap-3 ${isMobile ? "space-y-3" : "grid xl:grid-cols-[260px_minmax(0,1fr)]"}`}>
           <aside className="xl:sticky xl:top-4 xl:self-start">
             <div
               className="rounded-xl border p-3"
               style={{
-                borderColor: "color-mix(in srgb, var(--border) 92%, var(--accent) 8%)",
-                background: "linear-gradient(180deg, color-mix(in srgb, var(--surface) 98%, transparent), color-mix(in srgb, var(--ink-mid) 84%, var(--surface)))",
-                boxShadow: "0 8px 18px rgba(0,0,0,0.18)",
+                borderColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)",
+                backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))",
+                boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--cloud-white) 2%, transparent)",
               }}
             >
-              <p className="text-[10px] font-semibold uppercase tracking-[0.24em]" style={{ color: "var(--accent)" }}>User settings</p>
-              <h2 className="mt-2 text-xl font-semibold" style={{ color: "var(--text-primary)" }}>{user?.name || "Cultivator"}</h2>
-              <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>A Discord-style settings hub that adapts cleanly from phone to desktop.</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">User settings</p>
+              <h2 className="mt-2 text-lg font-semibold text-[#f2f3f5]">{user?.name || "Cultivator"}</h2>
+              <p className="mt-1 text-[11px] text-[#b5bac1]">A Discord-style settings hub that adapts cleanly from phone to desktop.</p>
 
-              <div className="mt-4 flex gap-2 overflow-x-auto pb-1 xl:flex-col xl:overflow-visible">
+              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:flex xl:flex-col">
                 {[
                   { id: "overview" as SectionId, label: "Overview" },
                   { id: "appearance" as SectionId, label: "Appearance" },
@@ -241,18 +321,14 @@ export default function SettingsPage() {
                     type="button"
                     onClick={() => scrollToSection(section.id)}
                     className={[
-                      "min-w-fit rounded-md border px-3 py-2 text-left text-sm transition-colors xl:w-full",
+                      "w-full min-w-0 rounded-md border px-3 py-2 text-left text-sm transition-colors xl:w-full",
                       activeSection === section.id
-                        ? "text-[var(--text-primary)]"
-                        : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+                        ? "text-[#f2f3f5]"
+                        : "text-[#b5bac1] hover:text-[#f2f3f5]",
                     ].join(" ")}
                     style={{
-                      borderColor: activeSection === section.id
-                        ? "color-mix(in srgb, var(--accent) 50%, transparent)"
-                        : "color-mix(in srgb, var(--border) 90%, transparent)",
-                      backgroundColor: activeSection === section.id
-                        ? "color-mix(in srgb, var(--accent) 18%, var(--surface))"
-                        : "color-mix(in srgb, var(--surface) 90%, transparent)",
+                      borderColor: activeSection === section.id ? "rgba(88, 101, 242, 0.6)" : "#3b3f48",
+                      backgroundColor: activeSection === section.id ? "#383a40" : "#313338",
                     }}
                   >
                     {section.label}
@@ -260,37 +336,39 @@ export default function SettingsPage() {
                 ))}
               </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-2 xl:grid-cols-1">
+              <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
                 <div
-                  className="rounded-lg border px-3 py-2"
+                  className="min-w-0 rounded-lg border px-3 py-2"
                   style={{
-                    borderColor: "color-mix(in srgb, var(--border) 88%, transparent)",
-                    background: "color-mix(in srgb, var(--surface) 94%, transparent)",
+                    borderColor: "#3b3f48",
+                    background: "#313338",
                   }}
                 >
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-mist-dark">Theme</p>
-                  <p className="mt-1 text-sm font-medium" style={{ color: "var(--text-primary)" }}>{themeLabel}</p>
+                  <p className="text-[10px] uppercase tracking-[0.16em] text-[#949ba4]">Theme</p>
+                  <p className="mt-1 break-words text-sm font-medium" style={{ color: "#f2f3f5" }}>{themeLabel}</p>
                 </div>
                 <div
-                  className="rounded-lg border px-3 py-2"
+                  className="min-w-0 rounded-lg border px-3 py-2"
                   style={{
-                    borderColor: "color-mix(in srgb, var(--border) 88%, transparent)",
-                    background: "color-mix(in srgb, var(--surface) 94%, transparent)",
+                    borderColor: "#3b3f48",
+                    background: "#313338",
                   }}
                 >
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-mist-dark">Zone</p>
-                  <p className="mt-1 text-sm font-medium" style={{ color: "var(--text-primary)" }}>{timeZoneLabel}</p>
+                  <p className="text-[10px] uppercase tracking-[0.16em] text-[#949ba4]">Zone</p>
+                  <p className="mt-1 break-words text-sm font-medium" style={{ color: "#f2f3f5" }}>{timeZoneLabel}</p>
                 </div>
               </div>
             </div>
           </aside>
 
-          <div className="space-y-3">
+          <div className="min-w-0 space-y-2 sm:space-y-3">
             <SettingsSection
               id="overview"
               eyebrow="Control center"
               title="Clean settings canvas"
               description="The old dense table layout has been replaced with a simpler panel system designed for thumb-friendly mobile interaction and a spacious desktop view."
+              active={activeSection === "overview"}
+              onToggle={() => scrollToSection("overview")}
             >
               <div className="grid gap-2 sm:grid-cols-2 2xl:grid-cols-4">
                 {[
@@ -302,19 +380,19 @@ export default function SettingsPage() {
                   <div
                     key={item.label}
                     className="rounded-lg border px-3 py-3"
-                    style={{ borderColor: "color-mix(in srgb, var(--border) 88%, transparent)", background: "color-mix(in srgb, var(--surface) 94%, transparent)" }}
+                    style={{ borderColor: "#3b3f48", background: "#313338" }}
                   >
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-mist-dark">{item.label}</p>
-                    <p className="mt-1 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{item.value}</p>
+                    <p className="text-[10px] uppercase tracking-[0.16em] text-[#949ba4]">{item.label}</p>
+                    <p className="mt-1 text-sm font-semibold" style={{ color: "#f2f3f5" }}>{item.value}</p>
                   </div>
                 ))}
               </div>
 
-              <div className="mt-3 flex flex-wrap gap-2">
-                <GlowButton variant="ghost" onClick={resetSettings}>
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                <GlowButton variant="ghost" onClick={resetSettings} className="w-full sm:w-auto">
                   <LearningText text="Reset Display Settings" languageMode={languageMode} enabled={learningEnabled} />
                 </GlowButton>
-                <GlowButton variant="crimson" onClick={logout}>
+                <GlowButton variant="crimson" onClick={logout} className="w-full sm:w-auto">
                   <LearningText text="Logout" languageMode={languageMode} enabled={learningEnabled} />
                 </GlowButton>
               </div>
@@ -323,23 +401,48 @@ export default function SettingsPage() {
             <SettingsSection
               id="appearance"
               eyebrow="Appearance"
-              title="Theme and date styling"
-              description="Optimized as stacked touch cards on mobile and a wider selection grid on desktop."
+              title="Canvas themes and date styling"
+              description="Each theme now keeps the same Discord-inspired layout and sidebar sync while only changing the palette."
+              active={activeSection === "appearance"}
+              onToggle={() => scrollToSection("appearance")}
             >
-              <div className="grid gap-2 lg:grid-cols-2 xl:grid-cols-3">
-                {THEME_OPTIONS.map((theme) => (
-                  <SettingsChoice
-                    key={theme.value}
-                    active={themeStyle === theme.value}
-                    title={theme.label}
-                    subtitle={theme.desc}
-                    badge={theme.value === "discord" ? "discord" : undefined}
-                    onClick={() => setThemeStyle(theme.value)}
-                    languageMode={languageMode}
-                    learningEnabled={learningEnabled}
+              {isMobile ? (
+                <div className="grid gap-2 lg:grid-cols-2">
+                  <SettingsSelectField
+                    label="Theme"
+                    helper="Use the selector for the longer theme list."
+                    value={themeStyle}
+                    onChange={(value) => setThemeStyle(value as Theme)}
+                    options={THEME_OPTIONS.map((theme) => ({ value: theme.value, label: theme.label, desc: theme.desc }))}
                   />
-                ))}
-              </div>
+                  <div
+                    className="rounded-xl border p-3"
+                    style={{
+                      borderColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)",
+                      backgroundColor: "color-mix(in srgb, var(--ink-mid) 52%, var(--ink-deep))",
+                    }}
+                  >
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">Current theme</p>
+                    <p className="mt-1 text-sm font-semibold" style={{ color: "#f2f3f5" }}>{themeLabel}</p>
+                    <p className="mt-1 text-[11px]" style={{ color: "#b5bac1" }}>{themeDescription}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid gap-2 lg:grid-cols-2 xl:grid-cols-3">
+                  {THEME_OPTIONS.map((theme) => (
+                    <SettingsChoice
+                      key={theme.value}
+                      active={themeStyle === theme.value}
+                      title={theme.label}
+                      subtitle={theme.desc}
+                      badge={theme.value === "discord" ? "discord" : undefined}
+                      onClick={() => setThemeStyle(theme.value)}
+                      languageMode={languageMode}
+                      learningEnabled={learningEnabled}
+                    />
+                  ))}
+                </div>
+              )}
 
               <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                 {DATE_OPTIONS.map((option) => (
@@ -361,20 +464,45 @@ export default function SettingsPage() {
               eyebrow="Region & calendar"
               title="Timezone-aware scheduling"
               description="Your calendar, logs, and today markers follow the user-selected region instead of a generic clock."
+              active={activeSection === "calendar"}
+              onToggle={() => scrollToSection("calendar")}
             >
-              <div className="grid gap-2 lg:grid-cols-2 xl:grid-cols-3">
-                {TIMEZONE_OPTIONS.map((option) => (
-                  <SettingsChoice
-                    key={option.value}
-                    active={settings.timeZone === option.value}
-                    title={option.label}
-                    subtitle={option.desc}
-                    onClick={() => updateSettings({ timeZone: option.value })}
-                    languageMode={languageMode}
-                    learningEnabled={learningEnabled}
+              {isMobile ? (
+                <div className="grid gap-2 lg:grid-cols-2">
+                  <SettingsSelectField
+                    label="Timezone"
+                    helper="Longer region lists now use a compact selector."
+                    value={settings.timeZone}
+                    onChange={(value) => updateSettings({ timeZone: value })}
+                    options={TIMEZONE_OPTIONS.map((option) => ({ value: option.value, label: option.label, desc: option.desc }))}
                   />
-                ))}
-              </div>
+                  <div
+                    className="rounded-xl border p-3"
+                    style={{
+                      borderColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)",
+                      backgroundColor: "color-mix(in srgb, var(--ink-mid) 52%, var(--ink-deep))",
+                    }}
+                  >
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">Selected region</p>
+                    <p className="mt-1 text-sm font-semibold" style={{ color: "#f2f3f5" }}>{timeZoneLabel}</p>
+                    <p className="mt-1 text-[11px]" style={{ color: "#b5bac1" }}>{timeZoneDescription}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid gap-2 lg:grid-cols-2 xl:grid-cols-3">
+                  {TIMEZONE_OPTIONS.map((option) => (
+                    <SettingsChoice
+                      key={option.value}
+                      active={settings.timeZone === option.value}
+                      title={option.label}
+                      subtitle={option.desc}
+                      onClick={() => updateSettings({ timeZone: option.value })}
+                      languageMode={languageMode}
+                      learningEnabled={learningEnabled}
+                    />
+                  ))}
+                </div>
+              )}
 
               <div className="mt-4 grid gap-2 sm:grid-cols-3">
                 {CALENDAR_START_OPTIONS.map((option) => (
@@ -396,10 +524,12 @@ export default function SettingsPage() {
               eyebrow="Language"
               title="Terminology and naming"
               description="Separate the overall app language from exercise-name display so mobile users can keep the UI clean."
+              active={activeSection === "language"}
+              onToggle={() => scrollToSection("language")}
             >
               <div className="grid gap-2 lg:grid-cols-2">
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-mist-dark">App language</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">App language</p>
                   <SettingsChoice
                     active={languageMode === "english"}
                     title="English"
@@ -419,7 +549,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-mist-dark">Label style</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">Label style</p>
                   <SettingsChoice
                     active={settings.terminologyMode === "normal"}
                     title="Conventional"
@@ -470,10 +600,12 @@ export default function SettingsPage() {
               eyebrow="Training display"
               title="Weight and variation formatting"
               description="These controls stay compact on phones but open into a tidy two-column arrangement on larger screens."
+              active={activeSection === "training"}
+              onToggle={() => scrollToSection("training")}
             >
               <div className="grid gap-2 lg:grid-cols-2">
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-mist-dark">Weight unit</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">Weight unit</p>
                   {([
                     { value: "kg" as WeightUnitPref, title: "Kilograms (kg)" },
                     { value: "lbs" as WeightUnitPref, title: "Pounds (lbs)" },
@@ -490,7 +622,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-mist-dark">Variation labels</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">Variation labels</p>
                   {([
                     { value: "abbreviation" as VariationDisplayMode, title: "Abbreviated", subtitle: "Short labels" },
                     { value: "full" as VariationDisplayMode, title: "Full text", subtitle: "Expanded labels" },

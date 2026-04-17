@@ -211,6 +211,19 @@ export default function FriendsPage() {
   const pendingCount = data.incomingRequests.length + data.outgoingRequests.length;
   const activeFriendsCount = Array.from(friendStatsMap.values()).filter((stats) => stats.totalCheckIns > 0).length;
 
+  const sectionShellStyle = {
+    borderColor: "color-mix(in srgb, var(--ink-light) 56%, transparent)",
+    backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))",
+    boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--cloud-white) 2%, transparent)",
+  };
+
+  const tileStyle = {
+    borderColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)",
+    backgroundColor: "color-mix(in srgb, var(--ink-mid) 58%, var(--ink-deep))",
+  };
+
+  const shellMinHeight = "calc(var(--app-viewport-height) - var(--mobile-nav-offset) - 0.5rem)";
+
   return (
     <PageLayout
       title="Friends"
@@ -222,12 +235,12 @@ export default function FriendsPage() {
           <p className="py-4 text-center text-sm text-mist-dark">Loading friends data...</p>
         </GlowCard>
       ) : (
-        <div className="px-0">
+        <div className="flex flex-col px-0" style={{ minHeight: shellMinHeight }}>
           <section
-            className="overflow-hidden rounded-tl-2xl border"
+            className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-tl-2xl border"
             style={{
-              borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-              backgroundColor: "color-mix(in srgb, var(--ink-mid) 20%, var(--ink-deep))",
+              ...sectionShellStyle,
+              minHeight: shellMinHeight,
             }}
           >
             <div
@@ -242,66 +255,70 @@ export default function FriendsPage() {
               <p className="mt-1 text-[11px] text-[#b5bac1]">Open the social areas you want, with the same flatter train-style feed feel.</p>
             </div>
 
-            <div className="space-y-3 px-2 py-2.5 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)]">
+            <div className="flex flex-1 flex-col space-y-3 px-2 py-2.5 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)]">
               <section className="grid grid-cols-3 gap-2">
-                <div className="rounded-md border border-[#3b3f48] bg-[#232428] px-2.5 py-2">
+                <div className="rounded-md border px-2.5 py-2" style={tileStyle}>
                   <p className="text-[10px] uppercase tracking-[0.08em] text-[#949ba4]">Friends</p>
                   <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{data.friends.length}</p>
                 </div>
-                <div className="rounded-md border border-[#3b3f48] bg-[#232428] px-2.5 py-2">
+                <div className="rounded-md border px-2.5 py-2" style={tileStyle}>
                   <p className="text-[10px] uppercase tracking-[0.08em] text-[#949ba4]">Pending</p>
                   <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{pendingCount}</p>
                 </div>
-                <div className="rounded-md border border-[#3b3f48] bg-[#232428] px-2.5 py-2">
+                <div className="rounded-md border px-2.5 py-2" style={tileStyle}>
                   <p className="text-[10px] uppercase tracking-[0.08em] text-[#949ba4]">Active</p>
                   <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{activeFriendsCount}</p>
                 </div>
               </section>
 
-              <section className="rounded-lg border border-[#3b3f48] bg-[#313338] p-2">
+              <section className="border-t pt-2" style={{ borderTopColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)" }}>
                 <p className="px-1 pb-2 text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Navigation</p>
 
                 <div className="space-y-2">
                   <Link
                     href="/dashboard/friends/manage"
-                    className="flex items-center justify-between gap-3 rounded-md border border-[#3b3f48] bg-[#232428] px-3 py-3 transition-colors hover:border-[#5865f2]/55 hover:bg-[#2b2d31]"
+                    className="flex items-center justify-between gap-3 rounded-lg px-3 py-3 transition-colors hover:bg-[#2b2d31]"
+                    style={{
+                      border: "1px solid color-mix(in srgb, var(--ink-light) 40%, transparent)",
+                      backgroundColor: "color-mix(in srgb, var(--ink-mid) 48%, var(--ink-deep))",
+                    }}
                   >
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-[#f2f3f5]">Manage Friends</p>
                       <p className="mt-0.5 text-[11px] text-[#b5bac1]">Incoming requests, outgoing invites, and remove friend actions.</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="flex h-7 min-w-7 items-center justify-center rounded-full border border-[#5865f2]/60 bg-[#5865f2]/12 px-2 text-[11px] font-semibold text-[#c8cdfa]">
+                      <span className="flex h-7 min-w-7 items-center justify-center rounded-full px-2 text-[11px] font-semibold text-[#c8cdfa]" style={{ backgroundColor: "color-mix(in srgb, var(--accent) 14%, transparent)", border: "1px solid color-mix(in srgb, var(--accent) 34%, transparent)" }}>
                         {pendingCount}
                       </span>
                       <span className="text-[#949ba4]">›</span>
                     </div>
                   </Link>
 
-                  <div className="flex items-center justify-between gap-3 rounded-md border border-[#3b3f48] bg-[#232428] px-3 py-3">
+                  <div className="flex items-center justify-between gap-3 rounded-lg px-3 py-3" style={{ border: "1px solid color-mix(in srgb, var(--ink-light) 40%, transparent)", backgroundColor: "color-mix(in srgb, var(--ink-mid) 48%, var(--ink-deep))" }}>
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-[#f2f3f5]">Connected Cultivators</p>
                       <p className="mt-0.5 text-[11px] text-[#b5bac1]">Your current circle and recent social activity at a glance.</p>
                     </div>
-                    <span className="flex h-7 min-w-7 items-center justify-center rounded-full border border-[#3b3f48] bg-[#2b2d31] px-2 text-[11px] font-semibold text-[#dbdee1]">
+                    <span className="flex h-7 min-w-7 items-center justify-center rounded-full px-2 text-[11px] font-semibold text-[#dbdee1]" style={{ backgroundColor: "color-mix(in srgb, var(--ink-light) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--ink-light) 34%, transparent)" }}>
                       {data.friends.length}
                     </span>
                   </div>
                 </div>
               </section>
 
-              <section className="rounded-lg border border-[#3b3f48] bg-[#313338] p-3">
+              <section className="flex flex-1 flex-col border-t pt-3" style={{ borderTopColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)" }}>
                 <div className="mb-2">
                   <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Preview</p>
                   <p className="mt-1 text-[11px] text-[#b5bac1]">A light feed preview of your current circle.</p>
                 </div>
 
                 {sortedFriends.length === 0 ? (
-                  <div className="rounded-md border border-[#3b3f48] bg-[#232428] p-3">
+                  <div className="rounded-lg p-3" style={{ border: "1px solid color-mix(in srgb, var(--ink-light) 40%, transparent)", backgroundColor: "color-mix(in srgb, var(--ink-mid) 48%, var(--ink-deep))" }}>
                     <EmptyFriends friendCode={data.me?.friendCode ?? undefined} />
                   </div>
                 ) : (
-                  <div className="space-y-2.5">
+                  <div className="flex flex-1 flex-col space-y-2.5">
                     {sortedFriends.slice(0, 4).map((friend) => {
                       const stats = friendStatsMap.get(friend.id) || {
                         totalCheckIns: 0,
@@ -310,13 +327,13 @@ export default function FriendsPage() {
                       };
 
                       return (
-                        <article key={friend.id} className="rounded-md border border-[#3b3f48] bg-[#232428] p-3">
+                        <article key={friend.id} className="rounded-lg p-3" style={{ border: "1px solid color-mix(in srgb, var(--ink-light) 40%, transparent)", backgroundColor: "color-mix(in srgb, var(--ink-mid) 48%, var(--ink-deep))" }}>
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
                               <p className="truncate text-sm font-semibold text-[#f2f3f5]">{friend.name}</p>
                               <p className="truncate text-[11px] text-[#b5bac1]">@{friend.username}</p>
                             </div>
-                            <span className="rounded-md border border-[#3b3f48] bg-[#2b2d31] px-2 py-1 text-[11px] text-[#b5bac1]">
+                            <span className="rounded-md px-2 py-1 text-[11px] text-[#b5bac1]" style={{ backgroundColor: "color-mix(in srgb, var(--ink-light) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--ink-light) 34%, transparent)" }}>
                               {stats.totalCheckIns} check-ins
                             </span>
                           </div>

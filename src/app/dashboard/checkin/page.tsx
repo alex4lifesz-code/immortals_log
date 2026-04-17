@@ -484,7 +484,7 @@ export default function CheckInPage() {
       {loading ? (
         <PageSkeleton statCards={2} wideBlock rows={5} />
       ) : (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4">
           {dayNotes.length > 0 && (
             <div className="flex flex-wrap items-start gap-4">
               {/* Cultivation Journal — personal day notes */}
@@ -495,11 +495,11 @@ export default function CheckInPage() {
                   transition={{ duration: 0.25 }}
                   className="min-w-[280px] flex-1"
                 >
-                  <GlowCard glow="gold" hoverable={false}>
-                    <h3 className="text-sm text-gold-glow uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <GlowCard glow="none" hoverable={false} className="rounded-xl border border-[#3b3f48] bg-[#2b2d31] shadow-[0_10px_20px_rgba(0,0,0,0.22)]">
+                    <h3 className="mb-3 flex items-center gap-2 text-sm uppercase tracking-wider text-[#f2f3f5]">
                       📝 Cultivation Journal
                     </h3>
-                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                    <div className="max-h-48 space-y-2 overflow-y-auto">
                       {dayNotes.map((dn) => (
                         <motion.div
                           key={dn.date}
@@ -508,29 +508,29 @@ export default function CheckInPage() {
                           className="flex items-start gap-2 text-xs group"
                         >
                           {dn.pinned && (
-                            <span className="text-gold-glow shrink-0" title="Pinned">📌</span>
+                            <span className="shrink-0 text-[#8ea1ff]" title="Pinned">📌</span>
                           )}
                           <button
                             onClick={() => setEditingNote({ date: dn.date, note: dn.note })}
-                            className="text-jade-glow font-mono shrink-0 hover:underline text-[10px]"
+                            className="shrink-0 font-mono text-[10px] text-[#8ea1ff] hover:underline"
                           >
                             {dn.date}
                           </button>
                           {dn.userName && (
-                            <span className="text-gold shrink-0 font-medium">{dn.userName}:</span>
+                            <span className="shrink-0 font-medium text-[#b5bac1]">{dn.userName}:</span>
                           )}
-                          <span className="text-mist-light flex-1">{dn.note}</span>
+                          <span className="flex-1 text-[#f2f3f5]">{dn.note}</span>
                           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                             <button
                               onClick={() => toggleDayNotePin(dn.date)}
-                              className={`hover:text-gold-glow transition-colors ${dn.pinned ? 'text-gold-glow' : 'text-mist-dark'}`}
+                              className={`transition-colors hover:text-[#f2f3f5] ${dn.pinned ? 'text-[#8ea1ff]' : 'text-[#949ba4]'}`}
                               title={dn.pinned ? "Unpin" : "Pin note"}
                             >
                               📌
                             </button>
                             <button
                               onClick={() => saveDayNote(dn.date, "")}
-                              className="text-mist-dark hover:text-crimson-light transition-colors"
+                              className="text-[#949ba4] transition-colors hover:text-[#ff8fa3]"
                               title="Delete note"
                             >
                               ✕
@@ -548,8 +548,8 @@ export default function CheckInPage() {
 
           {/* Sect Member Statistics (separate from the table) */}
           {users.length > 0 && (
-            <GlowCard glow="jade" hoverable={false}>
-              <h3 className="mb-3 flex items-center gap-2 text-sm uppercase tracking-wider text-jade-glow">
+            <GlowCard glow="none" hoverable={false} className="rounded-xl border border-[#3b3f48] bg-[#2b2d31] shadow-[0_10px_20px_rgba(0,0,0,0.22)]">
+              <h3 className="mb-3 flex items-center gap-2 text-sm uppercase tracking-wider text-[#f2f3f5]">
                 Sect Member Statistics
               </h3>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
@@ -560,48 +560,47 @@ export default function CheckInPage() {
 
                   const consistencyColor =
                     stats.consistencyPercent >= 80
-                      ? "text-jade-glow"
+                      ? "text-[#8ea1ff]"
                       : stats.consistencyPercent >= 60
-                        ? "text-gold-glow"
-                        : "text-mist-light";
+                        ? "text-[#f0b96a]"
+                        : "text-[#b5bac1]";
 
                   const weightTrendColor =
                     stats.weightChange === null
-                      ? "text-mist-dark"
+                      ? "text-[#949ba4]"
                       : stats.weightChange > 0
-                        ? "text-crimson-light"
-                        : "text-jade-glow";
+                        ? "text-[#ff8fa3]"
+                        : "text-[#7ee787]";
 
                   return (
                     <motion.div
                       key={u.id}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="space-y-2 rounded-lg border border-ink-light/40 p-3"
-                      style={{ background: "var(--surface-gradient-strong)" }}
+                      className="space-y-2 rounded-md border border-[#3b3f48] bg-[#232428] p-3"
                     >
-                      <div className="flex items-center justify-between border-b border-ink-light/30 pb-2">
-                        <span className="text-sm font-semibold text-jade-glow">{u.name}</span>
+                      <div className="flex items-center justify-between border-b border-[#3b3f48] pb-2">
+                        <span className="text-sm font-semibold text-[#f2f3f5]">{u.name}</span>
                         {stats.lastCheckInDate && (
-                          <span className="text-[9px] text-mist-dark">
+                          <span className="text-[9px] text-[#949ba4]">
                             Last: {formatDateWithPreference(stats.lastCheckInDate, dateFormat)}
                           </span>
                         )}
                       </div>
 
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-mist-light">Check-ins</span>
-                        <span className="font-semibold text-jade-glow">
+                        <span className="text-[#b5bac1]">Check-ins</span>
+                        <span className="font-semibold text-[#f2f3f5]">
                           {stats.totalCheckIns}/{stats.totalDays}
                         </span>
                       </div>
 
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-mist-light">Consistency</span>
+                        <span className="text-[#b5bac1]">Consistency</span>
                         <div className="flex items-center gap-1.5">
-                          <div className="h-1.5 w-20 overflow-hidden rounded-full bg-ink-light/30">
+                          <div className="h-1.5 w-20 overflow-hidden rounded-full bg-[#3b3f48]">
                             <div
-                              className="h-full bg-jade-glow/50 transition-all duration-300"
+                              className="h-full bg-[#5865f2] transition-all duration-300"
                               style={{ width: `${stats.consistencyPercent}%` }}
                             />
                           </div>
@@ -614,16 +613,16 @@ export default function CheckInPage() {
                       {stats.avgWeight !== null && (
                         <>
                           <div className="flex items-center justify-between text-xs">
-                            <span className="text-mist-light">Avg Weight</span>
-                            <span className="font-semibold text-gold-glow">{stats.avgWeight.toFixed(1)} lb</span>
+                            <span className="text-[#b5bac1]">Avg Weight</span>
+                            <span className="font-semibold text-[#f2f3f5]">{stats.avgWeight.toFixed(1)} lb</span>
                           </div>
                           <div className="flex items-center justify-between text-xs">
-                            <span className="text-mist-light">Latest Weight</span>
-                            <span className="font-semibold text-mist-light">{stats.latestWeight?.toFixed(1) || "-"} lb</span>
+                            <span className="text-[#b5bac1]">Latest Weight</span>
+                            <span className="font-semibold text-[#f2f3f5]">{stats.latestWeight?.toFixed(1) || "-"} lb</span>
                           </div>
                           {stats.weightChange !== null && (
-                            <div className="flex items-center justify-between border-t border-ink-light/30 pt-1 text-xs">
-                              <span className="text-mist-light">Weight Change</span>
+                            <div className="flex items-center justify-between border-t border-[#3b3f48] pt-1 text-xs">
+                              <span className="text-[#b5bac1]">Weight Change</span>
                               <span className={`font-semibold ${weightTrendColor}`}>
                                 {stats.weightChange > 0 ? "+" : ""}
                                 {stats.weightChange.toFixed(1)} lb
@@ -640,10 +639,10 @@ export default function CheckInPage() {
             </GlowCard>
           )}
 
-          <GlowCard glow="jade" hoverable={false}>
-            <div className="overflow-x-auto w-full">
+          <GlowCard glow="none" hoverable={false} className="rounded-xl border border-[#3b3f48] bg-[#2b2d31] shadow-[0_10px_20px_rgba(0,0,0,0.22)]">
+            <div className="w-full overflow-x-auto">
               {/* Toolbar */}
-              <div className="mb-4 rounded-lg border border-ink-light/35 bg-ink-mid/15 p-2.5 sm:p-3 space-y-2.5">
+              <div className="mb-3 space-y-2 rounded-md border border-[#3b3f48] bg-[#232428] p-2.5 sm:p-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     onClick={() => {
@@ -651,18 +650,18 @@ export default function CheckInPage() {
                       setSortOrder(next);
                       localStorage.setItem("checkin-sort-order", next);
                     }}
-                    className="px-2.5 py-1 text-[10px] rounded border border-ink-light/50 text-mist-dark hover:text-mist-light hover:border-ink-light transition-all"
+                    className="rounded-md border border-[#3b3f48] bg-[#383a40]/65 px-2.5 py-1 text-[10px] text-[#b5bac1] transition-colors hover:text-[#f2f3f5]"
                     title={sortOrder === "newest" ? "Showing newest first — click for oldest first" : "Showing oldest first — click for newest first"}
                   >
                     {sortOrder === "newest" ? "↓ Newest" : "↑ Oldest"}
                   </button>
-                  <span className="text-[10px] text-mist-dark sm:ml-auto">
+                  <span className="text-[10px] text-[#949ba4] sm:ml-auto">
                     {rows.length} records
                   </span>
                   {rows.length > 0 && !isEditMode && (
                     <button
                       onClick={handleEditToggle}
-                      className="px-3 py-1 text-[10px] rounded border border-jade-glow/45 bg-jade-deep/20 text-jade-light hover:text-jade-glow hover:border-jade-glow transition-all"
+                      className="rounded-md border border-[#5865f2]/60 bg-[#383a40] px-3 py-1 text-[10px] text-[#f2f3f5] transition-colors hover:bg-[#454852]"
                     >
                       ✎ Enter Edit Mode
                     </button>
@@ -670,12 +669,12 @@ export default function CheckInPage() {
                 </div>
 
                 {isEditMode && rows.length > 0 && (
-                  <div className="rounded-md border border-jade-glow/35 bg-jade-deep/10 px-2.5 py-2">
+                  <div className="rounded-md border border-[#3b3f48] bg-[#2b2d31] px-2.5 py-2">
                     <div className="flex flex-wrap gap-2">
                       <GlowButton variant="jade" size="sm" className="flex-1 min-w-[130px]" onClick={handleEditToggle}>✓ Save Changes</GlowButton>
                       <GlowButton variant="ghost" size="sm" className="flex-1 min-w-[130px]" onClick={handleEditCancel}>✕ Cancel</GlowButton>
                     </div>
-                    <p className="mt-2 text-[10px] text-jade-light/90">
+                    <p className="mt-2 text-[10px] text-[#b5bac1]">
                       Edit mode active. Use the red Remove button at the left of each date to delete a row.
                     </p>
                   </div>
@@ -685,7 +684,7 @@ export default function CheckInPage() {
               <div style={{ minWidth: checkinGridMinWidth }}>
                 {/* Grid header */}
                 <div
-                  className="grid gap-0 text-[10px] sm:text-[11px] normal-case sm:uppercase tracking-normal sm:tracking-wide font-semibold text-jade-glow border-b border-ink-light pb-2 mb-1"
+                  className="mb-1 grid gap-0 border-b border-[#3b3f48] pb-2 text-[10px] font-semibold normal-case tracking-normal text-[#b5bac1] sm:text-[11px] sm:uppercase sm:tracking-wide"
                   style={{ gridTemplateColumns: checkinGridTemplateColumns }}
                 >
                   <div className="px-1">Date</div>
@@ -712,8 +711,8 @@ export default function CheckInPage() {
                 {sortedRows.length === 0 ? (
                   <div className="flex flex-col items-center py-10 text-center">
                     <div className="text-2xl opacity-30 mb-2">📋</div>
-                    <p className="text-xs text-mist-dark">No records yet</p>
-                    <p className="text-[10px] text-mist-dark/60 mt-1">
+                    <p className="text-xs text-[#b5bac1]">No records yet</p>
+                    <p className="mt-1 text-[10px] text-[#949ba4]">
                       Check-in records will be created automatically
                     </p>
                   </div>
@@ -728,10 +727,10 @@ export default function CheckInPage() {
                         <div
                           key={row.date}
                           id={`checkin-row-${row.date}`}
-                          className={`grid gap-0 items-center py-1 border-b text-xs transition-colors duration-100 ${
+                          className={`grid gap-0 items-center border-b py-1 text-xs transition-colors duration-100 ${
                             isEditMode
-                              ? "border-jade-glow/15 bg-jade-deep/5 hover:bg-jade-deep/10"
-                              : `border-ink-light/50 hover:bg-ink-mid/10 ${isWeekend ? "bg-ink-dark/20" : ""}`
+                              ? "border-[#3b3f48] bg-[#2b2d31] hover:bg-[#313338]"
+                              : `border-[#3b3f48] hover:bg-[#2b2d31] ${isWeekend ? "bg-[#232428]" : ""}`
                           }`}
                           style={{ gridTemplateColumns: checkinGridTemplateColumns }}
                         >
@@ -767,14 +766,14 @@ export default function CheckInPage() {
                             )}
                             <button
                               onClick={() => setEditingNote({ date: row.date, note: noteText })}
-                              className="text-mist-light hover:text-jade-glow transition-colors text-left leading-tight"
+                              className="text-left leading-tight text-[#f2f3f5] transition-colors hover:text-[#8ea1ff]"
                               title="Click to add/edit day note"
                             >
                               <span className="text-[11px]">{formatDateWithPreference(row.date, dateFormat)}</span>
-                              <span className={`text-[9px] ml-1 ${isWeekend ? "text-gold/70" : "text-mist-dark"}`}>{dayName}</span>
+                              <span className={`ml-1 text-[9px] ${isWeekend ? "text-[#f0b96a]" : "text-[#949ba4]"}`}>{dayName}</span>
                             </button>
                             {noteText && (
-                              <span className="text-[10px] text-gold-glow shrink-0" title={noteText}>📝</span>
+                              <span className="shrink-0 text-[10px] text-[#8ea1ff]" title={noteText}>📝</span>
                             )}
                           </div>
 
@@ -788,19 +787,19 @@ export default function CheckInPage() {
                                 {canEdit ? (
                                   <button
                                     onClick={() => handleCheckInToggle(row.date, u.id, !isPresent)}
-                                    className={`w-5 h-5 rounded text-[10px] font-bold transition-all duration-150 ${
+                                    className={`h-5 w-5 rounded-md text-[10px] font-bold transition-colors duration-150 ${
                                       isPresent
-                                        ? "bg-jade-glow/20 text-jade-glow border border-jade-glow/40 shadow-[var(--glow-subtle)]"
-                                        : "text-mist-dark border border-ink-light/40 hover:border-mist-dark/60"
+                                        ? "border border-[#5865f2]/60 bg-[#383a40] text-[#f2f3f5]"
+                                        : "border border-[#3b3f48] text-[#949ba4] hover:text-[#f2f3f5]"
                                     }`}
                                   >
                                     {isPresent ? "✓" : ""}
                                   </button>
                                 ) : (
-                                  <span className={`w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold ${
+                                  <span className={`flex h-5 w-5 items-center justify-center rounded-md text-[10px] font-bold ${
                                     isPresent
-                                      ? "bg-jade-glow/15 text-jade-glow/70 border border-jade-glow/20"
-                                      : "text-mist-dark/40"
+                                      ? "border border-[#5865f2]/50 bg-[#383a40] text-[#f2f3f5]"
+                                      : "text-[#949ba4]/60"
                                   }`}>
                                     {isPresent ? "✓" : "·"}
                                   </span>
@@ -822,7 +821,7 @@ export default function CheckInPage() {
                                   : "—";
                                 return (
                                   <span
-                                    className={`text-[11px] ${ownWeight ? "text-cloud-white" : "text-mist-dark/70"}`}
+                                    className={`text-[11px] ${ownWeight ? "text-[#f2f3f5]" : "text-[#949ba4]"}`}
                                     title={`You: ${ownWeight || "—"} • Avg: ${avgWeight}`}
                                   >
                                     {ownWeight || avgWeight}
@@ -840,11 +839,11 @@ export default function CheckInPage() {
                                     value={row.entries[u.id]?.weight || ""}
                                     onChange={(e) => updateCell(row.date, u.id, "weight", e.target.value)}
                                     placeholder="—"
-                                    className="w-full bg-ink-deep border border-jade-glow/30 rounded px-1 py-0.5 text-cloud-white
-                                               text-center text-[11px] outline-none focus:border-jade-glow"
+                                    className="w-full rounded-md border border-[#3b3f48] bg-[#232428] px-1 py-0.5 text-center text-[11px] text-[#f2f3f5]
+                                               outline-none focus:border-[#5865f2]/60"
                                   />
                                 ) : (
-                                  <span className={`text-[11px] ${row.entries[u.id]?.weight ? "text-cloud-white" : "text-mist-dark/50"}`}>
+                                  <span className={`text-[11px] ${row.entries[u.id]?.weight ? "text-[#f2f3f5]" : "text-[#949ba4]"}`}>
                                     {row.entries[u.id]?.weight || "—"}
                                   </span>
                                 )}
@@ -864,8 +863,8 @@ export default function CheckInPage() {
                                       value={row.entries[u.id]?.comment || ""}
                                       onChange={(e) => updateCell(row.date, u.id, "comment", e.target.value)}
                                       placeholder={`${u.name} note...`}
-                                      className="w-full bg-ink-deep border border-jade-glow/30 rounded px-2 py-0.5 text-cloud-white text-[11px]
-                                                 placeholder:text-mist-dark/40 outline-none focus:border-jade-glow"
+                                      className="w-full rounded-md border border-[#3b3f48] bg-[#232428] px-2 py-0.5 text-[11px] text-[#f2f3f5]
+                                                 placeholder:text-[#949ba4] outline-none focus:border-[#5865f2]/60"
                                     />
                                   ))}
                                 </div>
@@ -879,13 +878,13 @@ export default function CheckInPage() {
                                     }
                                   }}
                                   placeholder="Add your notes..."
-                                  className="w-full bg-ink-deep border border-jade-glow/30 rounded px-2 py-0.5 text-cloud-white text-[11px]
-                                             placeholder:text-mist-dark/40 outline-none focus:border-jade-glow"
+                                  className="w-full rounded-md border border-[#3b3f48] bg-[#232428] px-2 py-0.5 text-[11px] text-[#f2f3f5]
+                                             placeholder:text-[#949ba4] outline-none focus:border-[#5865f2]/60"
                                 />
                               )
                             ) : (
                               <span
-                                className="text-mist-light/80 text-[11px] truncate block cursor-help hover:text-mist-glow transition-colors"
+                                className="block cursor-help truncate text-[11px] text-[#b5bac1] transition-colors hover:text-[#f2f3f5]"
                                 title={getRowCommentSummary(row) || "No notes"}
                               >
                                 {getRowCommentSummary(row) || "—"}
@@ -901,8 +900,8 @@ export default function CheckInPage() {
 
               {/* Footer */}
               {rows.length > 0 && !isEditMode && (
-                <div className="text-center pt-2 border-t border-ink-light">
-                  <p className="text-xs text-mist-dark">
+                <div className="border-t border-[#3b3f48] pt-2 text-center">
+                  <p className="text-xs text-[#949ba4]">
                     Showing {rows.length} records
                   </p>
                 </div>
@@ -921,9 +920,9 @@ export default function CheckInPage() {
         <div className="space-y-4">
           {editingNote && (
             <>
-              <p className="text-xs text-mist-dark">{formatDateDisplay(editingNote.date)}</p>
+              <p className="text-xs text-[#949ba4]">{formatDateDisplay(editingNote.date)}</p>
               <div>
-                <label className="block text-xs text-mist-light uppercase tracking-wider mb-2">
+                <label className="mb-2 block text-xs uppercase tracking-wider text-[#b5bac1]">
                   Cultivation Notes
                 </label>
                 <textarea
@@ -931,7 +930,7 @@ export default function CheckInPage() {
                   onChange={(e) => setEditingNote({ ...editingNote, note: e.target.value })}
                   placeholder="Record training observations, energy levels, insights..."
                   rows={4}
-                  className="w-full bg-ink-dark border border-jade-glow/30 rounded-lg px-3 py-2 text-cloud-white text-sm outline-none focus:border-jade-glow transition-colors resize-none placeholder:text-mist-dark"
+                  className="w-full rounded-md border border-[#3b3f48] bg-[#232428] px-3 py-2 text-sm text-[#f2f3f5] outline-none transition-colors resize-none placeholder:text-[#949ba4] focus:border-[#5865f2]/60"
                 />
               </div>
               <div className="flex gap-2">
@@ -965,11 +964,11 @@ export default function CheckInPage() {
         title="⚖️ Log Your Weight"
       >
         <div className="space-y-5">
-          <p className="text-xs text-mist-mid">
+          <p className="text-xs text-[#b5bac1]">
             You haven&apos;t logged your weight today. Tracking your weight helps monitor your cultivation progress.
           </p>
           <div>
-            <label className="block text-[10px] text-jade-glow uppercase tracking-wider mb-2">Body Weight (kg)</label>
+            <label className="mb-2 block text-[10px] uppercase tracking-wider text-[#b5bac1]">Body Weight (kg)</label>
             <input
               type="number"
               placeholder="Enter your weight..."
@@ -978,7 +977,7 @@ export default function CheckInPage() {
               onKeyDown={(e) => {
                 if (e.key === "Enter" && weightPromptValue) handleWeightPromptSubmit();
               }}
-              className="w-full bg-ink-deep border border-ink-light rounded-lg px-4 py-4 text-lg text-cloud-white placeholder-mist-dark outline-none focus:border-jade-glow transition-colors text-center font-medium"
+              className="w-full rounded-md border border-[#3b3f48] bg-[#232428] px-4 py-4 text-center text-lg font-medium text-[#f2f3f5] placeholder:text-[#949ba4] outline-none transition-colors focus:border-[#5865f2]/60"
               min="0"
               max="500"
               step="0.1"
@@ -1031,14 +1030,14 @@ export default function CheckInPage() {
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-xs text-mist-light uppercase tracking-wider mb-2">
+            <label className="mb-2 block text-xs uppercase tracking-wider text-[#b5bac1]">
               Date
             </label>
             <input
               type="date"
               value={customDate}
               onChange={(e) => setCustomDate(e.target.value)}
-              className="w-full bg-ink-dark border border-jade-glow/30 rounded-lg px-3 py-2 text-cloud-white outline-none focus:border-jade-glow transition-colors"
+              className="w-full rounded-md border border-[#3b3f48] bg-[#232428] px-3 py-2 text-[#f2f3f5] outline-none transition-colors focus:border-[#5865f2]/60"
             />
           </div>
           <GlowButton

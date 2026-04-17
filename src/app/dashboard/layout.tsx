@@ -25,21 +25,23 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   const { count: incomingFriendRequestCount } = useIncomingFriendRequestsCount(user?.id);
   const { themeStyle, isMobile } = useAppContext();
   const [isTrainExerciseHistoryOpen, setIsTrainExerciseHistoryOpen] = useState(false);
-  const disableMotion = themeStyle === "eternal" || themeStyle === "discord" || prefersReducedMotion;
+  const disableMotion = themeStyle === "discord" || prefersReducedMotion;
   const isWorkoutInputFullscreen =
     pathname?.startsWith("/dashboard/train/input/") || pathname?.startsWith("/dashboard/workout-history/input/") || false;
   const isFriendDrawerRoute =
     pathname?.startsWith("/dashboard/train")
     && Boolean(searchParams.get("targetUserId"))
     && Boolean(searchParams.get("friendView"));
+  const matchesRouteOrChild = (route: string) => pathname === route || pathname?.startsWith(`${route}/`);
   const hideFriendsRail =
     pathname === DASHBOARD_ROUTES.overview
-    || pathname === DASHBOARD_ROUTES.rankUp
-    || pathname?.startsWith(`${DASHBOARD_ROUTES.rankUp}/`)
-    || pathname === DASHBOARD_ROUTES.exercises
-    || pathname?.startsWith(`${DASHBOARD_ROUTES.exercises}/`)
-    || pathname === DASHBOARD_ROUTES.profile
-    || pathname?.startsWith(`${DASHBOARD_ROUTES.profile}/`)
+    || matchesRouteOrChild(DASHBOARD_ROUTES.community)
+    || matchesRouteOrChild(DASHBOARD_ROUTES.rankUp)
+    || matchesRouteOrChild(DASHBOARD_ROUTES.exercises)
+    || matchesRouteOrChild(DASHBOARD_ROUTES.profile)
+    || matchesRouteOrChild(DASHBOARD_ROUTES.settings)
+    || matchesRouteOrChild(DASHBOARD_ROUTES.checkIn)
+    || matchesRouteOrChild(DASHBOARD_ROUTES.checkinLegacy)
     || pathname === "/dashboard/mobile/profile"
     || pathname?.startsWith("/dashboard/mobile/profile/")
     || false;
@@ -70,7 +72,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     <MotionConfig transition={disableMotion ? { duration: 0 } : undefined}>
       <div className="app-atmosphere safe-area-shell h-app flex overflow-hidden nyaa-layout">
         <AtmosphericBackground />
-        {!isWorkoutInputFullscreen && !isFriendDrawerRoute && !isTrainExerciseHistoryOpen && !hideFriendsRail && (
+        {!isWorkoutInputFullscreen && !isTrainExerciseHistoryOpen && !hideFriendsRail && (
           <DiscordFriendsRail incomingFriendRequestCount={incomingFriendRequestCount} />
         )}
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">

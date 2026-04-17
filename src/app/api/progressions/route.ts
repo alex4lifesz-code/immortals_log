@@ -5,6 +5,7 @@ import {
   applyProgressionExerciseTranslation,
   getUserLanguageMode,
 } from "@/lib/exercise-translation-db";
+import { isDeletedExerciseDescription } from "@/lib/pending-exercises";
 
 // GET /api/progressions — fetch shared progression exercises plus requesting user's progress
 export const GET = withAuth(async (_request, { auth }) => {
@@ -31,7 +32,9 @@ export const GET = withAuth(async (_request, { auth }) => {
       orderBy: { createdAt: "desc" },
     });
 
-    const localizedExercises = exercises.map(({ translation, ...exercise }) => {
+    const localizedExercises = exercises
+      .filter((exercise) => !isDeletedExerciseDescription(exercise.story))
+      .map(({ translation, ...exercise }) => {
       const localized = applyProgressionExerciseTranslation(exercise, translation, languageMode);
       const englishName = translation?.englishName || exercise.name;
       const vietnameseName = translation?.vietnameseName || exercise.wuxiaName || exercise.name;

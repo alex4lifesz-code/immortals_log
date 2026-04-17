@@ -11,7 +11,7 @@ import { useDisplaySettings, DEFAULT_UNIFIED_VISIBLE_COLUMNS, DISPLAY_DEFAULTS }
 import { useIsMobile } from "@/context/AppContext";
 import { buildIsoAtUserDateTime, formatDateLocal, formatDateWithPreference } from "@/lib/constants";
 import { api, ApiRequestError } from "@/lib/api-client";
-import { getExerciseDisplayName } from "@/lib/exercise-name";
+import { getDeletedExerciseLabel, getExerciseDisplayName } from "@/lib/exercise-name";
 import { DASHBOARD_ROUTES } from "@/lib/navigation";
 import { t, tHint } from "@/lib/terminology";
 import { isDeletedExerciseDescription } from "@/lib/pending-exercises";
@@ -177,7 +177,7 @@ function flattenLogsUnified(exercises: ProgressionExercise[]): UnifiedFlatLogEnt
       entries.push({
         logId: log.id,
         date: log.createdAt,
-        exerciseName: ex.name,
+        exerciseName: isDeletedExerciseDescription(ex.story) ? getDeletedExerciseLabel(ex) : ex.name,
         exerciseId: ex.id,
         level: log.level,
         levelNameLevel: parsed.displayLevelOverride ?? log.level,
@@ -290,6 +290,7 @@ const TrainingLogMobileCard = memo(function TrainingLogMobileCard({
   const hasAverageWeight = averageValue !== null;
   const hasAverageReps = averageReps !== null;
   const hasWeight = Boolean(entry.modifier);
+  const isDeletedEntry = entryDisplayName.toLowerCase().startsWith("deleted exercise");
 
   return (
     <button
@@ -305,7 +306,7 @@ const TrainingLogMobileCard = memo(function TrainingLogMobileCard({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <p className="training-log-mobile-entry-title truncate text-xs font-semibold" style={{ color: "var(--cloud-white)" }}>{entryDisplayName}</p>
+          <p className="training-log-mobile-entry-title truncate text-xs font-semibold" style={{ color: isDeletedEntry ? "var(--crimson-light)" : "var(--cloud-white)" }}>{entryDisplayName}</p>
           <p className="training-log-mobile-entry-date mt-0.5 text-[10px]" style={{ color: "var(--text-muted)" }}>{formattedEntryDate}</p>
         </div>
         {(hasAverageWeight || hasAverageReps || hasWeight) && (
@@ -3616,6 +3617,7 @@ function TrainingLogTable({
                   const entryDisplayName = ex
                     ? (exerciseMeta?.displayName ?? stripBwPercentHint(getExerciseDisplayName(ex, displayTerminologyMode, settings.showExerciseForeignLanguage)))
                     : stripBwPercentHint(entry.exerciseName);
+                  const isDeletedEntry = entryDisplayName.toLowerCase().startsWith("deleted exercise");
                   const typeLabel = exerciseMeta?.categoryLabel ?? getExerciseCategoryLabel(ex);
                   const formattedEntryDate = formattedDateByLogId.get(entry.logId) ?? formatDate(entry.date, dateFormat);
 
@@ -3870,6 +3872,7 @@ function TrainingLogTable({
                     const entryDisplayName = ex
                       ? (exerciseMeta?.displayName ?? stripBwPercentHint(getExerciseDisplayName(ex, displayTerminologyMode, settings.showExerciseForeignLanguage)))
                       : stripBwPercentHint(entry.exerciseName);
+                    const isDeletedEntry = entryDisplayName.toLowerCase().startsWith("deleted exercise");
                     const exerciseVariantOptions = exerciseMeta?.variationOptions ?? [];
                     const selectedVariantValue = editData?.variant ?? "";
                     const variantSelectOptions =
@@ -3997,7 +4000,7 @@ function TrainingLogTable({
                                     <span
                                       className={`text-xs truncate ${enableMobileTapToPreview ? "cursor-pointer" : ""}`}
                                       title={entryDisplayName}
-                                      style={{ color: "var(--text-primary)", textDecoration: "none" }}
+                                      style={{ color: isDeletedEntry ? "var(--crimson-light)" : "var(--text-primary)", textDecoration: "none" }}
                                       onClick={() => openMobileTextPreview(t("Exercise", "normal"), entryDisplayName)}
                                     >
                                       {entryDisplayName}
@@ -4046,6 +4049,7 @@ function TrainingLogTable({
                                       })()}
                                       className="text-xs training-log-exercise-link truncate"
                                       title={entryDisplayName}
+                                      style={{ color: isDeletedEntry ? "var(--crimson-light)" : "var(--text-primary)" }}
                                       onClick={(e) => {
                                         // Prevent navigation when in edit mode
                                         if (isEditMode) e.preventDefault();
@@ -4648,7 +4652,7 @@ function TrainingLogTable({
           document.body,
         )}
 
-      {/* Mobile input picker (replaces native APK select popups) */}
+      {/* Mobile input picker (replaces native select popups) */}
       {isMobile && typeof document !== "undefined" &&
         createPortal(
           <AnimatePresence>

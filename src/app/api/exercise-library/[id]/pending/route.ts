@@ -46,24 +46,12 @@ export const POST = withAuth(async (request, { params }) => {
       return apiSuccess({ success: true, exercise: updated });
     }
 
-    const updated = await prisma.$transaction(async (tx) => {
-      await tx.progressionTier.updateMany({
-        where: { exerciseId: id },
-        data: {
-          name: "Deleted exercise",
-          wuxiaName: "Deleted exercise",
-        },
-      });
-
-      return tx.progressionExercise.update({
-        where: { id },
-        data: {
-          name: "Deleted exercise",
-          wuxiaName: "Deleted exercise",
-          story: markExerciseAsDeleted(existing.story),
-        },
-        select: { id: true, name: true },
-      });
+    const updated = await prisma.progressionExercise.update({
+      where: { id },
+      data: {
+        story: markExerciseAsDeleted(existing.story),
+      },
+      select: { id: true, name: true },
     });
 
     return apiSuccess({ success: true, exercise: updated });

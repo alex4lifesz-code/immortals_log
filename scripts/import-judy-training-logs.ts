@@ -1,8 +1,10 @@
+import fs from "node:fs";
+import * as XLSX from "xlsx";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 
 type ParsedRow = {
-  date: string;
+  date: string | number;
   sourceExercise: string;
   w1: number | null;
   r1: number | null;
@@ -19,6 +21,8 @@ type Inference = {
   variantHint?: string;
   noteSuffix?: string;
 };
+
+const WORKBOOK_PATH = process.argv[2] || "C:/Users/Admin/Desktop/judyworkout.xlsx";
 
 const RAW_TSV = `Date	Judy-Exercise	W1	R1	W2	R2	W3	R3	Notes
 29-Jan-26	Lat Pulldown	30	12	40	8	50	6	Trying to do as heavy as I can so I can do a pull up :)
@@ -283,7 +287,13 @@ function parseIntOrNull(value: string): number | null {
   return Number.isFinite(rounded) ? rounded : null;
 }
 
-function parseDate(value: string): Date {
+function parseDate(value: string | number): Date {
+  if (typeof value === "number") {
+    const parsed = XLSX.SSF.parse_date_code(value);
+    if (!parsed) throw new Error(`Invalid excel date: ${value}`);
+    return new Date(Date.UTC(parsed.y, parsed.m - 1, parsed.d, 12, 0, 0));
+  }
+
   const raw = value.trim();
   const parts = raw.split("-");
   if (parts.length !== 3) throw new Error(`Invalid date: ${value}`);
@@ -310,7 +320,34 @@ function parseDate(value: string): Date {
   return new Date(Date.UTC(year, month, day, 12, 0, 0));
 }
 
-function parseRows(): ParsedRow[] {
+function parseRowsFromWorkbook(): ParsedRow[] {
+  if (!fs.existsSync(WORKBOOK_PATH)) {
+    return [];
+  }
+
+  const workbook = XLSX.readFile(WORKBOOK_PATH);
+  for (const sheetName of workbook.SheetNames) {
+    const sheet = workbook.Sheets[sheetName];
+    const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
+    if (rawRows.length === 0) continue;
+
+    return rawRows.map((row) => ({
+      date: (row.Date as string | number | undefined) ?? "",
+      sourceExercise: String(row.Exercise || row["Judy-Exercise"] || "").trim(),
+      w1: parseNumber(String(row.W1 ?? "")),
+      r1: parseIntOrNull(String(row.R1 ?? "")),
+      w2: parseNumber(String(row.W2 ?? "")),
+      r2: parseIntOrNull(String(row.R2 ?? "")),
+      w3: parseNumber(String(row.W3 ?? "")),
+      r3: parseIntOrNull(String(row.R3 ?? "")),
+      notes: String(row.Notes || "").trim(),
+    })).filter((row) => row.sourceExercise.length > 0);
+  }
+
+  return [];
+}
+
+function parseRowsFromTsv(): ParsedRow[] {
   const lines = RAW_TSV.split(/\r?\n/).filter((line) => line.trim().length > 0);
   if (lines.length <= 1) return [];
   const rows: ParsedRow[] = [];
@@ -335,6 +372,11 @@ function parseRows(): ParsedRow[] {
   return rows;
 }
 
+function parseRows(): ParsedRow[] {
+  const workbookRows = parseRowsFromWorkbook();
+  return workbookRows.length > 0 ? workbookRows : parseRowsFromTsv();
+}
+
 function inferMapping(sourceExercise: string, notes: string): Inference | null {
   const name = normalizeKey(sourceExercise);
   const note = normalizeKey(notes);
@@ -346,84 +388,98 @@ function inferMapping(sourceExercise: string, notes: string): Inference | null {
     return { canonicalExercise: "Lat pulldown" };
   }
 
-  if (name.includes("seated cable row")) return { canonicalExercise: "Row", variantHint: "Seated Cable" };
-  if (name.includes("machine row")) return { canonicalExercise: "Row", variantHint: "Machine" };
-  if (name === "t bar" || name.includes("t bar")) return { canonicalExercise: "Row", variantHint: "T-Bar" };
-  if (name.includes("bb row") || name.includes("barbell row")) return { canonicalExercise: "Row", variantHint: "Barbell" };
+  if (name.includes("seated cable row")) return { canonicalExercise: "Row", progressionHint: "Cable", variantHint: "Seated" };
+  if (name.includes("machine row")) return { canonicalExercise: "Row", progressionHint: "Machine", variantHint: note.includes("each arm") ? "Single arm" : undefined };
+  if (name === "t bar" || name.includes("t bar")) return { canonicalExercise: "Row", progressionHint: "Barbell", variantHint: "T-bar" };
+  if (name.includes("bb row") || name.includes("barbell row")) return { canonicalExercise: "Row", progressionHint: "Barbell", variantHint: "Bent over" };
 
-  if (name.includes("cable face pull")) return { canonicalExercise: "Face pull", variantHint: "Cable" };
+  if (name.includes("cable face pull")) return { canonicalExercise: "Face pull", progressionHint: "Cable" };
 
   if (name.includes("assisted pull up")) return { canonicalExercise: "Pull up", progressionHint: "Assisted" };
   if (name.includes("negative pull up")) return { canonicalExercise: "Pull up", progressionHint: "Negative" };
 
   if (name.includes("eb bicep curl") || name.includes("ezy bar") || name.includes("ez bar")) {
-    return { canonicalExercise: "Bicep curl", variantHint: "EZ Bar" };
+    return { canonicalExercise: "Bicep curl", progressionHint: "EZ bar" };
   }
-  if (name.includes("hammer curl")) return { canonicalExercise: "Bicep curl", variantHint: "Hammer" };
-  if (name.includes("cable bicep curl")) return { canonicalExercise: "Bicep curl", variantHint: "Cable" };
+  if (name.includes("hammer curl")) return { canonicalExercise: "Bicep curl", progressionHint: "Dumbbell", variantHint: "Hammer" };
+  if (name.includes("cable bicep curl")) return { canonicalExercise: "Bicep curl", progressionHint: "Cable" };
 
+  if (name.includes("machine shoulder press")) return { canonicalExercise: "Shoulder press", progressionHint: "Machine" };
   if (name.includes("db shoulder press")) return { canonicalExercise: "Shoulder press", progressionHint: "Dumbbell" };
-  if (name.includes("db lateral raise")) return { canonicalExercise: "Lateral raise", variantHint: "Dumbbell" };
-  if (name.includes("front raise")) return { canonicalExercise: "Front raise", variantHint: "Dumbbell" };
+  if (name.includes("db lateral raise")) return { canonicalExercise: "Lateral raise", progressionHint: "Dumbbell" };
+  if (name.includes("front raise")) return { canonicalExercise: "Front raise", progressionHint: "Dumbbell" };
 
-  if (name.includes("1 arm cable tricep pushdown")) return { canonicalExercise: "Tricep pushdown", variantHint: "One Arm Cable" };
-  if (name.includes("cable tricep pushdown")) return { canonicalExercise: "Tricep pushdown", variantHint: "Cable" };
+  if (name.includes("1 arm cable tricep pushdown")) return { canonicalExercise: "Tricep pushdown", progressionHint: "Cable", variantHint: "Single arm" };
+  if (name.includes("cable tricep pushdown")) {
+    if (note.includes("rope")) return { canonicalExercise: "Tricep pushdown", progressionHint: "Cable", variantHint: "Rope" };
+    if (note.includes("v bar") || note.includes("v grip")) return { canonicalExercise: "Tricep pushdown", progressionHint: "Cable", variantHint: "V-bar" };
+    return { canonicalExercise: "Tricep pushdown", progressionHint: "Cable", variantHint: "Bar" };
+  }
 
-  if (name.includes("cable rear delt")) return { canonicalExercise: "Rear delt fly", variantHint: "Cable" };
-  if (name.includes("rear delt fly")) return { canonicalExercise: "Rear delt fly" };
+  if (name.includes("cable rear delt")) return { canonicalExercise: "Rear delt fly", progressionHint: "Cable" };
+  if (name.includes("rear delt fly")) return { canonicalExercise: "Rear delt fly", progressionHint: "Dumbbell" };
 
-  if (name.includes("hamstring curl")) return { canonicalExercise: "Leg curl", variantHint: "Hamstring" };
+  if (name.includes("hamstring curl")) return { canonicalExercise: "Leg curl", progressionHint: "Seated" };
 
-  if (name.includes("bb squat")) return { canonicalExercise: "Squat", progressionHint: "Barbell" };
-  if (name.includes("pendulum squat")) return { canonicalExercise: "Squat", variantHint: "Pendulum" };
+  if (name.includes("bb squat")) return { canonicalExercise: "Squat", progressionHint: "Barbell", variantHint: "Back" };
+  if (name.includes("pendulum squat")) return { canonicalExercise: "Squat", progressionHint: "Weighted", variantHint: "Pendulum" };
 
-  if (name.includes("single leg extension")) return { canonicalExercise: "Leg extension", progressionHint: "Single Leg" };
-  if (name.includes("seated leg extension")) return { canonicalExercise: "Leg extension", progressionHint: "Seated" };
+  if (name.includes("single leg extension")) return { canonicalExercise: "Leg extension", progressionHint: "Seated", variantHint: "Single leg" };
+  if (name.includes("seated leg extension")) {
+    if (note.includes("left leg") || note.includes("right leg") || note.includes("each leg")) {
+      return { canonicalExercise: "Leg extension", progressionHint: "Seated", variantHint: "Single leg" };
+    }
+    if (note.includes("both leg")) {
+      return { canonicalExercise: "Leg extension", progressionHint: "Seated", variantHint: "Both legs" };
+    }
+    return { canonicalExercise: "Leg extension", progressionHint: "Seated" };
+  }
 
   if (name.includes("hip abduction")) {
-    if (name.includes("leaning back")) return { canonicalExercise: "Hip abduction", variantHint: "Leaning Back" };
-    if (name.includes("leaning forward")) return { canonicalExercise: "Hip abduction", variantHint: "Leaning Forward" };
-    if (name.includes("pulses")) return { canonicalExercise: "Hip abduction", variantHint: "Pulses" };
-    return { canonicalExercise: "Hip abduction" };
+    if (name.includes("leaning back")) return { canonicalExercise: "Hip abduction", progressionHint: "Machine", variantHint: "Leaning back" };
+    if (name.includes("leaning forward")) return { canonicalExercise: "Hip abduction", progressionHint: "Machine", variantHint: "Leaning forward" };
+    if (name.includes("pulses")) return { canonicalExercise: "Hip abduction", progressionHint: "Machine", variantHint: "Pulses" };
+    return { canonicalExercise: "Hip abduction", progressionHint: "Machine" };
   }
 
-  if (name.includes("hanging leg raise")) return { canonicalExercise: "Leg raise", progressionHint: "Hanging" };
-  if (name.includes("leg press")) return { canonicalExercise: "Leg press" };
+  if (name.includes("hanging leg raise")) return { canonicalExercise: "Leg raise", progressionHint: "Hanging", variantHint: "Straight" };
+  if (name.includes("leg press")) return { canonicalExercise: "Leg press", progressionHint: "Standard" };
 
   if (name.includes("db bench press")) return { canonicalExercise: "Bench press", progressionHint: "Dumbbell", variantHint: "Flat" };
-  if (name.includes("incline db bench press")) return { canonicalExercise: "Bench press", progressionHint: "Dumbbell", variantHint: "Incline 45" };
+  if (name.includes("incline db bench press")) return { canonicalExercise: "Bench press", progressionHint: "Dumbbell", variantHint: "Incline" };
 
-  if (name.includes("chest fly")) return { canonicalExercise: "Chest fly" };
+  if (name.includes("chest fly")) return { canonicalExercise: "Chest fly", progressionHint: "Machine" };
   if (name.includes("chest press")) return { canonicalExercise: "Chest press", progressionHint: "Machine", variantHint: "Flat" };
 
   if (name.includes("db hammer curl")) return { canonicalExercise: "Bicep curl", variantHint: "Hammer" };
 
-  if (name.includes("b stance rdl")) return { canonicalExercise: "Deadlift", progressionHint: "Romanian", variantHint: "B Stance" };
+  if (name.includes("b stance rdl")) return { canonicalExercise: "Deadlift", progressionHint: "Romanian", variantHint: "Single leg", noteSuffix: "B stance" };
   if (name.includes("romanian deadlift")) return { canonicalExercise: "Deadlift", progressionHint: "Romanian" };
 
-  if (name.includes("cable kickback")) return { canonicalExercise: "Glute kickback", variantHint: "Cable" };
+  if (name.includes("cable kickback")) return { canonicalExercise: "Glute kickback", progressionHint: "Cable", variantHint: note.includes("each leg") ? "Single leg" : undefined };
 
-  if (name.includes("eb upright row") || name.includes("upright row")) return { canonicalExercise: "Upright row", progressionHint: "EZ Bar" };
+  if (name.includes("eb upright row") || name.includes("upright row")) return { canonicalExercise: "Upright row", progressionHint: "EZ bar" };
 
   if (name.includes("stairmaster")) {
-    if (note.includes("interval")) return { canonicalExercise: "Stairmaster", variantHint: "Intervals" };
-    return { canonicalExercise: "Stairmaster" };
+    if (note.includes("interval")) return { canonicalExercise: "Stairmaster", progressionHint: "Medium", variantHint: "Intervals" };
+    return { canonicalExercise: "Stairmaster", progressionHint: "Medium", variantHint: "Steady state" };
   }
 
   if (name.includes("treadmill")) {
-    if (note.includes("incline")) return { canonicalExercise: "Treadmill", variantHint: "Incline" };
-    if (note.includes("interval")) return { canonicalExercise: "Treadmill", variantHint: "Intervals" };
-    return { canonicalExercise: "Treadmill" };
+    if (note.includes("incline")) return { canonicalExercise: "Treadmill", progressionHint: "Jog", variantHint: "Incline" };
+    if (note.includes("interval")) return { canonicalExercise: "Treadmill", progressionHint: "Jog", variantHint: "Intervals" };
+    return { canonicalExercise: "Treadmill", progressionHint: "Walk", variantHint: "Steady state" };
   }
 
   if (name === "bike") {
-    if (note.includes("steady")) return { canonicalExercise: "Stationary bike", variantHint: "Steady state" };
-    if (note.includes("interval")) return { canonicalExercise: "Stationary bike", variantHint: "Intervals" };
-    return { canonicalExercise: "Stationary bike" };
+    if (note.includes("level 7")) return { canonicalExercise: "Stationary bike", progressionHint: "Medium", variantHint: "Steady state" };
+    if (note.includes("steady")) return { canonicalExercise: "Stationary bike", progressionHint: "Low", variantHint: "Steady state" };
+    if (note.includes("interval")) return { canonicalExercise: "Stationary bike", progressionHint: "Medium", variantHint: "Intervals" };
+    return { canonicalExercise: "Stationary bike", progressionHint: "Low", variantHint: "Steady state" };
   }
 
   if (name === "row" && (!note || note.includes("minute") || note.includes("km"))) {
-    return { canonicalExercise: "Rowing machine" };
+    return { canonicalExercise: "Rowing machine", progressionHint: "Light", variantHint: "Steady state" };
   }
 
   return null;

@@ -30,7 +30,7 @@ function PageLayout({
 }: PageLayoutProps) {
   const { panelPosition, isMobile, mobileSidebarOpen, setMobileSidebarOpen, themeStyle } = useAppContext();
   const prefersReducedMotion = useReducedMotion();
-  const disableMotion = themeStyle === "eternal" || themeStyle === "discord" || prefersReducedMotion;
+  const disableMotion = themeStyle === "discord" || prefersReducedMotion;
   const effectivePosition = isMobile ? "top" : panelPosition;
   const mobileMode = isMobile;
   const mobileSidebarHistoryArmedRef = useRef(false);
@@ -130,10 +130,12 @@ function PageLayout({
   const desktopSidebar = sidebar && !isMobile && effectivePosition !== "top" ? (
     <motion.div
       layout={!disableMotion}
-      className="sticky top-0 safe-area-top safe-area-bottom self-start h-full border-r border-l-0 border-ink-light/50 surface-panel surface-panel-strong shrink-0 overflow-hidden flex flex-col"
+      className="sticky top-0 safe-area-top safe-area-bottom self-start h-full border-l-0 surface-panel surface-panel-strong shrink-0 overflow-hidden flex flex-col"
       style={{
         width: `${sidebarWidth}px`,
         minWidth: `${MIN_SIDEBAR_WIDTH}px`,
+        borderRightWidth: 0,
+        background: "var(--sidebar-canvas-bg)",
       }}
     >
       <div className="px-5 pt-4 pb-2.5 shrink-0 flex items-center justify-between">
@@ -147,7 +149,11 @@ function PageLayout({
   ) : sidebar && !isMobile && effectivePosition === "top" ? (
     <motion.div
       layout={!disableMotion}
-      className="w-full border-b border-ink-light surface-panel surface-panel-strong shrink-0 overflow-hidden flex flex-col max-h-[40vh]"
+      className="w-full border-b surface-panel surface-panel-strong shrink-0 overflow-hidden flex flex-col max-h-[40vh]"
+      style={{
+        borderColor: "var(--sidebar-canvas-border)",
+        background: "var(--sidebar-canvas-bg)",
+      }}
     >
       <div className="px-5 pt-4 pb-2.5 shrink-0 flex items-center justify-between">
         <h2 className="text-xs text-jade-glow uppercase tracking-widest font-semibold">{title}</h2>
@@ -165,6 +171,7 @@ function PageLayout({
       animate={disableMotion ? { opacity: 1 } : { opacity: 1 }}
       transition={{ duration: disableMotion ? 0 : 0.25, ease: [0.22, 1, 0.36, 1] }}
       className={`flex ${effectivePosition === "top" || isMobile ? "flex-col" : "flex-row"} relative ${isMobile ? "min-h-full" : "h-full overflow-hidden"}`}
+      style={{ background: "var(--page-gutter-bg)" }}
     >
       {/* Desktop sidebar */}
       {desktopSidebar}
@@ -217,8 +224,12 @@ function PageLayout({
                 }
               }}
               transition={disableMotion ? { duration: 0 } : { type: "spring", damping: 31, stiffness: 360, mass: 0.72 }}
-              className="fixed inset-y-0 left-0 z-50 surface-panel surface-panel-strong border-r border-jade-glow/15 flex flex-col shadow-2xl touch-pan-y pt-[max(env(safe-area-inset-top,0px),12px)] pb-[max(env(safe-area-inset-bottom,0px),10px)]"
-              style={{ width: "min(88vw, 380px)" }}
+              className="fixed inset-y-0 left-0 z-50 surface-panel surface-panel-strong flex flex-col shadow-2xl touch-pan-y pt-[max(env(safe-area-inset-top,0px),12px)] pb-[max(env(safe-area-inset-bottom,0px),10px)]"
+              style={{
+                width: "min(88vw, 380px)",
+                borderRightWidth: 0,
+                background: "var(--sidebar-canvas-bg)",
+              }}
               onTouchStart={onSidebarTouchStart}
               onTouchMove={onSidebarTouchMove}
               onTouchEnd={onSidebarTouchEnd}

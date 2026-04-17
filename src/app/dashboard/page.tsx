@@ -1,560 +1,580 @@
 "use client";
 
+import Link from "next/link";
 import { motion } from "framer-motion";
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useEffect, useMemo, useState } from "react";
 import PageLayout from "@/components/layout/PageLayout";
-import PageSkeleton from "@/components/ui/PageSkeleton";
-import GlowCard from "@/components/ui/GlowCard";
-import ExerciseStatsCarousel from "@/components/dashboard/ExerciseStatsCarousel";
-import ExerciseImageBox from "@/components/exercise/ExerciseImageBox";
+import { useSortedNavItems } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { api } from "@/lib/api-client";
-import { formatDateWithPreference } from "@/lib/constants";
-import { formatSetValue } from "@/lib/unit-conversion";
-import { EmptyFeed } from "@/components/empty-states";
+import { getExerciseDisplayName } from "@/lib/exercise-name";
+import { ADMIN_NAV_IDS, DASHBOARD_ROUTES } from "@/lib/navigation";
+import type { ProgressionExercise } from "./workout/types";
 
-interface UserProfile {
+type ProgressionsResponse = {
+  exercises?: ProgressionExercise[];
+};
+
+type ExercisePreview = {
   id: string;
-  name: string;
-  username?: string;
+  displayName: string;
+  category: string;
+  totalLogs: number;
+  lastLogAt: string | null;
+  lastLogId: string | null;
+};
+
+type PreviewCard = {
+  title: string;
+  subtitle: string;
+  href: string;
+  meta?: string;
+};
+
+type CommunityFeedResponse = {
+  exercises?: Array<{
+    id: string;
+    name: string;
+    tiers?: Array<{
+      level: number;
+      name: string;
+    }>;
+    userProgress?: Array<{
+      userId: string;
+      user?: {
+        id: string;
+        name: string;
+        username?: string;
+      };
+      logs?: Array<{
+        id: string;
+        createdAt: string;
+        level: number;
+        completed?: boolean;
+      }>;
+    }>;
+  }>;
+};
+
+type FriendPayload = {
+  friends?: Array<{
+    id: string;
+    name: string;
+    username: string;
+    friendCode?: string | null;
+  }>;
+  incomingRequests?: Array<{ id: string }>;
+  outgoingRequests?: Array<{ id: string }>;
+};
+
+type CheckInResponse = {
+  checkins?: Array<{
+    date: string;
+    userId: string;
+    present: boolean;
+    weight?: number | null;
+    comment?: string | null;
+    user?: {
+      id: string;
+      name: string;
+    };
+  }>;
+};
+
+const DASHBOARD_HOME_HIDDEN_NAV_IDS = new Set(["settings", "website-information", "admin"]);
+
+function getPrimaryCategory(category: string | null | undefined): string {
+  const raw = String(category || "").trim();
+  if (!raw) return "Other";
+  return raw.split(",")[0]?.trim() || "Other";
 }
 
-interface ExerciseLog {
-  id: string;
-  userId: string;
-  userName: string;
-  exerciseName: string;
-  level: number;
-  weight1?: number;
-  weight2?: number;
-  weight3?: number;
-  reps1?: number;
-  reps2?: number;
-  reps3?: number;
-  notes?: string;
-  createdAt: string;
-  completed: boolean;
+function formatRelativeRecentDate(dateLike: string | null | undefined): string {
+  if (!dateLike) return "Not logged yet";
+
+  const timestamp = new Date(dateLike).getTime();
+  if (!Number.isFinite(timestamp)) return "Not logged yet";
+
+  const diffMs = Math.max(0, Date.now() - timestamp);
+  const hourMs = 60 * 60 * 1000;
+  const dayMs = 24 * hourMs;
+
+  if (diffMs < hourMs) {
+    const mins = Math.max(1, Math.floor(diffMs / (60 * 1000)));
+    return `${mins}m ago`;
+  }
+
+  if (diffMs < dayMs) {
+    const hours = Math.max(1, Math.floor(diffMs / hourMs));
+    return `${hours}h ago`;
+  }
+
+  const days = Math.max(1, Math.floor(diffMs / dayMs));
+  return `${days}d ago`;
 }
 
-interface MemberStats {
-  lastActiveAt: string;
+function getTodayDateKey(timeZone?: string): string {
+  try {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: timeZone || "UTC",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
+  } catch {
+    return new Date().toISOString().slice(0, 10);
+  }
 }
 
-interface ExerciseFeedGroup {
-  exerciseName: string;
-  logs: ExerciseLog[];
-  lastActiveAt: string;
+function buildCommunityPreviewCards(feedData: CommunityFeedResponse | null | undefined, currentUserId?: string): PreviewCard[] {
+  const grouped = new Map<string, {
+    userName: string;
+    lastActiveAt: string;
+    logCount: number;
+    exerciseNames: Set<string>;
+    latestExerciseName: string;
+    latestProgressionName: string | null;
+  }>();
+
+  for (const exercise of feedData?.exercises ?? []) {
+    for (const progress of exercise.userProgress ?? []) {
+      if (progress.userId === currentUserId) continue;
+
+      const userName = progress.user?.name?.trim() || progress.user?.username?.trim() || "Unknown";
+
+      for (const log of progress.logs ?? []) {
+        const groupKey = `${progress.userId}:${log.createdAt.slice(0, 10)}`;
+        const progressionName = exercise.tiers?.find((tier) => tier.level === log.level)?.name ?? null;
+        const existing = grouped.get(groupKey) ?? {
+          userName,
+          lastActiveAt: log.createdAt,
+          logCount: 0,
+          exerciseNames: new Set<string>(),
+          latestExerciseName: exercise.name,
+          latestProgressionName: progressionName,
+        };
+
+        existing.logCount += 1;
+        existing.exerciseNames.add(exercise.name);
+
+        if (new Date(log.createdAt).getTime() >= new Date(existing.lastActiveAt).getTime()) {
+          existing.lastActiveAt = log.createdAt;
+          existing.latestExerciseName = exercise.name;
+          existing.latestProgressionName = progressionName;
+        }
+
+        grouped.set(groupKey, existing);
+      }
+    }
+  }
+
+  return Array.from(grouped.values())
+    .sort((a, b) => new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime())
+    .slice(0, 8)
+    .map((group) => ({
+      title: group.userName,
+      subtitle: `${group.exerciseNames.size} ${group.exerciseNames.size === 1 ? "exercise" : "exercises"} • ${group.logCount} ${group.logCount === 1 ? "entry" : "entries"}`,
+      meta: `${group.latestExerciseName}${group.latestProgressionName ? ` • ${group.latestProgressionName}` : ""} • ${formatRelativeRecentDate(group.lastActiveAt)}`,
+      href: DASHBOARD_ROUTES.community,
+    }));
 }
 
-interface MemberFeed {
-  userId: string;
-  userName: string;
-  dateKey: string;
-  logs: ExerciseLog[];
-  exerciseGroups: ExerciseFeedGroup[];
-  stats: MemberStats;
-}
-
-function countLogSets(log: ExerciseLog): number {
-  const setPairs: Array<[number | undefined, number | undefined]> = [
-    [log.weight1, log.reps1],
-    [log.weight2, log.reps2],
-    [log.weight3, log.reps3],
-  ];
-
-  return setPairs.filter(([, reps]) => reps != null && reps > 0).length;
-}
-
-function calculateLogVolume(log: ExerciseLog): number {
-  const setPairs: Array<[number | undefined, number | undefined]> = [
-    [log.weight1, log.reps1],
-    [log.weight2, log.reps2],
-    [log.weight3, log.reps3],
-  ];
-
-  return setPairs.reduce((total, [weight, reps]) => {
-    if (weight == null || reps == null || weight <= 0 || reps <= 0) return total;
-    return total + weight * reps;
-  }, 0);
-}
-
-const ITEMS_PER_PAGE = 7;
-
-export default function DashboardNewsfeedPage() {
+export default function DashboardHomePage() {
   const { user } = useAuth();
   const { settings } = useDisplaySettings();
-  const dateFormat = settings.dateFormat || "dd-mmm-yyyy";
-  const weightUnit = settings.defaultWeightUnit ?? "kg";
-  const [loading, setLoading] = useState(true);
-  const [exerciseLogs, setExerciseLogs] = useState<ExerciseLog[]>([]);
-  const [allExercises, setAllExercises] = useState<any[]>([]);
-  const [filterMode, setFilterMode] = useState<"category" | "muscle-group">("category");
-  const [selectedFilter, setSelectedFilter] = useState<string>("");
-  const [scope, setScope] = useState<"friends" | "community">(() => {
-    if (typeof window === "undefined") return "friends";
-    const saved = localStorage.getItem("community-feed-scope");
-    return saved === "community" ? "community" : "friends";
+  const displayTerminologyMode = !settings.showExerciseForeignLanguage && settings.languageMode === "english"
+    ? "normal"
+    : settings.terminologyMode;
+
+  const isAdmin = user?.role === "admin";
+  const navItems = useSortedNavItems().filter(
+    (item) => (isAdmin || !ADMIN_NAV_IDS.has(item.id)) && !DASHBOARD_HOME_HIDDEN_NAV_IDS.has(item.id)
+  );
+
+  const [exercises, setExercises] = useState<ProgressionExercise[]>([]);
+  const [communityCards, setCommunityCards] = useState<PreviewCard[]>([]);
+  const [friendData, setFriendData] = useState<FriendPayload>({
+    friends: [],
+    incomingRequests: [],
+    outgoingRequests: [],
   });
-  const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [expandedMemberGroups, setExpandedMemberGroups] = useState<Record<string, boolean>>({});
-  const [expandedExerciseGroups, setExpandedExerciseGroups] = useState<Record<string, boolean>>({});
-  const observerTarget = useRef<HTMLDivElement>(null);
+  const [checkinRows, setCheckinRows] = useState<NonNullable<CheckInResponse["checkins"]>>([]);
+  const [communityScope, setCommunityScope] = useState<"friends" | "community">("friends");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    localStorage.setItem("community-feed-scope", scope);
-  }, [scope]);
+    const savedScope = localStorage.getItem("community-feed-scope");
+    setCommunityScope(savedScope === "community" ? "community" : "friends");
+  }, []);
 
   useEffect(() => {
-    const fetchNewsfeed = async () => {
-      if (!user) return;
+    let cancelled = false;
 
+    const loadHomeContent = async () => {
       setLoading(true);
-
       try {
-        // Fetch community feed with all users' progress
-        const feedData = await api.get<{
-          exercises: Array<{
-            id: string;
-            name: string;
-            category: string;
-            primaryMuscles?: string;
-            userProgress?: Array<{
-              userId: string;
-              user?: UserProfile;
-              logs: Array<{
-                id: string;
-                createdAt: string;
-                weight1?: number;
-                weight2?: number;
-                weight3?: number;
-                reps1?: number;
-                reps2?: number;
-                reps3?: number;
-                level: number;
-                notes?: string;
-                completed?: boolean;
-              }>;
-            }>;
-          }>;
-        }>(`/api/feed?scope=${scope}`);
+        const [historyResult, feedResult, friendsResult, checkinsResult] = await Promise.allSettled([
+          api.get<ProgressionsResponse>("/api/progressions/history?logLimit=20&exerciseLimit=500", { cache: "no-store" }),
+          api.get<CommunityFeedResponse>(`/api/feed?scope=${communityScope}`, { cache: "no-store" }),
+          api.get<FriendPayload>("/api/friends", { cache: "no-store" }),
+          api.get<CheckInResponse>("/api/checkins?scope=friends", { cache: "no-store" }),
+        ]);
 
-        // Store all exercises for the carousel
-        setAllExercises(feedData.exercises || []);
+        if (cancelled) return;
 
-        // Build users map and flatten all logs from all exercises
-        const usersMap: Record<string, UserProfile> = {};
-        const allLogs: ExerciseLog[] = [];
-        
-        for (const exercise of feedData.exercises || []) {
-          for (const progress of exercise.userProgress || []) {
-            // Store user info if available
-            if (progress.user) {
-              usersMap[progress.userId] = progress.user;
-            }
-
-            for (const log of progress.logs || []) {
-              // Exclude current user's logs from newsfeed
-              if (progress.userId !== user.id) {
-                allLogs.push({
-                  id: log.id,
-                  userId: progress.userId,
-                  userName: progress.user?.name || usersMap[progress.userId]?.name || "Unknown",
-                  exerciseName: exercise.name,
-                  level: log.level,
-                  weight1: log.weight1,
-                  weight2: log.weight2,
-                  weight3: log.weight3,
-                  reps1: log.reps1,
-                  reps2: log.reps2,
-                  reps3: log.reps3,
-                  notes: log.notes,
-                  createdAt: log.createdAt,
-                  completed: log.completed || false,
-                });
-              }
-            }
-          }
+        if (historyResult.status === "fulfilled") {
+          setExercises(Array.isArray(historyResult.value.exercises) ? historyResult.value.exercises : []);
+        } else {
+          console.error("Failed to load home progression previews:", historyResult.reason);
+          setExercises([]);
         }
 
-        // Sort by most recent first
-        allLogs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        if (feedResult.status === "fulfilled") {
+          setCommunityCards(buildCommunityPreviewCards(feedResult.value, user?.id));
+        } else {
+          console.error("Failed to load home community previews:", feedResult.reason);
+          setCommunityCards([]);
+        }
 
-        setExerciseLogs(allLogs);
-      } catch (err) {
-        console.error("Failed to fetch newsfeed:", err);
+        if (friendsResult.status === "fulfilled") {
+          setFriendData({
+            friends: Array.isArray(friendsResult.value.friends) ? friendsResult.value.friends : [],
+            incomingRequests: Array.isArray(friendsResult.value.incomingRequests) ? friendsResult.value.incomingRequests : [],
+            outgoingRequests: Array.isArray(friendsResult.value.outgoingRequests) ? friendsResult.value.outgoingRequests : [],
+          });
+        } else {
+          console.error("Failed to load home friend previews:", friendsResult.reason);
+          setFriendData({ friends: [], incomingRequests: [], outgoingRequests: [] });
+        }
+
+        if (checkinsResult.status === "fulfilled") {
+          setCheckinRows(Array.isArray(checkinsResult.value.checkins) ? checkinsResult.value.checkins : []);
+        } else {
+          console.error("Failed to load home check-in previews:", checkinsResult.reason);
+          setCheckinRows([]);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
-    fetchNewsfeed();
-  }, [scope, user]);
+    void loadHomeContent();
 
-  const formatDayHeader = (dateKey: string): string => {
-    const parsed = new Date(`${dateKey}T00:00:00`);
-    return formatDateWithPreference(parsed, dateFormat);
-  };
+    return () => {
+      cancelled = true;
+    };
+  }, [communityScope, user?.id]);
 
-  const handleFilterChange = useCallback((mode: "category" | "muscle-group", filter: string) => {
-    setFilterMode(mode);
-    setSelectedFilter(filter);
-    setDisplayCount(ITEMS_PER_PAGE); // Reset to first page when filter changes
-  }, []);
-
-  const toggleMemberGroup = useCallback((memberKey: string) => {
-    setExpandedMemberGroups((prev) => ({
-      ...prev,
-      [memberKey]: !prev[memberKey],
-    }));
-  }, []);
-
-  const toggleExerciseGroup = useCallback((exerciseKey: string) => {
-    setExpandedExerciseGroups((prev) => ({
-      ...prev,
-      [exerciseKey]: !prev[exerciseKey],
-    }));
-  }, []);
-
-  const allGroupedByMemberDay = useMemo<MemberFeed[]>(() => {
-    // First filter the logs based on the selected category/muscle group
-    const filteredLogs = selectedFilter === ""
-      ? exerciseLogs
-      : exerciseLogs.filter((log) => {
-          const exercise = allExercises.find((e) => e.name === log.exerciseName);
-          if (!exercise) return false;
-          
-          if (filterMode === "category") {
-            return exercise.category === selectedFilter;
-          } else {
-            return exercise.primaryMuscles === selectedFilter;
-          }
-        });
-
-    const grouped: Record<string, ExerciseLog[]> = {};
-    for (const log of filteredLogs) {
-      const dateKey = log.createdAt.slice(0, 10);
-      const groupKey = `${log.userId}:${dateKey}`;
-      if (!grouped[groupKey]) {
-        grouped[groupKey] = [];
-      }
-      grouped[groupKey].push(log);
-    }
-
-    return Object.entries(grouped)
-      .map(([groupKey, logs]) => {
-        const [userId, dateKey] = groupKey.split(":");
-        const lastActiveAt = logs[0]?.createdAt ?? "";
+  const exercisePreviews = useMemo<ExercisePreview[]>(() => {
+    return exercises
+      .map((exercise) => {
+        const logs = exercise.userProgress?.flatMap((progress) => progress.logs ?? []) ?? [];
+        const latestLog = [...logs].sort((a, b) => {
+          const timeDiff = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          if (timeDiff !== 0) return timeDiff;
+          return String(b.id).localeCompare(String(a.id));
+        })[0] ?? null;
 
         return {
-          userId,
-          userName: logs[0]?.userName ?? "Unknown",
-          dateKey,
-          logs,
-          exerciseGroups: Object.entries(
-            logs.reduce<Record<string, ExerciseLog[]>>((acc, log) => {
-              if (!acc[log.exerciseName]) {
-                acc[log.exerciseName] = [];
-              }
-              acc[log.exerciseName].push(log);
-              return acc;
-            }, {})
-          )
-            .map(([exerciseName, groupedLogs]) => {
-              const sortedLogs = [...groupedLogs].sort(
-                (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-              );
-
-              return {
-                exerciseName,
-                logs: sortedLogs,
-                lastActiveAt: sortedLogs[0]?.createdAt ?? "",
-              };
-            })
-            .sort((a, b) => new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime()),
-          stats: {
-            lastActiveAt,
-          },
+          id: exercise.id,
+          displayName: getExerciseDisplayName(exercise, displayTerminologyMode, settings.showExerciseForeignLanguage),
+          category: getPrimaryCategory(exercise.category),
+          totalLogs: logs.length,
+          lastLogAt: latestLog?.createdAt ?? null,
+          lastLogId: latestLog?.id ?? null,
         };
       })
-        .sort((a, b) => new Date(b.stats.lastActiveAt).getTime() - new Date(a.stats.lastActiveAt).getTime());
-  }, [exerciseLogs, allExercises, selectedFilter, filterMode]);
+      .sort((a, b) => {
+        const aTime = a.lastLogAt ? new Date(a.lastLogAt).getTime() : 0;
+        const bTime = b.lastLogAt ? new Date(b.lastLogAt).getTime() : 0;
+        if (aTime !== bTime) return bTime - aTime;
 
-  // Paginated feed data
-  const groupedByMemberDay = useMemo(() => {
-    return allGroupedByMemberDay.slice(0, displayCount);
-  }, [allGroupedByMemberDay, displayCount]);
-  const hasMore = displayCount < allGroupedByMemberDay.length;
+        const idCompare = String(b.lastLogId ?? "").localeCompare(String(a.lastLogId ?? ""));
+        if (idCompare !== 0) return idCompare;
 
-  // Infinite scroll observer
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting && !isLoadingMore && hasMore) {
-          setIsLoadingMore(true);
-          // Simulate loading delay for smooth UX
-          setTimeout(() => {
-            setDisplayCount((prev) => Math.min(prev + ITEMS_PER_PAGE, allGroupedByMemberDay.length));
-            setIsLoadingMore(false);
-          }, 300);
-        }
+        return a.displayName.localeCompare(b.displayName);
+      });
+  }, [displayTerminologyMode, exercises, settings.showExerciseForeignLanguage]);
+
+  const categoryProgress = useMemo(() => {
+    const grouped = new Map<string, { total: number; logged: number }>();
+
+    exercisePreviews.forEach((exercise) => {
+      const key = exercise.category || "Other";
+      const existing = grouped.get(key) ?? { total: 0, logged: 0 };
+      existing.total += 1;
+      if (exercise.totalLogs > 0) existing.logged += 1;
+      grouped.set(key, existing);
+    });
+
+    return Array.from(grouped.entries())
+      .map(([category, value]) => ({
+        category,
+        total: value.total,
+        logged: value.logged,
+        pct: value.total > 0 ? Math.round((value.logged / value.total) * 100) : 0,
+      }))
+      .sort((a, b) => b.logged - a.logged || a.category.localeCompare(b.category));
+  }, [exercisePreviews]);
+
+  const checkinCards = useMemo<PreviewCard[]>(() => {
+    const rows = [...checkinRows].sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    const todayKey = getTodayDateKey(settings.timeZone);
+    const presentRows = rows.filter((row) => row.present);
+    const todayCount = presentRows.filter((row) => String(row.date).slice(0, 10) === todayKey).length;
+    const yourLatest = presentRows.find((row) => row.userId === user?.id);
+    const visibleCultivators = new Set(presentRows.map((row) => row.userId)).size;
+
+    const cards: PreviewCard[] = [
+      {
+        title: todayCount > 0 ? `${todayCount} checked in today` : "No check-ins yet today",
+        subtitle: todayCount > 0 ? "Visible attendance from the Check-In page" : "Open Check-In to mark today’s status",
+        meta: `${visibleCultivators} cultivators in recent attendance`,
+        href: DASHBOARD_ROUTES.checkIn,
       },
-      { threshold: 0.1 }
-    );
+    ];
 
-    if (observerTarget.current) {
-      observer.observe(observerTarget.current);
+    if (yourLatest) {
+      cards.push({
+        title: "Your latest check-in",
+        subtitle: String(yourLatest.date).slice(0, 10),
+        meta: yourLatest.comment?.trim() ? yourLatest.comment.trim().slice(0, 42) : "Attendance recorded",
+        href: DASHBOARD_ROUTES.attendance,
+      });
     }
 
-    return () => observer.disconnect();
-  }, [isLoadingMore, hasMore, allGroupedByMemberDay.length]);
+    const latestVisible = presentRows.find((row) => row.userId !== user?.id && row.user?.name);
+    if (latestVisible?.user?.name) {
+      cards.push({
+        title: latestVisible.user.name,
+        subtitle: "Recent visible attendance",
+        meta: `Checked in ${formatRelativeRecentDate(`${String(latestVisible.date).slice(0, 10)}T00:00:00`)}`,
+        href: DASHBOARD_ROUTES.checkIn,
+      });
+    }
 
-  const timeAgo = (dateString: string): string => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
+    return cards;
+  }, [checkinRows, settings.timeZone, user?.id]);
 
-    if (diffMins < 1) return "just now";
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return formatDateWithPreference(date, dateFormat);
-  };
+  const friendCards = useMemo<PreviewCard[]>(() => {
+    const pendingCount = (friendData.incomingRequests?.length ?? 0) + (friendData.outgoingRequests?.length ?? 0);
+    const rowsByUser = new Map<string, NonNullable<CheckInResponse["checkins"]>>();
 
-  if (!user) return null;
+    for (const row of checkinRows) {
+      const existing = rowsByUser.get(row.userId) ?? [];
+      existing.push(row);
+      rowsByUser.set(row.userId, existing);
+    }
+
+    const sortedFriends = [...(friendData.friends ?? [])].sort((left, right) => {
+      const leftLatest = (rowsByUser.get(left.id) ?? [])
+        .filter((row) => row.present)
+        .sort((a, b) => String(b.date).localeCompare(String(a.date)))[0]?.date ?? "";
+      const rightLatest = (rowsByUser.get(right.id) ?? [])
+        .filter((row) => row.present)
+        .sort((a, b) => String(b.date).localeCompare(String(a.date)))[0]?.date ?? "";
+
+      if (leftLatest !== rightLatest) return String(rightLatest).localeCompare(String(leftLatest));
+      return left.name.localeCompare(right.name);
+    });
+
+    const cards: PreviewCard[] = [
+      {
+        title: `${friendData.friends?.length ?? 0} friends`,
+        subtitle: pendingCount > 0 ? `${pendingCount} pending requests` : "Your cultivation circle",
+        meta: pendingCount > 0 ? "Open Friends to review requests" : "Manage your social circle",
+        href: DASHBOARD_ROUTES.friends,
+      },
+      ...sortedFriends.slice(0, 7).map((friend) => {
+        const latest = (rowsByUser.get(friend.id) ?? [])
+          .filter((row) => row.present)
+          .sort((a, b) => String(b.date).localeCompare(String(a.date)))[0];
+
+        return {
+          title: friend.name,
+          subtitle: friend.username ? `@${friend.username}` : "Friend",
+          meta: latest
+            ? `Last check-in ${formatRelativeRecentDate(`${String(latest.date).slice(0, 10)}T00:00:00`)}`
+            : "No shared check-ins yet",
+          href: DASHBOARD_ROUTES.friends,
+        };
+      }),
+    ];
+
+    return cards;
+  }, [checkinRows, friendData]);
+
+  const cardsByNavId = useMemo<Record<string, PreviewCard[]>>(() => {
+    const trainCards: PreviewCard[] = exercisePreviews.slice(0, 8).map((exercise) => ({
+      title: exercise.displayName,
+      subtitle: exercise.category,
+      meta: exercise.totalLogs > 0 ? `${exercise.totalLogs} logs • last trained ${formatRelativeRecentDate(exercise.lastLogAt)}` : "Ready to log",
+      href: `${DASHBOARD_ROUTES.workoutHistory}/${encodeURIComponent(exercise.id)}?from=exercises`,
+    }));
+
+    const historyCards: PreviewCard[] = Array.from(
+      new Map(
+        exercises
+          .flatMap((exercise) => {
+            const displayName = getExerciseDisplayName(exercise, displayTerminologyMode, settings.showExerciseForeignLanguage);
+            const category = getPrimaryCategory(exercise.category);
+
+            return (exercise.userProgress ?? []).flatMap((progress) =>
+              (progress.logs ?? []).map((log) => ({
+                exerciseId: exercise.id,
+                createdAt: log.createdAt,
+                card: {
+                  title: displayName,
+                  subtitle: category,
+                  meta: `${exercise.tiers?.find((tier) => tier.level === log.level)?.name ?? `Level ${log.level}`} • ${formatRelativeRecentDate(log.createdAt)}`,
+                  href: `${DASHBOARD_ROUTES.workoutHistory}/${encodeURIComponent(exercise.id)}?from=history`,
+                },
+              }))
+            );
+          })
+          .sort((a, b) => {
+            const timeDiff = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+            if (timeDiff !== 0) return timeDiff;
+            return b.exerciseId.localeCompare(a.exerciseId);
+          })
+          .map((item) => [item.exerciseId, item.card] as const)
+      ).values()
+    ).slice(0, 8);
+
+    const completionistCards: PreviewCard[] = categoryProgress.slice(0, 8).map((category) => ({
+      title: category.category,
+      subtitle: `${category.logged}/${category.total} progressions logged`,
+      meta: `${category.pct}% completion coverage`,
+      href: DASHBOARD_ROUTES.rankUp,
+    }));
+
+    const libraryCards: PreviewCard[] = categoryProgress.slice(0, 8).map((category) => ({
+      title: category.category,
+      subtitle: `${category.total} ${category.total === 1 ? "exercise" : "exercises"} in library`,
+      meta: `${category.logged} trained so far`,
+      href: DASHBOARD_ROUTES.exercises,
+    }));
+
+    return {
+      dashboard: [
+        { title: "Start training", subtitle: "Open the Train flow", meta: "Log your next session", href: DASHBOARD_ROUTES.workoutHistory },
+        { title: "Daily check-in", subtitle: "Keep your rhythm going", meta: "Track routine and streaks", href: DASHBOARD_ROUTES.checkIn },
+        { title: "Exercise library", subtitle: "Browse your movements", meta: "See progressions and variations", href: DASHBOARD_ROUTES.exercises },
+      ],
+      newsfeed: communityCards.length > 0
+        ? communityCards
+        : [
+            {
+              title: communityScope === "community" ? "Community activity" : "Friends activity",
+              subtitle: communityScope === "community" ? "Live updates from visible users" : "Live updates from your circle",
+              meta: "Opens the same feed shown in Community",
+              href: DASHBOARD_ROUTES.community,
+            },
+            {
+              title: "Scope preview",
+              subtitle: communityScope === "community" ? "Currently showing community scope" : "Currently showing friends scope",
+              meta: "Switch scope in the Community page",
+              href: DASHBOARD_ROUTES.community,
+            },
+          ],
+      history: trainCards.length > 0
+        ? trainCards
+        : [
+            { title: "No exercises yet", subtitle: "Your recent movements will appear here", meta: "Start logging to populate Train", href: DASHBOARD_ROUTES.workoutHistory },
+          ],
+      "training-log-history": historyCards.length > 0
+        ? historyCards
+        : [
+            { title: "Recent history", subtitle: "Past sessions show up here", meta: "Review your training timeline", href: DASHBOARD_ROUTES.trainingLogHistory },
+          ],
+      checkin: checkinCards.length > 0
+        ? checkinCards
+        : [
+            { title: "Check in today", subtitle: "Log your daily status", meta: "Routine, consistency, progress", href: DASHBOARD_ROUTES.checkIn },
+          ],
+      "exercise-db": libraryCards.length > 0
+        ? libraryCards
+        : [
+            { title: "Exercise library", subtitle: "Your movement collection lives here", meta: "Browse by progression and category", href: DASHBOARD_ROUTES.exercises },
+          ],
+      friends: friendCards.length > 0
+        ? friendCards
+        : [
+            { title: "Friends list", subtitle: "Open your cultivation circle", meta: "Manage connections and requests", href: DASHBOARD_ROUTES.friends },
+          ],
+      "rank-up": completionistCards.length > 0
+        ? completionistCards
+        : [
+            { title: "Coverage summary", subtitle: "Your logged progressions appear here", meta: "Open Completionist to review", href: DASHBOARD_ROUTES.rankUp },
+          ],
+    };
+  }, [categoryProgress, checkinCards, communityCards, communityScope, displayTerminologyMode, exercisePreviews, exercises, friendCards, settings.showExerciseForeignLanguage]);
+
+  const sections = navItems.map((item) => ({
+    item,
+    cards: cardsByNavId[item.id] ?? [
+      {
+        title: item.label,
+        subtitle: "Open this page",
+        meta: "More content will appear here",
+        href: item.path,
+      },
+    ],
+  }));
 
   return (
     <PageLayout
-      title="Community Feed"
-      mobileContentPaddingClass="p-3 pb-24"
+      title="Home"
+      subtitle="Swipeable hub"
+      mobileContentPaddingClass="p-2 pb-24"
     >
-      {loading ? (
-        <PageSkeleton statCards={0} wideBlock rows={4} />
-      ) : (
-        <div className="dashboard-modern-feed">
-          {/* Carousel at the top */}
-          {allExercises.length > 0 && (
-            <GlowCard glow="jade" hoverable={false} className="dashboard-modern-hero !p-0 overflow-hidden">
-              <ExerciseStatsCarousel 
-                exercises={allExercises} 
-                communityLogs={exerciseLogs}
-                currentUserId={user?.id}
-                scope={scope}
-                onScopeChange={setScope}
-                onFilterChange={handleFilterChange}
-              />
-            </GlowCard>
-          )}
+      <div className="space-y-3 px-0 py-2 sm:space-y-4 sm:py-3">
+        {sections.map(({ item, cards }, sectionIndex) => (
+          <section key={item.id} className="space-y-2">
+            <div className="flex items-center gap-2 px-1 sm:px-2">
+              <span className="text-base">{item.icon}</span>
+              <Link href={item.path} className="text-base font-semibold text-[#f2f3f5] hover:text-[#8ea1e1] transition-colors">
+                {item.label}
+              </Link>
+            </div>
 
-          {/* Community feed */}
-          {allGroupedByMemberDay.length === 0 ? (
-            selectedFilter !== "" ? (
-              <GlowCard glow="none" hoverable={false} className="dashboard-modern-empty mt-8">
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <div className="text-4xl mb-4 opacity-40">🏛️</div>
-                  <h3 className="text-sm text-jade-glow uppercase tracking-wider mb-2">The Hall is Silent</h3>
-                  <p className="text-sm text-mist-light max-w-sm">
-                    {`No activity found for the selected ${filterMode === "category" ? "category" : "muscle group"}.`}
-                  </p>
-                </div>
-              </GlowCard>
-            ) : (
-              <EmptyFeed />
-            )
-          ) : (
-            <>
-              <div className="space-y-6 mt-6 sm:mt-8">
-                {groupedByMemberDay.map((member, memberIdx) => (
-                  <GlowCard
-                    key={`${member.userId}-${member.dateKey}`}
-                    glow="jade"
-                    hoverable={false}
-                    className="dashboard-modern-member"
+            <div className="overflow-x-auto scrollbar-hide px-1 py-1 sm:px-2">
+              <div className="flex min-w-max gap-2.5 sm:gap-3">
+                {cards.map((card, index) => (
+                  <motion.div
+                    key={`${item.id}-${card.title}-${index}`}
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: sectionIndex * 0.03 + index * 0.02 }}
+                    className="shrink-0"
                   >
-                    {(() => {
-                      const memberKey = `${member.userId}-${member.dateKey}`;
-                      const isMemberExpanded = Boolean(expandedMemberGroups[memberKey]);
-
-                      return (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => toggleMemberGroup(memberKey)}
-                            className="dashboard-modern-member-trigger w-full text-left"
-                            aria-expanded={isMemberExpanded}
-                          >
-                            <div className="grid grid-cols-[36px_1fr_auto] sm:grid-cols-[40px_1fr_auto] gap-2 sm:gap-3 items-center">
-                              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-jade-glow/15 border border-ink-light/30 grid place-items-center">
-                                <span className="text-base sm:text-lg font-bold text-jade-light">
-                                  {member.userName.charAt(0).toUpperCase()}
-                                </span>
-                              </div>
-                              <div className="min-w-0">
-                                <h3 className="font-semibold text-cloud-white text-sm sm:text-base truncate">{member.userName}</h3>
-                                <p className="text-[10px] sm:text-xs text-mist-dark truncate">
-                                  {member.exerciseGroups.length} {member.exerciseGroups.length === 1 ? "exercise" : "exercises"} • {member.logs.length} {member.logs.length === 1 ? "entry" : "entries"} • active {timeAgo(member.stats.lastActiveAt)}
-                                </p>
-                              </div>
-                              <div className="justify-self-end flex flex-col items-end gap-1 shrink-0">
-                                <div className="rounded-full border border-ink-light/30 bg-ink-dark px-2 sm:px-2.5 py-0.5 sm:py-1 text-[9px] sm:text-[10px] font-semibold uppercase tracking-wide text-jade-glow whitespace-nowrap">
-                                  {formatDayHeader(member.dateKey)}
-                                </div>
-                                <span className="text-[10px] text-mist-dark">
-                                  {isMemberExpanded ? "Hide exercises" : "Show exercises"}
-                                </span>
-                              </div>
-                            </div>
-                          </button>
-
-                          {isMemberExpanded && (
-                            <div className="flex flex-col gap-2.5 pt-1.5">
-                              {member.exerciseGroups.map((exerciseGroup, exerciseIdx) => {
-                                const exerciseKey = `${memberKey}-${exerciseGroup.exerciseName}`;
-                                const isExerciseExpanded = Boolean(expandedExerciseGroups[exerciseKey]);
-
-                                return (
-                                  <motion.div
-                                    key={exerciseKey}
-                                    initial={{ opacity: 0, x: -10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: memberIdx * 0.05 + (exerciseIdx * 0.02) }}
-                                    className="dashboard-modern-exercise rounded-lg border border-ink-light/30 p-2.5 sm:p-3 bg-ink-deep/40 overflow-hidden"
-                                  >
-                                    <button
-                                      type="button"
-                                      onClick={() => toggleExerciseGroup(exerciseKey)}
-                                      className="w-full text-left"
-                                      aria-expanded={isExerciseExpanded}
-                                    >
-                                      <div className="flex items-center justify-between gap-2 sm:gap-3">
-                                        <div className="flex min-w-0 items-center gap-2">
-                                          <ExerciseImageBox className="h-8 w-8 sm:h-9 sm:w-9" compact />
-                                          <div className="min-w-0">
-                                            <h4 className="truncate font-semibold text-jade-light text-sm sm:text-base">
-                                              {exerciseGroup.exerciseName}
-                                            </h4>
-                                            <p className="text-[10px] text-mist-dark">
-                                              {exerciseGroup.logs.length} {exerciseGroup.logs.length === 1 ? "entry" : "entries"} • latest {timeAgo(exerciseGroup.lastActiveAt)}
-                                            </p>
-                                          </div>
-                                        </div>
-                                        <span className="shrink-0 text-[10px] text-mist-dark whitespace-nowrap">
-                                          {isExerciseExpanded ? "Hide logs" : "Show logs"}
-                                        </span>
-                                      </div>
-                                    </button>
-
-                                    {isExerciseExpanded && (
-                                      <div className="mt-2.5 flex flex-col gap-2.5 pl-2 sm:pl-3 border-l border-ink-light/30">
-                                        {exerciseGroup.logs.map((log) => (
-                                          <div
-                                            key={log.id}
-                                            className="dashboard-modern-log rounded-lg border border-ink-light/30 p-3 sm:p-4 bg-ink-dark/50 hover:border-ink-light/50 hover:bg-ink-dark/70 transition-all duration-200"
-                                          >
-                                            <div className="mb-2 flex items-center justify-between gap-3">
-                                              <span className="text-xs text-jade-light font-semibold">Log Entry</span>
-                                              <span className="shrink-0 text-xs text-mist-dark whitespace-nowrap">
-                                                {timeAgo(log.createdAt)}
-                                              </span>
-                                            </div>
-
-                                            <div className="space-y-1.5 mb-2">
-                                              {log.weight1 != null && log.reps1 != null && (
-                                                <div className="flex items-center gap-2 text-[10px] sm:text-[11px]">
-                                                  <span className="inline-block px-1.5 py-0.5 rounded bg-jade-deep/20 text-jade-light font-medium text-[10px] sm:text-[11px]">
-                                                    Set 1
-                                                  </span>
-                                                  <span className="text-cloud-white">
-                                                    {formatSetValue(log.weight1, log.weight1 > 0 ? "weighted" : "bodyweight", weightUnit)} {log.weight1 > 0 ? (weightUnit === "kg" ? "Kg" : "Lbs") : "seconds"} × {log.reps1} Reps
-                                                  </span>
-                                                </div>
-                                              )}
-                                              {log.weight2 != null && log.reps2 != null && (
-                                                <div className="flex items-center gap-2 text-[10px] sm:text-[11px]">
-                                                  <span className="inline-block px-1.5 py-0.5 rounded bg-jade-deep/20 text-jade-light font-medium text-[10px] sm:text-[11px]">
-                                                    Set 2
-                                                  </span>
-                                                  <span className="text-cloud-white">
-                                                    {formatSetValue(log.weight2, log.weight2 > 0 ? "weighted" : "bodyweight", weightUnit)} {log.weight2 > 0 ? (weightUnit === "kg" ? "Kg" : "Lbs") : "seconds"} × {log.reps2} Reps
-                                                  </span>
-                                                </div>
-                                              )}
-                                              {log.weight3 != null && log.reps3 != null && (
-                                                <div className="flex items-center gap-2 text-[10px] sm:text-[11px]">
-                                                  <span className="inline-block px-1.5 py-0.5 rounded bg-jade-deep/20 text-jade-light font-medium text-[10px] sm:text-[11px]">
-                                                    Set 3
-                                                  </span>
-                                                  <span className="text-cloud-white">
-                                                    {formatSetValue(log.weight3, log.weight3 > 0 ? "weighted" : "bodyweight", weightUnit)} {log.weight3 > 0 ? (weightUnit === "kg" ? "Kg" : "Lbs") : "seconds"} × {log.reps3} Reps
-                                                  </span>
-                                                </div>
-                                              )}
-                                            </div>
-
-                                            {log.notes && (
-                                              <div className="text-[10px] sm:text-xs text-mist-light italic pt-2 border-t border-ink-light/50 mb-2">
-                                                💭 "{log.notes}"
-                                              </div>
-                                            )}
-
-                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 mt-2 pt-2 border-t border-ink-light/50">
-                                              <span className="text-[10px] text-mist-dark">Level {log.level} • Sets {countLogSets(log)} • Volume {calculateLogVolume(log).toFixed(1)} {weightUnit}-reps</span>
-                                              {log.completed && (
-                                                <span className="text-jade-light font-semibold text-xs">✦ Completed</span>
-                                              )}
-                                            </div>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </motion.div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </>
-                      );
-                    })()}
-                  </GlowCard>
-              ))}
+                    <Link
+                      href={card.href}
+                      className="group flex min-h-[165px] w-[150px] flex-col justify-between rounded-lg border px-3 py-3.5 transition-all duration-200 hover:border-[#7289da]/55 hover:bg-[#313338] sm:min-h-[180px] sm:w-[165px]"
+                      style={{
+                        borderColor: "rgba(59, 63, 72, 0.78)",
+                        backgroundColor: "rgba(43, 45, 49, 0.88)",
+                      }}
+                    >
+                      <div>
+                        <h3 className="text-sm font-semibold leading-snug text-[#f2f3f5]">{card.title}</h3>
+                        <p className="mt-1.5 text-[12px] leading-snug text-[#dbdee1]">{card.subtitle}</p>
+                      </div>
+                      {card.meta ? (
+                        <p className="mt-3 text-[11px] leading-snug text-[#949ba4]">{card.meta}</p>
+                      ) : null}
+                    </Link>
+                  </motion.div>
+                ))}
               </div>
-
-              {/* Infinite scroll observer target */}
-              <div
-                ref={observerTarget}
-                className="dashboard-modern-loadmore flex items-center justify-center py-8"
-              >
-                {isLoadingMore ? (
-                  <div className="flex items-center gap-3">
-                    <div className="h-2 w-2 rounded-full bg-jade-glow/60 animate-bounce" />
-                    <div className="h-2 w-2 rounded-full bg-jade-glow/60 animate-bounce" style={{ animationDelay: "0.1s" }} />
-                    <div className="h-2 w-2 rounded-full bg-jade-glow/60 animate-bounce" style={{ animationDelay: "0.2s" }} />
-                    <span className="ml-2 text-xs text-mist-light">Loading more activity...</span>
-                  </div>
-                ) : hasMore ? (
-                  <button
-                    type="button"
-                    onClick={() => setDisplayCount((prev) => Math.min(prev + ITEMS_PER_PAGE, allGroupedByMemberDay.length))}
-                    className="dashboard-modern-loadmore-btn rounded-md border border-ink-light/30 bg-ink-dark/60 px-3 py-1.5 text-xs text-jade-glow hover:bg-ink-dark/80 transition-colors"
-                  >
-                    Load more activity
-                  </button>
-                ) : allGroupedByMemberDay.length > 0 ? (
-                  <div className="text-center">
-                    <p className="text-xs text-mist-dark mb-1">No more activity</p>
-                    <span className="text-[10px] text-mist-dark/60">You have seen all {allGroupedByMemberDay.length} recent entries</span>
-                  </div>
-                ) : null}
-              </div>
-            </>
-          )}
-        </div>
-      )}
+            </div>
+          </section>
+        ))}
+      </div>
     </PageLayout>
   );
 }

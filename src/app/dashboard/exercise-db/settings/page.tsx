@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import PageLayout from "@/components/layout/PageLayout";
 import { useIsMobile } from "@/context/AppContext";
+import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import GlowButton from "@/components/ui/GlowButton";
 import { api } from "@/lib/api-client";
@@ -12,6 +13,7 @@ import {
   getDefaultExerciseDbOptions,
   type ExerciseDbOptions,
 } from "@/lib/exercise-db-settings";
+import { notifyExerciseDbSettingsUpdated } from "@/lib/progression-events";
 import type { SimpleExercise } from "@/lib/exercise-types";
 
 type RenamePair = { from: string; to: string };
@@ -410,9 +412,10 @@ function ExerciseRowLabelEditor({
   );
 }
 
-export default function ExerciseDbSettingsPage() {
+export function ExerciseDbSettingsPanel({ embedded = false }: { embedded?: boolean } = {}) {
   const router = useRouter();
   const isMobile = useIsMobile();
+  const { user } = useAuth();
   const { settings } = useDisplaySettings();
   const defaults = useMemo(() => getDefaultExerciseDbOptions(), []);
 
@@ -688,6 +691,7 @@ export default function ExerciseDbSettingsPage() {
         });
       }
 
+      notifyExerciseDbSettingsUpdated();
       setMessage("DB settings saved.");
       setInitialOptions(payload);
       setPendingRenames({ categories: [], types: [], muscles: [], variants: [] });
@@ -699,8 +703,7 @@ export default function ExerciseDbSettingsPage() {
     }
   };
 
-  return (
-    <PageLayout title="Exercise DB Settings" subtitle="Manage category, type, muscle, progression, and variant options" mobileContentPaddingClass="p-2 pb-24">
+  const content = (
       <div className="nyaa-history-page space-y-2 px-0 py-2 sm:py-3">
         {loading ? (
           <div className="border px-3 py-8 text-sm text-center" style={{ borderColor: "var(--border)", borderRadius: "2px", backgroundColor: "var(--surface)", color: "var(--text-muted)" }}>
@@ -933,16 +936,18 @@ export default function ExerciseDbSettingsPage() {
               </p>
             )}
 
-            <div className="flex items-center justify-end pt-1">
-              <button
-                type="button"
-                onClick={handleBack}
-                className="w-full sm:w-auto px-3 py-1.5 text-xs border"
-                style={{ borderColor: "var(--border)", borderRadius: "2px", color: "var(--text-secondary)", backgroundColor: "var(--surface)" }}
-              >
-                Back to Exercise DB
-              </button>
-            </div>
+            {!embedded && (
+              <div className="flex items-center justify-end pt-1">
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  className="w-full sm:w-auto px-3 py-1.5 text-xs border"
+                  style={{ borderColor: "var(--border)", borderRadius: "2px", color: "var(--text-secondary)", backgroundColor: "var(--surface)" }}
+                >
+                  Back to Exercise DB
+                </button>
+              </div>
+            )}
 
             {hasUnsavedChanges && (
               <div
@@ -981,6 +986,36 @@ export default function ExerciseDbSettingsPage() {
           </div>
         )}
       </div>
+  );
+
+  if (!user || user.role !== "admin") {
+    return (
+      <PageLayout title="Exercise DB Settings" subtitle="Manage category, type, muscle, progression, and variant options" mobileContentPaddingClass="p-2 pb-24">
+        <div className="flex flex-col items-center justify-center py-20 space-y-4">
+          <div className="text-5xl opacity-50">🔒</div>
+          <h3 className="text-lg font-semibold text-crimson-light">Access Restricted</h3>
+          <p className="text-sm text-mist-dark text-center max-w-md">
+            Exercise DB settings are available only to admins.
+          </p>
+          <GlowButton variant="ghost" size="sm" onClick={() => router.push("/dashboard/overview")}>
+            ← Return to Overview
+          </GlowButton>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  if (embedded) {
+    return content;
+  }
+
+  return (
+    <PageLayout title="Exercise DB Settings" subtitle="Manage category, type, muscle, progression, and variant options" mobileContentPaddingClass="p-2 pb-24">
+      {content}
     </PageLayout>
   );
+}
+
+export default function ExerciseDbSettingsPage() {
+  return <ExerciseDbSettingsPanel />;
 }

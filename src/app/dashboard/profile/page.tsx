@@ -187,40 +187,65 @@ export default function ProfilePage() {
       ] as const
     : [];
 
+  const sectionShellStyle = {
+    borderColor: "color-mix(in srgb, var(--ink-light) 62%, transparent)",
+    backgroundColor: "color-mix(in srgb, var(--ink-deep) 90%, var(--ink-mid))",
+    boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--cloud-white) 3%, transparent), 0 10px 28px color-mix(in srgb, var(--void-black) 22%, transparent)",
+  };
+
+  const flatTileStyle = {
+    borderColor: "color-mix(in srgb, var(--ink-light) 50%, transparent)",
+    backgroundColor: "color-mix(in srgb, var(--ink-mid) 62%, var(--ink-deep))",
+    boxShadow: "inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 3%, transparent)",
+  };
+
   return (
     <PageLayout
       title="Me"
       mobileContentPaddingClass="p-2 pb-24"
     >
       <div className="space-y-3 px-0 py-2 sm:py-3">
-        <section className="rounded-md border border-[#32353b] bg-[#2b2d31] p-3 shadow-[0_10px_26px_rgba(0,0,0,0.28)]">
-          <div className="mb-3 border-b border-[#32353b] pb-3">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#b5bac1]">Me</span>
-            <p className="mt-1 text-[13px] text-[#949ba4]">Profile, settings and personal pages</p>
+        <section className="rounded-xl border p-3.5" style={sectionShellStyle}>
+          <div className="mb-3 flex items-start justify-between gap-3 border-b pb-3" style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)" }}>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8ea1ff]">Me</p>
+              <h2 className="mt-1 text-[18px] font-semibold text-[#f2f3f5]">Profile & preferences</h2>
+              <p className="mt-1 text-[12px] text-[#b5bac1]">A flatter Train-style home for your account, settings, and personal tools.</p>
+            </div>
+            <span className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8ea1ff]">
+              Active
+            </span>
           </div>
 
           {user && (
-            <div className="mb-3 rounded-md border border-[#3b3f48] bg-[#313338] p-3">
-              <div className="flex items-start gap-3">
-                <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md border border-[#3b3f48] bg-[#383a40] text-[#f2f3f5]">
+            <div className="space-y-3">
+              <div className="flex items-start gap-3 border-b pb-3" style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)" }}>
+                <span
+                  className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-[#f2f3f5]"
+                  style={{
+                    border: "1px solid color-mix(in srgb, var(--accent) 26%, transparent)",
+                    backgroundColor: "color-mix(in srgb, var(--accent) 16%, var(--ink-mid))",
+                    boxShadow: "inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 5%, transparent)",
+                  }}
+                >
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z" />
                     <path strokeLinecap="round" strokeLinejoin="round" d="M4 20a8 8 0 0116 0" />
                   </svg>
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13px] font-semibold text-[#f2f3f5]">{user.name}</p>
+                  <p className="truncate text-[14px] font-semibold text-[#f2f3f5]">{user.name}</p>
                   <p className="truncate text-[11px] text-[#949ba4]">@{user.username}</p>
-                  <p className="mt-1 text-[12px] text-[#b5bac1]">Open your profile and manage personal preferences.</p>
+                  <p className="mt-1 text-[12px] text-[#b5bac1]">Open your profile, review your stats, and keep preferences in sync.</p>
                 </div>
               </div>
 
-              <div className="mt-3 grid grid-cols-3 gap-2">
-                <div className="rounded-md border border-[#3b3f48] bg-[#2b2d31] px-2.5 py-2">
+              <div className="grid grid-cols-3 gap-2">
+                <div className="rounded-md border px-2.5 py-2" style={flatTileStyle}>
                   <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Weight</p>
                   <p className="mt-1 text-[12px] font-semibold text-[#f2f3f5]">{bodyWeightKg || "--"}{bodyWeightKg ? " kg" : ""}</p>
                 </div>
-                <div className="rounded-md border border-[#3b3f48] bg-[#2b2d31] px-2.5 py-2">
+                <div className="rounded-md border px-2.5 py-2" style={flatTileStyle}>
                   <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Trend</p>
                   <p
                     className="mt-1 text-[12px] font-semibold"
@@ -236,13 +261,13 @@ export default function ProfilePage() {
                     {weightTrendLabel ?? "--"}
                   </p>
                 </div>
-                <div className="rounded-md border border-[#3b3f48] bg-[#2b2d31] px-2.5 py-2">
+                <div className="rounded-md border px-2.5 py-2" style={flatTileStyle}>
                   <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Check-ins</p>
                   <p className="mt-1 text-[12px] font-semibold text-[#f2f3f5]">{checkInTotalCount ?? 0}</p>
                 </div>
               </div>
 
-              <div className="mt-3 rounded-md border border-[#3b3f48] bg-[#2b2d31] p-2.5">
+              <div className="border-t pt-2.5" style={{ borderTopColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)" }}>
                 <button
                   type="button"
                   onClick={() => setIsPhysiqueExpanded((current) => !current)}
@@ -255,21 +280,21 @@ export default function ProfilePage() {
                       {gender === "male" ? "Male" : "Female"} • {bodyWeightKg ? `${bodyWeightKg} kg` : "No weight set"} • {syncEnabled ? "Synced" : "Manual"}
                     </p>
                   </div>
-                  <span className="rounded-md border border-[#3b3f48] bg-[#313338] px-2 py-1 text-[11px] font-semibold text-[#f2f3f5]">
-                    {isPhysiqueExpanded ? "Hide" : "Edit"}
+                  <span className="rounded-md px-2 py-1 text-[11px] font-semibold text-[#c9d2ff]" style={{ backgroundColor: "color-mix(in srgb, var(--accent) 18%, transparent)" }}>
+                    {isPhysiqueExpanded ? "Collapse" : "Adjust"}
                   </span>
                 </button>
 
                 {isPhysiqueExpanded ? (
-                  <div className="mt-2 border-t border-[#3b3f48] pt-2">
+                  <div className="mt-2 space-y-2.5 border-t pt-2.5" style={{ borderTopColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)" }}>
                     <div className="flex flex-wrap gap-2">
                       <button
                         type="button"
                         onClick={() => setGender("male")}
-                        className={`rounded-md border px-2.5 py-1.5 text-[11px] transition-all ${
+                        className={`rounded-md border px-2.5 py-1.5 text-[11px] transition-colors ${
                           gender === "male"
-                            ? "border-[#5865f2]/60 bg-[#383a40] text-[#f2f3f5]"
-                            : "border-[#3b3f48] bg-[#313338] text-[#dbdee1]"
+                            ? "border-[#5865f2]/50 bg-[#5865f2]/15 text-[#ffffff]"
+                            : "border-[#3b3f48] bg-transparent text-[#dbdee1]"
                         }`}
                       >
                         Male
@@ -277,10 +302,10 @@ export default function ProfilePage() {
                       <button
                         type="button"
                         onClick={() => setGender("female")}
-                        className={`rounded-md border px-2.5 py-1.5 text-[11px] transition-all ${
+                        className={`rounded-md border px-2.5 py-1.5 text-[11px] transition-colors ${
                           gender === "female"
-                            ? "border-[#5865f2]/60 bg-[#383a40] text-[#f2f3f5]"
-                            : "border-[#3b3f48] bg-[#313338] text-[#dbdee1]"
+                            ? "border-[#5865f2]/50 bg-[#5865f2]/15 text-[#ffffff]"
+                            : "border-[#3b3f48] bg-transparent text-[#dbdee1]"
                         }`}
                       >
                         Female
@@ -306,7 +331,7 @@ export default function ProfilePage() {
                       </label>
                     </div>
 
-                    <div className="mt-2 flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <input
                         type="number"
                         min="1"
@@ -317,7 +342,7 @@ export default function ProfilePage() {
                         }}
                         readOnly={syncEnabled}
                         placeholder="Weight in kg"
-                        className={`min-w-0 flex-1 rounded-md border border-[#3b3f48] bg-[#313338] px-3 py-2 text-[12px] text-[#f2f3f5] outline-none ${
+                        className={`min-w-0 flex-1 rounded-md border border-[#3b3f48] bg-transparent px-3 py-2 text-[12px] text-[#f2f3f5] outline-none ${
                           syncEnabled ? "cursor-not-allowed opacity-70" : ""
                         }`}
                       />
@@ -325,7 +350,7 @@ export default function ProfilePage() {
                         <button
                           type="button"
                           onClick={() => setBodyWeightKg(String(latestCheckinWeight.weight))}
-                          className="rounded-md border border-[#3b3f48] bg-[#383a40]/65 px-2.5 py-2 text-[11px] font-semibold text-[#f2f3f5]"
+                          className="rounded-md border border-[#3b3f48] bg-transparent px-2.5 py-2 text-[11px] font-semibold text-[#dbdee1]"
                         >
                           Use latest
                         </button>
@@ -333,13 +358,13 @@ export default function ProfilePage() {
                       <button
                         type="button"
                         onClick={handleSave}
-                        className="rounded-md border border-[#5865f2]/60 bg-[#383a40] px-2.5 py-2 text-[11px] font-semibold text-[#f2f3f5]"
+                        className="rounded-md border border-[#5865f2]/50 bg-[#5865f2]/15 px-2.5 py-2 text-[11px] font-semibold text-[#ffffff]"
                       >
                         Save
                       </button>
                     </div>
 
-                    <p className="mt-2 text-[11px] text-[#949ba4]">
+                    <p className="text-[11px] text-[#949ba4]">
                       {checkinWeightLoading
                         ? "Loading latest check-in…"
                         : latestCheckinWeight
@@ -347,17 +372,20 @@ export default function ProfilePage() {
                           : "No check-in weight recorded yet"}
                     </p>
 
-                    {saveMessage ? <p className="mt-1 text-[11px] text-[#7289da]">{saveMessage}</p> : null}
+                    {saveMessage ? <p className="text-[11px] text-[#8ea1ff]">{saveMessage}</p> : null}
                   </div>
                 ) : null}
               </div>
             </div>
           )}
+        </section>
 
-          <div className="mb-2">
-            <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Quick access</p>
+        <section className="rounded-xl border p-3.5" style={sectionShellStyle}>
+          <div className="mb-2 border-b pb-2" style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)" }}>
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[#8ea1ff]">Navigation</p>
+            <h3 className="mt-1 text-[15px] font-semibold text-[#f2f3f5]">Quick access</h3>
           </div>
-          <div className="mb-3 grid grid-cols-2 gap-2">
+          <div className="mb-4 grid grid-cols-2 gap-2">
             {quickAccessItems.map((item) => {
               const isCurrent = item.path === DASHBOARD_ROUTES.profile;
               return (
@@ -365,16 +393,35 @@ export default function ProfilePage() {
                   key={item.id}
                   type="button"
                   onClick={() => router.push(item.path)}
-                  className={`flex min-h-[44px] items-center gap-2 rounded-md border px-3 py-2 text-left text-[12px] font-medium transition-colors ${
+                  className={`flex min-h-[52px] items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[12px] font-medium transition-colors ${
                     isCurrent
-                      ? "border-[#5865f2]/60 bg-[#383a40] text-[#f2f3f5]"
-                      : "border-[#3b3f48] bg-[#313338] text-[#dbdee1] active:border-[#5865f2]/60 active:bg-[#383a40]"
+                      ? "text-[#ffffff]"
+                      : "text-[#dbdee1] active:bg-[#2b2f36]"
                   }`}
+                  style={{
+                    border: isCurrent
+                      ? "1px solid color-mix(in srgb, var(--accent) 38%, transparent)"
+                      : "1px solid color-mix(in srgb, var(--ink-light) 34%, transparent)",
+                    backgroundColor: isCurrent
+                      ? "color-mix(in srgb, var(--accent) 14%, var(--ink-mid))"
+                      : "color-mix(in srgb, var(--ink-mid) 44%, transparent)",
+                    boxShadow: isCurrent
+                      ? "inset 0 0 0 1px color-mix(in srgb, var(--accent) 10%, transparent)"
+                      : "inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 2%, transparent)",
+                  }}
                 >
-                  <span className="flex h-7 w-7 items-center justify-center rounded-md border border-[#3b3f48] bg-[#2b2d31] text-[13px]">
+                  <span
+                    className="flex h-8 w-8 items-center justify-center rounded-md text-[13px]"
+                    style={{ backgroundColor: isCurrent ? "color-mix(in srgb, var(--accent) 18%, transparent)" : "color-mix(in srgb, var(--ink-light) 10%, transparent)" }}
+                  >
                     {item.icon}
                   </span>
-                  <span className="truncate">{item.label}</span>
+                  <div className="min-w-0 flex-1">
+                    <span className="block truncate">{item.label}</span>
+                    <span className="block text-[10px] font-normal text-[#a9b0b8]">
+                      {item.id === "profile" ? "Current page" : item.id === "checkin" ? "Log your day" : item.id === "settings" ? "App preferences" : "Social tools"}
+                    </span>
+                  </div>
                 </button>
               );
             })}
@@ -388,20 +435,34 @@ export default function ProfilePage() {
               <button
                 key={item.id}
                 type="button"
-                className="flex min-h-[46px] items-center gap-2.5 rounded-md border border-[#3b3f48] bg-[#313338] px-3 py-2.5 text-[#dbdee1] transition-colors active:border-[#5865f2]/60 active:bg-[#383a40]"
+                className="flex min-h-[50px] items-center gap-2.5 rounded-lg px-3 py-2.5 text-[#dbdee1] transition-colors active:bg-[#2b2f36]"
+                style={{
+                  border: "1px solid color-mix(in srgb, var(--ink-light) 34%, transparent)",
+                  backgroundColor: "color-mix(in srgb, var(--ink-mid) 40%, transparent)",
+                  boxShadow: "inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 2%, transparent)",
+                }}
                 onClick={() => router.push(item.path)}
               >
-                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md border border-[#3b3f48] bg-[#2b2d31]">
+                <span
+                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md"
+                  style={{ backgroundColor: "color-mix(in srgb, var(--ink-light) 10%, transparent)" }}
+                >
                   <span className="text-base">{item.icon}</span>
                 </span>
-                <span className="truncate text-[13px] font-medium">{item.label}</span>
+                <div className="min-w-0 flex-1 text-left">
+                  <span className="block truncate text-[13px] font-medium">{item.label}</span>
+                  <span className="block text-[10px] text-[#a9b0b8]">
+                    {item.id === "train" ? "Workout history and logs" : item.id === "community" ? "See everyone’s activity" : item.id === "completionist" ? "Track exercise progress" : "Browse movements"}
+                  </span>
+                </div>
+                <span className="text-[12px] text-[#8b949e]">›</span>
               </button>
             ))}
           </div>
 
           {adminItems.length > 0 && (
             <>
-              <div className="mb-2 mt-3">
+              <div className="mb-2 mt-4">
                 <p className="text-[10px] uppercase tracking-[0.1em] text-[#f0b96a]">Admin</p>
               </div>
               <div className="grid grid-cols-1 gap-2">
@@ -409,29 +470,49 @@ export default function ProfilePage() {
                   <button
                     key={item.id}
                     type="button"
-                    className="flex min-h-[46px] items-center gap-2.5 rounded-md border border-[#4c4030] bg-[#313338] px-3 py-2.5 text-[#f0c991] transition-colors"
+                    className="flex min-h-[50px] items-center gap-2.5 rounded-lg px-3 py-2.5 text-[#f0c991] transition-colors"
+                    style={{
+                      border: "1px solid color-mix(in srgb, var(--gold-glow) 24%, transparent)",
+                      backgroundColor: "color-mix(in srgb, var(--gold-glow) 8%, transparent)",
+                      boxShadow: "inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 2%, transparent)",
+                    }}
                     onClick={() => router.push(item.path)}
                   >
-                    <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md border border-[#4c4030] bg-[#2b2d31]">
+                    <span
+                      className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md"
+                      style={{ backgroundColor: "color-mix(in srgb, var(--gold-glow) 10%, transparent)" }}
+                    >
                       <span className="text-base">{item.icon}</span>
                     </span>
-                    <span className="truncate text-[13px] font-medium">{item.label}</span>
+                    <div className="min-w-0 flex-1 text-left">
+                      <span className="block truncate text-[13px] font-medium">{item.label}</span>
+                      <span className="block text-[10px] text-[#d6b17d]">
+                        {item.id === "admin" ? "Open admin controls" : "Manage site details"}
+                      </span>
+                    </div>
                   </button>
                 ))}
               </div>
             </>
           )}
-
-          <button
-            type="button"
-            className="mt-3 flex min-h-[46px] w-full items-center gap-2.5 rounded-md border border-[#5a2b31] bg-[#3a2328] px-3 py-2.5 text-[#ffb3b8] transition-colors active:bg-[#49292f]"
-            onClick={() => logout()}
-          >
-            <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md border border-[#6a343b] bg-[#49292f]">↩</span>
-            <span className="text-[13px] font-medium">Logout</span>
-          </button>
         </section>
 
+        <button
+          type="button"
+          className="flex min-h-[48px] w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-[#ffb3b8] transition-colors active:bg-[#49292f]"
+          style={{
+            border: "1px solid color-mix(in srgb, var(--danger) 34%, transparent)",
+            backgroundColor: "color-mix(in srgb, var(--danger) 10%, transparent)",
+            boxShadow: "inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 2%, transparent)",
+          }}
+          onClick={() => logout()}
+        >
+          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center">↩</span>
+          <div className="text-left">
+            <span className="block text-[13px] font-medium">Logout</span>
+            <span className="block text-[10px] text-[#e19aa1]">Leave this session safely</span>
+          </div>
+        </button>
       </div>
     </PageLayout>
   );

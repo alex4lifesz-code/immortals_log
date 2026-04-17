@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import PageLayout from "@/components/layout/PageLayout";
@@ -9,38 +9,51 @@ import { MemoTrainingLogTable } from "@/components/workout/TrainingLogTable";
 import { useIsMobile } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api-client";
+import { getDeletedExerciseLabel } from "@/lib/exercise-name";
 import { DASHBOARD_ROUTES } from "@/lib/navigation";
+import { isDeletedExerciseDescription } from "@/lib/pending-exercises";
 import { DEFAULT_USER_PHYSIQUE, loadUserPhysique } from "@/lib/user-physique";
+import { PROGRESSION_EXERCISES_UPDATED_EVENT } from "@/lib/progression-events";
 import type { UserPhysiqueSettings } from "@/lib/user-physique";
 import type { ProgressionExercise, ProgressionLog } from "../workout/types";
 
-function formatWorkoutValueChips(log: ProgressionLog): string[] {
+type WorkoutMetricRow = { weight: string; reps: string };
+
+function getWorkoutMetricRows(log: ProgressionLog): WorkoutMetricRow[] {
   const hasHold = log.holdTime != null || log.holdTime2 != null || log.holdTime3 != null;
-  const metricValues = hasHold
+  const primaryRows = (hasHold
     ? [log.holdTime, log.holdTime2, log.holdTime3]
-    : [log.weight1, log.weight2, log.weight3];
-  const repsValues = [log.reps1, log.reps2, log.reps3];
+    : [log.weight1, log.weight2, log.weight3]
+  ).map((metric, index) => {
+    const reps = [log.reps1, log.reps2, log.reps3][index];
+    if (metric == null && reps == null) return null;
+    return {
+      weight: metric == null ? "-" : hasHold ? `${metric}s` : `${metric} kg`,
+      reps: reps == null ? "-" : String(reps),
+    };
+  }).filter((row): row is WorkoutMetricRow => Boolean(row));
 
-  const chips = metricValues
-    .map((metric, index) => {
-      const reps = repsValues[index];
-      if (metric == null && reps == null) return null;
+  const extraRows = Array.isArray(log.dynamicSetRows) ? log.dynamicSetRows : [];
+  const rows = [...primaryRows, ...extraRows].filter((row) => row.weight !== "-" || row.reps !== "-");
+  return rows.length > 0 ? rows : [{ weight: "-", reps: "-" }];
+}
 
-      const metricLabel = metric == null
-        ? "-"
-        : hasHold
-          ? `${metric}s`
-          : `${metric}kg`;
-
-      return reps != null ? `${metricLabel} x ${reps}` : metricLabel;
-    })
-    .filter((chip): chip is string => Boolean(chip));
+function formatWorkoutValueChips(log: ProgressionLog): string[] {
+  const chips = getWorkoutMetricRows(log)
+    .map((row) => (row.reps !== "-" ? `${row.weight} x ${row.reps}` : row.weight))
+    .filter(Boolean);
 
   if (chips.length === 0 && log.reps != null) {
     return [`${log.reps} reps`];
   }
 
   return chips;
+}
+
+function compareLogRecency(a: Pick<ProgressionLog, "id" | "createdAt">, b: Pick<ProgressionLog, "id" | "createdAt">): number {
+  const timeDiff = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  if (timeDiff !== 0) return timeDiff;
+  return b.id.localeCompare(a.id);
 }
 
 function formatRelativeRecentDate(dateLike: string): string {
@@ -87,8 +100,8 @@ function getRecentExerciseTextColor(dateLike: string | null | undefined, isSelec
 
   if (diffMs <= 7 * dayMs) {
     return isSelected
-      ? "color-mix(in srgb, var(--cultivator-amber) 78%, white 22%)"
-      : "color-mix(in srgb, var(--cultivator-amber) 82%, var(--mist-light) 18%)";
+      ? "color-mix(in srgb, var(--cultivator-amber) 58%, white 42%)"
+      : "color-mix(in srgb, var(--cultivator-amber) 68%, white 32%)";
   }
 
   if (diffMs <= 14 * dayMs) {
@@ -112,12 +125,25 @@ export default function HistoryPage() {
   const [physique, setPhysique] = useState<UserPhysiqueSettings>(DEFAULT_USER_PHYSIQUE);
   const [visibleUsers, setVisibleUsers] = useState<Array<{ id: string; name: string; username: string }>>([]);
   const [mobileSearchQuery, setMobileSearchQuery] = useState("");
+  const [mobileHistoryFilterOpen, setMobileHistoryFilterOpen] = useState(false);
+  const [mobileHistoryCategory, setMobileHistoryCategory] = useState("all");
+  const [mobileHistorySort, setMobileHistorySort] = useState<"recent" | "oldest" | "name-az">("recent");
+  const [mobileHistoryRecency, setMobileHistoryRecency] = useState<"all" | "7d" | "30d">("all");
+  const [mobileDrawerSearchOpen, setMobileDrawerSearchOpen] = useState(false);
+  const [mobileDrawerSearchQuery, setMobileDrawerSearchQuery] = useState("");
+  const [mobileDrawerFilterOpen, setMobileDrawerFilterOpen] = useState(false);
+  const [mobileDrawerLevelFilter, setMobileDrawerLevelFilter] = useState("all");
+  const [mobileDrawerVariantFilter, setMobileDrawerVariantFilter] = useState("all");
+  const [mobileDrawerWeightFilter, setMobileDrawerWeightFilter] = useState<"all" | "weighted" | "bodyweight">("all");
+  const [mobileDrawerRepsFilter, setMobileDrawerRepsFilter] = useState<"all" | "1-5" | "6-10" | "11+">("all");
+  const [mobileDrawerSort, setMobileDrawerSort] = useState<"recent" | "oldest" | "progression-asc" | "progression-desc">("recent");
   const [mobileExerciseDrawerExerciseId, setMobileExerciseDrawerExerciseId] = useState<string | null>(null);
   const [mobileLastSelectedExerciseId, setMobileLastSelectedExerciseId] = useState<string | null>(null);
   const [mobileLogFabOpen, setMobileLogFabOpen] = useState(false);
   const [mobileLogFabSearchQuery, setMobileLogFabSearchQuery] = useState("");
   const [mobileLogFabCategory, setMobileLogFabCategory] = useState("all");
   const [mobileLogFabSort, setMobileLogFabSort] = useState<"recent" | "oldest" | "name-az">("recent");
+  const mobileDrawerSearchInputRef = useRef<HTMLInputElement | null>(null);
 
   const userId = user?.id ?? "";
   const targetUserId = searchParams.get("targetUserId") || "";
@@ -128,6 +154,15 @@ export default function HistoryPage() {
   const prefillExerciseName = searchParams.get("prefillExercise");
   const prefillProgression = searchParams.get("prefillProgression");
   const prefillVariant = searchParams.get("prefillVariant");
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !mobileDrawerSearchOpen) return;
+    const frame = window.requestAnimationFrame(() => {
+      mobileDrawerSearchInputRef.current?.focus();
+      mobileDrawerSearchInputRef.current?.select();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [mobileDrawerSearchOpen]);
 
   useEffect(() => {
     const hasPrefill = Boolean(prefillExerciseId || prefillExerciseName || prefillProgression || prefillVariant);
@@ -191,6 +226,18 @@ export default function HistoryPage() {
     void fetchExercises();
   }, [fetchExercises]);
 
+  useEffect(() => {
+    const handleProgressionUpdate = () => {
+      setLoading(true);
+      void fetchExercises();
+    };
+
+    window.addEventListener(PROGRESSION_EXERCISES_UPDATED_EVENT, handleProgressionUpdate);
+    return () => {
+      window.removeEventListener(PROGRESSION_EXERCISES_UPDATED_EVENT, handleProgressionUpdate);
+    };
+  }, [fetchExercises]);
+
   const orderedVisibleUsers = useMemo(() => {
     if (!userId) return visibleUsers;
 
@@ -235,6 +282,7 @@ export default function HistoryPage() {
     ? `Review ${targetUserDisplayName}'s training logs and cultivation entries`
     : "Review your training logs and cultivation entries";
   const isFriendTrainOverlay = isMobile && Boolean(targetUserId);
+  const friendRailWidthPx = isMobile ? 64 : 76;
 
   const handleUserScopeChange = (nextUserId: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -252,67 +300,110 @@ export default function HistoryPage() {
       exerciseId: string;
       exerciseName: string;
       date: string;
+      logId: string;
       progression: string;
       variant: string;
       category: string;
+      isDeleted: boolean;
     }> = [];
 
     for (const exercise of exercises) {
       const logs = exercise.userProgress?.[0]?.logs ?? [];
       if (logs.length === 0) continue;
 
-      const latestLog = [...logs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
-      const tierName = exercise.tiers.find((tier) => tier.level === latestLog.level)?.name ?? `Lv ${latestLog.level}`;
+      const latestLog = [...logs].sort(compareLogRecency)[0];
+      const tierName = exercise.tiers.find((tier) => tier.level === latestLog.level)?.name ?? `Progression ${latestLog.level}`;
+
+      const deletedExercise = isDeletedExerciseDescription(exercise.story);
 
       rows.push({
         exerciseId: exercise.id,
-        exerciseName: exercise.name,
+        exerciseName: deletedExercise ? getDeletedExerciseLabel(exercise) : exercise.name,
         date: latestLog.createdAt,
+        logId: latestLog.id,
         progression: tierName,
         variant: latestLog.variant?.trim() || "",
         category: (exercise.category || "Uncategorized").trim() || "Uncategorized",
+        isDeleted: deletedExercise,
       });
     }
 
-    rows.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    rows.sort((a, b) => {
+      const timeDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+      if (timeDiff !== 0) return timeDiff;
+      return b.logId.localeCompare(a.logId);
+    });
     return rows;
   }, [exercises]);
 
+  const mobileHistoryCategoryOptions = useMemo(() => {
+    const categories = Array.from(new Set(mobileExerciseRows.map((row) => row.category).filter(Boolean)));
+    categories.sort((a, b) => a.localeCompare(b));
+    return ["all", ...categories];
+  }, [mobileExerciseRows]);
+
   const filteredMobileExerciseRows = useMemo(() => {
     const query = mobileSearchQuery.trim().toLowerCase();
-    if (!query) return mobileExerciseRows;
-    return mobileExerciseRows.filter((row) => {
-      const haystack = `${row.exerciseName} ${row.progression} ${row.variant}`.toLowerCase();
-      return haystack.includes(query);
+    const now = Date.now();
+    const dayMs = 24 * 60 * 60 * 1000;
+
+    const filtered = mobileExerciseRows.filter((row) => {
+      const matchesQuery = !query || `${row.exerciseName} ${row.progression} ${row.variant} ${row.category}`.toLowerCase().includes(query);
+      const matchesCategory = mobileHistoryCategory === "all" || row.category === mobileHistoryCategory;
+
+      let matchesRecency = true;
+      if (mobileHistoryRecency === "7d") {
+        matchesRecency = now - new Date(row.date).getTime() <= 7 * dayMs;
+      } else if (mobileHistoryRecency === "30d") {
+        matchesRecency = now - new Date(row.date).getTime() <= 30 * dayMs;
+      }
+
+      return matchesQuery && matchesCategory && matchesRecency;
     });
-  }, [mobileExerciseRows, mobileSearchQuery]);
+
+    const sorted = [...filtered];
+    if (mobileHistorySort === "oldest") {
+      sorted.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    } else if (mobileHistorySort === "name-az") {
+      sorted.sort((a, b) => a.exerciseName.localeCompare(b.exerciseName));
+    } else {
+      sorted.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }
+
+    return sorted;
+  }, [mobileExerciseRows, mobileHistoryCategory, mobileHistoryRecency, mobileHistorySort, mobileSearchQuery]);
 
   const mobileLogFabRows = useMemo(() => {
     const rows: Array<{
       exerciseId: string;
       exerciseName: string;
       date: string | null;
+      logId: string | null;
       progression: string;
       variant: string;
       category: string;
+      isDeleted: boolean;
     }> = [];
 
     for (const exercise of exercises) {
       const logs = exercise.userProgress?.[0]?.logs ?? [];
       const latestLog = logs.length > 0
-        ? [...logs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
+        ? [...logs].sort(compareLogRecency)[0]
         : null;
 
       const progressionLevel = latestLog?.level ?? exercise.userProgress?.[0]?.currentLevel ?? exercise.tiers[0]?.level ?? 1;
-      const progressionName = exercise.tiers.find((tier) => tier.level === progressionLevel)?.name ?? `Lv ${progressionLevel}`;
+      const progressionName = exercise.tiers.find((tier) => tier.level === progressionLevel)?.name ?? `Progression ${progressionLevel}`;
+      const deletedExercise = isDeletedExerciseDescription(exercise.story);
 
       rows.push({
         exerciseId: exercise.id,
-        exerciseName: exercise.name,
+        exerciseName: deletedExercise ? getDeletedExerciseLabel(exercise) : exercise.name,
         date: latestLog?.createdAt ?? null,
+        logId: latestLog?.id ?? null,
         progression: progressionName,
         variant: latestLog?.variant?.trim() || "",
         category: (exercise.category || "Uncategorized").trim() || "Uncategorized",
+        isDeleted: deletedExercise,
       });
     }
 
@@ -349,7 +440,11 @@ export default function HistoryPage() {
       sorted.sort((a, b) => {
         const left = a.date ? new Date(a.date).getTime() : Number.NEGATIVE_INFINITY;
         const right = b.date ? new Date(b.date).getTime() : Number.NEGATIVE_INFINITY;
-        if (left === right) return a.exerciseName.localeCompare(b.exerciseName);
+        if (left === right) {
+          const idCompare = (b.logId ?? "").localeCompare(a.logId ?? "");
+          if (idCompare !== 0) return idCompare;
+          return a.exerciseName.localeCompare(b.exerciseName);
+        }
         return right - left;
       });
     }
@@ -364,14 +459,77 @@ export default function HistoryPage() {
   const selectedMobileExerciseLogs = useMemo(() => {
     if (!selectedMobileExercise) return [];
     const logs = selectedMobileExercise.userProgress?.[0]?.logs ?? [];
-    return [...logs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return [...logs].sort(compareLogRecency);
   }, [selectedMobileExercise]);
+
+  const mobileDrawerLevelOptions = useMemo(() => {
+    return Array.from(
+      new Set(
+        selectedMobileExerciseLogs.map((log) => selectedMobileExercise?.tiers.find((tier) => tier.level === log.level)?.name ?? `Progression ${log.level}`),
+      ),
+    ).sort((a, b) => a.localeCompare(b));
+  }, [selectedMobileExercise, selectedMobileExerciseLogs]);
+
+  const mobileDrawerVariantOptions = useMemo(() => {
+    return Array.from(new Set(selectedMobileExerciseLogs.map((log) => log.variant?.trim() || "-"))).sort((a, b) => a.localeCompare(b));
+  }, [selectedMobileExerciseLogs]);
+
+  const filteredSelectedMobileExerciseLogs = useMemo(() => {
+    const query = mobileDrawerSearchQuery.trim().toLowerCase();
+    const filtered = selectedMobileExerciseLogs.filter((log) => {
+      const progressionName = selectedMobileExercise?.tiers.find((tier) => tier.level === log.level)?.name ?? `Progression ${log.level}`;
+      const variationValue = log.variant?.trim() || "-";
+      const metricRows = getWorkoutMetricRows(log);
+      const hasWeightedValue = metricRows.some((row) => row.weight !== "-" && !row.weight.endsWith("s"));
+      const reps = metricRows
+        .map((row) => Number.parseInt(row.reps, 10))
+        .filter((value): value is number => Number.isFinite(value) && value > 0);
+      const maxReps = reps.length > 0 ? Math.max(...reps) : null;
+
+      const matchesQuery = !query || `${progressionName} ${variationValue} ${log.modifier || ""} ${log.notes || ""}`.toLowerCase().includes(query);
+      const matchesProgression = mobileDrawerLevelFilter === "all" || progressionName === mobileDrawerLevelFilter;
+      const matchesVariant = mobileDrawerVariantFilter === "all" || variationValue === mobileDrawerVariantFilter;
+      const matchesWeight = mobileDrawerWeightFilter === "all"
+        || (mobileDrawerWeightFilter === "weighted" && hasWeightedValue)
+        || (mobileDrawerWeightFilter === "bodyweight" && !hasWeightedValue);
+      const matchesReps = mobileDrawerRepsFilter === "all"
+        || (mobileDrawerRepsFilter === "1-5" && maxReps != null && maxReps >= 1 && maxReps <= 5)
+        || (mobileDrawerRepsFilter === "6-10" && maxReps != null && maxReps >= 6 && maxReps <= 10)
+        || (mobileDrawerRepsFilter === "11+" && maxReps != null && maxReps >= 11);
+
+      return matchesQuery && matchesProgression && matchesVariant && matchesWeight && matchesReps;
+    });
+
+    const sorted = [...filtered];
+    if (mobileDrawerSort === "oldest") {
+      sorted.sort((a, b) => compareLogRecency(b, a));
+    } else if (mobileDrawerSort === "progression-asc") {
+      sorted.sort((a, b) => a.level - b.level || compareLogRecency(a, b));
+    } else if (mobileDrawerSort === "progression-desc") {
+      sorted.sort((a, b) => b.level - a.level || compareLogRecency(a, b));
+    } else {
+      sorted.sort(compareLogRecency);
+    }
+
+    return sorted;
+  }, [mobileDrawerLevelFilter, mobileDrawerRepsFilter, mobileDrawerSearchQuery, mobileDrawerSort, mobileDrawerVariantFilter, mobileDrawerWeightFilter, selectedMobileExercise, selectedMobileExerciseLogs]);
 
   useEffect(() => {
     if (!isMobile && mobileExerciseDrawerExerciseId) {
       setMobileExerciseDrawerExerciseId(null);
     }
   }, [isMobile, mobileExerciseDrawerExerciseId]);
+
+  useEffect(() => {
+    setMobileDrawerSearchOpen(false);
+    setMobileDrawerSearchQuery("");
+    setMobileDrawerFilterOpen(false);
+    setMobileDrawerLevelFilter("all");
+    setMobileDrawerVariantFilter("all");
+    setMobileDrawerWeightFilter("all");
+    setMobileDrawerRepsFilter("all");
+    setMobileDrawerSort("recent");
+  }, [mobileExerciseDrawerExerciseId]);
 
   useEffect(() => {
     if (!isMobile && mobileLogFabOpen) {
@@ -397,6 +555,18 @@ export default function HistoryPage() {
       setMobileExerciseDrawerExerciseId(null);
       setMobileLogFabOpen(false);
       setMobileSearchQuery("");
+      setMobileHistoryFilterOpen(false);
+      setMobileHistoryCategory("all");
+      setMobileHistorySort("recent");
+      setMobileHistoryRecency("all");
+      setMobileDrawerSearchOpen(false);
+      setMobileDrawerSearchQuery("");
+      setMobileDrawerFilterOpen(false);
+      setMobileDrawerLevelFilter("all");
+      setMobileDrawerVariantFilter("all");
+      setMobileDrawerWeightFilter("all");
+      setMobileDrawerRepsFilter("all");
+      setMobileDrawerSort("recent");
       setMobileLogFabSearchQuery("");
       setMobileLogFabCategory("all");
       setMobileLogFabSort("recent");
@@ -433,9 +603,9 @@ export default function HistoryPage() {
                   key={isFriendTrainOverlay ? `friend-train-${targetUserId}` : "self-train"}
                   initial={isFriendTrainOverlay ? { x: "100%" } : false}
                   animate={isFriendTrainOverlay ? { x: "0%" } : { x: 0 }}
-                  transition={isFriendTrainOverlay ? { duration: 0.26, ease: [0.22, 1, 0.36, 1] } : undefined}
-                  className={isFriendTrainOverlay ? "relative z-[72]" : "flex min-h-[calc(var(--app-viewport-height)-2rem)] flex-col"}
-                  style={isFriendTrainOverlay ? { backgroundColor: "color-mix(in srgb, var(--ink-deep) 98%, var(--ink-mid))", minHeight: "var(--app-viewport-height)" } : undefined}
+                  transition={isFriendTrainOverlay ? { duration: 0.24, ease: [0.22, 1, 0.36, 1] } : undefined}
+                  className={isFriendTrainOverlay ? "fixed inset-y-0 right-0 z-[71] border-l overflow-hidden safe-area-top safe-area-bottom safe-area-right" : "flex h-[calc(var(--app-viewport-height)-2rem)] min-h-[calc(var(--app-viewport-height)-2rem)] flex-col"}
+                  style={isFriendTrainOverlay ? { left: `${friendRailWidthPx}px`, borderLeftColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)", backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))", minHeight: "var(--app-viewport-height)" } : undefined}
                 >
                   <div
                     className={`border overflow-hidden flex min-h-0 flex-1 flex-col ${isFriendTrainOverlay ? "rounded-none h-full" : "rounded-tl-2xl"}`}
@@ -446,10 +616,10 @@ export default function HistoryPage() {
                   >
                     <div
                       data-mobile-scroll-container={isFriendTrainOverlay ? "true" : undefined}
-                      className={`${isFriendTrainOverlay ? "h-app safe-area-top safe-area-bottom overflow-y-auto scrollbar-hide" : "flex min-h-0 flex-1 flex-col"}`}
+                      className={`${isFriendTrainOverlay ? "h-app safe-area-top safe-area-bottom overflow-y-auto scrollbar-hide" : "flex min-h-0 flex-1 flex-col overflow-hidden"}`}
                       style={isFriendTrainOverlay ? { WebkitOverflowScrolling: "touch", overscrollBehaviorY: "auto", touchAction: "pan-y" } : undefined}
                     >
-                      <div className={`sticky top-0 z-20 ${isFriendTrainOverlay ? "safe-area-top" : ""}`} style={{ backgroundColor: "color-mix(in srgb, var(--ink-deep) 94%, var(--ink-mid))" }}>
+                      <div className={`sticky top-0 z-20 shrink-0 ${isFriendTrainOverlay ? "safe-area-top" : ""}`} style={{ backgroundColor: "color-mix(in srgb, var(--ink-deep) 94%, var(--ink-mid))" }}>
                         <div
                           className="px-3 py-2.5"
                           style={{
@@ -480,18 +650,33 @@ export default function HistoryPage() {
 
                           {friendView === "history" && (
                             <>
-                              <input
-                                type="text"
-                                value={mobileSearchQuery}
-                                onChange={(event) => setMobileSearchQuery(event.target.value)}
-                                placeholder="Search exercises"
-                                className="mt-2 h-8 w-full rounded-md border px-2.5 text-sm outline-none"
-                                style={{
-                                  borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                                  backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
-                                  color: "var(--cloud-white)",
-                                }}
-                              />
+                              <div className="mt-2 flex items-center gap-2">
+                                <input
+                                  type="text"
+                                  value={mobileSearchQuery}
+                                  onChange={(event) => setMobileSearchQuery(event.target.value)}
+                                  placeholder="Search exercises"
+                                  className="h-8 min-w-0 flex-1 rounded-md border px-2.5 text-sm outline-none"
+                                  style={{
+                                    borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                                    backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
+                                    color: "var(--cloud-white)",
+                                  }}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setMobileHistoryFilterOpen(true)}
+                                  className="relative inline-flex h-8 items-center justify-center text-[#b5bac1] transition-colors hover:text-[#f2f3f5]"
+                                  aria-label="Open filters"
+                                >
+                                  <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 5h18M6 12h12m-9 7h6" />
+                                  </svg>
+                                  {(mobileHistoryCategory !== "all" || mobileHistorySort !== "recent" || mobileHistoryRecency !== "all") ? (
+                                    <span className="absolute right-0.5 top-1 h-2 w-2 rounded-full bg-[#5865f2]" />
+                                  ) : null}
+                                </button>
+                              </div>
 
                               {!isFriendTrainOverlay ? (
                                 <div className="mt-2 -mx-0.5 overflow-x-auto scrollbar-hide">
@@ -524,7 +709,11 @@ export default function HistoryPage() {
                       </div>
 
                       {friendView === "history" ? (
-                      <div className={isFriendTrainOverlay ? "flex-1 pb-[calc(var(--mobile-nav-offset)+0.5rem)]" : "flex-1 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)]"}>
+                      <div
+                        data-mobile-scroll-container={isFriendTrainOverlay ? "true" : "true"}
+                        className={isFriendTrainOverlay ? "flex-1 pb-[calc(var(--mobile-nav-offset)+0.5rem)]" : "min-h-0 flex-1 overflow-y-auto scrollbar-hide pb-[calc(var(--mobile-nav-offset)+0.75rem)]"}
+                        style={isFriendTrainOverlay ? undefined : { WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain", touchAction: "pan-y" }}
+                      >
                         {filteredMobileExerciseRows.length === 0 ? (
                           <div
                             className="px-3 py-4 text-center text-xs"
@@ -565,7 +754,7 @@ export default function HistoryPage() {
                               <div className="flex items-start justify-between gap-2">
                                 <p
                                   className="text-sm font-semibold leading-tight"
-                                  style={{ color: getRecentExerciseTextColor(row.date, isPreviouslySelected) }}
+                                  style={{ color: row.isDeleted ? "var(--crimson-light)" : getRecentExerciseTextColor(row.date, isPreviouslySelected) }}
                                 >
                                   {row.exerciseName}
                                 </p>
@@ -573,7 +762,7 @@ export default function HistoryPage() {
                                     {formatRelativeRecentDate(row.date)}
                                   </span>
                               </div>
-                              <p className="mt-0.5 text-[11px] italic" style={{ color: "var(--text-muted)" }}>
+                              <p className="mt-0.5 text-[11px] italic" style={{ color: row.isDeleted ? "var(--crimson-light)" : "var(--text-muted)" }}>
                                 {`Recent: ${row.variant ? `${row.variant} ` : ""}${row.progression} ${row.exerciseName}`}
                               </p>
                             </article>
@@ -600,6 +789,31 @@ export default function HistoryPage() {
               </>
             ) : (
               <>
+                {!isFriendTrainOverlay ? (
+                  <div className="mb-2 overflow-x-auto scrollbar-hide">
+                    <div className="flex min-w-max items-center gap-2 px-0.5 pb-0.5">
+                      {trainQuickNavItems.map((item) => {
+                        const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                        return (
+                          <button
+                            key={item.href}
+                            type="button"
+                            onClick={() => router.push(item.href)}
+                            className={`rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-colors ${
+                              isActive
+                                ? "border-[#5865f2]/70 bg-[#5865f2]/18 text-[#f2f3f5]"
+                                : "border-[#3b3f48] bg-[#383a40]/65 text-[#b5bac1] hover:text-[#f2f3f5] hover:border-[#5865f2]/60"
+                            }`}
+                            aria-current={isActive ? "page" : undefined}
+                          >
+                            {item.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+
                 <div className="nyaa-history-table-shell">
                   <MemoTrainingLogTable
                     exercises={exercises}
@@ -620,6 +834,136 @@ export default function HistoryPage() {
         )}
       </div>
       </PageLayout>
+
+      <AnimatePresence>
+        {isMobile && friendView === "history" && mobileHistoryFilterOpen ? (
+          <>
+            <motion.div
+              key="mobile-history-filter-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+              className="fixed inset-0 z-[237]"
+              style={{ backgroundColor: "color-mix(in srgb, var(--void-black) 74%, transparent)" }}
+              onClick={() => setMobileHistoryFilterOpen(false)}
+            />
+            <motion.aside
+              key="mobile-history-filter-drawer"
+              initial={{ x: "100%" }}
+              animate={{ x: "0%" }}
+              exit={{ x: "100%" }}
+              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+              className="fixed inset-y-0 right-0 z-[239] w-[min(320px,88vw)] border-l overflow-hidden safe-area-top safe-area-bottom safe-area-right"
+              style={{
+                borderLeftColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
+                backgroundColor: "color-mix(in srgb, var(--ink-deep) 97%, var(--ink-mid))",
+              }}
+            >
+              <div className="flex h-full min-h-0 flex-col overflow-hidden">
+                <div className="border-b px-3 py-2.5" style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)" }}>
+                  <div className="flex items-center justify-between gap-2">
+                    <h2 className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--mist-light)" }}>
+                      Exercise Filters
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => setMobileHistoryFilterOpen(false)}
+                      className="h-8 w-8 rounded-md border text-sm"
+                      style={{
+                        borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                        color: "var(--mist-light)",
+                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
+                      }}
+                      aria-label="Close exercise filters"
+                    >
+                      x
+                    </button>
+                  </div>
+                </div>
+
+                <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 space-y-3">
+                  <div>
+                    <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Category</label>
+                    <select
+                      value={mobileHistoryCategory}
+                      onChange={(event) => setMobileHistoryCategory(event.target.value)}
+                      className="h-9 w-full rounded-md border px-2.5 text-sm outline-none"
+                      style={{
+                        borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
+                        color: "var(--cloud-white)",
+                      }}
+                    >
+                      {mobileHistoryCategoryOptions.map((category) => (
+                        <option key={`history-category-${category}`} value={category}>
+                          {category === "all" ? "All categories" : category}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Sort</label>
+                    <select
+                      value={mobileHistorySort}
+                      onChange={(event) => setMobileHistorySort(event.target.value as "recent" | "oldest" | "name-az")}
+                      className="h-9 w-full rounded-md border px-2.5 text-sm outline-none"
+                      style={{
+                        borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
+                        color: "var(--cloud-white)",
+                      }}
+                    >
+                      <option value="recent">Recent first</option>
+                      <option value="oldest">Oldest first</option>
+                      <option value="name-az">Name A-Z</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Updated</label>
+                    <select
+                      value={mobileHistoryRecency}
+                      onChange={(event) => setMobileHistoryRecency(event.target.value as "all" | "7d" | "30d")}
+                      className="h-9 w-full rounded-md border px-2.5 text-sm outline-none"
+                      style={{
+                        borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
+                        color: "var(--cloud-white)",
+                      }}
+                    >
+                      <option value="all">All time</option>
+                      <option value="7d">Last 7 days</option>
+                      <option value="30d">Last 30 days</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="border-t px-3 py-3" style={{ borderTopColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)" }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileHistoryCategory("all");
+                      setMobileHistorySort("recent");
+                      setMobileHistoryRecency("all");
+                      setMobileHistoryFilterOpen(false);
+                    }}
+                    className="w-full rounded-md border px-3 py-2 text-sm font-semibold"
+                    style={{
+                      borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                      backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
+                      color: "var(--mist-light)",
+                    }}
+                  >
+                    Clear filters
+                  </button>
+                </div>
+              </div>
+            </motion.aside>
+          </>
+        ) : null}
+      </AnimatePresence>
 
       <AnimatePresence>
         {isMobile && mobileLogFabOpen ? (
@@ -750,7 +1094,7 @@ export default function HistoryPage() {
                         }}
                       >
                         <div className="flex items-start justify-between gap-2">
-                          <p className="text-sm font-semibold leading-tight" style={{ color: getRecentExerciseTextColor(row.date) }}>
+                          <p className="text-sm font-semibold leading-tight" style={{ color: row.isDeleted ? "var(--crimson-light)" : getRecentExerciseTextColor(row.date) }}>
                             {row.exerciseName}
                           </p>
                           <span className="shrink-0 text-[11px]" style={{ color: "var(--text-muted)" }}>
@@ -799,7 +1143,7 @@ export default function HistoryPage() {
             >
               <div
                 data-mobile-scroll-container="true"
-                className="h-full overflow-y-auto scrollbar-hide overflow-x-hidden pb-[calc(env(safe-area-inset-bottom,0px)+5rem)]"
+                className="relative h-full overflow-y-auto scrollbar-hide overflow-x-hidden pb-[calc(env(safe-area-inset-bottom,0px)+5rem)]"
                 style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorY: "auto", touchAction: "pan-y" }}
               >
                 <div className="sticky top-0 z-10 border-b px-3 py-2.5 safe-area-top" style={{
@@ -822,7 +1166,7 @@ export default function HistoryPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                       </svg>
                     </button>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <h3
                         className="truncate text-sm font-semibold"
                         style={{ color: getRecentExerciseTextColor(selectedMobileExerciseLogs[0]?.createdAt, true) }}
@@ -833,40 +1177,245 @@ export default function HistoryPage() {
                         Workout History
                       </p>
                     </div>
+                    <div className="flex items-center gap-3 pt-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setMobileDrawerSearchOpen((prev) => !prev)}
+                        className="inline-flex h-8 items-center justify-center text-[#b5bac1] transition-colors hover:text-[#f2f3f5]"
+                        aria-label={mobileDrawerSearchOpen ? "Close log search" : "Open log search"}
+                        aria-expanded={mobileDrawerSearchOpen}
+                      >
+                        <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-4.35-4.35m1.85-5.15a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setMobileDrawerFilterOpen(true)}
+                        className="relative inline-flex h-8 items-center justify-center text-[#b5bac1] transition-colors hover:text-[#f2f3f5]"
+                        aria-label="Open log filters"
+                      >
+                        <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 5h18M6 12h12m-9 7h6" />
+                        </svg>
+                        {(mobileDrawerLevelFilter !== "all" || mobileDrawerVariantFilter !== "all" || mobileDrawerWeightFilter !== "all" || mobileDrawerRepsFilter !== "all" || mobileDrawerSort !== "recent") ? (
+                          <span className="absolute right-0.5 top-1 h-2 w-2 rounded-full bg-[#5865f2]" />
+                        ) : null}
+                      </button>
+                    </div>
                   </div>
+
+                  <AnimatePresence initial={false}>
+                    {mobileDrawerSearchOpen ? (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0, y: -6 }}
+                        animate={{ height: "auto", opacity: 1, y: 0 }}
+                        exit={{ height: 0, opacity: 0, y: -6 }}
+                        transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                        className="overflow-hidden"
+                      >
+                        <input
+                          ref={mobileDrawerSearchInputRef}
+                          autoFocus
+                          type="text"
+                          value={mobileDrawerSearchQuery}
+                          onChange={(event) => setMobileDrawerSearchQuery(event.target.value)}
+                          placeholder="Search logs"
+                          className="mt-2 h-8 w-full rounded-md border px-2.5 text-sm outline-none"
+                          style={{
+                            borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                            backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
+                            color: "var(--cloud-white)",
+                          }}
+                        />
+                      </motion.div>
+                    ) : null}
+                  </AnimatePresence>
                 </div>
 
+                <AnimatePresence>
+                  {mobileDrawerFilterOpen ? (
+                    <>
+                      <motion.div
+                        key="mobile-inner-log-filter-backdrop"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                        className="absolute inset-0 z-20"
+                        style={{ backgroundColor: "color-mix(in srgb, var(--void-black) 72%, transparent)" }}
+                        onClick={() => setMobileDrawerFilterOpen(false)}
+                      />
+                      <motion.aside
+                        key="mobile-inner-log-filter-drawer"
+                        initial={{ x: "100%" }}
+                        animate={{ x: "0%" }}
+                        exit={{ x: "100%" }}
+                        transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+                        className="absolute inset-y-0 right-0 z-30 w-[min(320px,88vw)] border-l overflow-hidden"
+                        style={{
+                          borderLeftColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
+                          backgroundColor: "color-mix(in srgb, var(--ink-deep) 97%, var(--ink-mid))",
+                        }}
+                      >
+                        <div className="flex h-full min-h-0 flex-col overflow-hidden">
+                          <div className="border-b px-3 py-2.5" style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)" }}>
+                            <div className="flex items-center justify-between gap-2">
+                              <h2 className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--mist-light)" }}>
+                                Log Filters
+                              </h2>
+                              <button
+                                type="button"
+                                onClick={() => setMobileDrawerFilterOpen(false)}
+                                className="h-8 w-8 rounded-md border text-sm"
+                                style={{
+                                  borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                                  color: "var(--mist-light)",
+                                  backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
+                                }}
+                                aria-label="Close log filters"
+                              >
+                                x
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 space-y-3">
+                            <div>
+                              <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Progression</label>
+                              <select
+                                value={mobileDrawerLevelFilter}
+                                onChange={(event) => setMobileDrawerLevelFilter(event.target.value)}
+                                className="h-9 w-full rounded-md border px-2.5 text-sm outline-none"
+                                style={{
+                                  borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                                  backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
+                                  color: "var(--cloud-white)",
+                                }}
+                              >
+                                <option value="all">All progressions</option>
+                                {mobileDrawerLevelOptions.map((progressionName) => (
+                                  <option key={`drawer-progression-${progressionName}`} value={progressionName}>{progressionName}</option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Variation</label>
+                              <select
+                                value={mobileDrawerVariantFilter}
+                                onChange={(event) => setMobileDrawerVariantFilter(event.target.value)}
+                                className="h-9 w-full rounded-md border px-2.5 text-sm outline-none"
+                                style={{
+                                  borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                                  backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
+                                  color: "var(--cloud-white)",
+                                }}
+                              >
+                                <option value="all">All variations</option>
+                                {mobileDrawerVariantOptions.map((variant) => (
+                                  <option key={`drawer-variant-${variant}`} value={variant}>{variant === "-" ? "No variation" : variant}</option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Weight</label>
+                              <select
+                                value={mobileDrawerWeightFilter}
+                                onChange={(event) => setMobileDrawerWeightFilter(event.target.value as "all" | "weighted" | "bodyweight")}
+                                className="h-9 w-full rounded-md border px-2.5 text-sm outline-none"
+                                style={{
+                                  borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                                  backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
+                                  color: "var(--cloud-white)",
+                                }}
+                              >
+                                <option value="all">All loads</option>
+                                <option value="weighted">Weighted</option>
+                                <option value="bodyweight">Bodyweight</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Reps</label>
+                              <select
+                                value={mobileDrawerRepsFilter}
+                                onChange={(event) => setMobileDrawerRepsFilter(event.target.value as "all" | "1-5" | "6-10" | "11+")}
+                                className="h-9 w-full rounded-md border px-2.5 text-sm outline-none"
+                                style={{
+                                  borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                                  backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
+                                  color: "var(--cloud-white)",
+                                }}
+                              >
+                                <option value="all">All rep ranges</option>
+                                <option value="1-5">1–5 reps</option>
+                                <option value="6-10">6–10 reps</option>
+                                <option value="11+">11+ reps</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Sort</label>
+                              <select
+                                value={mobileDrawerSort}
+                                onChange={(event) => setMobileDrawerSort(event.target.value as "recent" | "oldest" | "progression-asc" | "progression-desc")}
+                                className="h-9 w-full rounded-md border px-2.5 text-sm outline-none"
+                                style={{
+                                  borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                                  backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
+                                  color: "var(--cloud-white)",
+                                }}
+                              >
+                                <option value="recent">Recent first</option>
+                                <option value="oldest">Oldest first</option>
+                                <option value="progression-asc">Progression ascending</option>
+                                <option value="progression-desc">Progression descending</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          <div className="border-t px-3 py-3" style={{ borderTopColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)" }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMobileDrawerLevelFilter("all");
+                                setMobileDrawerVariantFilter("all");
+                                setMobileDrawerWeightFilter("all");
+                                setMobileDrawerRepsFilter("all");
+                                setMobileDrawerSort("recent");
+                                setMobileDrawerFilterOpen(false);
+                              }}
+                              className="w-full rounded-md border px-3 py-2 text-sm font-semibold"
+                              style={{
+                                borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                                backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
+                                color: "var(--mist-light)",
+                              }}
+                            >
+                              Clear filters
+                            </button>
+                          </div>
+                        </div>
+                      </motion.aside>
+                    </>
+                  ) : null}
+                </AnimatePresence>
+
                 <div>
-                  {selectedMobileExerciseLogs.length === 0 ? (
+                  {filteredSelectedMobileExerciseLogs.length === 0 ? (
                     <div className="px-3 py-4 text-center text-xs" style={{ color: "var(--text-muted)" }}>
-                      No workout history for this exercise yet.
+                      {selectedMobileExerciseLogs.length === 0 ? "No workout history for this exercise yet." : "No logs match your search or filters."}
                     </div>
                   ) : (
                     <>
-                      {selectedMobileExerciseLogs.map((log) => {
-                      const tierName = selectedMobileExercise?.tiers.find((tier) => tier.level === log.level)?.name ?? `Lv ${log.level}`;
+                      {filteredSelectedMobileExerciseLogs.map((log) => {
+                      const tierName = selectedMobileExercise?.tiers.find((tier) => tier.level === log.level)?.name ?? `Progression ${log.level}`;
                       const variationValue = log.variant?.trim() || "-";
                       const modValue = log.modifier?.trim() || "-";
                       const notesValue = log.notes?.trim() || "-";
-                      const weightValues = [log.weight1, log.weight2, log.weight3]
-                        .filter((value): value is number => value != null)
-                        .map((value) => `${value} kg`);
-                      const repsValues = [log.reps1, log.reps2, log.reps3]
-                        .filter((value): value is number => value != null)
-                        .map((value) => String(value));
-                      const timedValues = [log.holdTime, log.holdTime2, log.holdTime3]
-                        .filter((value): value is number => value != null)
-                        .map((value) => `${value}s`)
-                        .join(", ");
-                      const hasWeightValues = weightValues.length > 0;
-                      const hasTimedValues = Boolean(timedValues);
-                      const repsFallback = log.reps != null ? String(log.reps) : "";
-                      const displayedReps = repsValues.length > 0 ? repsValues : repsFallback ? [repsFallback] : [];
-                      const alignedMetricRowCount = Math.max(weightValues.length, displayedReps.length, 1);
-                      const alignedMetricRows = Array.from({ length: alignedMetricRowCount }, (_, index) => ({
-                        weight: weightValues[index] ?? "-",
-                        reps: displayedReps[index] ?? "-",
-                      }));
+                      const alignedMetricRows = getWorkoutMetricRows(log);
                       const leftDetailRows = [
                         { label: "Variation:", value: variationValue, valueColor: "var(--mountain-blue-glow)" },
                         { label: "Mod:", value: modValue, valueColor: "var(--gold-glow)" },
@@ -914,16 +1463,6 @@ export default function HistoryPage() {
                                 </div>
                               );
                             })}
-
-                            {hasTimedValues && !hasWeightValues ? (
-                              <div className="grid grid-cols-2 gap-x-3">
-                                <div aria-hidden="true">&nbsp;</div>
-                                <div className="min-w-0 truncate">
-                                  <span style={{ color: "var(--mist-light)" }}>Timed:</span>{" "}
-                                  <span style={{ color: "var(--text-secondary)" }}>{timedValues}</span>
-                                </div>
-                              </div>
-                            ) : null}
                           </div>
                         </article>
                       );
