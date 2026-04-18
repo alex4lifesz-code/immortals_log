@@ -404,9 +404,9 @@ export default function AdminPanelPage() {
 
           {/* Data Management Section */}
           <div>
-            <h3 className="text-sm text-jade-glow uppercase mb-3">Backup Studio</h3>
+            <h3 className="text-sm text-jade-glow uppercase mb-3">Backup Studio & Library Control</h3>
             <p className="text-xs text-mist-dark mb-3">
-              The rebuilt studio now handles unified backup export and restore for user records and the Exercise DB.
+              Manage user backup packages and the shared Application Exercise Library from one admin surface.
             </p>
           </div>
 

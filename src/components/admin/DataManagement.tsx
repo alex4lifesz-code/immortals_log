@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import GlowButton from "@/components/ui/GlowButton";
 import GlowCard, { GlowModal } from "@/components/ui/GlowCard";
@@ -39,7 +40,12 @@ export default function DataManagement() {
   const [purgeStatus, setPurgeStatus] = useState<StatusState>(INITIAL_STATUS);
   const [exportStatus, setExportStatus] = useState<StatusState>(INITIAL_STATUS);
   const [importStatus, setImportStatus] = useState<StatusState>(INITIAL_STATUS);
+  const [libraryReplaceExisting, setLibraryReplaceExisting] = useState(false);
+  const [libraryExportStatus, setLibraryExportStatus] = useState<StatusState>(INITIAL_STATUS);
+  const [libraryImportStatus, setLibraryImportStatus] = useState<StatusState>(INITIAL_STATUS);
+  const [libraryPurgeStatus, setLibraryPurgeStatus] = useState<StatusState>(INITIAL_STATUS);
   const importInputRef = useRef<HTMLInputElement>(null);
+  const libraryImportInputRef = useRef<HTMLInputElement>(null);
 
   const refreshUsers = async () => {
     try {
@@ -206,6 +212,115 @@ export default function DataManagement() {
     }
   };
 
+  const handleLibraryExport = async () => {
+    setLibraryExportStatus({ type: "loading", message: "Preparing exercise library export..." });
+
+    try {
+      const res = await fetch("/api/exercise-library/studio", {
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const payload = await res.json().catch(() => null);
+        const message = payload?.error?.message || payload?.error || "Exercise library export failed";
+        setLibraryExportStatus({ type: "error", message });
+        return;
+      }
+
+      const count = Number(res.headers.get("X-Exercise-Count") || 0);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `application-exercise-library-${new Date().toISOString().slice(0, 10)}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+
+      setLibraryExportStatus({
+        type: "success",
+        message: `Application Exercise Library exported successfully (${count} exercises).`,
+      });
+    } catch (error) {
+      setLibraryExportStatus({
+        type: "error",
+        message: error instanceof Error ? error.message : "Exercise library export failed",
+      });
+    }
+  };
+
+  const handleLibraryImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) return;
+
+    setLibraryImportStatus({ type: "loading", message: "Reading exercise library file..." });
+
+    try {
+      const text = await file.text();
+      const backup = JSON.parse(text);
+
+      const res = await fetch("/api/exercise-library/studio", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          replaceExisting: libraryReplaceExisting,
+          backup,
+        }),
+      });
+
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) {
+        const message = payload?.error?.message || payload?.error || "Exercise library import failed";
+        setLibraryImportStatus({ type: "error", message });
+        return;
+      }
+
+      const message = payload?.data?.message || payload?.message || "Application Exercise Library imported successfully.";
+      setLibraryImportStatus({ type: "success", message });
+    } catch (error) {
+      setLibraryImportStatus({
+        type: "error",
+        message: error instanceof Error ? error.message : "Exercise library import failed",
+      });
+    }
+  };
+
+  const handleLibraryPurge = async () => {
+    const confirmed = typeof window !== "undefined"
+      ? window.confirm("Purge the shared Application Exercise Library? This clears the deployed library canvas and preserves user history for later restore.")
+      : true;
+
+    if (!confirmed) return;
+
+    setLibraryPurgeStatus({ type: "loading", message: "Purging Application Exercise Library..." });
+
+    try {
+      const res = await fetch("/api/exercise-library/studio", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ confirm: true }),
+      });
+
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) {
+        const message = payload?.error?.message || payload?.error || "Exercise DB purge failed";
+        setLibraryPurgeStatus({ type: "error", message });
+        return;
+      }
+
+      const message = payload?.data?.message || payload?.message || "Application Exercise Library purged successfully.";
+      setLibraryPurgeStatus({ type: "success", message });
+    } catch (error) {
+      setLibraryPurgeStatus({
+        type: "error",
+        message: error instanceof Error ? error.message : "Exercise DB purge failed",
+      });
+    }
+  };
+
   return (
     <GlowCard glow="crimson" hoverable={false}>
       <div className="space-y-4">
@@ -334,6 +449,92 @@ export default function DataManagement() {
                   : "text-mist-light"
             }`}>
               {purgeStatus.message}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="rounded-xl border border-sky-400/25 bg-sky-500/5 p-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-sky-100">Application Exercise Library</p>
+              <p className="text-xs text-mist-light">
+                Manage the shared hidden library owner for deployment and the Exercise DB canvas.
+              </p>
+              <p className="text-[11px] text-mist-dark">
+                Owner: Application Exercise Library (@__app_exercise_library__)
+              </p>
+            </div>
+
+            <Link
+              href="/dashboard/exercise-db"
+              className="inline-flex items-center justify-center rounded-lg border border-ink-light/50 px-3 py-2 text-xs font-medium text-mist-light transition hover:border-sky-300/45 hover:text-cloud-white"
+            >
+              Open full Exercise DB
+            </Link>
+          </div>
+
+          <label className="mt-3 flex items-center gap-2 text-xs text-mist-light">
+            <input
+              type="checkbox"
+              checked={libraryReplaceExisting}
+              onChange={(event) => setLibraryReplaceExisting(event.target.checked)}
+              className="h-3.5 w-3.5 rounded border-ink-light bg-ink-dark accent-sky-300"
+            />
+            Replace existing library records during import
+          </label>
+
+          <div className="mt-3 flex flex-wrap gap-3">
+            <GlowButton variant="jade" size="sm" glow onClick={handleLibraryExport}>
+              Export Library JSON
+            </GlowButton>
+            <GlowButton variant="gold" size="sm" onClick={() => libraryImportInputRef.current?.click()}>
+              Import Library JSON
+            </GlowButton>
+            <GlowButton variant="crimson" size="sm" onClick={handleLibraryPurge}>
+              Purge Exercise DB
+            </GlowButton>
+            <input
+              ref={libraryImportInputRef}
+              type="file"
+              accept=".json,application/json"
+              onChange={handleLibraryImport}
+              className="hidden"
+            />
+          </div>
+
+          {libraryExportStatus.type !== "idle" ? (
+            <p className={`mt-3 text-xs ${
+              libraryExportStatus.type === "success"
+                ? "text-jade-light"
+                : libraryExportStatus.type === "error"
+                  ? "text-crimson-light"
+                  : "text-mist-light"
+            }`}>
+              {libraryExportStatus.message}
+            </p>
+          ) : null}
+
+          {libraryImportStatus.type !== "idle" ? (
+            <p className={`mt-2 whitespace-pre-line text-xs ${
+              libraryImportStatus.type === "success"
+                ? "text-jade-light"
+                : libraryImportStatus.type === "error"
+                  ? "text-crimson-light"
+                  : "text-mist-light"
+            }`}>
+              {libraryImportStatus.message}
+            </p>
+          ) : null}
+
+          {libraryPurgeStatus.type !== "idle" ? (
+            <p className={`mt-2 whitespace-pre-line text-xs ${
+              libraryPurgeStatus.type === "success"
+                ? "text-jade-light"
+                : libraryPurgeStatus.type === "error"
+                  ? "text-crimson-light"
+                  : "text-mist-light"
+            }`}>
+              {libraryPurgeStatus.message}
             </p>
           ) : null}
         </div>
