@@ -15,6 +15,8 @@ const { readFileSync } = require("fs");
 const { resolve } = require("path");
 
 const TARGET_USERNAME = process.argv[2] || "admin";
+const APP_LIBRARY_USERNAME = "__app_exercise_library__";
+const APP_LIBRARY_NAME = "Application Exercise Library";
 const DB_URL = process.env.DATABASE_URL || "file:./dev.db";
 
 function cuid() {
@@ -37,6 +39,46 @@ async function withRetry(fn, retries = 5) {
   }
 }
 
+async function ensureTargetUser(client) {
+  const userResult = await client.execute({
+    sql: "SELECT id FROM User WHERE username = ?",
+    args: [TARGET_USERNAME],
+  });
+
+  if (userResult.rows.length > 0) {
+    return String(userResult.rows[0].id);
+  }
+
+  if (TARGET_USERNAME !== APP_LIBRARY_USERNAME) {
+    throw new Error(`User "${TARGET_USERNAME}" not found.`);
+  }
+
+  const userId = cuid();
+  const now = new Date().toISOString();
+  const friendCode = crypto.randomBytes(6).toString("hex");
+
+  await client.execute({
+    sql: `INSERT INTO User (id, friendCode, username, password, name, role, onboardingCompleted, onboardingSkipped, onboardingStep, createdAt, updatedAt)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [
+      userId,
+      friendCode,
+      APP_LIBRARY_USERNAME,
+      `system:${crypto.randomBytes(16).toString("hex")}`,
+      APP_LIBRARY_NAME,
+      "system",
+      1,
+      1,
+      0,
+      now,
+      now,
+    ],
+  });
+
+  console.log(`Created ${APP_LIBRARY_NAME} owner (${userId})`);
+  return userId;
+}
+
 async function main() {
   const seedPath = resolve(__dirname, "../seed-data/exercise-library-full.json");
   const raw = readFileSync(seedPath, "utf-8");
@@ -50,16 +92,7 @@ async function main() {
   await client.execute("PRAGMA journal_mode=WAL");
   await client.execute("PRAGMA busy_timeout=5000");
 
-  // Find admin user
-  const userResult = await client.execute({
-    sql: "SELECT id FROM User WHERE username = ?",
-    args: [TARGET_USERNAME],
-  });
-  if (userResult.rows.length === 0) {
-    console.error(`User "${TARGET_USERNAME}" not found.`);
-    process.exit(1);
-  }
-  const userId = String(userResult.rows[0].id);
+  const userId = await ensureTargetUser(client);
   console.log(`Target user: ${TARGET_USERNAME} (${userId})\n`);
 
   let created = 0;

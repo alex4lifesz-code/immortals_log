@@ -33,6 +33,7 @@ It is LAN-ready and includes:
 - 2048 MB memory cap
 - persistent database volume
 - automatic Prisma migration on startup
+- automatic shared Application Exercise Library seeding for fresh databases
 - simple image-based deployment like common self-hosted apps
 
 ## Limits

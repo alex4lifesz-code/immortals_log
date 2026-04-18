@@ -20,7 +20,7 @@ services:
     volumes:
       - immortals_log_data:/app/data
     command: >
-      sh -c 'npx prisma migrate deploy && npm run start -- -H 0.0.0.0 -p 4400'
+      sh -c 'npx prisma migrate deploy && node scripts/import-exercise-library.cjs __app_exercise_library__ && npm run start -- -H 0.0.0.0 -p 4400'
     ports:
       - "4400:4400"
     healthcheck:

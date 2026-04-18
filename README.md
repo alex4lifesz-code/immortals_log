@@ -47,7 +47,7 @@ Use [docker-compose.yml](docker-compose.yml) for the clean default Portainer dep
 - Compose path: [portainer-stack.yml](portainer-stack.yml)
 - Required variables: JWT_SECRET, APP_URL, NEXT_PUBLIC_APP_URL
 
-The container automatically runs Prisma migrations on startup and listens on port 4400.
+The container automatically runs Prisma migrations on startup, seeds the shared Application Exercise Library into a fresh database, and listens on port 4400.
 
 ### Convenience variants
 
