@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import GlowButton from "@/components/ui/GlowButton";
 import { useAppContext } from "@/context/AppContext";
@@ -9,29 +9,27 @@ import {
   useDisplaySettings,
   type CalendarWeekStartOption,
   type DateFormatOption,
-  type VariationDisplayMode,
   type WeightUnitPref,
 } from "@/context/DisplaySettingsContext";
 import type { Theme } from "@/lib/config";
 import type { LanguageMode } from "@/lib/language";
-import LearningText from "@/components/ui/LearningText";
 
 const THEME_OPTIONS: Array<{ value: Theme; label: string; desc: string }> = [
   { value: "discord", label: "Discord Default", desc: "Original Discord-style canvas" },
-  { value: "midnight-ink", label: "Midnight Ink", desc: "Discord canvas with deep void + jade accents" },
-  { value: "mountain-mist", label: "Mountain Mist", desc: "Discord canvas with misty parchment blues" },
-  { value: "calligraphy", label: "Calligraphy", desc: "Discord canvas with monochrome ink tones" },
-  { value: "sakura", label: "Sakura", desc: "Discord canvas with light blossom colors" },
-  { value: "sakura-dark", label: "Sakura Dark", desc: "Discord canvas with dusk rose tones" },
-  { value: "eternal", label: "Eternal", desc: "Discord canvas with clean minimal greens" },
-  { value: "document", label: "Document", desc: "Discord canvas with paper and slate tones" },
-  { value: "nyaa", label: "Nyaa", desc: "Discord canvas with blue-green contrast" },
-  { value: "emerald-lotus", label: "Emerald Lotus", desc: "Discord canvas with jade temple colors" },
-  { value: "gilded-bamboo", label: "Gilded Bamboo", desc: "Discord canvas with warm gold accents" },
-  { value: "crane-peak", label: "Crane Peak", desc: "Discord canvas with silver-blue highlights" },
-  { value: "obsidian-void", label: "Obsidian Void", desc: "Discord canvas with cosmic purple hues" },
-  { value: "crimson-gate", label: "Crimson Gate", desc: "Discord canvas with ember-red contrast" },
-  { value: "frost-sanctuary", label: "Frost Sanctuary", desc: "Discord canvas with icy aurora tones" },
+  { value: "midnight-ink", label: "Midnight Ink", desc: "Deep void with jade accents" },
+  { value: "mountain-mist", label: "Mountain Mist", desc: "Misty parchment blues" },
+  { value: "calligraphy", label: "Calligraphy", desc: "Monochrome ink tones" },
+  { value: "sakura", label: "Sakura", desc: "Light blossom colors" },
+  { value: "sakura-dark", label: "Sakura Dark", desc: "Dusk rose tones" },
+  { value: "eternal", label: "Eternal", desc: "Clean minimal greens" },
+  { value: "document", label: "Document", desc: "Paper and slate tones" },
+  { value: "nyaa", label: "Nyaa", desc: "Blue-green contrast" },
+  { value: "emerald-lotus", label: "Emerald Lotus", desc: "Jade temple colors" },
+  { value: "gilded-bamboo", label: "Gilded Bamboo", desc: "Warm gold accents" },
+  { value: "crane-peak", label: "Crane Peak", desc: "Silver-blue highlights" },
+  { value: "obsidian-void", label: "Obsidian Void", desc: "Cosmic purple hues" },
+  { value: "crimson-gate", label: "Crimson Gate", desc: "Ember-red contrast" },
+  { value: "frost-sanctuary", label: "Frost Sanctuary", desc: "Icy aurora tones" },
 ];
 
 const DATE_OPTIONS: Array<{ value: DateFormatOption; label: string; sample: string }> = [
@@ -57,74 +55,41 @@ const CALENDAR_START_OPTIONS: Array<{ value: CalendarWeekStartOption; label: str
   { value: "sunday", label: "Sunday", desc: "Common in the US" },
 ];
 
-const SECTION_IDS = ["overview", "appearance", "calendar", "language", "training"] as const;
-type SectionId = (typeof SECTION_IDS)[number];
-
-function SettingsChoice({
-  active,
+function SectionCard({
+  eyebrow,
   title,
-  subtitle,
-  badge,
-  onClick,
-  languageMode,
-  learningEnabled,
+  description,
+  children,
 }: {
-  active: boolean;
+  eyebrow: string;
   title: string;
-  subtitle?: string;
-  badge?: string;
-  onClick: () => void;
-  languageMode: LanguageMode;
-  learningEnabled: boolean;
+  description?: string;
+  children: ReactNode;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="w-full min-w-0 overflow-hidden rounded-xl border p-3 text-left transition-colors duration-150"
+    <section
+      className="rounded-xl border p-3 sm:p-4"
       style={{
-        borderColor: active ? "rgba(88, 101, 242, 0.6)" : "#3b3f48",
-        backgroundColor: active ? "#383a40" : "#313338",
-        boxShadow: "none",
+        borderColor: "color-mix(in srgb, var(--ink-light) 56%, transparent)",
+        backgroundColor: "color-mix(in srgb, var(--ink-deep) 95%, var(--ink-mid))",
+        boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--cloud-white) 2%, transparent)",
       }}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold break-words" style={{ color: "#f2f3f5" }}>
-            <LearningText text={title} languageMode={languageMode} enabled={learningEnabled} />
-          </p>
-          {subtitle ? (
-            <p className="mt-1 text-[11px] break-words" style={{ color: "#b5bac1" }}>
-              <LearningText text={subtitle} languageMode={languageMode} enabled={learningEnabled} />
-            </p>
-          ) : null}
-        </div>
-        {badge ? (
-          <span
-            className="shrink-0 rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em]"
-            style={{
-              borderColor: "rgba(88, 101, 242, 0.45)",
-              backgroundColor: "rgba(88, 101, 242, 0.12)",
-              color: "#c8cdfa",
-            }}
-          >
-            {badge}
-          </span>
-        ) : null}
-      </div>
-    </button>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">{eyebrow}</p>
+      <h2 className="mt-1 text-[15px] font-semibold text-[#f2f3f5]">{title}</h2>
+      {description ? <p className="mt-1 text-[11px] text-[#b5bac1]">{description}</p> : null}
+      <div className="mt-3">{children}</div>
+    </section>
   );
 }
 
 function SettingsSelectField({
   label,
-  helper,
   value,
   onChange,
   options,
 }: {
   label: string;
-  helper?: string;
   value: string;
   onChange: (value: string) => void;
   options: Array<{ value: string; label: string; desc?: string }>;
@@ -135,13 +100,11 @@ function SettingsSelectField({
     <div
       className="rounded-xl border p-3"
       style={{
-        borderColor: "#3b3f48",
-        backgroundColor: "#313338",
-        boxShadow: "none",
+        borderColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)",
+        backgroundColor: "color-mix(in srgb, var(--ink-mid) 58%, var(--ink-deep))",
       }}
     >
       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">{label}</p>
-      {helper ? <p className="mt-1 text-[11px]" style={{ color: "#b5bac1" }}>{helper}</p> : null}
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
@@ -158,489 +121,219 @@ function SettingsSelectField({
           </option>
         ))}
       </select>
-      {selected?.desc ? (
-        <p className="mt-2 text-[11px]" style={{ color: "#b5bac1" }}>{selected.desc}</p>
-      ) : null}
+      {selected?.desc ? <p className="mt-2 text-[11px] text-[#b5bac1]">{selected.desc}</p> : null}
     </div>
   );
 }
 
-function SettingsSection({
-  id,
-  eyebrow,
-  title,
-  description,
-  children,
+function ToggleOption({
   active,
-  onToggle,
+  title,
+  subtitle,
+  onClick,
 }: {
-  id: SectionId;
-  eyebrow: string;
-  title: string;
-  description: string;
-  children: ReactNode;
   active: boolean;
-  onToggle: () => void;
+  title: string;
+  subtitle?: string;
+  onClick: () => void;
 }) {
   return (
-    <section
-      id={id}
-      className="scroll-mt-24 rounded-xl border p-3 sm:p-4"
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full rounded-xl border p-3 text-left transition-colors"
       style={{
-        borderColor: active ? "rgba(88, 101, 242, 0.55)" : "#3b3f48",
-        backgroundColor: "#2b2d31",
-        boxShadow: "none",
+        borderColor: active ? "rgba(88, 101, 242, 0.56)" : "#3b3f48",
+        backgroundColor: active ? "#383a40" : "#313338",
       }}
     >
-      <button
-        type="button"
-        onClick={onToggle}
-        className="flex w-full items-start justify-between gap-3 text-left"
-        aria-expanded={active}
-      >
-        <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: "#949ba4" }}>{eyebrow}</p>
-          <h2 className="mt-1 text-sm font-semibold uppercase tracking-[0.08em] sm:text-base" style={{ color: "#f2f3f5" }}>{title}</h2>
-          <p className="mt-1 text-[11px]" style={{ color: "#b5bac1" }}>{description}</p>
-        </div>
-        <span
-          className="mt-1 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border text-sm"
-          style={{
-            borderColor: active ? "rgba(88, 101, 242, 0.55)" : "#3b3f48",
-            backgroundColor: active ? "#383a40" : "#313338",
-            color: active ? "#f2f3f5" : "#b5bac1",
-          }}
-        >
-          {active ? "−" : "+"}
-        </span>
-      </button>
-
-      {active ? <div className="mt-4">{children}</div> : null}
-    </section>
+      <p className="text-sm font-semibold text-[#f2f3f5]">{title}</p>
+      {subtitle ? <p className="mt-1 text-[11px] text-[#b5bac1]">{subtitle}</p> : null}
+    </button>
   );
 }
 
 export default function SettingsPage() {
   const { logout, user } = useAuth();
-  const { themeStyle, setThemeStyle, isMobile } = useAppContext();
+  const { themeStyle, setThemeStyle } = useAppContext();
   const { settings, updateSettings, resetSettings } = useDisplaySettings();
-  const [activeSection, setActiveSection] = useState<SectionId | null>("overview");
-  const [exerciseLanguageAutoSelectedNotice, setExerciseLanguageAutoSelectedNotice] = useState("");
-
-  const themeLabel = useMemo(
-    () => THEME_OPTIONS.find((theme) => theme.value === themeStyle)?.label ?? themeStyle,
-    [themeStyle],
-  );
-
-  const timeZoneLabel = useMemo(
-    () => TIMEZONE_OPTIONS.find((option) => option.value === settings.timeZone)?.label ?? settings.timeZone,
-    [settings.timeZone],
-  );
-
-  const themeDescription = useMemo(
-    () => THEME_OPTIONS.find((theme) => theme.value === themeStyle)?.desc ?? "",
-    [themeStyle],
-  );
-
-  const timeZoneDescription = useMemo(
-    () => TIMEZONE_OPTIONS.find((option) => option.value === settings.timeZone)?.desc ?? "",
-    [settings.timeZone],
-  );
+  const languageMode = settings.languageMode ?? "english";
 
   const handleLanguageModeChange = (nextLanguageMode: LanguageMode) => {
     if (nextLanguageMode === "vietnamese") {
-      const shouldAutoEnableExerciseLanguage = !settings.showExerciseForeignLanguage;
       updateSettings({
         languageMode: "vietnamese",
         showExerciseForeignLanguage: true,
       });
-      setExerciseLanguageAutoSelectedNotice(
-        shouldAutoEnableExerciseLanguage
-          ? "Exercise language was auto-selected for Vietnamese UI."
-          : "Exercise language remains enabled for Vietnamese UI.",
-      );
       return;
     }
 
     updateSettings({ languageMode: nextLanguageMode });
-    setExerciseLanguageAutoSelectedNotice("");
   };
-
-  const scrollToSection = (sectionId: SectionId) => {
-    const nextSection = activeSection === sectionId ? null : sectionId;
-    setActiveSection(nextSection);
-    if (!nextSection || typeof window === "undefined") return;
-    window.requestAnimationFrame(() => {
-      document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  };
-
-  const languageMode = settings.languageMode ?? "english";
-  const learningEnabled = settings.terminologyMode === "normal";
 
   return (
     <PageLayout
-      title={learningEnabled ? (languageMode === "vietnamese" ? "Cài đặt" : "Settings") : "Settings"}
-      subtitle={learningEnabled ? (languageMode === "vietnamese" ? "Tune the interface for mobile and desktop flow" : "Tune the interface for mobile and desktop flow") : "Tune the interface for mobile and desktop flow"}
+      title={languageMode === "vietnamese" ? "Cài đặt" : "Settings"}
+      subtitle="Core preferences only"
       mobileContentPaddingClass="p-2 pb-24"
     >
-      <div
-        className="relative overflow-visible rounded-xl border p-2 sm:overflow-hidden sm:p-3"
-        style={{
-          borderColor: "#3b3f48",
-          backgroundColor: "#2b2d31",
-          boxShadow: "none",
-        }}
-      >
-        <div className="pointer-events-none absolute inset-x-4 top-0 h-px" style={{ background: "color-mix(in srgb, var(--accent) 28%, transparent)" }} />
-
-        <div className={`relative min-w-0 gap-3 ${isMobile ? "space-y-3" : "grid xl:grid-cols-[260px_minmax(0,1fr)]"}`}>
-          <aside className="xl:sticky xl:top-4 xl:self-start">
-            <div
-              className="rounded-xl border p-3"
-              style={{
-                borderColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)",
-                backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))",
-                boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--cloud-white) 2%, transparent)",
-              }}
-            >
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">User settings</p>
-              <h2 className="mt-2 text-lg font-semibold text-[#f2f3f5]">{user?.name || "Cultivator"}</h2>
-              <p className="mt-1 text-[11px] text-[#b5bac1]">A Discord-style settings hub that adapts cleanly from phone to desktop.</p>
-
-              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:flex xl:flex-col">
-                {[
-                  { id: "overview" as SectionId, label: "Overview" },
-                  { id: "appearance" as SectionId, label: "Appearance" },
-                  { id: "calendar" as SectionId, label: "Region" },
-                  { id: "language" as SectionId, label: "Language" },
-                  { id: "training" as SectionId, label: "Training" },
-                ].map((section) => (
-                  <button
-                    key={section.id}
-                    type="button"
-                    onClick={() => scrollToSection(section.id)}
-                    className={[
-                      "w-full min-w-0 rounded-md border px-3 py-2 text-left text-sm transition-colors xl:w-full",
-                      activeSection === section.id
-                        ? "text-[#f2f3f5]"
-                        : "text-[#b5bac1] hover:text-[#f2f3f5]",
-                    ].join(" ")}
-                    style={{
-                      borderColor: activeSection === section.id ? "rgba(88, 101, 242, 0.6)" : "#3b3f48",
-                      backgroundColor: activeSection === section.id ? "#383a40" : "#313338",
-                    }}
-                  >
-                    {section.label}
-                  </button>
-                ))}
-              </div>
-
-              <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
-                <div
-                  className="min-w-0 rounded-lg border px-3 py-2"
-                  style={{
-                    borderColor: "#3b3f48",
-                    background: "#313338",
-                  }}
-                >
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-[#949ba4]">Theme</p>
-                  <p className="mt-1 break-words text-sm font-medium" style={{ color: "#f2f3f5" }}>{themeLabel}</p>
-                </div>
-                <div
-                  className="min-w-0 rounded-lg border px-3 py-2"
-                  style={{
-                    borderColor: "#3b3f48",
-                    background: "#313338",
-                  }}
-                >
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-[#949ba4]">Zone</p>
-                  <p className="mt-1 break-words text-sm font-medium" style={{ color: "#f2f3f5" }}>{timeZoneLabel}</p>
-                </div>
-              </div>
+      <div className="space-y-3 px-0 py-2 sm:space-y-4 sm:py-3">
+        <SectionCard
+          eyebrow="Settings"
+          title={user?.name || "Cultivator"}
+          description="Only the settings that still matter for everyday use."
+        >
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-lg border px-3 py-2.5" style={{ borderColor: "#3b3f48", background: "#313338" }}>
+              <p className="text-[10px] uppercase tracking-[0.16em] text-[#949ba4]">Theme</p>
+              <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{THEME_OPTIONS.find((theme) => theme.value === themeStyle)?.label ?? themeStyle}</p>
             </div>
-          </aside>
+            <div className="rounded-lg border px-3 py-2.5" style={{ borderColor: "#3b3f48", background: "#313338" }}>
+              <p className="text-[10px] uppercase tracking-[0.16em] text-[#949ba4]">Date</p>
+              <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{settings.dateFormat}</p>
+            </div>
+            <div className="rounded-lg border px-3 py-2.5" style={{ borderColor: "#3b3f48", background: "#313338" }}>
+              <p className="text-[10px] uppercase tracking-[0.16em] text-[#949ba4]">Timezone</p>
+              <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{TIMEZONE_OPTIONS.find((zone) => zone.value === settings.timeZone)?.label ?? settings.timeZone}</p>
+            </div>
+            <div className="rounded-lg border px-3 py-2.5" style={{ borderColor: "#3b3f48", background: "#313338" }}>
+              <p className="text-[10px] uppercase tracking-[0.16em] text-[#949ba4]">Weight</p>
+              <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{settings.defaultWeightUnit.toUpperCase()}</p>
+            </div>
+          </div>
+        </SectionCard>
 
-          <div className="min-w-0 space-y-2 sm:space-y-3">
-            <SettingsSection
-              id="overview"
-              eyebrow="Control center"
-              title="Clean settings canvas"
-              description="The old dense table layout has been replaced with a simpler panel system designed for thumb-friendly mobile interaction and a spacious desktop view."
-              active={activeSection === "overview"}
-              onToggle={() => scrollToSection("overview")}
-            >
-              <div className="grid gap-2 sm:grid-cols-2 2xl:grid-cols-4">
-                {[
-                  { label: "Current theme", value: themeLabel },
-                  { label: "Date format", value: settings.dateFormat },
-                  { label: "Week start", value: settings.calendarWeekStart },
-                  { label: "Weight unit", value: settings.defaultWeightUnit.toUpperCase() },
-                ].map((item) => (
-                  <div
-                    key={item.label}
-                    className="rounded-lg border px-3 py-3"
-                    style={{ borderColor: "#3b3f48", background: "#313338" }}
-                  >
-                    <p className="text-[10px] uppercase tracking-[0.16em] text-[#949ba4]">{item.label}</p>
-                    <p className="mt-1 text-sm font-semibold" style={{ color: "#f2f3f5" }}>{item.value}</p>
-                  </div>
-                ))}
-              </div>
+        <SectionCard eyebrow="Appearance" title="Theme" description="Pick the canvas look for the app.">
+          <SettingsSelectField
+            label="Theme style"
+            value={themeStyle}
+            onChange={(value) => setThemeStyle(value as Theme)}
+            options={THEME_OPTIONS.map((theme) => ({ value: theme.value, label: theme.label, desc: theme.desc }))}
+          />
+        </SectionCard>
 
-              <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                <GlowButton variant="ghost" onClick={resetSettings} className="w-full sm:w-auto">
-                  <LearningText text="Reset Display Settings" languageMode={languageMode} enabled={learningEnabled} />
-                </GlowButton>
-                <GlowButton variant="crimson" onClick={logout} className="w-full sm:w-auto">
-                  <LearningText text="Logout" languageMode={languageMode} enabled={learningEnabled} />
-                </GlowButton>
-              </div>
-            </SettingsSection>
+        <SectionCard eyebrow="Calendar" title="Date and region" description="Keep dates and schedules consistent across the app.">
+          <div className="grid gap-3 lg:grid-cols-2">
+            <SettingsSelectField
+              label="Timezone"
+              value={settings.timeZone}
+              onChange={(value) => updateSettings({ timeZone: value })}
+              options={TIMEZONE_OPTIONS.map((option) => ({ value: option.value, label: option.label, desc: option.desc }))}
+            />
 
-            <SettingsSection
-              id="appearance"
-              eyebrow="Appearance"
-              title="Canvas themes and date styling"
-              description="Each theme now keeps the same Discord-inspired layout and sidebar sync while only changing the palette."
-              active={activeSection === "appearance"}
-              onToggle={() => scrollToSection("appearance")}
-            >
-              {isMobile ? (
-                <div className="grid gap-2 lg:grid-cols-2">
-                  <SettingsSelectField
-                    label="Theme"
-                    helper="Use the selector for the longer theme list."
-                    value={themeStyle}
-                    onChange={(value) => setThemeStyle(value as Theme)}
-                    options={THEME_OPTIONS.map((theme) => ({ value: theme.value, label: theme.label, desc: theme.desc }))}
-                  />
-                  <div
-                    className="rounded-xl border p-3"
-                    style={{
-                      borderColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)",
-                      backgroundColor: "color-mix(in srgb, var(--ink-mid) 52%, var(--ink-deep))",
-                    }}
-                  >
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">Current theme</p>
-                    <p className="mt-1 text-sm font-semibold" style={{ color: "#f2f3f5" }}>{themeLabel}</p>
-                    <p className="mt-1 text-[11px]" style={{ color: "#b5bac1" }}>{themeDescription}</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="grid gap-2 lg:grid-cols-2 xl:grid-cols-3">
-                  {THEME_OPTIONS.map((theme) => (
-                    <SettingsChoice
-                      key={theme.value}
-                      active={themeStyle === theme.value}
-                      title={theme.label}
-                      subtitle={theme.desc}
-                      badge={theme.value === "discord" ? "discord" : undefined}
-                      onClick={() => setThemeStyle(theme.value)}
-                      languageMode={languageMode}
-                      learningEnabled={learningEnabled}
-                    />
-                  ))}
-                </div>
-              )}
-
-              <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">Date format</p>
+              <div className="grid gap-2 sm:grid-cols-2">
                 {DATE_OPTIONS.map((option) => (
-                  <SettingsChoice
+                  <ToggleOption
                     key={option.value}
                     active={settings.dateFormat === option.value}
                     title={option.label}
                     subtitle={option.sample}
                     onClick={() => updateSettings({ dateFormat: option.value })}
-                    languageMode={languageMode}
-                    learningEnabled={learningEnabled}
                   />
                 ))}
               </div>
-            </SettingsSection>
-
-            <SettingsSection
-              id="calendar"
-              eyebrow="Region & calendar"
-              title="Timezone-aware scheduling"
-              description="Your calendar, logs, and today markers follow the user-selected region instead of a generic clock."
-              active={activeSection === "calendar"}
-              onToggle={() => scrollToSection("calendar")}
-            >
-              {isMobile ? (
-                <div className="grid gap-2 lg:grid-cols-2">
-                  <SettingsSelectField
-                    label="Timezone"
-                    helper="Longer region lists now use a compact selector."
-                    value={settings.timeZone}
-                    onChange={(value) => updateSettings({ timeZone: value })}
-                    options={TIMEZONE_OPTIONS.map((option) => ({ value: option.value, label: option.label, desc: option.desc }))}
-                  />
-                  <div
-                    className="rounded-xl border p-3"
-                    style={{
-                      borderColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)",
-                      backgroundColor: "color-mix(in srgb, var(--ink-mid) 52%, var(--ink-deep))",
-                    }}
-                  >
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">Selected region</p>
-                    <p className="mt-1 text-sm font-semibold" style={{ color: "#f2f3f5" }}>{timeZoneLabel}</p>
-                    <p className="mt-1 text-[11px]" style={{ color: "#b5bac1" }}>{timeZoneDescription}</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="grid gap-2 lg:grid-cols-2 xl:grid-cols-3">
-                  {TIMEZONE_OPTIONS.map((option) => (
-                    <SettingsChoice
-                      key={option.value}
-                      active={settings.timeZone === option.value}
-                      title={option.label}
-                      subtitle={option.desc}
-                      onClick={() => updateSettings({ timeZone: option.value })}
-                      languageMode={languageMode}
-                      learningEnabled={learningEnabled}
-                    />
-                  ))}
-                </div>
-              )}
-
-              <div className="mt-4 grid gap-2 sm:grid-cols-3">
-                {CALENDAR_START_OPTIONS.map((option) => (
-                  <SettingsChoice
-                    key={option.value}
-                    active={settings.calendarWeekStart === option.value}
-                    title={option.label}
-                    subtitle={option.desc}
-                    onClick={() => updateSettings({ calendarWeekStart: option.value })}
-                    languageMode={languageMode}
-                    learningEnabled={learningEnabled}
-                  />
-                ))}
-              </div>
-            </SettingsSection>
-
-            <SettingsSection
-              id="language"
-              eyebrow="Language"
-              title="Terminology and naming"
-              description="Separate the overall app language from exercise-name display so mobile users can keep the UI clean."
-              active={activeSection === "language"}
-              onToggle={() => scrollToSection("language")}
-            >
-              <div className="grid gap-2 lg:grid-cols-2">
-                <div className="space-y-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">App language</p>
-                  <SettingsChoice
-                    active={languageMode === "english"}
-                    title="English"
-                    subtitle="UI labels in English"
-                    onClick={() => handleLanguageModeChange("english")}
-                    languageMode={languageMode}
-                    learningEnabled={learningEnabled}
-                  />
-                  <SettingsChoice
-                    active={languageMode === "vietnamese"}
-                    title="Vietnamese"
-                    subtitle="UI labels in Vietnamese"
-                    onClick={() => handleLanguageModeChange("vietnamese")}
-                    languageMode={languageMode}
-                    learningEnabled={learningEnabled}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">Label style</p>
-                  <SettingsChoice
-                    active={settings.terminologyMode === "normal"}
-                    title="Conventional"
-                    subtitle="Standard fitness labels"
-                    onClick={() => updateSettings({ terminologyMode: "normal" })}
-                    languageMode={languageMode}
-                    learningEnabled={learningEnabled}
-                  />
-                  <SettingsChoice
-                    active={settings.terminologyMode === "fantasy"}
-                    title="Cultivation"
-                    subtitle="Wuxia-themed labels"
-                    onClick={() => updateSettings({ terminologyMode: "fantasy" })}
-                    languageMode={languageMode}
-                    learningEnabled={learningEnabled}
-                  />
-                </div>
-              </div>
-
-              <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                <SettingsChoice
-                  active={settings.showExerciseForeignLanguage}
-                  title="Show exercises in foreign name"
-                  subtitle="Helpful for bilingual learning"
-                  onClick={() => updateSettings({ showExerciseForeignLanguage: true })}
-                  languageMode={languageMode}
-                  learningEnabled={learningEnabled}
-                />
-                <SettingsChoice
-                  active={!settings.showExerciseForeignLanguage}
-                  title="Hide exercises in foreign name"
-                  subtitle="Cleaner, more compact list view"
-                  onClick={() => updateSettings({ showExerciseForeignLanguage: false })}
-                  languageMode={languageMode}
-                  learningEnabled={learningEnabled}
-                />
-              </div>
-
-              {exerciseLanguageAutoSelectedNotice ? (
-                <p className="mt-3 rounded-xl border border-[rgba(88,101,242,0.22)] bg-[rgba(88,101,242,0.1)] px-3 py-2 text-xs text-[#d7dcff]">
-                  <LearningText text={exerciseLanguageAutoSelectedNotice} languageMode={languageMode} enabled={learningEnabled} />
-                </p>
-              ) : null}
-            </SettingsSection>
-
-            <SettingsSection
-              id="training"
-              eyebrow="Training display"
-              title="Weight and variation formatting"
-              description="These controls stay compact on phones but open into a tidy two-column arrangement on larger screens."
-              active={activeSection === "training"}
-              onToggle={() => scrollToSection("training")}
-            >
-              <div className="grid gap-2 lg:grid-cols-2">
-                <div className="space-y-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">Weight unit</p>
-                  {([
-                    { value: "kg" as WeightUnitPref, title: "Kilograms (kg)" },
-                    { value: "lbs" as WeightUnitPref, title: "Pounds (lbs)" },
-                  ]).map((option) => (
-                    <SettingsChoice
-                      key={option.value}
-                      active={settings.defaultWeightUnit === option.value}
-                      title={option.title}
-                      onClick={() => updateSettings({ defaultWeightUnit: option.value })}
-                      languageMode={languageMode}
-                      learningEnabled={learningEnabled}
-                    />
-                  ))}
-                </div>
-
-                <div className="space-y-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">Variation labels</p>
-                  {([
-                    { value: "abbreviation" as VariationDisplayMode, title: "Abbreviated", subtitle: "Short labels" },
-                    { value: "full" as VariationDisplayMode, title: "Full text", subtitle: "Expanded labels" },
-                  ]).map((option) => (
-                    <SettingsChoice
-                      key={option.value}
-                      active={settings.progressionVariationDisplay === option.value}
-                      title={option.title}
-                      subtitle={option.subtitle}
-                      onClick={() => updateSettings({ progressionVariationDisplay: option.value })}
-                      languageMode={languageMode}
-                      learningEnabled={learningEnabled}
-                    />
-                  ))}
-                </div>
-              </div>
-            </SettingsSection>
+            </div>
           </div>
+
+          <div className="mt-3">
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">Week starts on</p>
+            <div className="grid gap-2 sm:grid-cols-3">
+              {CALENDAR_START_OPTIONS.map((option) => (
+                <ToggleOption
+                  key={option.value}
+                  active={settings.calendarWeekStart === option.value}
+                  title={option.label}
+                  subtitle={option.desc}
+                  onClick={() => updateSettings({ calendarWeekStart: option.value })}
+                />
+              ))}
+            </div>
+          </div>
+        </SectionCard>
+
+        <SectionCard eyebrow="Language" title="Language and names" description="Keep the UI readable while choosing how exercise names appear.">
+          <div className="grid gap-3 lg:grid-cols-2">
+            <div>
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">App language</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <ToggleOption
+                  active={languageMode === "english"}
+                  title="English"
+                  subtitle="UI labels in English"
+                  onClick={() => handleLanguageModeChange("english")}
+                />
+                <ToggleOption
+                  active={languageMode === "vietnamese"}
+                  title="Vietnamese"
+                  subtitle="UI labels in Vietnamese"
+                  onClick={() => handleLanguageModeChange("vietnamese")}
+                />
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">Naming style</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <ToggleOption
+                  active={settings.terminologyMode === "normal"}
+                  title="Conventional"
+                  subtitle="Standard fitness labels"
+                  onClick={() => updateSettings({ terminologyMode: "normal" })}
+                />
+                <ToggleOption
+                  active={settings.terminologyMode === "fantasy"}
+                  title="Cultivation"
+                  subtitle="Wuxia-style labels"
+                  onClick={() => updateSettings({ terminologyMode: "fantasy" })}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-3">
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">Exercise names</p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <ToggleOption
+                active={settings.showExerciseForeignLanguage}
+                title="Show bilingual names"
+                subtitle="Helpful for learning and matching names"
+                onClick={() => updateSettings({ showExerciseForeignLanguage: true })}
+              />
+              <ToggleOption
+                active={!settings.showExerciseForeignLanguage}
+                title="Show cleaner names"
+                subtitle="More compact across lists and tables"
+                onClick={() => updateSettings({ showExerciseForeignLanguage: false })}
+              />
+            </div>
+          </div>
+        </SectionCard>
+
+        <SectionCard eyebrow="Training" title="Weight unit" description="Keep training logs consistent with your preferred unit.">
+          <div className="grid gap-2 sm:grid-cols-2">
+            {([
+              { value: "kg" as WeightUnitPref, title: "Kilograms (kg)" },
+              { value: "lbs" as WeightUnitPref, title: "Pounds (lbs)" },
+            ]).map((option) => (
+              <ToggleOption
+                key={option.value}
+                active={settings.defaultWeightUnit === option.value}
+                title={option.title}
+                onClick={() => updateSettings({ defaultWeightUnit: option.value })}
+              />
+            ))}
+          </div>
+        </SectionCard>
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <GlowButton variant="ghost" onClick={resetSettings} className="w-full sm:w-auto">
+            Reset Display Settings
+          </GlowButton>
+          <GlowButton variant="crimson" onClick={logout} className="w-full sm:w-auto">
+            Logout
+          </GlowButton>
         </div>
       </div>
     </PageLayout>

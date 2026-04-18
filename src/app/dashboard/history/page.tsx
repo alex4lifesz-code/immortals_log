@@ -8,18 +8,20 @@ import GlowCard from "@/components/ui/GlowCard";
 import { MemoTrainingLogTable } from "@/components/workout/TrainingLogTable";
 import { useIsMobile } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
+import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { api } from "@/lib/api-client";
 import { getDeletedExerciseLabel } from "@/lib/exercise-name";
 import { DASHBOARD_ROUTES } from "@/lib/navigation";
 import { isDeletedExerciseDescription } from "@/lib/pending-exercises";
 import { DEFAULT_USER_PHYSIQUE, loadUserPhysique } from "@/lib/user-physique";
 import { PROGRESSION_EXERCISES_UPDATED_EVENT } from "@/lib/progression-events";
+import { formatSetValue, type WeightUnit } from "@/lib/unit-conversion";
 import type { UserPhysiqueSettings } from "@/lib/user-physique";
 import type { ProgressionExercise, ProgressionLog } from "../workout/types";
 
 type WorkoutMetricRow = { weight: string; reps: string };
 
-function getWorkoutMetricRows(log: ProgressionLog): WorkoutMetricRow[] {
+function getWorkoutMetricRows(log: ProgressionLog, displayUnit: WeightUnit = "kg"): WorkoutMetricRow[] {
   const hasHold = log.holdTime != null || log.holdTime2 != null || log.holdTime3 != null;
   const primaryRows = (hasHold
     ? [log.holdTime, log.holdTime2, log.holdTime3]
@@ -28,7 +30,7 @@ function getWorkoutMetricRows(log: ProgressionLog): WorkoutMetricRow[] {
     const reps = [log.reps1, log.reps2, log.reps3][index];
     if (metric == null && reps == null) return null;
     return {
-      weight: metric == null ? "-" : hasHold ? `${metric}s` : `${metric} kg`,
+      weight: metric == null ? "-" : formatSetValue(metric, hasHold ? "timed" : "weighted", displayUnit),
       reps: reps == null ? "-" : String(reps),
     };
   }).filter((row): row is WorkoutMetricRow => Boolean(row));
@@ -38,8 +40,8 @@ function getWorkoutMetricRows(log: ProgressionLog): WorkoutMetricRow[] {
   return rows.length > 0 ? rows : [{ weight: "-", reps: "-" }];
 }
 
-function formatWorkoutValueChips(log: ProgressionLog): string[] {
-  const chips = getWorkoutMetricRows(log)
+function formatWorkoutValueChips(log: ProgressionLog, displayUnit: WeightUnit = "kg"): string[] {
+  const chips = getWorkoutMetricRows(log, displayUnit)
     .map((row) => (row.reps !== "-" ? `${row.weight} x ${row.reps}` : row.weight))
     .filter(Boolean);
 
@@ -116,6 +118,8 @@ function getRecentExerciseTextColor(dateLike: string | null | undefined, isSelec
 export default function HistoryPage() {
   const { user } = useAuth();
   const isMobile = useIsMobile();
+  const { settings } = useDisplaySettings();
+  const weightUnit = settings.defaultWeightUnit ?? "kg";
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -479,7 +483,7 @@ export default function HistoryPage() {
     const filtered = selectedMobileExerciseLogs.filter((log) => {
       const progressionName = selectedMobileExercise?.tiers.find((tier) => tier.level === log.level)?.name ?? `Progression ${log.level}`;
       const variationValue = log.variant?.trim() || "-";
-      const metricRows = getWorkoutMetricRows(log);
+      const metricRows = getWorkoutMetricRows(log, weightUnit);
       const hasWeightedValue = metricRows.some((row) => row.weight !== "-" && !row.weight.endsWith("s"));
       const reps = metricRows
         .map((row) => Number.parseInt(row.reps, 10))
@@ -512,7 +516,7 @@ export default function HistoryPage() {
     }
 
     return sorted;
-  }, [mobileDrawerLevelFilter, mobileDrawerRepsFilter, mobileDrawerSearchQuery, mobileDrawerSort, mobileDrawerVariantFilter, mobileDrawerWeightFilter, selectedMobileExercise, selectedMobileExerciseLogs]);
+  }, [mobileDrawerLevelFilter, mobileDrawerRepsFilter, mobileDrawerSearchQuery, mobileDrawerSort, mobileDrawerVariantFilter, mobileDrawerWeightFilter, selectedMobileExercise, selectedMobileExerciseLogs, weightUnit]);
 
   useEffect(() => {
     if (!isMobile && mobileExerciseDrawerExerciseId) {
@@ -1415,7 +1419,7 @@ export default function HistoryPage() {
                       const variationValue = log.variant?.trim() || "-";
                       const modValue = log.modifier?.trim() || "-";
                       const notesValue = log.notes?.trim() || "-";
-                      const alignedMetricRows = getWorkoutMetricRows(log);
+                      const alignedMetricRows = getWorkoutMetricRows(log, weightUnit);
                       const openEditorField = (step: string, field: string) => {
                         const params = new URLSearchParams({ step, field });
                         router.push(`/dashboard/workout-history/input/${log.id}?${params.toString()}`);

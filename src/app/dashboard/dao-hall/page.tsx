@@ -1356,132 +1356,170 @@ export default function DaoHallPage() {
         onClose={() => { setCheckInModal(null); }}
         title={`Day Check-In — ${checkInModal ? formatDateWithPreference(checkInModal.date, dateFormat) : ""}`}
         hideHeader
-        panelClassName="!max-w-2xl !max-h-[86vh] !overflow-hidden"
+        panelClassName="!max-w-[34rem] !max-h-[88vh] !overflow-hidden"
         contentClassName="!p-0"
       >
         {checkInModal && (() => {
           const todayKey = formatDateLocal(new Date(), settings.timeZone);
           const isFarFuture = checkInModal.date > todayKey;
+          const currentUserEntry = user?.id
+            ? (checkInModal.entries[user.id] || { present: false, weight: "", comment: "" })
+            : { present: false, weight: "", comment: "" };
+          const checkedInUsers = allUsers.filter((u) => checkInModal.entries[u.id]?.present);
+          const hasExistingFutureNote = Boolean(
+            user?.id && futureNotes.some((n) => n.date === checkInModal.date && n.user.id === user.id)
+          );
 
           return (
             <div
-              className="overflow-hidden rounded-lg border border-[#32353b] bg-[#2b2d31]"
-              style={{ boxShadow: "0 1px 0 rgba(255,255,255,0.03) inset" }}
+              className="overflow-hidden rounded-xl border"
+              style={{
+                borderColor: "color-mix(in srgb, var(--ink-light) 56%, transparent)",
+                backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))",
+                boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--cloud-white) 3%, transparent), 0 14px 30px rgba(0,0,0,0.28)",
+              }}
             >
-              <div className="flex items-center justify-between gap-3 border-b border-[#32353b] px-3 py-2.5">
-                <div className="min-w-0">
-                  <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Day Check-In</p>
-                  <h2 className="truncate text-sm font-semibold text-[#f2f3f5]">
-                    {formatDateWithPreference(checkInModal.date, dateFormat)}
-                  </h2>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`rounded-md border px-2 py-1 text-[10px] font-semibold ${isFarFuture ? "border-[#5b4d34] bg-[#3a3328] text-[#f3cd8c]" : "border-[#4e5058] bg-[#404249] text-[#ffffff]"}`}>
-                    {isFarFuture ? "Notes Mode" : "Check-In Mode"}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setCheckInModal(null)}
-                    aria-label="Close dialog"
-                    className="flex h-8 w-8 items-center justify-center rounded-md border border-[#3b3f48] bg-[#2b2d31] text-[#b5bac1] transition-colors hover:bg-[#35373c] hover:text-[#f2f3f5]"
-                  >
-                    ✕
-                  </button>
+              <div
+                className="border-b px-3.5 py-3"
+                style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)" }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8ea1ff]">Training Canvas</p>
+                    <h2 className="mt-1 truncate text-[16px] font-semibold text-[#f2f3f5]">Day Check-In</h2>
+                    <p className="mt-1 text-[12px] text-[#b5bac1]">
+                      {formatDateWithPreference(checkInModal.date, dateFormat)}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="rounded-md border px-2 py-1 text-[10px] font-semibold"
+                      style={{
+                        borderColor: isFarFuture
+                          ? "rgba(240, 185, 106, 0.34)"
+                          : currentUserEntry.present
+                            ? "rgba(87, 242, 135, 0.38)"
+                            : "rgba(88, 101, 242, 0.38)",
+                        backgroundColor: isFarFuture
+                          ? "rgba(240, 185, 106, 0.10)"
+                          : currentUserEntry.present
+                            ? "rgba(87, 242, 135, 0.10)"
+                            : "rgba(88, 101, 242, 0.12)",
+                        color: isFarFuture ? "#f3cd8c" : currentUserEntry.present ? "#c9f7d6" : "#d6dcff",
+                      }}
+                    >
+                      {isFarFuture ? "Note Only" : currentUserEntry.present ? "Checked In" : "Ready"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setCheckInModal(null)}
+                      aria-label="Close dialog"
+                      className="flex h-8 w-8 items-center justify-center rounded-md border text-[#b5bac1] transition-colors hover:text-[#f2f3f5]"
+                      style={{
+                        borderColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)",
+                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 54%, transparent)",
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <div className="max-h-[calc(86vh-3.25rem)] overflow-y-auto px-2.5 pt-2.5 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] scrollbar-hide" style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain", touchAction: "pan-y" }}>
-                <div className="space-y-2.5">
-                  {isFarFuture && (
-                    <div className="rounded-md border border-[#5b4d34] bg-[#312b22] px-2.5 py-1.5 text-[11px] text-[#f3cd8c]">
-                      Save a personal note for this future day. Full check-in is available only for today.
+              <div
+                className="max-h-[calc(88vh-4.25rem)] overflow-y-auto px-3.5 py-3 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] scrollbar-hide"
+                style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain", touchAction: "pan-y" }}
+              >
+                <div className="space-y-3">
+                  {isFarFuture ? (
+                    <div
+                      className="rounded-lg border px-3 py-2 text-[11px]"
+                      style={{
+                        borderColor: "rgba(240, 185, 106, 0.34)",
+                        backgroundColor: "rgba(240, 185, 106, 0.08)",
+                        color: "#f3cd8c",
+                      }}
+                    >
+                      Future days only support a personal note. Full check-in is available on the day itself.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="rounded-md border px-2.5 py-2" style={{ borderColor: "color-mix(in srgb, var(--ink-light) 50%, transparent)", backgroundColor: "color-mix(in srgb, var(--ink-mid) 62%, var(--ink-deep))" }}>
+                        <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Status</p>
+                        <p className="mt-1 text-[12px] font-semibold text-[#f2f3f5]">{currentUserEntry.present ? "In" : "Open"}</p>
+                      </div>
+                      <div className="rounded-md border px-2.5 py-2" style={{ borderColor: "color-mix(in srgb, var(--ink-light) 50%, transparent)", backgroundColor: "color-mix(in srgb, var(--ink-mid) 62%, var(--ink-deep))" }}>
+                        <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Weight</p>
+                        <p className="mt-1 text-[12px] font-semibold text-[#f2f3f5]">{currentUserEntry.weight || "--"}</p>
+                      </div>
+                      <div className="rounded-md border px-2.5 py-2" style={{ borderColor: "color-mix(in srgb, var(--ink-light) 50%, transparent)", backgroundColor: "color-mix(in srgb, var(--ink-mid) 62%, var(--ink-deep))" }}>
+                        <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Present</p>
+                        <p className="mt-1 text-[12px] font-semibold text-[#f2f3f5]">{checkedInUsers.length}</p>
+                      </div>
                     </div>
                   )}
 
-                  {!isFarFuture && (
-                    <section className="border-b border-[#32353b] pb-3">
-                      <div className="mb-3">
-                        <label className="block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">
-                          Cultivator Check-In
-                        </label>
-                        <p className="mt-1 text-[11px] text-[#b5bac1]">
-                          Check-in and weight are tracked separately. Logging at least one workout for this day will auto-mark you as present.
-                        </p>
-                      </div>
-
-                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                        {allUsers.map((u) => {
-                          const entry = checkInModal.entries[u.id] || { present: false, weight: "", comment: "" };
-                          const color = getUserCultivatorColor(u.id, userColors);
-                          const isSelf = u.id === user.id;
-                          return (
-                            <motion.div
-                              key={u.id}
-                              whileHover={isSelf ? { scale: 1.01 } : {}}
-                              whileTap={isSelf ? { scale: 0.99 } : {}}
-                              className={`rounded-md border p-2.5 transition-all ${
-                                entry.present
-                                  ? "bg-[#313338]"
-                                  : "bg-[#2b2d31]"
-                              } ${isSelf ? "" : "opacity-75 cursor-default"}`}
-                              style={{
-                                borderColor: entry.present
-                                  ? `color-mix(in srgb, ${color} 45%, #3b3f48)`
-                                  : "#3b3f48",
-                                boxShadow: "none",
-                              }}
-                            >
-                              <div>
-                                <div className="flex items-center justify-between gap-2">
-                                  <span className="truncate text-[12px] font-semibold text-[#f2f3f5]">{u.name}</span>
-                                  {isSelf ? <span className="rounded-md border border-[#5865f2]/45 bg-[#5865f2]/12 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.08em] text-[#c8cdfa]">Me</span> : null}
-                                </div>
-                                <div className="mt-2 flex items-center gap-2">
-                                  <span className="text-lg font-bold" style={{ color: entry.present ? color : "var(--mist-dark)" }}>
-                                    {entry.present ? "✓" : "○"}
-                                  </span>
-                                  <span className={`text-[11px] font-medium ${entry.present ? "text-[#f2f3f5]" : "text-[#949ba4]"}`}>
-                                    {entry.present ? "Checked in" : "Not checked in"}
-                                  </span>
-                                  {entry.weight ? <span className="ml-auto text-[10px] text-[#b5bac1]">{entry.weight} kg</span> : null}
-                                </div>
-                              </div>
-
-                              {isSelf && (
-                                <div className="mt-3 space-y-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => updateCheckInModalEntry(u.id, "present", !entry.present)}
-                                    className={`w-full rounded-md border px-2.5 py-2 text-[11px] font-semibold transition-colors ${entry.present ? "border-[#2f8f63] bg-[#1f4d3d] text-[#d9fff0]" : "border-[#5865f2]/55 bg-[#2f355f] text-[#eef1ff] hover:bg-[#39427a]"}`}
-                                  >
-                                    {entry.present ? "✓ Checked In" : "Mark Check-In"}
-                                  </button>
-
-                                  <div>
-                                    <label className="mb-1 block text-[10px] uppercase tracking-[0.08em] text-[#949ba4]">Weight</label>
-                                    <input
-                                      type="number"
-                                      placeholder="Weight (kg)"
-                                      value={entry.weight}
-                                      onChange={(e) => updateCheckInModalEntry(u.id, "weight", e.target.value)}
-                                      className="w-full rounded-md border border-[#4f6aa8] bg-[#263248] px-2.5 py-2 text-[11px] text-[#f2f3f5] outline-none placeholder:text-[#9fb2d9]"
-                                      min="0"
-                                      max="500"
-                                      step="0.1"
-                                    />
-                                  </div>
-                                </div>
-                              )}
-                            </motion.div>
-                          );
-                        })}
-                      </div>
+                  {!isFarFuture && user?.id ? (
+                    <section
+                      className="rounded-xl border p-3"
+                      style={{
+                        borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)",
+                        backgroundColor: "color-mix(in srgb, var(--ink-deep) 90%, var(--ink-mid))",
+                      }}
+                    >
+                      <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Today’s check-in</p>
+                      <p className="mt-1 text-[11px] text-[#b5bac1]">Logging training for the day will also count toward attendance.</p>
+                      <button
+                        type="button"
+                        onClick={() => updateCheckInModalEntry(user.id, "present", !currentUserEntry.present)}
+                        className="mt-3 w-full rounded-lg border px-3 py-2.5 text-[12px] font-semibold transition-colors"
+                        style={{
+                          borderColor: currentUserEntry.present ? "rgba(87, 242, 135, 0.42)" : "rgba(88, 101, 242, 0.42)",
+                          backgroundColor: currentUserEntry.present ? "rgba(87, 242, 135, 0.10)" : "rgba(88, 101, 242, 0.12)",
+                          color: currentUserEntry.present ? "#c9f7d6" : "#eef1ff",
+                        }}
+                      >
+                        {currentUserEntry.present ? "✓ Checked In" : "Mark Check-In"}
+                      </button>
                     </section>
-                  )}
+                  ) : null}
 
-                  <section className="pt-1">
-                    <label className="block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Personal Note</label>
-                    <p className="mt-1 text-[11px] text-[#b5bac1]">Add a short update for this day.</p>
+                  {!isFarFuture && user?.id ? (
+                    <section
+                      className="rounded-xl border p-3"
+                      style={{
+                        borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)",
+                        backgroundColor: "color-mix(in srgb, var(--ink-deep) 90%, var(--ink-mid))",
+                      }}
+                    >
+                      <label className="block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Body weight</label>
+                      <input
+                        type="number"
+                        placeholder="Weight in kg"
+                        value={currentUserEntry.weight}
+                        onChange={(e) => updateCheckInModalEntry(user.id, "weight", e.target.value)}
+                        className="mt-2 w-full rounded-md border px-3 py-2 text-[12px] text-[#f2f3f5] outline-none placeholder:text-[#8f98a3]"
+                        style={{
+                          borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)",
+                          backgroundColor: "color-mix(in srgb, var(--ink-mid) 58%, var(--ink-deep))",
+                        }}
+                        min="0"
+                        max="500"
+                        step="0.1"
+                      />
+                    </section>
+                  ) : null}
+
+                  <section
+                    className="rounded-xl border p-3"
+                    style={{
+                      borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)",
+                      backgroundColor: "color-mix(in srgb, var(--ink-deep) 90%, var(--ink-mid))",
+                    }}
+                  >
+                    <label className="block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Personal note</label>
+                    <p className="mt-1 text-[11px] text-[#b5bac1]">Keep it short and relevant to the day.</p>
                     <textarea
                       placeholder="Add a short note for this day"
                       value={user?.id ? checkInModal.entries[user.id]?.comment || "" : ""}
@@ -1490,68 +1528,146 @@ export default function DaoHallPage() {
                           updateCheckInModalEntry(user.id, "comment", e.target.value);
                         }
                       }}
-                      rows={3}
-                      className="mt-2 w-full resize-none rounded-md border border-[#7b5aa6] bg-[#312848] px-2.5 py-2 text-xs text-[#f2f3f5] outline-none placeholder:text-[#c8b3e6]"
+                      rows={4}
+                      className="mt-2 w-full resize-none rounded-md border px-3 py-2 text-[12px] text-[#f2f3f5] outline-none placeholder:text-[#8f98a3]"
+                      style={{
+                        borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)",
+                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 58%, var(--ink-deep))",
+                      }}
                     />
                   </section>
 
-                  <div className="sticky bottom-0 -mx-2.5 mt-2 border-t border-[#32353b] bg-[#2b2d31]/98 px-2.5 pt-2.5 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] backdrop-blur-sm">
-                    {isFarFuture ? (
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={handleSaveCheckIn}
-                          className="flex-1 rounded-md border border-[#3d6f5d] bg-[#24503f] px-3 py-2.5 text-sm font-semibold text-[#e8fff5] transition-colors hover:bg-[#2c644e]"
-                        >
-                          Save Note
-                        </button>
-                        {futureNotes.some(n => n.date === checkInModal.date && n.user.id === user.id) && (
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              const existingNote = futureNotes.find(n => n.date === checkInModal.date && n.user.id === user.id);
-                              if (existingNote) {
-                                await api.delete("/api/checkins/notes", { noteId: existingNote.id });
-                                await api.post("/api/checkins", {
-                                  date: checkInModal.date,
-                                  entries: { [user.id]: { present: false, weight: "", comment: "" } },
-                                });
-                                refreshFutureNotes();
-                                broadcastNotesUpdated();
-                                if (user?.id) updateCheckInModalEntry(user.id, "comment", "");
-                                setCheckInRows(prev => {
-                                  return prev.map(r => {
-                                    if (r.date !== checkInModal.date) return r;
-                                    const updatedEntries = { ...r.entries };
-                                    if (updatedEntries[user.id]) {
-                                      updatedEntries[user.id] = { ...updatedEntries[user.id], comment: "" };
-                                    }
-                                    const hasData = Object.values(updatedEntries).some(
-                                      e => e.present || e.weight || e.comment?.trim()
-                                    );
-                                    if (!hasData) return null;
-                                    return { ...r, entries: updatedEntries };
-                                  }).filter(Boolean) as typeof prev;
-                                });
-                              }
+                  {!isFarFuture && checkedInUsers.length > 0 ? (
+                    <section
+                      className="rounded-xl border p-3"
+                      style={{
+                        borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)",
+                        backgroundColor: "color-mix(in srgb, var(--ink-deep) 90%, var(--ink-mid))",
+                      }}
+                    >
+                      <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Checked in today</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {checkedInUsers.map((u) => (
+                          <span
+                            key={u.id}
+                            className="inline-flex items-center gap-2 rounded-md border px-2 py-1 text-[11px] text-[#dbdee1]"
+                            style={{
+                              borderColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)",
+                              backgroundColor: "color-mix(in srgb, var(--ink-mid) 52%, transparent)",
                             }}
-                            className="flex-1 rounded-md border border-[#6b3b42] bg-[#4a2a30] px-3 py-2.5 text-sm font-semibold text-[#ffd8dc] transition-colors hover:bg-[#5a3239]"
                           >
-                            Clear Note
-                          </button>
-                        )}
+                            <span
+                              className="h-2 w-2 rounded-full"
+                              style={{ backgroundColor: getUserCultivatorColor(u.id, userColors) }}
+                            />
+                            {u.id === user?.id ? "You" : u.name}
+                          </span>
+                        ))}
                       </div>
-                    ) : (
+                    </section>
+                  ) : null}
+                </div>
+              </div>
+
+              <div
+                className="border-t px-3.5 pt-2.5 pb-[calc(env(safe-area-inset-bottom,0px)+0.85rem)]"
+                style={{
+                  borderTopColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)",
+                  backgroundColor: "color-mix(in srgb, var(--ink-deep) 94%, var(--ink-mid))",
+                }}
+              >
+                {isFarFuture ? (
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCheckInModal(null)}
+                      className="flex-1 rounded-md border px-3 py-2.5 text-sm font-semibold text-[#dbdee1]"
+                      style={{
+                        borderColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)",
+                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 52%, transparent)",
+                      }}
+                    >
+                      Close
+                    </button>
+                    {hasExistingFutureNote ? (
                       <button
                         type="button"
-                        onClick={handleSaveCheckIn}
-                        className="w-full rounded-md border border-[#5b6ee1] bg-[#3d4ec9] px-3 py-2.5 text-sm font-semibold text-white shadow-[0_6px_18px_rgba(88,101,242,0.28)] transition-colors hover:bg-[#5063e6]"
+                        onClick={async () => {
+                          const existingNote = futureNotes.find((n) => n.date === checkInModal.date && n.user.id === user?.id);
+                          if (existingNote && user?.id) {
+                            await api.delete("/api/checkins/notes", { noteId: existingNote.id });
+                            await api.post("/api/checkins", {
+                              date: checkInModal.date,
+                              entries: { [user.id]: { present: false, weight: "", comment: "" } },
+                            });
+                            refreshFutureNotes();
+                            broadcastNotesUpdated();
+                            updateCheckInModalEntry(user.id, "comment", "");
+                            setCheckInRows((prev) => {
+                              return prev.map((r) => {
+                                if (r.date !== checkInModal.date) return r;
+                                const updatedEntries = { ...r.entries };
+                                if (updatedEntries[user.id]) {
+                                  updatedEntries[user.id] = { ...updatedEntries[user.id], comment: "" };
+                                }
+                                const hasData = Object.values(updatedEntries).some(
+                                  (e) => e.present || e.weight || e.comment?.trim()
+                                );
+                                if (!hasData) return null;
+                                return { ...r, entries: updatedEntries };
+                              }).filter(Boolean) as typeof prev;
+                            });
+                          }
+                        }}
+                        className="flex-1 rounded-md border px-3 py-2.5 text-sm font-semibold text-[#ffd8dc]"
+                        style={{
+                          borderColor: "rgba(237, 66, 69, 0.34)",
+                          backgroundColor: "rgba(237, 66, 69, 0.10)",
+                        }}
                       >
-                        Save Check-In
+                        Clear
                       </button>
-                    )}
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={handleSaveCheckIn}
+                      className="flex-1 rounded-md border px-3 py-2.5 text-sm font-semibold text-white"
+                      style={{
+                        borderColor: "rgba(88, 101, 242, 0.45)",
+                        backgroundColor: "rgba(88, 101, 242, 0.88)",
+                        boxShadow: "0 8px 18px rgba(88, 101, 242, 0.22)",
+                      }}
+                    >
+                      Save Note
+                    </button>
                   </div>
-                </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCheckInModal(null)}
+                      className="flex-1 rounded-md border px-3 py-2.5 text-sm font-semibold text-[#dbdee1]"
+                      style={{
+                        borderColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)",
+                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 52%, transparent)",
+                      }}
+                    >
+                      Close
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveCheckIn}
+                      className="flex-1 rounded-md border px-3 py-2.5 text-sm font-semibold text-white"
+                      style={{
+                        borderColor: "rgba(88, 101, 242, 0.45)",
+                        backgroundColor: "rgba(88, 101, 242, 0.88)",
+                        boxShadow: "0 8px 18px rgba(88, 101, 242, 0.22)",
+                      }}
+                    >
+                      Save Check-In
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           );
