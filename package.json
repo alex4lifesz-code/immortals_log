@@ -6,6 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "deploy:portainer": "sh ./scripts/deploy-portainer.sh",
+    "deploy:portainer:localhost": "sh ./scripts/deploy-portainer.sh portainer-stack-localhost.yml",
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest"

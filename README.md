@@ -1,36 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Immortals Log
 
-## Getting Started
+Immortals Log is a Next.js workout and progression tracking app with Prisma-backed data storage.
 
-First, run the development server:
+## Local development
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+1. Install dependencies:
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+   npm install
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+2. Start the development server:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+   npm run dev
 
-## Learn More
+3. Open http://localhost:3000
 
-To learn more about Next.js, take a look at the following resources:
+## Production build
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Run the verified production build locally with:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+npm run build
+npm run start
 
-## Deploy on Vercel
+## Portainer deployment
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+This repo is set up to run in Portainer with a 2 GB RAM cap and 2 CPU limit.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Recommended stack file
+
+Use [portainer-stack.yml](portainer-stack.yml) for Portainer deployments.
+
+### Quick setup on a Linux host
+
+1. Copy the example environment file:
+
+   cp .env.portainer.example .env.portainer
+
+2. Edit the values in the new env file, especially the secret and app URL.
+
+3. Deploy with the helper:
+
+   sh ./scripts/deploy-portainer.sh
+
+### Manual Portainer stack deployment
+
+- Repository URL: this repository
+- Compose path: [portainer-stack.yml](portainer-stack.yml)
+- Required variables: JWT_SECRET, APP_URL, NEXT_PUBLIC_APP_URL
+
+The container automatically runs Prisma migrations on startup and listens on port 4400.
+
+### Convenience variants
+
+- [portainer-stack-lan.yml](portainer-stack-lan.yml) for LAN access
+- [portainer-stack-localhost.yml](portainer-stack-localhost.yml) for localhost-only binding
