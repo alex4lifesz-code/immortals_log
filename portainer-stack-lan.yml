@@ -16,11 +16,14 @@ services:
       APP_URL: http://192.168.1.115:4400
       NEXT_PUBLIC_APP_URL: http://192.168.1.115:4400
       JWT_SECRET: REPLACE_WITH_A_LONG_RANDOM_SECRET
+      DEFAULT_ADMIN_USERNAME: ${DEFAULT_ADMIN_USERNAME:-}
+      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-}
+      DEFAULT_ADMIN_NAME: ${DEFAULT_ADMIN_NAME:-Administrator}
       COOKIE_SECURE: "false"
     volumes:
       - immortals_log_data:/app/data
     command: >
-      sh -c 'npx prisma migrate deploy && node scripts/import-exercise-library.cjs __app_exercise_library__ && npm run start -- -H 0.0.0.0 -p 4400'
+      sh -c 'npx prisma migrate deploy && node scripts/ensure-admin-account.cjs && node scripts/import-exercise-library.cjs __app_exercise_library__ && npm run start -- -H 0.0.0.0 -p 4400'
     ports:
       - "4400:4400"
     healthcheck:

@@ -8,6 +8,7 @@ import { validatePassword, validateUsername } from "@/lib/validation";
 import { CONFIG } from "@/lib/config";
 import { generateUniqueImmortalFriendCode } from "@/lib/friend-code";
 import { apiSuccess, ApiErrors } from "@/lib/api";
+import { resolveSelfServeRegistrationRole } from "@/lib/auth/admin-bootstrap";
 
 export async function POST(req: NextRequest) {
   try {
@@ -72,9 +73,11 @@ export async function POST(req: NextRequest) {
       CONFIG.auth.bcryptRounds
     );
 
-    // Check if this is the first user — assign admin role
-    const userCount = await prisma.user.count();
-    const role = userCount === 0 ? "admin" : "user";
+    // If no admin exists yet, the first real self-serve account becomes admin.
+    const users = await prisma.user.findMany({
+      select: { role: true },
+    });
+    const role = resolveSelfServeRegistrationRole(users.map((entry) => entry.role));
     const friendCode = await generateUniqueImmortalFriendCode();
 
     const user = await prisma.user.create({

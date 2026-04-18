@@ -39,3 +39,5 @@ It is LAN-ready and includes:
 ## Limits
 
 The container is capped at 2 CPU cores and 2048 MB RAM.
+
+If no admin exists yet, the first real signup becomes admin. You can also set DEFAULT_ADMIN_USERNAME and DEFAULT_ADMIN_PASSWORD in the env file to bootstrap one during deployment.
