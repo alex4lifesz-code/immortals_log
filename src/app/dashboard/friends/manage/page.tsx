@@ -185,7 +185,14 @@ export default function ManageFriendsPage() {
     }
   }, [broadcastFriendRequestsUpdated, refresh]);
 
-  const removeFriend = useCallback(async (friendUserId: string) => {
+  const removeFriend = useCallback(async (friendUserId: string, friendName?: string) => {
+    if (typeof window !== "undefined") {
+      const confirmed = window.confirm(
+        `Remove ${friendName || "this friend"} from your friends list? This cannot be undone automatically.`
+      );
+      if (!confirmed) return;
+    }
+
     setWorking(true);
     try {
       await api.delete("/api/friends", { friendUserId });
@@ -395,7 +402,7 @@ export default function ManageFriendsPage() {
                                 {stats.lastCheckInDate ? `Last check-in on ${formatDateWithPreference(stats.lastCheckInDate, dateFormat)}` : "No check-in activity yet."}
                               </p>
                             </div>
-                            <GlowButton variant="ghost" size="sm" disabled={working} onClick={() => removeFriend(friend.id)}>
+                            <GlowButton variant="ghost" size="sm" disabled={working} onClick={() => removeFriend(friend.id, friend.name)}>
                               Remove
                             </GlowButton>
                           </div>

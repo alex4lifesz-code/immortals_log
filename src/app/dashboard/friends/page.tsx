@@ -195,7 +195,14 @@ export default function FriendsPage() {
     }
   }, [broadcastFriendRequestsUpdated, refresh]);
 
-  const removeFriend = useCallback(async (friendUserId: string) => {
+  const removeFriend = useCallback(async (friendUserId: string, friendName?: string) => {
+    if (typeof window !== "undefined") {
+      const confirmed = window.confirm(
+        `Remove ${friendName || "this friend"} from your friends list? This cannot be undone automatically.`
+      );
+      if (!confirmed) return;
+    }
+
     setWorking(true);
     try {
       await api.delete("/api/friends", { friendUserId });

@@ -29,11 +29,11 @@ describe("handleLegacyRedirects", () => {
     expect(result!.status).toBe(307);
   });
 
-  it("redirects /dashboard/workout-history/input/abc to /dashboard/train/input/abc", () => {
+  it("does not redirect nested workout-history edit routes", () => {
     const result = handleLegacyRedirects(
       mockCtx("/dashboard/workout-history/input/abc")
     );
-    expect(result).not.toBeNull();
+    expect(result).toBeNull();
   });
 
   it("does not redirect canonical routes", () => {

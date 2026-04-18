@@ -20,12 +20,6 @@ interface RedirectRule {
 
 const LEGACY_RULES: RedirectRule[] = [
   {
-    match: "/dashboard/workout-history/",
-    prefix: true,
-    target: (p) =>
-      p.replace("/dashboard/workout-history", DASHBOARD_ROUTES.workoutHistory),
-  },
-  {
     match: "/dashboard/workout-history",
     prefix: false,
     target: () => DASHBOARD_ROUTES.workoutHistory,

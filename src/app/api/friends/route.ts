@@ -130,19 +130,69 @@ export const GET = withAuth(async (_request, { auth }) => {
       }
     }
 
-    let friends: Array<{ id: string; name: string; username: string; friendCode?: string | null }> = [];
+    let friends: Array<{
+      id: string;
+      name: string;
+      username: string;
+      friendCode?: string | null;
+      createdAt?: Date;
+      updatedAt?: Date;
+      sessionCount?: number;
+      checkInCount?: number;
+    }> = [];
     if (friendIds.length) {
       try {
-        friends = await prisma.user.findMany({
-          where: { id: { in: friendIds } },
-          select: { id: true, name: true, username: true, friendCode: true },
-          orderBy: { name: "asc" },
-        });
+        const [friendUsers, progressionLevels] = await Promise.all([
+          prisma.user.findMany({
+            where: { id: { in: friendIds } },
+            select: {
+              id: true,
+              name: true,
+              username: true,
+              friendCode: true,
+              createdAt: true,
+              updatedAt: true,
+              _count: {
+                select: {
+                  checkIns: true,
+                },
+              },
+            },
+            orderBy: { name: "asc" },
+          }),
+          prisma.userProgressionLevel.findMany({
+            where: { userId: { in: friendIds } },
+            select: {
+              userId: true,
+              _count: {
+                select: {
+                  logs: true,
+                },
+              },
+            },
+          }),
+        ]);
+
+        const progressionLogCounts = new Map<string, number>();
+        for (const level of progressionLevels) {
+          progressionLogCounts.set(level.userId, (progressionLogCounts.get(level.userId) ?? 0) + level._count.logs);
+        }
+
+        friends = friendUsers.map((friend) => ({
+          id: friend.id,
+          name: friend.name,
+          username: friend.username,
+          friendCode: friend.friendCode,
+          createdAt: friend.createdAt,
+          updatedAt: friend.updatedAt,
+          sessionCount: progressionLogCounts.get(friend.id) ?? 0,
+          checkInCount: friend._count.checkIns,
+        }));
       } catch (error) {
         if (isMissingFriendSchemaError(error)) {
           friends = await prisma.user.findMany({
             where: { id: { in: friendIds } },
-            select: { id: true, name: true, username: true },
+            select: { id: true, name: true, username: true, createdAt: true, updatedAt: true },
             orderBy: { name: "asc" },
           });
         } else {

@@ -10,7 +10,15 @@ import { useAuth } from "@/context/AuthContext";
 import type { ProgressionExercise, ProgressionLog } from "@/app/dashboard/workout/types";
 
 interface FriendsPayload {
-  friends?: Array<{ id: string; name: string; username?: string | null }>;
+  friends?: Array<{
+    id: string;
+    name: string;
+    username?: string | null;
+    createdAt?: string | Date | null;
+    updatedAt?: string | Date | null;
+    sessionCount?: number | null;
+    checkInCount?: number | null;
+  }>;
 }
 
 function initials(value: string) {
@@ -105,11 +113,27 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
   const drawerFriendId = searchParams.get("friendDrawerId") || "";
   const rawFriendView = searchParams.get("friendView") || "";
   const selectedFriendExerciseId = searchParams.get("friendExerciseId") || "";
-  const friendViewMode = rawFriendView === "history" || rawFriendView === "chart" || rawFriendView === "checkin" ? rawFriendView : "";
+  const friendViewMode = rawFriendView === "history" || rawFriendView === "chart" || rawFriendView === "checkin" || rawFriendView === "chat" ? rawFriendView : "";
   const targetViewUserId = searchParams.get("targetUserId") || "";
-  const [friends, setFriends] = useState<Array<{ id: string; name: string; username?: string }>>([]);
+  const [friends, setFriends] = useState<Array<{
+    id: string;
+    name: string;
+    username?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    sessionCount?: number;
+    checkInCount?: number;
+  }>>([]);
   const [friendActionsOpen, setFriendActionsOpen] = useState(false);
-  const [activeFriend, setActiveFriend] = useState<{ id: string; name: string; username?: string } | null>(null);
+  const [activeFriend, setActiveFriend] = useState<{
+    id: string;
+    name: string;
+    username?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    sessionCount?: number;
+    checkInCount?: number;
+  } | null>(null);
   const [friendHistoryExercises, setFriendHistoryExercises] = useState<ProgressionExercise[]>([]);
   const [friendHistoryLoading, setFriendHistoryLoading] = useState(false);
   const [friendHistorySearchOpen, setFriendHistorySearchOpen] = useState(false);
@@ -162,6 +186,10 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                 id: friend.id,
                 name: (friend.name || friend.username || "Friend").trim() || "Friend",
                 username: (friend.username || "").trim() || undefined,
+                createdAt: friend.createdAt ? new Date(friend.createdAt).toISOString() : undefined,
+                updatedAt: friend.updatedAt ? new Date(friend.updatedAt).toISOString() : undefined,
+                sessionCount: typeof friend.sessionCount === "number" ? friend.sessionCount : 0,
+                checkInCount: typeof friend.checkInCount === "number" ? friend.checkInCount : 0,
               }))
           : [];
 
@@ -187,7 +215,7 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
 
   const setDrawerQueryState = (
     friendId: string | null,
-    options: { view?: "history" | "chart" | "checkin" | null; exerciseId?: string | null; mode?: "push" | "replace" } = {},
+    options: { view?: "history" | "chart" | "checkin" | "chat" | null; exerciseId?: string | null; mode?: "push" | "replace" } = {},
   ) => {
     const { view = null, exerciseId = null, mode = "replace" } = options;
     const params = new URLSearchParams(searchParams.toString());
@@ -241,7 +269,15 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
     if (!matchedFriend) return;
 
     setActiveFriend((current) => {
-      if (current?.id === matchedFriend.id && current?.name === matchedFriend.name && current?.username === ("username" in matchedFriend ? matchedFriend.username : undefined)) {
+      if (
+        current?.id === matchedFriend.id
+        && current?.name === matchedFriend.name
+        && current?.username === ("username" in matchedFriend ? matchedFriend.username : undefined)
+        && current?.createdAt === ("createdAt" in matchedFriend ? matchedFriend.createdAt : undefined)
+        && current?.updatedAt === ("updatedAt" in matchedFriend ? matchedFriend.updatedAt : undefined)
+        && current?.sessionCount === ("sessionCount" in matchedFriend ? matchedFriend.sessionCount : undefined)
+        && current?.checkInCount === ("checkInCount" in matchedFriend ? matchedFriend.checkInCount : undefined)
+      ) {
         return current;
       }
 
@@ -249,6 +285,10 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
         id: matchedFriend.id,
         name: matchedFriend.name,
         username: "username" in matchedFriend ? matchedFriend.username : undefined,
+        createdAt: "createdAt" in matchedFriend ? matchedFriend.createdAt : undefined,
+        updatedAt: "updatedAt" in matchedFriend ? matchedFriend.updatedAt : undefined,
+        sessionCount: "sessionCount" in matchedFriend ? matchedFriend.sessionCount : undefined,
+        checkInCount: "checkInCount" in matchedFriend ? matchedFriend.checkInCount : undefined,
       };
     });
     setFriendActionsOpen(!friendViewMode && !targetViewUserId);
@@ -508,7 +548,15 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                       return;
                     }
 
-                    setActiveFriend({ id: friend.id, name: friend.name, username: "username" in friend ? friend.username : undefined });
+                    setActiveFriend({
+                      id: friend.id,
+                      name: friend.name,
+                      username: "username" in friend ? friend.username : undefined,
+                      createdAt: "createdAt" in friend ? friend.createdAt : undefined,
+                      updatedAt: "updatedAt" in friend ? friend.updatedAt : undefined,
+                      sessionCount: "sessionCount" in friend ? friend.sessionCount : undefined,
+                      checkInCount: "checkInCount" in friend ? friend.checkInCount : undefined,
+                    });
                     setFriendActionsOpen(true);
                     setDrawerQueryState(friend.id, { mode: "push" });
                   }}
@@ -624,37 +672,37 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
 
                     <div>
                       <div
-                        className="mx-1 mt-1 mb-2 rounded-2xl border p-3.5"
+                        className="mx-1 mt-1 mb-1.5 rounded-md border px-2.5 py-2"
                         style={{
-                          borderColor: "var(--sidebar-canvas-border)",
-                          background: "var(--sidebar-canvas-card)",
+                          borderColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)",
+                          backgroundColor: "rgba(35, 36, 40, 0.32)",
                         }}
                       >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-[10px] uppercase tracking-[0.1em]" style={{ color: "var(--text-muted)" }}>Friend Profile</p>
-                            <p className="mt-0.5 truncate text-[13px] font-semibold" style={{ color: "var(--text-primary)" }}>{activeFriend.name}</p>
-                            <p className="truncate text-[11px]" style={{ color: "var(--text-secondary)" }}>@{activeFriend.username || activeFriend.name.toLowerCase().replace(/\s+/g, "")}</p>
-                            <p className="mt-1 truncate text-[10px]" style={{ color: "var(--text-muted)" }}>ID: {activeFriend.id || "-"}</p>
+                        <div className="mb-1.5 flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-[10px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>Friend Profile</p>
+                            <p className="truncate text-[12px] font-semibold" style={{ color: "var(--text-primary)" }}>{activeFriend.name}</p>
+                            <p className="truncate text-[10px]" style={{ color: "var(--text-secondary)" }}>@{activeFriend.username || activeFriend.name.toLowerCase().replace(/\s+/g, "")}</p>
                           </div>
+                          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "var(--forest)" }} />
+                        </div>
 
-                          <span
-                            className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border"
-                            style={{
-                              borderColor: "color-mix(in srgb, var(--accent) 42%, transparent)",
-                              backgroundColor: "color-mix(in srgb, var(--accent) 16%, transparent)",
-                              color: "color-mix(in srgb, var(--accent) 70%, var(--cloud-white))",
-                            }}
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M4 20a8 8 0 0116 0" />
-                            </svg>
-                            <span
-                              className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border"
-                              style={{ backgroundColor: "var(--forest)", borderColor: "var(--ink-deep)" }}
-                            />
-                          </span>
+                        <div className="space-y-1 text-[10px]">
+                          {[
+                            { label: "Sessions", value: String(activeFriend.sessionCount ?? 0) },
+                            { label: "Check-Ins", value: String(activeFriend.checkInCount ?? 0) },
+                            { label: "Member Since", value: activeFriend.createdAt ? new Date(activeFriend.createdAt).toLocaleDateString() : "-" },
+                            { label: "Last Login", value: activeFriend.updatedAt ? formatRelativeRecentDate(activeFriend.updatedAt) : "-" },
+                          ].map((item) => (
+                            <div
+                              key={item.label}
+                              className="flex items-center justify-between gap-3 rounded-sm px-1.5 py-1"
+                              style={{ backgroundColor: "rgba(255, 255, 255, 0.02)" }}
+                            >
+                              <span style={{ color: "var(--text-muted)" }}>{item.label}</span>
+                              <span className="truncate text-right font-semibold" style={{ color: "var(--text-primary)" }}>{item.value}</span>
+                            </div>
+                          ))}
                         </div>
                       </div>
 
@@ -662,6 +710,7 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                         { id: "history", label: "History", hint: "Open train history" },
                         { id: "chart", label: "Chart", hint: "Coming soon" },
                         { id: "checkin", label: "Check-in", hint: "Coming soon" },
+                        { id: "chat", label: "Chat", hint: "Coming soon" },
                       ].map((item) => (
                         <article
                           key={item.id}
@@ -673,13 +722,13 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                           role="button"
                           tabIndex={0}
                           onClick={() => {
-                            setDrawerQueryState(activeFriend.id, { view: item.id as "history" | "chart" | "checkin", mode: "push" });
+                            setDrawerQueryState(activeFriend.id, { view: item.id as "history" | "chart" | "checkin" | "chat", mode: "push" });
                             setFriendActionsOpen(false);
                           }}
                           onKeyDown={(event) => {
                             if (event.key === "Enter" || event.key === " ") {
                               event.preventDefault();
-                              setDrawerQueryState(activeFriend.id, { view: item.id as "history" | "chart" | "checkin", mode: "push" });
+                              setDrawerQueryState(activeFriend.id, { view: item.id as "history" | "chart" | "checkin" | "chat", mode: "push" });
                               setFriendActionsOpen(false);
                             }
                           }}
@@ -741,7 +790,7 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                               </svg>
                             </button>
                             <h2 className="truncate text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--mist-light)" }}>
-                              {`${activeFriend.name} ${friendViewMode === "history" ? "History" : friendViewMode === "chart" ? "Chart" : "Check-in"}`}
+                              {`${activeFriend.name} ${friendViewMode === "history" ? "History" : friendViewMode === "chart" ? "Chart" : friendViewMode === "chat" ? "Chat" : "Check-in"}`}
                             </h2>
                           </div>
 
@@ -854,7 +903,7 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                       <div className="px-3 py-5">
                         <div className="rounded-2xl border border-[#3b3f48] bg-[#232428] p-4">
                           <p className="text-sm font-semibold text-[#f2f3f5]">
-                            {friendViewMode === "chart" ? "Chart" : "Check-in"} coming soon
+                            {friendViewMode === "chart" ? "Chart" : friendViewMode === "chat" ? "Chat" : "Check-in"} coming soon
                           </p>
                           <p className="mt-1 text-xs text-[#949ba4]">
                             This now opens as a dedicated drawer instead of switching the page.

@@ -3997,14 +3997,26 @@ function TrainingLogTable({
                                   </select>
                                 ) : disableExerciseLinks ? (
                                   <div className="flex min-w-0 items-center gap-1 overflow-hidden">
-                                    <span
-                                      className={`text-xs truncate ${enableMobileTapToPreview ? "cursor-pointer" : ""}`}
-                                      title={entryDisplayName}
-                                      style={{ color: isDeletedEntry ? "var(--crimson-light)" : "var(--text-primary)", textDecoration: "none" }}
-                                      onClick={() => openMobileTextPreview(t("Exercise", "normal"), entryDisplayName)}
-                                    >
-                                      {entryDisplayName}
-                                    </span>
+                                    {historyTargetUserId ? (
+                                      <span
+                                        className={`text-xs truncate ${enableMobileTapToPreview ? "cursor-pointer" : ""}`}
+                                        title={entryDisplayName}
+                                        style={{ color: isDeletedEntry ? "var(--crimson-light)" : "var(--text-primary)", textDecoration: "none" }}
+                                        onClick={() => openMobileTextPreview(t("Exercise", "normal"), entryDisplayName)}
+                                      >
+                                        {entryDisplayName}
+                                      </span>
+                                    ) : (
+                                      <Link
+                                        href={`/dashboard/workout-history/input/${entry.logId}`}
+                                        className="text-xs truncate underline-offset-2 hover:underline"
+                                        title={`Edit ${entryDisplayName}`}
+                                        style={{ color: isDeletedEntry ? "var(--crimson-light)" : "var(--text-primary)", textDecoration: "none" }}
+                                        onClick={(event) => event.stopPropagation()}
+                                      >
+                                        {entryDisplayName}
+                                      </Link>
+                                    )}
                                     {(showSimpleProgressionLabel || showSimpleVariantLabel) && (
                                       <div className="flex flex-wrap items-center gap-1 text-[10px]" style={{ color: "var(--text-muted)" }}>
                                         {showSimpleProgressionLabel && (

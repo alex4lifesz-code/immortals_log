@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import PageLayout from "@/components/layout/PageLayout";
 import GlowButton from "@/components/ui/GlowButton";
 import GlowCard from "@/components/ui/GlowCard";
@@ -11,7 +11,7 @@ import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { buildIsoAtUserDateTime } from "@/lib/constants";
 import { PROGRESSION_EXERCISES_UPDATED_EVENT } from "@/lib/progression-events";
 import { api, ApiRequestError } from "@/lib/api-client";
-import { lbsToKg } from "@/lib/unit-conversion";
+import { kgToLbs, lbsToKg } from "@/lib/unit-conversion";
 import type { ProgressionExercise } from "@/app/dashboard/workout/types";
 
 type InputMode = "existing" | "custom";
@@ -19,6 +19,25 @@ type ValueMode = "weight" | "timed";
 type WeightUnit = "kg" | "lbs";
 type SessionPanelId = "exercise" | "details" | "format" | "session" | "notes" | "review";
 type SetRow = { id: string; value: string; reps: string };
+type ExistingLogPayload = {
+  id: string;
+  exerciseId: string;
+  exerciseName?: string;
+  level: number;
+  weight1: number | null;
+  reps1: number | null;
+  weight2: number | null;
+  reps2: number | null;
+  weight3: number | null;
+  reps3: number | null;
+  holdTime: number | null;
+  holdTime2: number | null;
+  holdTime3: number | null;
+  modifier: string | null;
+  variant: string | null;
+  notes: string | null;
+  createdAt: string;
+};
 
 const SESSION_PANELS: Array<{ id: SessionPanelId; label: string; description: string }> = [
   { id: "exercise", label: "Exercise", description: "Selected movement" },
@@ -52,15 +71,41 @@ function parseNumber(value: string, integerOnly = false): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function formatSignedModifierKg(value: number): string {
+  const normalized = Math.round(value * 10) / 10;
+  const absValue = Math.abs(normalized);
+  const display = Number.isInteger(absValue) ? String(absValue) : absValue.toFixed(1).replace(/\.0$/, "");
+  return `${normalized >= 0 ? "+" : "-"}${display}kg`;
+}
+
+function parseSignedModifierKg(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const match = value.match(/([+-]?[\d.]+)\s*kg/i);
+  if (!match) return null;
+  const parsed = Number.parseFloat(match[1]);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function formatInputNumber(value: number | null): string {
+  if (value == null || !Number.isFinite(value)) return "";
+  const normalized = Math.round(value * 10) / 10;
+  return Number.isInteger(normalized) ? String(normalized) : normalized.toFixed(1).replace(/\.0$/, "");
+}
+
 export default function TrainInputCanvasPage() {
   const { user } = useAuth();
   const { settings } = useDisplaySettings();
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const params = useParams<{ id?: string | string[] }>();
   const userId = user?.id ?? "";
 
   const routeExerciseId = Array.isArray(params?.id) ? params.id[0] ?? "" : params?.id ?? "";
-  const prefillExerciseId = searchParams.get("prefillExerciseId") || (routeExerciseId !== "new" ? routeExerciseId : "");
+  const isEditingExistingLog = pathname.includes("/workout-history/input/");
+  const editLogId = isEditingExistingLog ? routeExerciseId : searchParams.get("editLogId") || "";
+  const returnHref = isEditingExistingLog ? "/dashboard/history" : "/dashboard/train";
+  const prefillExerciseId = searchParams.get("prefillExerciseId") || (!editLogId && routeExerciseId !== "new" ? routeExerciseId : "");
   const prefillExerciseName = searchParams.get("prefillExercise") || "";
   const prefillProgression = searchParams.get("prefillProgression") || "";
   const prefillVariant = searchParams.get("prefillVariant") || "";
@@ -68,6 +113,8 @@ export default function TrainInputCanvasPage() {
   const [exercises, setExercises] = useState<ProgressionExercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [editLogHydrated, setEditLogHydrated] = useState(!editLogId);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [inputMode, setInputMode] = useState<InputMode>(prefillExerciseName ? "existing" : "existing");
   const [valueMode, setValueMode] = useState<ValueMode>("weight");
@@ -77,11 +124,13 @@ export default function TrainInputCanvasPage() {
   const [customExerciseName, setCustomExerciseName] = useState(prefillExerciseName);
   const [selectedLevel, setSelectedLevel] = useState("");
   const [selectedVariant, setSelectedVariant] = useState(prefillVariant);
+  const [modifierKg, setModifierKg] = useState(0);
   const [trainingDate, setTrainingDate] = useState(getTodayInputValue());
   const [notes, setNotes] = useState("");
   const [sets, setSets] = useState<SetRow[]>(createInitialSets);
   const [activePanel, setActivePanel] = useState<SessionPanelId>("exercise");
   const [highlightedSetId, setHighlightedSetId] = useState<string | null>(null);
+  const [highlightedField, setHighlightedField] = useState<string | null>(null);
   const [confirmedPanels, setConfirmedPanels] = useState<SessionPanelId[]>([]);
 
   useEffect(() => {
@@ -93,6 +142,121 @@ export default function TrainInputCanvasPage() {
     const timeout = window.setTimeout(() => setHighlightedSetId(null), 1200);
     return () => window.clearTimeout(timeout);
   }, [highlightedSetId]);
+
+  useEffect(() => {
+    const step = searchParams.get("step");
+    if (!step) return;
+    if (SESSION_PANELS.some((panel) => panel.id === step)) {
+      setActivePanel(step as SessionPanelId);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    const field = searchParams.get("field");
+    if (!field) {
+      setHighlightedField(null);
+      return;
+    }
+
+    setHighlightedField(field);
+
+    if (field === "progression" || field === "variation") {
+      setActivePanel("details");
+    } else if (field === "modifier" || field === "session-date" || field.startsWith("set-")) {
+      setActivePanel("session");
+    } else if (field === "notes") {
+      setActivePanel("notes");
+    }
+
+    if (field.startsWith("set-")) {
+      const setIndex = Math.max(0, Number.parseInt(field.replace("set-", ""), 10) - 1);
+      const targetSet = sets[setIndex];
+      if (targetSet) {
+        setHighlightedSetId(targetSet.id);
+      }
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      const target = document.getElementById(`editor-field-${field}`);
+      target?.scrollIntoView({ block: "center", behavior: "smooth" });
+    });
+
+    const timeout = window.setTimeout(() => {
+      setHighlightedField((current) => (current === field ? null : current));
+    }, 2600);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timeout);
+    };
+  }, [searchParams, sets]);
+
+  useEffect(() => {
+    if (!editLogId) {
+      setEditLogHydrated(true);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadExistingLog = async () => {
+      setEditLogHydrated(false);
+      try {
+        const data = await api.get<{ log: ExistingLogPayload }>(`/api/progressions/logs/${encodeURIComponent(editLogId)}`);
+        if (cancelled || !data.log) return;
+
+        const log = data.log;
+        const usesTimedMetrics = log.holdTime != null || log.holdTime2 != null || log.holdTime3 != null;
+        const displayWeight = (value: number | null) => {
+          if (value == null) return "";
+          return formatInputNumber(weightUnit === "lbs" ? kgToLbs(value) : value);
+        };
+
+        setInputMode("existing");
+        setSelectedExerciseId(log.exerciseId);
+        setSearchTerm(log.exerciseName || "");
+        setCustomExerciseName("");
+        setSelectedLevel(String(log.level || 1));
+        setSelectedVariant(log.variant || "");
+        setModifierKg(parseSignedModifierKg(log.modifier) ?? 0);
+        setTrainingDate(new Date(log.createdAt).toISOString().slice(0, 10));
+        setNotes(log.notes || "");
+        setValueMode(usesTimedMetrics ? "timed" : "weight");
+        setSets([
+          {
+            id: `${log.id}-set-1`,
+            value: usesTimedMetrics ? formatInputNumber(log.holdTime) : displayWeight(log.weight1),
+            reps: log.reps1 != null ? String(log.reps1) : "",
+          },
+          {
+            id: `${log.id}-set-2`,
+            value: usesTimedMetrics ? formatInputNumber(log.holdTime2) : displayWeight(log.weight2),
+            reps: log.reps2 != null ? String(log.reps2) : "",
+          },
+          {
+            id: `${log.id}-set-3`,
+            value: usesTimedMetrics ? formatInputNumber(log.holdTime3) : displayWeight(log.weight3),
+            reps: log.reps3 != null ? String(log.reps3) : "",
+          },
+        ]);
+      } catch (error) {
+        console.error("Failed to load existing training log:", error);
+        if (!cancelled) {
+          setMessage({ type: "error", text: "Failed to load this logged session." });
+        }
+      } finally {
+        if (!cancelled) {
+          setEditLogHydrated(true);
+        }
+      }
+    };
+
+    void loadExistingLog();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [editLogId, weightUnit]);
 
   const fetchExercises = useCallback(async () => {
     if (!userId) {
@@ -203,6 +367,7 @@ export default function TrainInputCanvasPage() {
     setCustomExerciseName("");
     setSelectedLevel("");
     setSelectedVariant("");
+    setModifierKg(0);
     setTrainingDate(getTodayInputValue());
     setNotes("");
     setSets(createInitialSets());
@@ -219,7 +384,7 @@ export default function TrainInputCanvasPage() {
   };
 
   const handleSave = useCallback(async () => {
-    if (saving) return;
+    if (saving || deleting) return;
 
     const parsedSets = sets
       .map((set) => ({
@@ -236,8 +401,6 @@ export default function TrainInputCanvasPage() {
     }
 
     const primarySets = [parsedSets[0] ?? null, parsedSets[1] ?? null, parsedSets[2] ?? null];
-    const extraSets = parsedSets.slice(3);
-
     const mergedNotes = notes.trim();
 
     const toStoredWeightKg = (value: number | null): number | null => {
@@ -291,59 +454,104 @@ export default function TrainInputCanvasPage() {
         return;
       }
 
-      await api.post(`/api/progressions/${targetExerciseId}/log`, {
-        level: targetLevel,
-        trainingDate,
-        weight1: toStoredWeightKg(primarySets[0]?.value ?? null),
-        reps1: primarySets[0]?.reps ?? null,
-        weight2: toStoredWeightKg(primarySets[1]?.value ?? null),
-        reps2: primarySets[1]?.reps ?? null,
-        weight3: toStoredWeightKg(primarySets[2]?.value ?? null),
-        reps3: primarySets[2]?.reps ?? null,
-        holdTime: toStoredSeconds(primarySets[0]?.value ?? null),
-        holdTime2: toStoredSeconds(primarySets[1]?.value ?? null),
-        holdTime3: toStoredSeconds(primarySets[2]?.value ?? null),
-        sets: parsedSets.map((set) => ({
-          value: valueMode === "timed" ? toStoredSeconds(set.value) : toStoredWeightKg(set.value),
-          reps: set.reps,
-          metric: valueMode === "timed" ? "time" : "weight",
-        })),
-        variant: targetVariant,
-        modifier: null,
-        notes: mergedNotes || null,
-        completed: false,
-        createdAt,
-      });
+      if (isEditingExistingLog && editLogId) {
+        await api.post("/api/progressions/logs/update", {
+          updates: [
+            {
+              id: editLogId,
+              exerciseId: targetExerciseId,
+              level: targetLevel,
+              weight1: toStoredWeightKg(primarySets[0]?.value ?? null),
+              reps1: primarySets[0]?.reps ?? null,
+              weight2: toStoredWeightKg(primarySets[1]?.value ?? null),
+              reps2: primarySets[1]?.reps ?? null,
+              weight3: toStoredWeightKg(primarySets[2]?.value ?? null),
+              reps3: primarySets[2]?.reps ?? null,
+              holdTime: toStoredSeconds(primarySets[0]?.value ?? null),
+              holdTime2: toStoredSeconds(primarySets[1]?.value ?? null),
+              holdTime3: toStoredSeconds(primarySets[2]?.value ?? null),
+              modifier: valueMode === "weight" && modifierKg !== 0 ? formatSignedModifierKg(modifierKg) : null,
+              variant: targetVariant,
+              notes: mergedNotes || null,
+            },
+          ],
+        });
+      } else {
+        await api.post(`/api/progressions/${targetExerciseId}/log`, {
+          level: targetLevel,
+          trainingDate,
+          weight1: toStoredWeightKg(primarySets[0]?.value ?? null),
+          reps1: primarySets[0]?.reps ?? null,
+          weight2: toStoredWeightKg(primarySets[1]?.value ?? null),
+          reps2: primarySets[1]?.reps ?? null,
+          weight3: toStoredWeightKg(primarySets[2]?.value ?? null),
+          reps3: primarySets[2]?.reps ?? null,
+          holdTime: toStoredSeconds(primarySets[0]?.value ?? null),
+          holdTime2: toStoredSeconds(primarySets[1]?.value ?? null),
+          holdTime3: toStoredSeconds(primarySets[2]?.value ?? null),
+          sets: parsedSets.map((set) => ({
+            value: valueMode === "timed" ? toStoredSeconds(set.value) : toStoredWeightKg(set.value),
+            reps: set.reps,
+            metric: valueMode === "timed" ? "time" : "weight",
+          })),
+          variant: targetVariant,
+          modifier: valueMode === "weight" && modifierKg !== 0 ? formatSignedModifierKg(modifierKg) : null,
+          notes: mergedNotes || null,
+          completed: false,
+          createdAt,
+        });
+      }
 
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("progression-exercises-updated"));
       }
 
-      setConfirmedPanels((prev) => (prev.includes("review") ? prev : [...prev, "review"]));
-      setMessage({
-        type: "success",
-        text: extraSets.length > 0
-          ? "Training log added. Extra sets were preserved with the log."
-          : "Training log added.",
-      });
-      setSets(createInitialSets());
-      setNotes("");
-
-      if (inputMode === "custom") {
-        setCustomExerciseName("");
-        setInputMode("existing");
-        void fetchExercises();
+      if (typeof window !== "undefined" && window.history.length > 1) {
+        router.back();
+      } else {
+        router.push(returnHref);
       }
+      return;
     } catch (error) {
       console.error("Failed to save training log:", error);
       setMessage({
         type: "error",
-        text: error instanceof ApiRequestError ? error.message : "Failed to save training log.",
+        text: error instanceof ApiRequestError ? error.message : `Failed to ${isEditingExistingLog ? "update" : "save"} training log.`,
       });
     } finally {
       setSaving(false);
     }
-  }, [customExerciseName, fetchExercises, inputMode, notes, saving, selectedExerciseId, selectedLevel, selectedVariant, sets, trainingDate, valueMode, weightUnit]);
+  }, [customExerciseName, deleting, editLogId, inputMode, isEditingExistingLog, notes, returnHref, router, saving, selectedExerciseId, selectedLevel, selectedVariant, sets, settings.timeZone, trainingDate, valueMode, weightUnit]);
+
+  const handleDeleteLoggedSession = useCallback(async () => {
+    if (!isEditingExistingLog || !editLogId || saving || deleting) return;
+    if (typeof window !== "undefined" && !window.confirm("Delete this logged session? This action cannot be undone.")) return;
+
+    setDeleting(true);
+    setMessage(null);
+
+    try {
+      await api.post("/api/progressions/logs/delete", { logId: editLogId });
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("progression-exercises-updated"));
+      }
+
+      if (typeof window !== "undefined" && window.history.length > 1) {
+        router.back();
+      } else {
+        router.push(returnHref);
+      }
+    } catch (error) {
+      console.error("Failed to delete training log:", error);
+      setMessage({
+        type: "error",
+        text: error instanceof ApiRequestError ? error.message : "Failed to delete this logged session.",
+      });
+    } finally {
+      setDeleting(false);
+    }
+  }, [deleting, editLogId, isEditingExistingLog, returnHref, router, saving]);
 
   const shellMinHeight = "calc(var(--app-viewport-height) - 0.5rem)";
   const selectedExerciseMeta = selectedExercise
@@ -372,6 +580,37 @@ export default function TrainInputCanvasPage() {
   const selectedExerciseLabel = inputMode === "custom"
     ? customExerciseName.trim() || "Custom exercise"
     : selectedExercise?.name || "No exercise selected";
+  const selectedProgressionLabel = inputMode === "custom"
+    ? "Progression 1"
+    : selectedExercise?.tiers.find((tier) => String(tier.level) === selectedLevel)?.name || `Progression ${selectedLevel || "1"}`;
+  const reviewSetPreview = sets.flatMap((set, index) => {
+    const value = set.value.trim();
+    const reps = set.reps.trim();
+
+    if (!value && !reps) return [];
+
+    const summary = valueMode === "timed"
+      ? `${value || "0"} sec • ${reps || "0"} reps`
+      : `${value || "0"} ${weightUnit} • ${reps || "0"} reps`;
+
+    return [{ label: `Set ${index + 1}`, summary }];
+  });
+  const editorPageTitle = isEditingExistingLog ? "Edit Logged Session" : "Log a Session";
+  const editorPageDescription = isEditingExistingLog
+    ? "Update or delete this saved workout entry."
+    : "A cleaner train-aligned input page with dynamic sets.";
+  const isFocusedField = (field: string) => highlightedField === field;
+  const getFieldHighlightStyle = (field: string) => (isFocusedField(field)
+    ? {
+        scrollMarginTop: "5.5rem",
+        borderColor: "rgba(87, 242, 135, 0.52)",
+        boxShadow: "0 0 0 1px rgba(87, 242, 135, 0.18) inset, 0 0 22px rgba(87, 242, 135, 0.12)",
+        transition: "border-color 320ms ease, box-shadow 320ms ease, opacity 320ms ease",
+      }
+    : {
+        scrollMarginTop: "5.5rem",
+        transition: "border-color 320ms ease, box-shadow 320ms ease, opacity 320ms ease",
+      });
 
   const goToNextPanel = () => {
     if (activePanelIndex >= SESSION_PANELS.length - 1) return;
@@ -419,15 +658,33 @@ export default function TrainInputCanvasPage() {
       </GlowButton>
 
       {mode === "save" ? (
-        <GlowButton
-          variant="jade"
-          size="sm"
-          disabled={saving}
-          onClick={() => void handleSave()}
-          className="h-10 min-w-[96px] justify-center rounded-xl"
-        >
-          {saving ? "Saving..." : "Save"}
-        </GlowButton>
+        <div className="flex items-center gap-2">
+          {isEditingExistingLog ? (
+            <GlowButton
+              variant="ghost"
+              size="sm"
+              disabled={saving || deleting}
+              onClick={() => void handleDeleteLoggedSession()}
+              className="h-10 min-w-[96px] justify-center rounded-xl"
+              style={{
+                borderColor: "rgba(237, 66, 69, 0.45)",
+                backgroundColor: "rgba(237, 66, 69, 0.08)",
+                color: "#ffb3b8",
+              }}
+            >
+              {deleting ? "Deleting..." : "Delete"}
+            </GlowButton>
+          ) : null}
+          <GlowButton
+            variant="jade"
+            size="sm"
+            disabled={saving || deleting}
+            onClick={() => void handleSave()}
+            className="h-10 min-w-[96px] justify-center rounded-xl"
+          >
+            {saving ? "Saving..." : isEditingExistingLog ? "Update" : "Save"}
+          </GlowButton>
+        </div>
       ) : (
         <GlowButton variant="jade" size="sm" onClick={goToNextPanel} className="h-10 min-w-[96px] justify-center rounded-xl">
           Next →
@@ -438,11 +695,11 @@ export default function TrainInputCanvasPage() {
 
   return (
     <PageLayout
-      title="Train Input"
-      subtitle="Fresh training canvas with dynamic sets"
+      title={isEditingExistingLog ? "Edit Session" : "Train Input"}
+      subtitle={isEditingExistingLog ? "Edit or delete a saved workout log" : "Fresh training canvas with dynamic sets"}
       mobileContentPaddingClass="p-0 pb-0"
     >
-      {loading ? (
+      {loading || !editLogHydrated ? (
         <GlowCard glow="jade" hoverable={false}>
           <p className="py-4 text-center text-sm text-mist-dark">Loading input canvas...</p>
         </GlowCard>
@@ -463,22 +720,41 @@ export default function TrainInputCanvasPage() {
                 backgroundColor: "color-mix(in srgb, var(--ink-deep) 94%, var(--ink-mid))",
               }}
             >
-              <div className="flex items-center gap-2">
-                <Link
-                  href="/dashboard/train"
-                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md transition-colors"
-                  style={{ color: "var(--mist-light)", backgroundColor: "transparent" }}
-                  aria-label="Back to train"
-                >
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                  </svg>
-                </Link>
-                <div className="min-w-0">
-                  <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Training Canvas</p>
-                  <h2 className="mt-0.5 text-xs font-semibold uppercase tracking-[0.08em] text-[#f2f3f5]">Log a Session</h2>
-                  <p className="mt-0.5 text-[11px] text-[#b5bac1]">A cleaner train-aligned input page with dynamic sets.</p>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2">
+                  <Link
+                    href={returnHref}
+                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md transition-colors"
+                    style={{ color: "var(--mist-light)", backgroundColor: "transparent" }}
+                    aria-label={isEditingExistingLog ? "Back to workout history" : "Back to train"}
+                  >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </Link>
+                  <div className="min-w-0">
+                    <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Training Canvas</p>
+                    <h2 className="mt-0.5 text-xs font-semibold uppercase tracking-[0.08em] text-[#f2f3f5]">{editorPageTitle}</h2>
+                    <p className="mt-0.5 text-[11px] text-[#b5bac1]">{editorPageDescription}</p>
+                  </div>
                 </div>
+
+                {isEditingExistingLog ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleDeleteLoggedSession()}
+                    disabled={saving || deleting}
+                    className="rounded-md border px-2.5 py-1 text-[11px] font-semibold transition-colors"
+                    style={{
+                      borderColor: "rgba(237, 66, 69, 0.45)",
+                      backgroundColor: "rgba(237, 66, 69, 0.08)",
+                      color: "#ffb3b8",
+                      opacity: saving || deleting ? 0.7 : 1,
+                    }}
+                  >
+                    {deleting ? "Deleting..." : "Delete"}
+                  </button>
+                ) : null}
               </div>
             </div>
 
@@ -568,6 +844,18 @@ export default function TrainInputCanvasPage() {
                           <p className="mt-1 text-[11px] text-[#b5bac1]">This movement was chosen before opening the session logger.</p>
                         </div>
 
+                        <div id="editor-field-session-date" className="mt-3 rounded-lg border px-3 py-2" style={{ borderColor: "#3b3f48", backgroundColor: "#232428", ...getFieldHighlightStyle("session-date") }}>
+                          <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Session date</label>
+                          <input
+                            type="date"
+                            value={trainingDate}
+                            onChange={(event) => setTrainingDate(event.target.value)}
+                            className="h-10 w-full rounded-md border px-3 text-sm outline-none"
+                            style={{ borderColor: "#3b3f48", backgroundColor: "#232428", color: "#f2f3f5" }}
+                          />
+                          <p className="mt-1 text-[11px] text-[#b5bac1]">Choose the day before continuing through the session logger.</p>
+                        </div>
+
                         <div className="mt-4 rounded-lg border px-3 py-3" style={{ borderColor: "#3b3f48", backgroundColor: "#232428" }}>
                           <p className="text-base font-semibold text-[#f2f3f5]">{selectedExercise?.name || customExerciseName || "No exercise selected"}</p>
                           <p className="mt-1 text-[11px] text-[#b5bac1]">{selectedExerciseMeta}</p>
@@ -587,7 +875,7 @@ export default function TrainInputCanvasPage() {
                         </div>
 
                         <div className="mt-4 grid gap-3 lg:grid-cols-2">
-                          <div>
+                          <div id="editor-field-progression" className="rounded-lg border px-3 py-2" style={{ borderColor: "#3b3f48", backgroundColor: "#232428", ...getFieldHighlightStyle("progression") }}>
                             <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Progression</label>
                             <select
                               value={selectedLevel}
@@ -604,7 +892,7 @@ export default function TrainInputCanvasPage() {
                             </select>
                           </div>
 
-                          <div>
+                          <div id="editor-field-variation" className="rounded-lg border px-3 py-2" style={{ borderColor: "#3b3f48", backgroundColor: "#232428", ...getFieldHighlightStyle("variation") }}>
                             <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Variant</label>
                             <select
                               value={selectedVariant}
@@ -720,35 +1008,77 @@ export default function TrainInputCanvasPage() {
                   {activePanel === "session" ? (
                     <section className="flex flex-col overflow-hidden px-1 py-1" style={panelShellStyle}>
                       <div className="flex-1 overflow-y-auto pr-0.5">
-                        <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
-                          <div>
-                            <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Training date</p>
-                            <p className="mt-1 text-[11px] text-[#b5bac1]">Pick the day for this session, then add your working sets.</p>
+                        <div className="space-y-3">
+                          <div
+                            className="rounded-lg border px-3 py-2 text-[11px]"
+                            style={{
+                              borderColor: "color-mix(in srgb, var(--ink-light) 34%, transparent)",
+                              backgroundColor: "rgba(35, 36, 40, 0.55)",
+                              color: "#b5bac1",
+                            }}
+                          >
+                            {valueMode === "timed"
+                              ? "You are logging a timed session."
+                              : `You are logging weight in ${weightUnit}.`}
+                          </div>
 
-                            <div className="mt-3">
-                              <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Session date</label>
-                              <input
-                                type="date"
-                                value={trainingDate}
-                                onChange={(event) => setTrainingDate(event.target.value)}
-                                className="h-10 w-full rounded-md border px-3 text-sm outline-none"
-                                style={{ borderColor: "#3b3f48", backgroundColor: "#232428", color: "#f2f3f5" }}
-                              />
-                            </div>
-
+                          {valueMode === "weight" ? (
                             <div
-                              className="mt-3 rounded-lg border px-3 py-2 text-[11px]"
+                              id="editor-field-modifier"
+                              className="rounded-md border px-2.5 py-2"
                               style={{
-                                borderColor: "color-mix(in srgb, var(--ink-light) 34%, transparent)",
-                                backgroundColor: "rgba(35, 36, 40, 0.55)",
-                                color: "#b5bac1",
+                                borderColor: "color-mix(in srgb, var(--ink-light) 32%, transparent)",
+                                backgroundColor: "rgba(35, 36, 40, 0.48)",
+                                ...getFieldHighlightStyle("modifier"),
                               }}
                             >
-                              {valueMode === "timed"
-                                ? "You are logging a timed session."
-                                : `You are logging weight in ${weightUnit}.`}
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="min-w-0">
+                                  <p className="text-[10px] uppercase tracking-[0.08em] text-[#949ba4]">Weight modifier</p>
+                                  <p className="text-[10px] text-[#7f8791]">Assist or add load</p>
+                                </div>
+                                <div className="flex shrink-0 items-center gap-1.5">
+                                  <span
+                                    className="min-w-[76px] rounded-md border px-2 py-0.5 text-center text-[10px] font-semibold text-[#f2f3f5]"
+                                    style={{
+                                      borderColor: "rgba(88, 101, 242, 0.3)",
+                                      backgroundColor: "rgba(88, 101, 242, 0.06)",
+                                    }}
+                                  >
+                                    {modifierKg === 0 ? "None" : formatSignedModifierKg(modifierKg)}
+                                  </span>
+                                  {modifierKg !== 0 ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => setModifierKg(0)}
+                                      className="rounded-md border px-2 py-0.5 text-[10px] font-semibold"
+                                      style={{ borderColor: "#3b3f48", color: "#b5bac1" }}
+                                    >
+                                      Reset
+                                    </button>
+                                  ) : null}
+                                </div>
+                              </div>
+
+                              <div className="mt-2">
+                                <input
+                                  type="range"
+                                  min="-50"
+                                  max="50"
+                                  step="0.5"
+                                  value={modifierKg}
+                                  onChange={(event) => setModifierKg(Number(event.target.value))}
+                                  className="h-1.5 w-full cursor-pointer accent-[var(--jade-glow)]"
+                                  aria-label="Weight modifier slider"
+                                />
+                                <div className="mt-1 flex items-center justify-between text-[9px] text-[#7f8791]">
+                                  <span>-50kg</span>
+                                  <span>0</span>
+                                  <span>+50kg</span>
+                                </div>
+                              </div>
                             </div>
-                          </div>
+                          ) : null}
 
                           <div>
                             <div className="flex items-start justify-between gap-2">
@@ -771,10 +1101,14 @@ export default function TrainInputCanvasPage() {
                               {sets.map((set, index) => (
                                 <div
                                   key={set.id}
+                                  id={`editor-field-set-${index + 1}`}
                                   className="rounded-md px-2 py-2.5 transition-all duration-700"
                                   style={{
+                                    scrollMarginTop: "5.5rem",
                                     backgroundColor: set.id === highlightedSetId ? "rgba(237, 66, 69, 0.16)" : "rgba(35, 36, 40, 0.55)",
-                                    boxShadow: set.id === highlightedSetId ? "0 0 0 1px rgba(237, 66, 69, 0.65), 0 0 24px rgba(237, 66, 69, 0.14)" : "none",
+                                    boxShadow: set.id === highlightedSetId || isFocusedField(`set-${index + 1}`)
+                                      ? "0 0 0 1px rgba(87, 242, 135, 0.55), 0 0 24px rgba(87, 242, 135, 0.14)"
+                                      : "none",
                                   }}
                                 >
                                   <div className="mb-2 flex items-center justify-between gap-2">
@@ -834,7 +1168,7 @@ export default function TrainInputCanvasPage() {
 
                   {activePanel === "notes" ? (
                     <section className="flex flex-col overflow-hidden px-1 py-1" style={panelShellStyle}>
-                      <div className="flex-1 overflow-y-auto pr-0.5">
+                      <div id="editor-field-notes" className="flex-1 overflow-y-auto rounded-lg border px-3 py-2 pr-0.5" style={{ borderColor: "#3b3f48", backgroundColor: "#232428", ...getFieldHighlightStyle("notes") }}>
                         <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Notes</p>
                       <textarea
                         value={notes}
@@ -854,33 +1188,56 @@ export default function TrainInputCanvasPage() {
                     <section className="flex flex-col overflow-hidden px-1 py-1" style={panelShellStyle}>
                       <div className="flex-1 overflow-y-auto pr-0.5">
                         <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Review</p>
-                      <p className="mt-1 text-[11px] text-[#b5bac1]">Everything is split and ready for a final save.</p>
+                        <p className="mt-1 text-[11px] text-[#b5bac1]">Everything is split and ready for a final save.</p>
 
-                      <div className="mt-3 grid gap-x-4 gap-y-2 sm:grid-cols-2">
-                        <div>
-                          <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Exercise</p>
-                          <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{selectedExerciseLabel}</p>
+                        <div className="mt-3 grid gap-x-4 gap-y-2 sm:grid-cols-2">
+                          <div>
+                            <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Exercise</p>
+                            <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{selectedExerciseLabel}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Progression</p>
+                            <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{selectedProgressionLabel}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Variation</p>
+                            <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{selectedVariant || "Default"}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Date</p>
+                            <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{trainingDate}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Format</p>
+                            <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{valueMode === "timed" ? "Timed session" : `Weight • ${weightUnit}`}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Modifier</p>
+                            <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">
+                              {valueMode === "weight" && modifierKg !== 0 ? formatSignedModifierKg(modifierKg) : "No modifier"}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Format</p>
-                          <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{valueMode === "timed" ? "Timed session" : `Weight • ${weightUnit}`}</p>
+
+                        <div className="mt-3">
+                          <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Working sets</p>
+                          <div className="mt-1 space-y-1">
+                            {reviewSetPreview.length ? reviewSetPreview.map((set) => (
+                              <p key={set.label} className="text-[11px] text-[#b5bac1]">
+                                <span className="font-semibold text-[#f2f3f5]">{set.label}:</span> {set.summary}
+                              </p>
+                            )) : (
+                              <p className="text-[11px] text-[#b5bac1]">No sets added yet.</p>
+                            )}
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Progression</p>
-                          <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{selectedLevel || "1"}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Date</p>
-                          <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{trainingDate}</p>
+
+                        <div className="mt-3">
+                          <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Session notes</p>
+                          <p className="mt-1 text-[11px] text-[#b5bac1]">{notes.trim() || "No notes added for this session."}</p>
                         </div>
                       </div>
 
-                      <div className="mt-3">
-                        <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Session notes</p>
-                        <p className="mt-1 text-[11px] text-[#b5bac1]">{notes.trim() || "No notes added for this session."}</p>
-                      </div>
-
-                      </div>
                       {renderPanelActions("save")}
                     </section>
                   ) : null}

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useMemo, startTransition, memo } from "react";
 import { createPortal } from "react-dom";
@@ -639,6 +640,7 @@ function UnifiedTrainingLogTable({
                     const entryDisplayName = ex
                       ? stripBwPercentHint(getExerciseDisplayName(ex, displayTerminologyMode, settings.showExerciseForeignLanguage))
                       : stripBwPercentHint(entry.exerciseName);
+                    const editLogHref = `/dashboard/workout-history/input/${entry.logId}`;
                     const isDeletedEntry = entryDisplayName.toLowerCase().startsWith("deleted exercise");
                     const exerciseVariantOptions = (ex?.variations ?? []).map((v) => v.name).filter(Boolean);
                     const selectedVariantValue = editData?.variant ?? "";
@@ -707,18 +709,26 @@ function UnifiedTrainingLogTable({
                           }}
                         >
                           {!showIllumination ? (
-                            <span className="text-xs text-cloud-white" style={softDimStyle} title={entryDisplayName}>
+                            <Link
+                              href={editLogHref}
+                              className="text-xs text-cloud-white underline-offset-2 hover:underline"
+                              style={softDimStyle}
+                              title={`Edit ${entryDisplayName}`}
+                              onClick={(event) => event.stopPropagation()}
+                            >
                               {entryDisplayName}
-                            </span>
+                            </Link>
                           ) : (
-                            <div
+                            <Link
+                              href={editLogHref}
                               className="px-2 py-1 rounded-md border inline-flex items-center gap-1.5"
                               style={
                                 glowIntensity > 0
                                   ? ({ ...(displayGlowStyle as React.CSSProperties), ...(softDimStyle || {}) } as React.CSSProperties)
                                   : softDimStyle
                               }
-                              title={entryDisplayName}
+                              title={`Edit ${entryDisplayName}`}
+                              onClick={(event) => event.stopPropagation()}
                             >
                               <span className="text-xs font-normal" style={{ color: rowTierInfo.glowColor }}>{entryDisplayName}</span>
                               {showRealm && ex && (
@@ -732,7 +742,7 @@ function UnifiedTrainingLogTable({
                                   )}
                                 </>
                               )}
-                            </div>
+                            </Link>
                           )}
                         </td>
                         {visibleDataIndices.map(({ idx }) => {
