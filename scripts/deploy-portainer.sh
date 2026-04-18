@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-STACK_FILE="${1:-portainer-stack.yml}"
+STACK_FILE="${1:-docker-compose.yml}"
 ENV_FILE="${2:-.env.portainer}"
 
 if [ ! -f "$STACK_FILE" ]; then
@@ -40,5 +40,6 @@ set -a
 set +a
 
 echo "Using $DC with $STACK_FILE"
-sh -c "$DC -f '$STACK_FILE' up --build -d"
+sh -c "$DC pull || true"
+sh -c "$DC -f '$STACK_FILE' up -d"
 sh -c "$DC -f '$STACK_FILE' ps"

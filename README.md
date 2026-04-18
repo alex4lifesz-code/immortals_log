@@ -27,7 +27,7 @@ This repo is set up to run in Portainer with a 2 GB RAM cap and 2 CPU limit.
 
 ### Recommended stack file
 
-Use [portainer-stack.yml](portainer-stack.yml) for Portainer deployments.
+Use [docker-compose.yml](docker-compose.yml) for the clean default Portainer deployment, or [portainer-stack-lan.yml](portainer-stack-lan.yml) if you want the explicit LAN variant.
 
 ### Quick setup on a Linux host
 

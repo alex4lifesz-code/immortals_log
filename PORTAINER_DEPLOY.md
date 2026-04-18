@@ -2,7 +2,8 @@
 
 ## Recommended files
 
-- Stack file: [portainer-stack.yml](portainer-stack.yml)
+- Main compose file: [docker-compose.yml](docker-compose.yml)
+- LAN stack: [portainer-stack-lan.yml](portainer-stack-lan.yml)
 - Env template: [.env.portainer.example](.env.portainer.example)
 - Helper script: [scripts/deploy-portainer.sh](scripts/deploy-portainer.sh)
 
@@ -24,7 +25,15 @@
 
 ## Portainer UI
 
-When deploying as a stack from the Portainer web UI, point it at [portainer-stack.yml](portainer-stack.yml) and supply the environment values from the template.
+Use [docker-compose.yml](docker-compose.yml) in the Portainer stack editor for the clean default setup.
+
+It is LAN-ready and includes:
+
+- 2 CPU limit
+- 2048 MB memory cap
+- persistent database volume
+- automatic Prisma migration on startup
+- simple image-based deployment like common self-hosted apps
 
 ## Limits
 
