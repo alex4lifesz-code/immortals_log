@@ -2,6 +2,7 @@ FROM node:20-alpine AS deps
 WORKDIR /app
 RUN apk add --no-cache libc6-compat openssl
 COPY package*.json ./
+COPY prisma ./prisma
 RUN npm ci --no-audit --no-fund
 
 FROM node:20-alpine AS builder
