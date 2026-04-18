@@ -92,6 +92,48 @@ function formatInputNumber(value: number | null): string {
   return Number.isInteger(normalized) ? String(normalized) : normalized.toFixed(1).replace(/\.0$/, "");
 }
 
+function normalizeEditableSetRows(rows: SetRow[]): Array<{ value: string; reps: string }> {
+  const normalized = rows.map((set) => ({
+    value: set.value.trim(),
+    reps: set.reps.trim(),
+  }));
+
+  let lastFilledIndex = -1;
+  normalized.forEach((set, index) => {
+    if (set.value || set.reps) lastFilledIndex = index;
+  });
+
+  return normalized.slice(0, Math.max(lastFilledIndex + 1, 1));
+}
+
+function buildEditSnapshot(input: {
+  inputMode: InputMode;
+  valueMode: ValueMode;
+  weightUnit: WeightUnit;
+  selectedExerciseId: string;
+  customExerciseName: string;
+  selectedLevel: string;
+  selectedVariant: string;
+  modifierKg: number;
+  trainingDate: string;
+  notes: string;
+  sets: SetRow[];
+}): string {
+  return JSON.stringify({
+    inputMode: input.inputMode,
+    valueMode: input.valueMode,
+    weightUnit: input.weightUnit,
+    selectedExerciseId: input.selectedExerciseId,
+    customExerciseName: input.customExerciseName.trim(),
+    selectedLevel: input.selectedLevel || "",
+    selectedVariant: input.selectedVariant || "",
+    modifierKg: Math.round(input.modifierKg * 10) / 10,
+    trainingDate: input.trainingDate,
+    notes: input.notes.trim(),
+    sets: normalizeEditableSetRows(input.sets),
+  });
+}
+
 export default function TrainInputCanvasPage() {
   const { user } = useAuth();
   const { settings } = useDisplaySettings();
@@ -115,6 +157,7 @@ export default function TrainInputCanvasPage() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [editLogHydrated, setEditLogHydrated] = useState(!editLogId);
+  const [initialEditSnapshot, setInitialEditSnapshot] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [inputMode, setInputMode] = useState<InputMode>(prefillExerciseName ? "existing" : "existing");
   const [valueMode, setValueMode] = useState<ValueMode>("weight");
@@ -193,6 +236,7 @@ export default function TrainInputCanvasPage() {
 
   useEffect(() => {
     if (!editLogId) {
+      setInitialEditSnapshot(null);
       setEditLogHydrated(true);
       return;
     }
@@ -212,17 +256,17 @@ export default function TrainInputCanvasPage() {
           return formatInputNumber(weightUnit === "lbs" ? kgToLbs(value) : value);
         };
 
-        setInputMode("existing");
-        setSelectedExerciseId(log.exerciseId);
-        setSearchTerm(log.exerciseName || "");
-        setCustomExerciseName("");
-        setSelectedLevel(String(log.level || 1));
-        setSelectedVariant(log.variant || "");
-        setModifierKg(parseSignedModifierKg(log.modifier) ?? 0);
-        setTrainingDate(new Date(log.createdAt).toISOString().slice(0, 10));
-        setNotes(log.notes || "");
-        setValueMode(usesTimedMetrics ? "timed" : "weight");
-        setSets([
+        const nextInputMode: InputMode = "existing";
+        const nextSelectedExerciseId = log.exerciseId;
+        const nextSearchTerm = log.exerciseName || "";
+        const nextCustomExerciseName = "";
+        const nextSelectedLevel = String(log.level || 1);
+        const nextSelectedVariant = log.variant || "";
+        const nextModifierKg = parseSignedModifierKg(log.modifier) ?? 0;
+        const nextTrainingDate = new Date(log.createdAt).toISOString().slice(0, 10);
+        const nextNotes = log.notes || "";
+        const nextValueMode: ValueMode = usesTimedMetrics ? "timed" : "weight";
+        const nextSets = [
           {
             id: `${log.id}-set-1`,
             value: usesTimedMetrics ? formatInputNumber(log.holdTime) : displayWeight(log.weight1),
@@ -238,7 +282,32 @@ export default function TrainInputCanvasPage() {
             value: usesTimedMetrics ? formatInputNumber(log.holdTime3) : displayWeight(log.weight3),
             reps: log.reps3 != null ? String(log.reps3) : "",
           },
-        ]);
+        ];
+
+        setInputMode(nextInputMode);
+        setSelectedExerciseId(nextSelectedExerciseId);
+        setSearchTerm(nextSearchTerm);
+        setCustomExerciseName(nextCustomExerciseName);
+        setSelectedLevel(nextSelectedLevel);
+        setSelectedVariant(nextSelectedVariant);
+        setModifierKg(nextModifierKg);
+        setTrainingDate(nextTrainingDate);
+        setNotes(nextNotes);
+        setValueMode(nextValueMode);
+        setSets(nextSets);
+        setInitialEditSnapshot(buildEditSnapshot({
+          inputMode: nextInputMode,
+          valueMode: nextValueMode,
+          weightUnit,
+          selectedExerciseId: nextSelectedExerciseId,
+          customExerciseName: nextCustomExerciseName,
+          selectedLevel: nextSelectedLevel,
+          selectedVariant: nextSelectedVariant,
+          modifierKg: nextModifierKg,
+          trainingDate: nextTrainingDate,
+          notes: nextNotes,
+          sets: nextSets,
+        }));
       } catch (error) {
         console.error("Failed to load existing training log:", error);
         if (!cancelled) {
@@ -595,6 +664,29 @@ export default function TrainInputCanvasPage() {
 
     return [{ label: `Set ${index + 1}`, summary }];
   });
+  const currentEditSnapshot = useMemo(() => {
+    if (!isEditingExistingLog) return null;
+    return buildEditSnapshot({
+      inputMode,
+      valueMode,
+      weightUnit,
+      selectedExerciseId,
+      customExerciseName,
+      selectedLevel,
+      selectedVariant,
+      modifierKg,
+      trainingDate,
+      notes,
+      sets,
+    });
+  }, [customExerciseName, inputMode, isEditingExistingLog, modifierKg, notes, selectedExerciseId, selectedLevel, selectedVariant, sets, trainingDate, valueMode, weightUnit]);
+  const hasPendingEditChanges = Boolean(
+    isEditingExistingLog
+      && editLogHydrated
+      && initialEditSnapshot
+      && currentEditSnapshot
+      && currentEditSnapshot !== initialEditSnapshot,
+  );
   const editorPageTitle = isEditingExistingLog ? "Edit Logged Session" : "Log a Session";
   const editorPageDescription = isEditingExistingLog
     ? "Update or delete this saved workout entry."
@@ -635,6 +727,21 @@ export default function TrainInputCanvasPage() {
     setHighlightedSetId(null);
     setActivePanel(SESSION_PANELS[activePanelIndex - 1]?.id ?? "exercise");
   };
+
+  const handleCloseOrApply = useCallback(async () => {
+    if (saving || deleting) return;
+
+    if (hasPendingEditChanges) {
+      await handleSave();
+      return;
+    }
+
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push(returnHref);
+    }
+  }, [deleting, handleSave, hasPendingEditChanges, returnHref, router, saving]);
 
   const renderPanelActions = (mode: "next" | "save" = "next") => (
     <div
@@ -740,20 +847,36 @@ export default function TrainInputCanvasPage() {
                 </div>
 
                 {isEditingExistingLog ? (
-                  <button
-                    type="button"
-                    onClick={() => void handleDeleteLoggedSession()}
-                    disabled={saving || deleting}
-                    className="rounded-md border px-2.5 py-1 text-[11px] font-semibold transition-colors"
-                    style={{
-                      borderColor: "rgba(237, 66, 69, 0.45)",
-                      backgroundColor: "rgba(237, 66, 69, 0.08)",
-                      color: "#ffb3b8",
-                      opacity: saving || deleting ? 0.7 : 1,
-                    }}
-                  >
-                    {deleting ? "Deleting..." : "Delete"}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void handleDeleteLoggedSession()}
+                      disabled={saving || deleting}
+                      className="rounded-md border px-2.5 py-1 text-[11px] font-semibold transition-colors"
+                      style={{
+                        borderColor: "rgba(237, 66, 69, 0.45)",
+                        backgroundColor: "rgba(237, 66, 69, 0.08)",
+                        color: "#ffb3b8",
+                        opacity: saving || deleting ? 0.7 : 1,
+                      }}
+                    >
+                      {deleting ? "Deleting..." : "Delete"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleCloseOrApply()}
+                      disabled={saving || deleting}
+                      className="rounded-md border px-2.5 py-1 text-[11px] font-semibold transition-colors"
+                      style={{
+                        borderColor: hasPendingEditChanges ? "rgba(87, 242, 135, 0.42)" : "color-mix(in srgb, var(--ink-light) 55%, transparent)",
+                        backgroundColor: hasPendingEditChanges ? "rgba(87, 242, 135, 0.10)" : "rgba(79, 84, 92, 0.16)",
+                        color: hasPendingEditChanges ? "#c9f7d6" : "#f2f3f5",
+                        opacity: saving || deleting ? 0.7 : 1,
+                      }}
+                    >
+                      {saving ? "Applying..." : hasPendingEditChanges ? "Apply Changes" : "Close"}
+                    </button>
+                  </div>
                 ) : null}
               </div>
             </div>
