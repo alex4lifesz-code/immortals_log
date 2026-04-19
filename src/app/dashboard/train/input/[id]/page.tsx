@@ -53,7 +53,7 @@ function createSetRow(seed: number): SetRow {
 }
 
 function createInitialSets(): SetRow[] {
-  return [createSetRow(1), createSetRow(2), createSetRow(3)];
+  return [createSetRow(1)];
 }
 
 function getTodayInputValue(): string {
@@ -171,6 +171,7 @@ export default function TrainInputCanvasPage() {
   const [trainingDate, setTrainingDate] = useState(getTodayInputValue());
   const [notes, setNotes] = useState("");
   const [sets, setSets] = useState<SetRow[]>(createInitialSets);
+  const [expandedSetId, setExpandedSetId] = useState<string | null>(null);
   const [activePanel, setActivePanel] = useState<SessionPanelId>("exercise");
   const [highlightedSetId, setHighlightedSetId] = useState<string | null>(null);
   const [highlightedField, setHighlightedField] = useState<string | null>(null);
@@ -185,6 +186,17 @@ export default function TrainInputCanvasPage() {
     const timeout = window.setTimeout(() => setHighlightedSetId(null), 1200);
     return () => window.clearTimeout(timeout);
   }, [highlightedSetId]);
+
+  useEffect(() => {
+    if (!sets.length) {
+      setExpandedSetId(null);
+      return;
+    }
+
+    if (!expandedSetId || !sets.some((set) => set.id === expandedSetId)) {
+      setExpandedSetId(sets[sets.length - 1]?.id ?? null);
+    }
+  }, [expandedSetId, sets]);
 
   useEffect(() => {
     const step = searchParams.get("step");
@@ -216,6 +228,7 @@ export default function TrainInputCanvasPage() {
       const targetSet = sets[setIndex];
       if (targetSet) {
         setHighlightedSetId(targetSet.id);
+        setExpandedSetId(targetSet.id);
       }
     }
 
@@ -413,18 +426,32 @@ export default function TrainInputCanvasPage() {
   }, [exercises, prefillExerciseId, prefillExerciseName, prefillProgression, prefillVariant, selectedExercise]);
 
   const addSetRow = () => {
-    setHighlightedSetId(null);
-    setSets((prev) => [...prev, createSetRow(prev.length + 1)]);
+    setSets((prev) => {
+      const nextSet = createSetRow(prev.length + 1);
+      setExpandedSetId(nextSet.id);
+      setHighlightedSetId(nextSet.id);
+      return [...prev, nextSet];
+    });
   };
 
   const updateSetRow = (id: string, field: "value" | "reps", value: string) => {
     setHighlightedSetId(null);
+    setExpandedSetId(id);
     setSets((prev) => prev.map((set) => (set.id === id ? { ...set, [field]: value } : set)));
   };
 
   const removeSetRow = (id: string) => {
     setHighlightedSetId(null);
-    setSets((prev) => (prev.length <= 1 ? prev : prev.filter((set) => set.id !== id)));
+    setSets((prev) => {
+      if (prev.length <= 1) return prev;
+      const nextSets = prev.filter((set) => set.id !== id);
+      if (expandedSetId === id) {
+        const removedIndex = prev.findIndex((set) => set.id === id);
+        const fallbackSet = nextSets[Math.max(0, Math.min(removedIndex, nextSets.length - 1))];
+        setExpandedSetId(fallbackSet?.id ?? null);
+      }
+      return nextSets;
+    });
   };
 
   const resetForm = () => {
@@ -440,6 +467,7 @@ export default function TrainInputCanvasPage() {
     setTrainingDate(getTodayInputValue());
     setNotes("");
     setSets(createInitialSets());
+    setExpandedSetId(null);
     setActivePanel("exercise");
     setHighlightedSetId(null);
     setConfirmedPanels([]);
@@ -627,7 +655,15 @@ export default function TrainInputCanvasPage() {
     ? `${selectedExercise.category || "Training"} • ${selectedExercise.tiers.length} progression tiers`
     : "Choose an exercise from the train library or create a custom one.";
   const setValuePlaceholder = valueMode === "timed" ? "time" : weightUnit;
-  const panelShellStyle = { minHeight: "430px", height: "430px" };
+  const panelShellStyle = {
+    minHeight: 0,
+    height: "100%",
+    flex: 1,
+    border: "1px solid color-mix(in srgb, var(--ink-light) 40%, transparent)",
+    borderRadius: "1rem",
+    backgroundColor: "color-mix(in srgb, var(--ink-deep) 97%, var(--ink-mid))",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.03)",
+  };
   const hasExerciseChoice = inputMode === "custom"
     ? customExerciseName.trim().length >= 2
     : Boolean(selectedExerciseId);
@@ -745,58 +781,77 @@ export default function TrainInputCanvasPage() {
 
   const renderPanelActions = (mode: "next" | "save" = "next") => (
     <div
-      className="mt-auto flex items-center justify-between gap-2 border-t pt-3"
-      style={{ borderColor: "color-mix(in srgb, var(--ink-light) 34%, transparent)" }}
+      className="mt-auto shrink-0 -mx-1 border-t px-2 py-2"
+      style={{
+        borderTopColor: "color-mix(in srgb, var(--ink-light) 36%, transparent)",
+        backgroundColor: "color-mix(in srgb, var(--ink-deep) 90%, transparent)",
+      }}
     >
-      <GlowButton
-        variant="ghost"
-        size="sm"
-        onClick={goToPreviousPanel}
-        disabled={activePanelIndex <= 0}
-        className={`h-10 min-w-[96px] justify-center rounded-xl ${activePanelIndex <= 0 ? "pointer-events-none opacity-45" : ""}`}
-        style={{
-          borderColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
-          backgroundColor: "color-mix(in srgb, var(--ink-dark) 92%, var(--ink-deep))",
-          color: "var(--cloud-white)",
-          boxShadow: "0 0 0 1px rgba(88,101,242,0.06) inset",
-        }}
-      >
-        ← Back
-      </GlowButton>
+      <div className="flex items-center justify-between gap-2">
+        <GlowButton
+          variant="ghost"
+          size="sm"
+          onClick={goToPreviousPanel}
+          disabled={activePanelIndex <= 0}
+          className={`h-9 min-w-[78px] justify-center rounded-lg px-3 ${activePanelIndex <= 0 ? "pointer-events-none opacity-45" : ""}`}
+          style={{
+            borderColor: "color-mix(in srgb, var(--ink-light) 56%, transparent)",
+            backgroundColor: "transparent",
+            color: "var(--mist-light)",
+          }}
+        >
+          ← Back
+        </GlowButton>
 
-      {mode === "save" ? (
-        <div className="flex items-center gap-2">
-          {isEditingExistingLog ? (
+        {mode === "save" ? (
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {isEditingExistingLog ? (
+              <GlowButton
+                variant="ghost"
+                size="sm"
+                disabled={saving || deleting}
+                onClick={() => void handleDeleteLoggedSession()}
+                className="h-9 min-w-[78px] justify-center rounded-lg px-3"
+                style={{
+                  borderColor: "rgba(237, 66, 69, 0.38)",
+                  backgroundColor: "transparent",
+                  color: "#ffb3b8",
+                }}
+              >
+                {deleting ? "Deleting..." : "Delete"}
+              </GlowButton>
+            ) : null}
             <GlowButton
-              variant="ghost"
+              variant="jade"
               size="sm"
               disabled={saving || deleting}
-              onClick={() => void handleDeleteLoggedSession()}
-              className="h-10 min-w-[96px] justify-center rounded-xl"
+              onClick={() => void handleSave()}
+              className="h-9 min-w-[78px] justify-center rounded-lg px-3"
               style={{
-                borderColor: "rgba(237, 66, 69, 0.45)",
-                backgroundColor: "rgba(237, 66, 69, 0.08)",
-                color: "#ffb3b8",
+                borderColor: "rgba(88, 101, 242, 0.38)",
+                backgroundColor: "color-mix(in srgb, var(--jade-glow) 16%, var(--ink-dark))",
+                color: "#f2f3f5",
               }}
             >
-              {deleting ? "Deleting..." : "Delete"}
+              {saving ? "Saving..." : isEditingExistingLog ? "Update" : "Save"}
             </GlowButton>
-          ) : null}
+          </div>
+        ) : (
           <GlowButton
             variant="jade"
             size="sm"
-            disabled={saving || deleting}
-            onClick={() => void handleSave()}
-            className="h-10 min-w-[96px] justify-center rounded-xl"
+            onClick={goToNextPanel}
+            className="h-9 min-w-[78px] justify-center rounded-lg px-3"
+            style={{
+              borderColor: "rgba(88, 101, 242, 0.38)",
+              backgroundColor: "color-mix(in srgb, var(--jade-glow) 16%, var(--ink-dark))",
+              color: "#f2f3f5",
+            }}
           >
-            {saving ? "Saving..." : isEditingExistingLog ? "Update" : "Save"}
+            Next →
           </GlowButton>
-        </div>
-      ) : (
-        <GlowButton variant="jade" size="sm" onClick={goToNextPanel} className="h-10 min-w-[96px] justify-center rounded-xl">
-          Next →
-        </GlowButton>
-      )}
+        )}
+      </div>
     </div>
   );
 
@@ -813,7 +868,7 @@ export default function TrainInputCanvasPage() {
       ) : (
         <div className="flex flex-col px-0" style={{ minHeight: shellMinHeight }}>
           <section
-            className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-tl-2xl border"
+            className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border"
             style={{
               minHeight: shellMinHeight,
               borderColor: "color-mix(in srgb, var(--ink-light) 56%, transparent)",
@@ -821,7 +876,7 @@ export default function TrainInputCanvasPage() {
             }}
           >
             <div
-              className="sticky top-0 z-10 border-b px-3 py-2.5"
+              className="sticky top-0 z-10 shrink-0 border-b px-3 py-2.5"
               style={{
                 borderBottomColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)",
                 backgroundColor: "color-mix(in srgb, var(--ink-deep) 94%, var(--ink-mid))",
@@ -881,7 +936,7 @@ export default function TrainInputCanvasPage() {
               </div>
             </div>
 
-            <div className="flex flex-1 flex-col gap-3 px-2 py-2.5 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)]">
+            <div className="flex min-h-0 flex-1 flex-col gap-3 px-2 py-2.5 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)]">
               {message ? (
                 <div
                   className="rounded-lg border px-3 py-2 text-[11px]"
@@ -895,12 +950,15 @@ export default function TrainInputCanvasPage() {
                 </div>
               ) : null}
 
-              <div className="flex min-h-0 flex-1 flex-row gap-3 overflow-hidden">
-                <aside className="w-[68px] shrink-0 sm:w-[72px]">
-                  <div className="flex h-full min-h-full flex-col items-center py-1">
-                    <div className="flex flex-1 flex-col items-center gap-1.5">
+              <div className="flex min-h-0 flex-1 flex-row gap-2 sm:gap-3 overflow-hidden">
+                <aside className="w-[56px] shrink-0 sm:w-[60px]">
+                  <div className="flex h-full min-h-0 flex-col items-center py-1">
+                    <p className="mb-2 text-[9px] uppercase tracking-[0.14em] text-[#949ba4]">Steps</p>
+
+                    <div className="flex min-h-0 flex-1 flex-col items-center gap-2 overflow-y-auto">
                       {SESSION_PANELS.map((panel, index) => {
                         const isActive = activePanel === panel.id;
+                        const isComplete = completionByPanel[panel.id];
                         return (
                           <button
                             key={panel.id}
@@ -909,80 +967,86 @@ export default function TrainInputCanvasPage() {
                               setHighlightedSetId(null);
                               setActivePanel(panel.id);
                             }}
-                            className="flex h-11 w-11 items-center justify-center rounded-full text-center transition-all"
+                            className="flex h-10 w-10 items-center justify-center rounded-full border text-center transition-all"
                             style={{
-                              border: completionByPanel[panel.id]
-                                ? "1px solid rgba(87, 242, 135, 0.42)"
+                              borderColor: isComplete
+                                ? "rgba(87, 242, 135, 0.45)"
                                 : isActive
-                                  ? "1px solid rgba(88, 101, 242, 0.42)"
-                                  : "1px solid rgba(59, 63, 72, 0.7)",
-                              backgroundColor: completionByPanel[panel.id]
-                                ? "rgba(87, 242, 135, 0.14)"
+                                  ? "rgba(88, 101, 242, 0.55)"
+                                  : "rgba(59, 63, 72, 0.72)",
+                              backgroundColor: isComplete
+                                ? "rgba(87, 242, 135, 0.12)"
                                 : isActive
-                                  ? "rgba(88, 101, 242, 0.14)"
+                                  ? "rgba(88, 101, 242, 0.16)"
                                   : "transparent",
-                              color: completionByPanel[panel.id]
+                              color: isComplete
                                 ? "#c9f7d6"
                                 : isActive
                                   ? "#f2f3f5"
                                   : "#949ba4",
-                              boxShadow: completionByPanel[panel.id] ? "0 0 16px rgba(87, 242, 135, 0.12)" : "none",
+                              boxShadow: isActive || isComplete ? "0 0 14px rgba(88, 101, 242, 0.12)" : "none",
                             }}
                             aria-label={panel.label}
-                            title={panel.label}
+                            title={`${index + 1}. ${panel.label}`}
                           >
-                            <span className="text-[11px] font-semibold">{index + 1}</span>
+                            <span className="text-[10px] font-semibold">{index + 1}</span>
                           </button>
                         );
                       })}
-
-                      <button
-                        type="button"
-                        onClick={resetForm}
-                        className="mt-1 flex h-10 w-10 items-center justify-center rounded-xl transition-colors"
-                        style={{
-                          border: "1px solid transparent",
-                          backgroundColor: "transparent",
-                          color: "#949ba4",
-                        }}
-                        aria-label="Reset session"
-                        title="Reset session"
-                      >
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.9}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5" />
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M20 20v-5h-5" />
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M20 9a8 8 0 0 0-13.66-3.66L4 9m16 6-2.34 3.66A8 8 0 0 1 4 15" />
-                        </svg>
-                      </button>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={resetForm}
+                      className="mt-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors"
+                      style={{
+                        border: "1px solid rgba(59, 63, 72, 0.72)",
+                        backgroundColor: "transparent",
+                        color: "#949ba4",
+                      }}
+                      aria-label="Reset session"
+                      title="Reset session"
+                    >
+                      <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.9}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M20 20v-5h-5" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M20 9a8 8 0 0 0-13.66-3.66L4 9m16 6-2.34 3.66A8 8 0 0 1 4 15" />
+                      </svg>
+                    </button>
                   </div>
                 </aside>
 
-                <div className="min-w-0 flex-1 overflow-y-auto space-y-3 pr-0.5">
+                <div className="min-w-0 flex min-h-0 flex-1 flex-col pr-0.5">
                   {activePanel === "exercise" ? (
                     <section className="flex flex-col overflow-hidden px-1 py-1" style={panelShellStyle}>
-                      <div className="flex-1 overflow-y-auto pr-0.5">
+                      <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">
                         <div className="min-w-0">
                           <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Selected exercise</p>
-                          <p className="mt-1 text-[11px] text-[#b5bac1]">This movement was chosen before opening the session logger.</p>
                         </div>
 
-                        <div id="editor-field-session-date" className="mt-3 rounded-lg border px-3 py-2" style={{ borderColor: "#3b3f48", backgroundColor: "#232428", ...getFieldHighlightStyle("session-date") }}>
+                        <div
+                          className="mt-2 flex min-w-0 flex-col rounded-lg px-3 py-2.5"
+                          style={{
+                            backgroundColor: "rgba(17, 18, 20, 0.42)",
+                            border: "1px solid color-mix(in srgb, var(--ink-light) 42%, transparent)",
+                          }}
+                        >
+                          <p className="text-[11px] text-[#b5bac1]">Selected movement</p>
+                          <p className="mt-1 text-base font-semibold text-[#f2f3f5]">{selectedExercise?.name || customExerciseName || "No exercise selected"}</p>
+                          <p className="mt-1 text-[11px] text-[#b5bac1]">{selectedExerciseMeta}</p>
+                        </div>
+
+                        <div id="editor-field-session-date" className="mt-3 rounded-lg px-1 py-1" style={getFieldHighlightStyle("session-date")}>
                           <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Session date</label>
                           <input
                             type="date"
                             value={trainingDate}
                             onChange={(event) => setTrainingDate(event.target.value)}
                             className="h-10 w-full rounded-md border px-3 text-sm outline-none"
-                            style={{ borderColor: "#3b3f48", backgroundColor: "#232428", color: "#f2f3f5" }}
+                            style={{ borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)", backgroundColor: "rgba(17, 18, 20, 0.45)", color: "#f2f3f5" }}
                           />
-                          <p className="mt-1 text-[11px] text-[#b5bac1]">Choose the day before continuing through the session logger.</p>
                         </div>
 
-                        <div className="mt-4 rounded-lg border px-3 py-3" style={{ borderColor: "#3b3f48", backgroundColor: "#232428" }}>
-                          <p className="text-base font-semibold text-[#f2f3f5]">{selectedExercise?.name || customExerciseName || "No exercise selected"}</p>
-                          <p className="mt-1 text-[11px] text-[#b5bac1]">{selectedExerciseMeta}</p>
-                        </div>
                       </div>
 
                       {renderPanelActions()}
@@ -991,21 +1055,21 @@ export default function TrainInputCanvasPage() {
 
                   {activePanel === "details" ? (
                     <section className="flex flex-col overflow-hidden px-1 py-1" style={panelShellStyle}>
-                      <div className="flex-1 overflow-y-auto pr-0.5">
+                      <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">
                         <div>
                           <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Exercise setup</p>
-                          <p className="mt-1 text-[11px] text-[#b5bac1]">Set the progression and variation before entering the session.</p>
+                          <p className="mt-1 text-[11px] text-[#b5bac1]">Choose progression and variant</p>
                         </div>
 
                         <div className="mt-4 grid gap-3 lg:grid-cols-2">
-                          <div id="editor-field-progression" className="rounded-lg border px-3 py-2" style={{ borderColor: "#3b3f48", backgroundColor: "#232428", ...getFieldHighlightStyle("progression") }}>
+                          <div id="editor-field-progression" className="rounded-lg px-1 py-1" style={getFieldHighlightStyle("progression")}>
                             <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Progression</label>
                             <select
                               value={selectedLevel}
                               onChange={(event) => setSelectedLevel(event.target.value)}
                               disabled={inputMode !== "existing" || !selectedExercise}
                               className="h-10 w-full rounded-md border px-3 text-sm outline-none"
-                              style={{ borderColor: "#3b3f48", backgroundColor: "#232428", color: "#f2f3f5", opacity: inputMode !== "existing" || !selectedExercise ? 0.6 : 1 }}
+                              style={{ borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)", backgroundColor: "rgba(17, 18, 20, 0.45)", color: "#f2f3f5", opacity: inputMode !== "existing" || !selectedExercise ? 0.6 : 1 }}
                             >
                               {(selectedExercise?.tiers.length ? selectedExercise.tiers : [{ level: 1, name: "Progression 1" }]).map((tier) => (
                                 <option key={`${tier.level}-${tier.name}`} value={String(tier.level)}>
@@ -1015,14 +1079,14 @@ export default function TrainInputCanvasPage() {
                             </select>
                           </div>
 
-                          <div id="editor-field-variation" className="rounded-lg border px-3 py-2" style={{ borderColor: "#3b3f48", backgroundColor: "#232428", ...getFieldHighlightStyle("variation") }}>
+                          <div id="editor-field-variation" className="rounded-lg px-1 py-1" style={getFieldHighlightStyle("variation")}>
                             <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Variant</label>
                             <select
                               value={selectedVariant}
                               onChange={(event) => setSelectedVariant(event.target.value)}
                               disabled={inputMode !== "existing" || !selectedExercise}
                               className="h-10 w-full rounded-md border px-3 text-sm outline-none"
-                              style={{ borderColor: "#3b3f48", backgroundColor: "#232428", color: "#f2f3f5", opacity: inputMode !== "existing" || !selectedExercise ? 0.6 : 1 }}
+                              style={{ borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)", backgroundColor: "rgba(17, 18, 20, 0.45)", color: "#f2f3f5", opacity: inputMode !== "existing" || !selectedExercise ? 0.6 : 1 }}
                             >
                               <option value="">Default</option>
                               {(selectedExercise?.variations || []).map((variation) => (
@@ -1040,41 +1104,69 @@ export default function TrainInputCanvasPage() {
 
                   {activePanel === "format" ? (
                     <section className="flex flex-col overflow-hidden px-1 py-1" style={panelShellStyle}>
-                      <div className="flex-1 overflow-y-auto pr-0.5">
+                      <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">
                         <div>
                           <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Session format</p>
-                          <p className="mt-1 text-[11px] text-[#b5bac1]">Choose how this workout should be logged before entering the session itself.</p>
+                          <p className="mt-1 text-[11px] text-[#b5bac1]">Select log style</p>
                         </div>
 
                         <div className="mt-4 grid gap-3 lg:grid-cols-2">
                           <button
                             type="button"
                             onClick={() => setValueMode("weight")}
-                            className="rounded-lg border px-3 py-3 text-left transition-colors"
+                            className="rounded-xl border px-3 py-3 text-left transition-colors"
                             style={{
                               borderColor: valueMode === "weight" ? "rgba(88, 101, 242, 0.62)" : "#3b3f48",
-                              backgroundColor: valueMode === "weight" ? "color-mix(in srgb, var(--jade-glow) 14%, var(--ink-dark))" : "#232428",
+                              backgroundColor: valueMode === "weight" ? "color-mix(in srgb, var(--jade-glow) 14%, var(--ink-dark))" : "rgba(35, 36, 40, 0.6)",
                               color: valueMode === "weight" ? "#f2f3f5" : "#b5bac1",
                               boxShadow: valueMode === "weight" ? "0 0 0 1px rgba(88, 101, 242, 0.18) inset" : "none",
                             }}
                           >
-                            <span className="block text-sm font-semibold">Weight</span>
-                            <span className="mt-0.5 block text-[10px] text-[#949ba4]">Load and reps</span>
+                            <div className="flex items-center gap-3">
+                              <span
+                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                                style={{ backgroundColor: valueMode === "weight" ? "rgba(88, 101, 242, 0.18)" : "rgba(255,255,255,0.05)" }}
+                              >
+                                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.5 9h11" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 9.5V14a2 2 0 0 0 2 2h1.5V8H6a2 2 0 0 0-2 1.5Z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M20 9.5V14a2 2 0 0 1-2 2h-1.5V8H18a2 2 0 0 1 2 1.5Z" />
+                                </svg>
+                              </span>
+                              <span className="min-w-0">
+                                <span className="block text-sm font-semibold">Weight</span>
+                                <span className="mt-0.5 block text-[10px] text-[#949ba4]">Load and reps</span>
+                              </span>
+                            </div>
                           </button>
 
                           <button
                             type="button"
                             onClick={() => setValueMode("timed")}
-                            className="rounded-lg border px-3 py-3 text-left transition-colors"
+                            className="rounded-xl border px-3 py-3 text-left transition-colors"
                             style={{
                               borderColor: valueMode === "timed" ? "rgba(88, 101, 242, 0.62)" : "#3b3f48",
-                              backgroundColor: valueMode === "timed" ? "color-mix(in srgb, var(--jade-glow) 14%, var(--ink-dark))" : "#232428",
+                              backgroundColor: valueMode === "timed" ? "color-mix(in srgb, var(--jade-glow) 14%, var(--ink-dark))" : "rgba(35, 36, 40, 0.6)",
                               color: valueMode === "timed" ? "#f2f3f5" : "#b5bac1",
                               boxShadow: valueMode === "timed" ? "0 0 0 1px rgba(88, 101, 242, 0.18) inset" : "none",
                             }}
                           >
-                            <span className="block text-sm font-semibold">Timed</span>
-                            <span className="mt-0.5 block text-[10px] text-[#949ba4]">Seconds and holds</span>
+                            <div className="flex items-center gap-3">
+                              <span
+                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                                style={{ backgroundColor: valueMode === "timed" ? "rgba(88, 101, 242, 0.18)" : "rgba(255,255,255,0.05)" }}
+                              >
+                                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                                  <circle cx="12" cy="13" r="7" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4l2.5 1.5" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 3h6" />
+                                </svg>
+                              </span>
+                              <span className="min-w-0">
+                                <span className="block text-sm font-semibold">Timed</span>
+                                <span className="mt-0.5 block text-[10px] text-[#949ba4]">Seconds and holds</span>
+                              </span>
+                            </div>
                           </button>
                         </div>
 
@@ -1090,34 +1182,35 @@ export default function TrainInputCanvasPage() {
                             Timed entries will be saved in seconds.
                           </div>
                         ) : (
-                          <div className="mt-3 max-w-[260px]">
-                            <p className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Weight unit</p>
+                          <div className="mt-3 max-w-[320px]">
+                            <p className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Input unit</p>
+                            <p className="mb-2 text-[11px] text-[#b5bac1]">Machine values logged in lbs or kg will be converted to your preferred unit from settings.</p>
                             <div className="grid grid-cols-2 gap-2">
                               <button
                                 type="button"
                                 onClick={() => setWeightUnit("kg")}
                                 className="rounded-xl border px-3 py-2 text-[11px] font-semibold transition-all"
                                 style={{
-                                  borderColor: weightUnit === "kg" ? "rgba(88, 101, 242, 0.62)" : "#3b3f48",
-                                  backgroundColor: weightUnit === "kg" ? "color-mix(in srgb, var(--jade-glow) 14%, var(--ink-dark))" : "#232428",
-                                  color: weightUnit === "kg" ? "#f2f3f5" : "#b5bac1",
-                                  boxShadow: weightUnit === "kg" ? "0 0 0 1px rgba(88, 101, 242, 0.18) inset" : "none",
+                                  borderColor: weightUnit === "kg" ? "rgba(88, 101, 242, 0.66)" : "rgba(59, 63, 72, 0.9)",
+                                  backgroundColor: weightUnit === "kg" ? "rgba(88, 101, 242, 0.24)" : "rgba(43, 46, 54, 0.95)",
+                                  color: weightUnit === "kg" ? "#f2f3f5" : "#d0d4db",
+                                  boxShadow: weightUnit === "kg" ? "inset 0 0 0 1px rgba(88, 101, 242, 0.22), inset 0 0 12px rgba(88, 101, 242, 0.16)" : "inset 0 0 0 1px rgba(255,255,255,0.03)",
                                 }}
                               >
-                                kg
+                                Kilograms (kg)
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setWeightUnit("lbs")}
                                 className="rounded-xl border px-3 py-2 text-[11px] font-semibold transition-all"
                                 style={{
-                                  borderColor: weightUnit === "lbs" ? "rgba(88, 101, 242, 0.62)" : "#3b3f48",
-                                  backgroundColor: weightUnit === "lbs" ? "color-mix(in srgb, var(--jade-glow) 14%, var(--ink-dark))" : "#232428",
-                                  color: weightUnit === "lbs" ? "#f2f3f5" : "#b5bac1",
-                                  boxShadow: weightUnit === "lbs" ? "0 0 0 1px rgba(88, 101, 242, 0.18) inset" : "none",
+                                  borderColor: weightUnit === "lbs" ? "rgba(88, 101, 242, 0.66)" : "rgba(59, 63, 72, 0.9)",
+                                  backgroundColor: weightUnit === "lbs" ? "rgba(88, 101, 242, 0.24)" : "rgba(43, 46, 54, 0.95)",
+                                  color: weightUnit === "lbs" ? "#f2f3f5" : "#d0d4db",
+                                  boxShadow: weightUnit === "lbs" ? "inset 0 0 0 1px rgba(88, 101, 242, 0.22), inset 0 0 12px rgba(88, 101, 242, 0.16)" : "inset 0 0 0 1px rgba(255,255,255,0.03)",
                                 }}
                               >
-                                lbs
+                                Pounds (lbs)
                               </button>
                             </div>
                           </div>
@@ -1130,42 +1223,29 @@ export default function TrainInputCanvasPage() {
 
                   {activePanel === "session" ? (
                     <section className="flex flex-col overflow-hidden px-1 py-1" style={panelShellStyle}>
-                      <div className="flex-1 overflow-y-auto pr-0.5">
+                      <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">
                         <div className="space-y-3">
-                          <div
-                            className="rounded-lg border px-3 py-2 text-[11px]"
-                            style={{
-                              borderColor: "color-mix(in srgb, var(--ink-light) 34%, transparent)",
-                              backgroundColor: "rgba(35, 36, 40, 0.55)",
-                              color: "#b5bac1",
-                            }}
-                          >
-                            {valueMode === "timed"
-                              ? "You are logging a timed session."
-                              : `You are logging weight in ${weightUnit}.`}
-                          </div>
-
                           {valueMode === "weight" ? (
                             <div
                               id="editor-field-modifier"
-                              className="rounded-md border px-2.5 py-2"
+                              className="rounded-xl border px-3 py-3"
                               style={{
-                                borderColor: "color-mix(in srgb, var(--ink-light) 32%, transparent)",
-                                backgroundColor: "rgba(35, 36, 40, 0.48)",
                                 ...getFieldHighlightStyle("modifier"),
+                                borderColor: "#3b3f48",
+                                backgroundColor: "rgba(35, 36, 40, 0.56)",
                               }}
                             >
-                              <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-start justify-between gap-2">
                                 <div className="min-w-0">
                                   <p className="text-[10px] uppercase tracking-[0.08em] text-[#949ba4]">Weight modifier</p>
-                                  <p className="text-[10px] text-[#7f8791]">Assist or add load</p>
+                                  <p className="mt-1 text-[11px] text-[#b5bac1]">Assist or add load</p>
                                 </div>
                                 <div className="flex shrink-0 items-center gap-1.5">
                                   <span
-                                    className="min-w-[76px] rounded-md border px-2 py-0.5 text-center text-[10px] font-semibold text-[#f2f3f5]"
+                                    className="min-w-[84px] rounded-full border px-2.5 py-1 text-center text-[10px] font-semibold text-[#f2f3f5]"
                                     style={{
-                                      borderColor: "rgba(88, 101, 242, 0.3)",
-                                      backgroundColor: "rgba(88, 101, 242, 0.06)",
+                                      borderColor: "rgba(88, 101, 242, 0.32)",
+                                      backgroundColor: "rgba(88, 101, 242, 0.09)",
                                     }}
                                   >
                                     {modifierKg === 0 ? "None" : formatSignedModifierKg(modifierKg)}
@@ -1174,8 +1254,8 @@ export default function TrainInputCanvasPage() {
                                     <button
                                       type="button"
                                       onClick={() => setModifierKg(0)}
-                                      className="rounded-md border px-2 py-0.5 text-[10px] font-semibold"
-                                      style={{ borderColor: "#3b3f48", color: "#b5bac1" }}
+                                      className="rounded-full border px-2.5 py-1 text-[10px] font-semibold"
+                                      style={{ borderColor: "rgba(59, 63, 72, 0.9)", backgroundColor: "rgba(43, 46, 54, 0.95)", color: "#d0d4db" }}
                                     >
                                       Reset
                                     </button>
@@ -1183,7 +1263,7 @@ export default function TrainInputCanvasPage() {
                                 </div>
                               </div>
 
-                              <div className="mt-2">
+                              <div className="mt-3 rounded-xl px-2.5 py-2" style={{ backgroundColor: "rgba(17, 18, 20, 0.34)" }}>
                                 <input
                                   type="range"
                                   min="-50"
@@ -1194,7 +1274,7 @@ export default function TrainInputCanvasPage() {
                                   className="h-1.5 w-full cursor-pointer accent-[var(--jade-glow)]"
                                   aria-label="Weight modifier slider"
                                 />
-                                <div className="mt-1 flex items-center justify-between text-[9px] text-[#7f8791]">
+                                <div className="mt-2 flex items-center justify-between text-[9px] text-[#7f8791]">
                                   <span>-50kg</span>
                                   <span>0</span>
                                   <span>+50kg</span>
@@ -1203,11 +1283,11 @@ export default function TrainInputCanvasPage() {
                             </div>
                           ) : null}
 
-                          <div>
+                          <div className="rounded-xl border px-3 py-3" style={{ borderColor: "#3b3f48", backgroundColor: "rgba(35, 36, 40, 0.42)" }}>
                             <div className="flex items-start justify-between gap-2">
                               <div>
                                 <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Sets</p>
-                                <p className="mt-1 text-[11px] text-[#b5bac1]">Add or remove set rows as needed for the session.</p>
+                                <p className="mt-1 text-[11px] text-[#b5bac1]">Start with one set and add more as you go</p>
                               </div>
                               <GlowButton
                                 variant="jade"
@@ -1221,66 +1301,109 @@ export default function TrainInputCanvasPage() {
                             </div>
 
                             <div className="mt-3 space-y-2.5">
-                              {sets.map((set, index) => (
-                                <div
-                                  key={set.id}
-                                  id={`editor-field-set-${index + 1}`}
-                                  className="rounded-md px-2 py-2.5 transition-all duration-700"
-                                  style={{
-                                    scrollMarginTop: "5.5rem",
-                                    backgroundColor: set.id === highlightedSetId ? "rgba(237, 66, 69, 0.16)" : "rgba(35, 36, 40, 0.55)",
-                                    boxShadow: set.id === highlightedSetId || isFocusedField(`set-${index + 1}`)
-                                      ? "0 0 0 1px rgba(87, 242, 135, 0.55), 0 0 24px rgba(87, 242, 135, 0.14)"
-                                      : "none",
-                                  }}
-                                >
-                                  <div className="mb-2 flex items-center justify-between gap-2">
-                                    <p className="text-[11px] font-semibold text-[#f2f3f5]">Set {index + 1}</p>
-                                    <button
-                                      type="button"
-                                      onClick={() => removeSetRow(set.id)}
-                                      disabled={sets.length <= 1}
-                                      className="rounded-lg border px-2.5 py-1.5 text-[10px] font-medium transition-all"
-                                      style={{
-                                        borderColor: "#3b3f48",
-                                        backgroundColor: "rgba(35, 36, 40, 0.55)",
-                                        color: sets.length <= 1 ? "#6f7680" : "#b5bac1",
-                                        opacity: sets.length <= 1 ? 0.45 : 0.88,
-                                      }}
-                                    >
-                                      Remove
-                                    </button>
-                                  </div>
+                              {sets.map((set, index) => {
+                                const isExpanded = expandedSetId === set.id;
+                                const setSummary = set.value || set.reps
+                                  ? `${set.value || "—"} ${valueMode === "timed" ? "sec" : weightUnit} · ${set.reps || "—"} reps`
+                                  : "Tap to continue this set";
 
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      step={valueMode === "timed" ? "1" : "0.5"}
-                                      value={set.value}
-                                      onChange={(event) => updateSetRow(set.id, "value", event.target.value)}
-                                      placeholder={setValuePlaceholder}
-                                      className="h-10 rounded-md border px-3 text-sm outline-none"
-                                      style={{ borderColor: "#3b3f48", backgroundColor: "#232428", color: "#f2f3f5" }}
-                                    />
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      step="1"
-                                      value={set.reps}
-                                      onChange={(event) => updateSetRow(set.id, "reps", event.target.value)}
-                                      placeholder="reps"
-                                      className="h-10 rounded-md border px-3 text-sm outline-none"
-                                      style={{ borderColor: "#3b3f48", backgroundColor: "#232428", color: "#f2f3f5" }}
-                                    />
+                                return (
+                                  <div
+                                    key={set.id}
+                                    id={`editor-field-set-${index + 1}`}
+                                    className="rounded-xl border px-3 py-3 transition-all duration-700"
+                                    style={{
+                                      scrollMarginTop: "5.5rem",
+                                      borderColor: set.id === highlightedSetId || isFocusedField(`set-${index + 1}`) || isExpanded ? "rgba(87, 242, 135, 0.45)" : "#30343c",
+                                      background: set.id === highlightedSetId || isExpanded
+                                        ? "linear-gradient(180deg, rgba(87, 242, 135, 0.035), rgba(26, 28, 32, 0.96))"
+                                        : "linear-gradient(180deg, rgba(30, 32, 37, 0.88), rgba(22, 24, 28, 0.92))",
+                                      boxShadow: set.id === highlightedSetId || isFocusedField(`set-${index + 1}`) || isExpanded
+                                        ? "0 0 0 1px rgba(87, 242, 135, 0.12), 0 0 16px rgba(87, 242, 135, 0.06)"
+                                        : "none",
+                                    }}
+                                  >
+                                    <div className="flex items-center justify-between gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => setExpandedSetId(set.id)}
+                                        className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                                      >
+                                        <span
+                                          className="rounded-full px-2.5 py-1 text-[10px] font-semibold text-[#f2f3f5]"
+                                          style={{ backgroundColor: "rgba(88, 101, 242, 0.12)", border: "1px solid rgba(88, 101, 242, 0.24)" }}
+                                        >
+                                          Set {index + 1}
+                                        </span>
+                                        <span className="truncate text-[10px] text-[#949ba4]">{setSummary}</span>
+                                      </button>
+
+                                      <div className="flex items-center gap-2">
+                                        {!isExpanded ? (
+                                          <button
+                                            type="button"
+                                            onClick={() => setExpandedSetId(set.id)}
+                                            className="rounded-full border px-2.5 py-1 text-[10px] font-medium"
+                                            style={{ borderColor: "rgba(59, 63, 72, 0.9)", backgroundColor: "rgba(43, 46, 54, 0.95)", color: "#d0d4db", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.03)" }}
+                                          >
+                                            Edit
+                                          </button>
+                                        ) : null}
+                                        <button
+                                          type="button"
+                                          onClick={() => removeSetRow(set.id)}
+                                          disabled={sets.length <= 1}
+                                          className="rounded-full border px-2.5 py-1 text-[10px] font-medium transition-all"
+                                          style={{
+                                            borderColor: "rgba(59, 63, 72, 0.9)",
+                                            backgroundColor: "rgba(43, 46, 54, 0.95)",
+                                            color: sets.length <= 1 ? "#6f7680" : "#d0d4db",
+                                            opacity: sets.length <= 1 ? 0.45 : 0.96,
+                                            boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.03)",
+                                          }}
+                                        >
+                                          Remove
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    {isExpanded ? (
+                                      <div className="mt-3 grid grid-cols-2 gap-2">
+                                        <label className="block">
+                                          <span className="mb-1 block text-[10px] uppercase tracking-[0.08em] text-[#7f8791]">
+                                            {valueMode === "timed" ? "Seconds" : "Weight"}
+                                          </span>
+                                          <input
+                                            type="number"
+                                            min="0"
+                                            step={valueMode === "timed" ? "1" : "0.5"}
+                                            value={set.value}
+                                            onChange={(event) => updateSetRow(set.id, "value", event.target.value)}
+                                            placeholder={setValuePlaceholder}
+                                            className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
+                                            style={{ borderColor: "#3b3f48", backgroundColor: "rgba(17, 18, 20, 0.5)", color: "#f2f3f5" }}
+                                          />
+                                        </label>
+                                        <label className="block">
+                                          <span className="mb-1 block text-[10px] uppercase tracking-[0.08em] text-[#7f8791]">Reps</span>
+                                          <input
+                                            type="number"
+                                            min="0"
+                                            step="1"
+                                            value={set.reps}
+                                            onChange={(event) => updateSetRow(set.id, "reps", event.target.value)}
+                                            placeholder="reps"
+                                            className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
+                                            style={{ borderColor: "#3b3f48", backgroundColor: "rgba(17, 18, 20, 0.5)", color: "#f2f3f5" }}
+                                          />
+                                        </label>
+                                      </div>
+                                    ) : null}
                                   </div>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
 
-                            {sets.length > 3 ? (
-                              <p className="mt-2 text-[11px] text-[#b5bac1]">Longer sessions are preserved with the log after the third set as well.</p>
-                            ) : null}
                           </div>
                         </div>
                       </div>
@@ -1291,16 +1414,29 @@ export default function TrainInputCanvasPage() {
 
                   {activePanel === "notes" ? (
                     <section className="flex flex-col overflow-hidden px-1 py-1" style={panelShellStyle}>
-                      <div id="editor-field-notes" className="flex-1 overflow-y-auto rounded-lg border px-3 py-2 pr-0.5" style={{ borderColor: "#3b3f48", backgroundColor: "#232428", ...getFieldHighlightStyle("notes") }}>
-                        <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Notes</p>
-                      <textarea
-                        value={notes}
-                        onChange={(event) => setNotes(event.target.value)}
-                        rows={6}
-                        placeholder="Anything important from this session..."
-                        className="mt-2 w-full rounded-md border px-3 py-2 text-sm outline-none resize-none"
-                        style={{ borderColor: "#3b3f48", backgroundColor: "#232428", color: "#f2f3f5" }}
-                      />
+                      <div
+                        id="editor-field-notes"
+                        className="flex min-h-0 flex-1 flex-col rounded-xl p-1"
+                        style={getFieldHighlightStyle("notes")}
+                      >
+                        <div className="shrink-0">
+                          <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Notes</p>
+                          <p className="mt-1 text-[11px] text-[#b5bac1]">Session notes</p>
+                        </div>
+
+                        <textarea
+                          value={notes}
+                          onChange={(event) => setNotes(event.target.value)}
+                          rows={8}
+                          placeholder="Anything important from this session..."
+                          className="mt-3 min-h-[220px] flex-1 w-full rounded-lg border px-3 py-2.5 text-sm outline-none resize-none placeholder:text-[#7f8791]"
+                          style={{
+                            borderColor: "color-mix(in srgb, var(--ink-light) 52%, transparent)",
+                            backgroundColor: "rgba(17, 18, 20, 0.55)",
+                            color: "#f2f3f5",
+                          }}
+                        />
+
                       </div>
 
                       {renderPanelActions()}
@@ -1309,32 +1445,43 @@ export default function TrainInputCanvasPage() {
 
                   {activePanel === "review" ? (
                     <section className="flex flex-col overflow-hidden px-1 py-1" style={panelShellStyle}>
-                      <div className="flex-1 overflow-y-auto pr-0.5">
-                        <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Review</p>
-                        <p className="mt-1 text-[11px] text-[#b5bac1]">Everything is split and ready for a final save.</p>
+                      <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">
+                        <div
+                          className="rounded-2xl border px-3 py-3"
+                          style={{
+                            borderColor: "rgba(88, 101, 242, 0.22)",
+                            background: "linear-gradient(180deg, rgba(35, 36, 40, 0.9), rgba(24, 25, 28, 0.88))",
+                          }}
+                        >
+                          <p className="text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">Review</p>
+                          <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">Ready for final save</p>
+                          <p className="mt-1 text-[11px] text-[#b5bac1]">Everything is filled out and prepared for submission.</p>
+                        </div>
 
-                        <div className="mt-3 grid gap-x-4 gap-y-2 sm:grid-cols-2">
-                          <div>
+                        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                          <div className="rounded-xl border px-3 py-2.5" style={{ borderColor: "#3b3f48", backgroundColor: "rgba(35, 36, 40, 0.58)" }}>
                             <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Exercise</p>
                             <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{selectedExerciseLabel}</p>
                           </div>
-                          <div>
+                          <div className="rounded-xl border px-3 py-2.5" style={{ borderColor: "#3b3f48", backgroundColor: "rgba(35, 36, 40, 0.58)" }}>
                             <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Progression</p>
                             <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{selectedProgressionLabel}</p>
                           </div>
-                          <div>
+                          <div className="rounded-xl border px-3 py-2.5" style={{ borderColor: "#3b3f48", backgroundColor: "rgba(35, 36, 40, 0.58)" }}>
                             <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Variation</p>
                             <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{selectedVariant || "Default"}</p>
                           </div>
-                          <div>
+                          <div className="rounded-xl border px-3 py-2.5" style={{ borderColor: "#3b3f48", backgroundColor: "rgba(35, 36, 40, 0.58)" }}>
                             <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Date</p>
                             <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{trainingDate}</p>
                           </div>
-                          <div>
+                          <div className="rounded-xl border px-3 py-2.5" style={{ borderColor: "#3b3f48", backgroundColor: "rgba(35, 36, 40, 0.58)" }}>
                             <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Format</p>
-                            <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{valueMode === "timed" ? "Timed session" : `Weight • ${weightUnit}`}</p>
+                            <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">
+                              {valueMode === "timed" ? "Timed session" : `Weight · ${weightUnit === "kg" ? "Kilograms (kg)" : "Pounds (lbs)"}`}
+                            </p>
                           </div>
-                          <div>
+                          <div className="rounded-xl border px-3 py-2.5" style={{ borderColor: "#3b3f48", backgroundColor: "rgba(35, 36, 40, 0.58)" }}>
                             <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Modifier</p>
                             <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">
                               {valueMode === "weight" && modifierKg !== 0 ? formatSignedModifierKg(modifierKg) : "No modifier"}
@@ -1342,22 +1489,25 @@ export default function TrainInputCanvasPage() {
                           </div>
                         </div>
 
-                        <div className="mt-3">
+                        <div className="mt-3 rounded-xl border px-3 py-3" style={{ borderColor: "#3b3f48", backgroundColor: "rgba(35, 36, 40, 0.52)" }}>
                           <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Working sets</p>
-                          <div className="mt-1 space-y-1">
+                          <div className="mt-2 space-y-2">
                             {reviewSetPreview.length ? reviewSetPreview.map((set) => (
-                              <p key={set.label} className="text-[11px] text-[#b5bac1]">
-                                <span className="font-semibold text-[#f2f3f5]">{set.label}:</span> {set.summary}
-                              </p>
+                              <div key={set.label} className="rounded-lg px-2.5 py-2" style={{ backgroundColor: "rgba(17, 18, 20, 0.45)" }}>
+                                <p className="text-[11px] text-[#b5bac1]">
+                                  <span className="font-semibold text-[#f2f3f5]">{set.label}</span>
+                                </p>
+                                <p className="mt-0.5 text-[11px] text-[#b5bac1]">{set.summary}</p>
+                              </div>
                             )) : (
                               <p className="text-[11px] text-[#b5bac1]">No sets added yet.</p>
                             )}
                           </div>
                         </div>
 
-                        <div className="mt-3">
+                        <div className="mt-3 rounded-xl border px-3 py-3" style={{ borderColor: "#3b3f48", backgroundColor: "rgba(35, 36, 40, 0.52)" }}>
                           <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Session notes</p>
-                          <p className="mt-1 text-[11px] text-[#b5bac1]">{notes.trim() || "No notes added for this session."}</p>
+                          <p className="mt-2 text-[11px] leading-5 text-[#b5bac1]">{notes.trim() || "No notes added for this session."}</p>
                         </div>
                       </div>
 

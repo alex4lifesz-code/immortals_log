@@ -12,7 +12,6 @@ import {
   type WeightUnitPref,
 } from "@/context/DisplaySettingsContext";
 import type { Theme } from "@/lib/config";
-import type { LanguageMode } from "@/lib/language";
 
 const THEME_OPTIONS: Array<{ value: Theme; label: string; desc: string }> = [
   { value: "discord", label: "Discord Default", desc: "Original Discord-style canvas" },
@@ -55,31 +54,80 @@ const CALENDAR_START_OPTIONS: Array<{ value: CalendarWeekStartOption; label: str
   { value: "sunday", label: "Sunday", desc: "Common in the US" },
 ];
 
+const sectionShellStyle = {
+  borderColor: "color-mix(in srgb, var(--ink-light) 62%, transparent)",
+  backgroundColor: "color-mix(in srgb, var(--ink-deep) 92%, var(--ink-mid))",
+  boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--cloud-white) 3%, transparent), 0 10px 28px color-mix(in srgb, var(--void-black) 18%, transparent)",
+};
+
+const summaryTileStyle = {
+  borderColor: "color-mix(in srgb, var(--ink-light) 50%, transparent)",
+  backgroundColor: "color-mix(in srgb, var(--ink-mid) 64%, var(--ink-deep))",
+  boxShadow: "inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 3%, transparent)",
+};
+
+const fieldShellStyle = {
+  borderColor: "color-mix(in srgb, var(--ink-light) 46%, transparent)",
+  backgroundColor: "color-mix(in srgb, var(--ink-mid) 58%, var(--ink-deep))",
+  boxShadow: "inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 3%, transparent)",
+};
+
 function SectionCard({
   eyebrow,
   title,
   description,
+  badge,
   children,
 }: {
   eyebrow: string;
   title: string;
   description?: string;
+  badge?: string;
   children: ReactNode;
 }) {
   return (
-    <section
-      className="rounded-xl border p-3 sm:p-4"
-      style={{
-        borderColor: "color-mix(in srgb, var(--ink-light) 56%, transparent)",
-        backgroundColor: "color-mix(in srgb, var(--ink-deep) 95%, var(--ink-mid))",
-        boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--cloud-white) 2%, transparent)",
-      }}
-    >
-      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">{eyebrow}</p>
-      <h2 className="mt-1 text-[15px] font-semibold text-[#f2f3f5]">{title}</h2>
-      {description ? <p className="mt-1 text-[11px] text-[#b5bac1]">{description}</p> : null}
-      <div className="mt-3">{children}</div>
+    <section className="overflow-hidden rounded-xl border" style={sectionShellStyle}>
+      <div className="border-b px-3.5 py-3 sm:px-4" style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)" }}>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8ea1ff]">{eyebrow}</p>
+            <h2 className="mt-1 text-[15px] font-semibold text-[#f2f3f5]">{title}</h2>
+            {description ? <p className="mt-1 text-[11px] text-[#b5bac1]">{description}</p> : null}
+          </div>
+          {badge ? (
+            <span
+              className="shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]"
+              style={{
+                borderColor: "color-mix(in srgb, var(--accent) 28%, transparent)",
+                backgroundColor: "color-mix(in srgb, var(--accent) 14%, transparent)",
+                color: "#dbe3ff",
+              }}
+            >
+              {badge}
+            </span>
+          ) : null}
+        </div>
+      </div>
+      <div className="px-3.5 py-3 sm:px-4">{children}</div>
     </section>
+  );
+}
+
+function SettingsSummaryTile({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+}) {
+  return (
+    <div className="rounded-lg border px-3 py-2.5" style={summaryTileStyle}>
+      <p className="text-[10px] uppercase tracking-[0.16em] text-[#949ba4]">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{value}</p>
+      {hint ? <p className="mt-1 line-clamp-2 text-[11px] text-[#b5bac1]">{hint}</p> : null}
+    </div>
   );
 }
 
@@ -97,244 +145,183 @@ function SettingsSelectField({
   const selected = options.find((option) => option.value === value);
 
   return (
-    <div
-      className="rounded-xl border p-3"
-      style={{
-        borderColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)",
-        backgroundColor: "color-mix(in srgb, var(--ink-mid) 58%, var(--ink-deep))",
-      }}
-    >
-      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">{label}</p>
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="mt-2 h-10 w-full rounded-lg border px-3 text-sm outline-none"
-        style={{
-          borderColor: "#3b3f48",
-          backgroundColor: "#232428",
-          color: "#f2f3f5",
-        }}
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      {selected?.desc ? <p className="mt-2 text-[11px] text-[#b5bac1]">{selected.desc}</p> : null}
-    </div>
-  );
-}
+    <div className="rounded-xl border p-3" style={fieldShellStyle}>
+      <div className="mb-2 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">{label}</p>
+          {selected?.desc ? <p className="mt-1 text-[11px] text-[#b5bac1]">{selected.desc}</p> : null}
+        </div>
+        <span
+          className="rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#c9d2ff]"
+          style={{
+            borderColor: "color-mix(in srgb, var(--accent) 24%, transparent)",
+            backgroundColor: "color-mix(in srgb, var(--accent) 12%, transparent)",
+          }}
+        >
+          Active
+        </span>
+      </div>
 
-function ToggleOption({
-  active,
-  title,
-  subtitle,
-  onClick,
-}: {
-  active: boolean;
-  title: string;
-  subtitle?: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="w-full rounded-xl border p-3 text-left transition-colors"
-      style={{
-        borderColor: active ? "rgba(88, 101, 242, 0.56)" : "#3b3f48",
-        backgroundColor: active ? "#383a40" : "#313338",
-      }}
-    >
-      <p className="text-sm font-semibold text-[#f2f3f5]">{title}</p>
-      {subtitle ? <p className="mt-1 text-[11px] text-[#b5bac1]">{subtitle}</p> : null}
-    </button>
+      <div className="relative">
+        <select
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="h-10 w-full appearance-none rounded-lg border px-3 pr-10 text-sm outline-none transition-colors"
+          style={{
+            borderColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)",
+            backgroundColor: "color-mix(in srgb, var(--void-black) 38%, var(--ink-dark))",
+            color: "#f2f3f5",
+          }}
+        >
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <svg
+          className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#949ba4]"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          strokeWidth={2}
+          aria-hidden="true"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
+        </svg>
+      </div>
+    </div>
   );
 }
 
 export default function SettingsPage() {
   const { logout, user } = useAuth();
   const { themeStyle, setThemeStyle } = useAppContext();
-  const { settings, updateSettings, resetSettings } = useDisplaySettings();
-  const languageMode = settings.languageMode ?? "english";
-
-  const handleLanguageModeChange = (nextLanguageMode: LanguageMode) => {
-    if (nextLanguageMode === "vietnamese") {
-      updateSettings({
-        languageMode: "vietnamese",
-        showExerciseForeignLanguage: true,
-      });
-      return;
-    }
-
-    updateSettings({ languageMode: nextLanguageMode });
-  };
+  const { settings, updateSettings } = useDisplaySettings();
+  const selectedTheme = THEME_OPTIONS.find((theme) => theme.value === themeStyle);
+  const selectedDateFormat = DATE_OPTIONS.find((option) => option.value === settings.dateFormat);
+  const selectedTimeZone = TIMEZONE_OPTIONS.find((zone) => zone.value === settings.timeZone);
+  const selectedWeekStart = CALENDAR_START_OPTIONS.find((option) => option.value === settings.calendarWeekStart);
 
   return (
     <PageLayout
-      title={languageMode === "vietnamese" ? "Cài đặt" : "Settings"}
-      subtitle="Core preferences only"
+      title="Settings"
+      subtitle="Clean defaults for appearance, dates, and training"
       mobileContentPaddingClass="p-2 pb-24"
     >
       <div className="space-y-3 px-0 py-2 sm:space-y-4 sm:py-3">
         <SectionCard
-          eyebrow="Settings"
+          eyebrow="Control room"
           title={user?.name || "Cultivator"}
-          description="Only the settings that still matter for everyday use."
+          description="The key preferences are now grouped into a cleaner, more consistent layout."
+          badge="Live"
         >
           <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-lg border px-3 py-2.5" style={{ borderColor: "#3b3f48", background: "#313338" }}>
-              <p className="text-[10px] uppercase tracking-[0.16em] text-[#949ba4]">Theme</p>
-              <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{THEME_OPTIONS.find((theme) => theme.value === themeStyle)?.label ?? themeStyle}</p>
-            </div>
-            <div className="rounded-lg border px-3 py-2.5" style={{ borderColor: "#3b3f48", background: "#313338" }}>
-              <p className="text-[10px] uppercase tracking-[0.16em] text-[#949ba4]">Date</p>
-              <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{settings.dateFormat}</p>
-            </div>
-            <div className="rounded-lg border px-3 py-2.5" style={{ borderColor: "#3b3f48", background: "#313338" }}>
-              <p className="text-[10px] uppercase tracking-[0.16em] text-[#949ba4]">Timezone</p>
-              <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{TIMEZONE_OPTIONS.find((zone) => zone.value === settings.timeZone)?.label ?? settings.timeZone}</p>
-            </div>
-            <div className="rounded-lg border px-3 py-2.5" style={{ borderColor: "#3b3f48", background: "#313338" }}>
-              <p className="text-[10px] uppercase tracking-[0.16em] text-[#949ba4]">Weight</p>
-              <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{settings.defaultWeightUnit.toUpperCase()}</p>
+            <SettingsSummaryTile
+              label="Theme"
+              value={selectedTheme?.label ?? themeStyle}
+              hint={selectedTheme?.desc}
+            />
+            <SettingsSummaryTile
+              label="Date format"
+              value={selectedDateFormat?.label ?? settings.dateFormat}
+              hint={selectedDateFormat?.sample}
+            />
+            <SettingsSummaryTile
+              label="Timezone"
+              value={selectedTimeZone?.label ?? settings.timeZone}
+              hint={selectedTimeZone?.desc}
+            />
+            <SettingsSummaryTile
+              label="Weight unit"
+              value={settings.defaultWeightUnit.toUpperCase()}
+              hint="Used across training logs and history"
+            />
+          </div>
+        </SectionCard>
+
+        <SectionCard eyebrow="Appearance" title="Theme canvas" description="Choose the palette without changing the layout behavior." badge="Visual">
+          <div className="grid gap-3 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+            <SettingsSelectField
+              label="Theme style"
+              value={themeStyle}
+              onChange={(value) => setThemeStyle(value as Theme)}
+              options={THEME_OPTIONS.map((theme) => ({ value: theme.value, label: theme.label, desc: theme.desc }))}
+            />
+            <div className="rounded-xl border p-3" style={fieldShellStyle}>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">Current look</p>
+              <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{selectedTheme?.label ?? themeStyle}</p>
+              <p className="mt-1 text-[11px] text-[#b5bac1]">{selectedTheme?.desc ?? "Palette synced across the entire app shell."}</p>
+              <div className="mt-3 flex items-center gap-2">
+                <span className="h-3 w-3 rounded-full" style={{ backgroundColor: "var(--accent)" }} />
+                <span className="h-3 w-3 rounded-full" style={{ backgroundColor: "var(--ink-mid)" }} />
+                <span className="h-3 w-3 rounded-full" style={{ backgroundColor: "var(--ink-light)" }} />
+              </div>
             </div>
           </div>
         </SectionCard>
 
-        <SectionCard eyebrow="Appearance" title="Theme" description="Pick the canvas look for the app.">
-          <SettingsSelectField
-            label="Theme style"
-            value={themeStyle}
-            onChange={(value) => setThemeStyle(value as Theme)}
-            options={THEME_OPTIONS.map((theme) => ({ value: theme.value, label: theme.label, desc: theme.desc }))}
-          />
-        </SectionCard>
-
-        <SectionCard eyebrow="Calendar" title="Date and region" description="Keep dates and schedules consistent across the app.">
-          <div className="grid gap-3 lg:grid-cols-2">
+        <SectionCard eyebrow="Calendar" title="Date and region" description="Keep history, schedules, and logs aligned everywhere." badge="Sync">
+          <div className="grid gap-3 lg:grid-cols-3">
             <SettingsSelectField
               label="Timezone"
               value={settings.timeZone}
               onChange={(value) => updateSettings({ timeZone: value })}
               options={TIMEZONE_OPTIONS.map((option) => ({ value: option.value, label: option.label, desc: option.desc }))}
             />
-
-            <div className="grid gap-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">Date format</p>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {DATE_OPTIONS.map((option) => (
-                  <ToggleOption
-                    key={option.value}
-                    active={settings.dateFormat === option.value}
-                    title={option.label}
-                    subtitle={option.sample}
-                    onClick={() => updateSettings({ dateFormat: option.value })}
-                  />
-                ))}
-              </div>
-            </div>
+            <SettingsSelectField
+              label="Date format"
+              value={settings.dateFormat}
+              onChange={(value) => updateSettings({ dateFormat: value as DateFormatOption })}
+              options={DATE_OPTIONS.map((option) => ({ value: option.value, label: option.label, desc: option.sample }))}
+            />
+            <SettingsSelectField
+              label="Week starts on"
+              value={settings.calendarWeekStart}
+              onChange={(value) => updateSettings({ calendarWeekStart: value as CalendarWeekStartOption })}
+              options={CALENDAR_START_OPTIONS.map((option) => ({ value: option.value, label: option.label, desc: option.desc }))}
+            />
           </div>
+        </SectionCard>
 
-          <div className="mt-3">
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">Week starts on</p>
-            <div className="grid gap-2 sm:grid-cols-3">
-              {CALENDAR_START_OPTIONS.map((option) => (
-                <ToggleOption
-                  key={option.value}
-                  active={settings.calendarWeekStart === option.value}
-                  title={option.label}
-                  subtitle={option.desc}
-                  onClick={() => updateSettings({ calendarWeekStart: option.value })}
-                />
-              ))}
+        <SectionCard eyebrow="Training" title="Weight unit" description="Set it once and keep every session log readable." badge="Log">
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
+            <SettingsSelectField
+              label="Preferred weight unit"
+              value={settings.defaultWeightUnit}
+              onChange={(value) => updateSettings({ defaultWeightUnit: value as WeightUnitPref })}
+              options={[
+                { value: "kg", label: "Kilograms (kg)", desc: "Best for metric-based training logs" },
+                { value: "lbs", label: "Pounds (lbs)", desc: "Best for imperial-based training logs" },
+              ]}
+            />
+            <div className="rounded-xl border p-3" style={fieldShellStyle}>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">Preview</p>
+              <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">Bench Press • 20 {settings.defaultWeightUnit.toUpperCase()}</p>
+              <p className="mt-1 text-[11px] text-[#b5bac1]">
+                History pages, summaries, and input flows will follow this default unit.
+              </p>
+              <p className="mt-3 text-[11px] text-[#949ba4]">Week start: {selectedWeekStart?.label ?? settings.calendarWeekStart}</p>
             </div>
           </div>
         </SectionCard>
 
-        <SectionCard eyebrow="Language" title="Language and names" description="Keep the UI readable while choosing how exercise names appear.">
-          <div className="grid gap-3 lg:grid-cols-2">
+        <SectionCard
+          eyebrow="Account"
+          title="Session"
+          description="Sign out without losing the local display choices already saved on this device."
+          badge={user?.username ? `@${user.username}` : undefined}
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">App language</p>
-              <div className="grid gap-2 sm:grid-cols-2">
-                <ToggleOption
-                  active={languageMode === "english"}
-                  title="English"
-                  subtitle="UI labels in English"
-                  onClick={() => handleLanguageModeChange("english")}
-                />
-                <ToggleOption
-                  active={languageMode === "vietnamese"}
-                  title="Vietnamese"
-                  subtitle="UI labels in Vietnamese"
-                  onClick={() => handleLanguageModeChange("vietnamese")}
-                />
-              </div>
+              <p className="text-[12px] text-[#dbdee1]">Everything important stays tidy and easier to scan now.</p>
+              <p className="mt-1 text-[11px] text-[#949ba4]">Signed in as {user?.name ?? "Cultivator"}.</p>
             </div>
-
-            <div>
-              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">Naming style</p>
-              <div className="grid gap-2 sm:grid-cols-2">
-                <ToggleOption
-                  active={settings.terminologyMode === "normal"}
-                  title="Conventional"
-                  subtitle="Standard fitness labels"
-                  onClick={() => updateSettings({ terminologyMode: "normal" })}
-                />
-                <ToggleOption
-                  active={settings.terminologyMode === "fantasy"}
-                  title="Cultivation"
-                  subtitle="Wuxia-style labels"
-                  onClick={() => updateSettings({ terminologyMode: "fantasy" })}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-3">
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">Exercise names</p>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <ToggleOption
-                active={settings.showExerciseForeignLanguage}
-                title="Show bilingual names"
-                subtitle="Helpful for learning and matching names"
-                onClick={() => updateSettings({ showExerciseForeignLanguage: true })}
-              />
-              <ToggleOption
-                active={!settings.showExerciseForeignLanguage}
-                title="Show cleaner names"
-                subtitle="More compact across lists and tables"
-                onClick={() => updateSettings({ showExerciseForeignLanguage: false })}
-              />
-            </div>
+            <GlowButton variant="crimson" onClick={logout} className="w-full sm:w-auto">
+              Logout
+            </GlowButton>
           </div>
         </SectionCard>
-
-        <SectionCard eyebrow="Training" title="Weight unit" description="Keep training logs consistent with your preferred unit.">
-          <div className="grid gap-2 sm:grid-cols-2">
-            {([
-              { value: "kg" as WeightUnitPref, title: "Kilograms (kg)" },
-              { value: "lbs" as WeightUnitPref, title: "Pounds (lbs)" },
-            ]).map((option) => (
-              <ToggleOption
-                key={option.value}
-                active={settings.defaultWeightUnit === option.value}
-                title={option.title}
-                onClick={() => updateSettings({ defaultWeightUnit: option.value })}
-              />
-            ))}
-          </div>
-        </SectionCard>
-
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-          <GlowButton variant="ghost" onClick={resetSettings} className="w-full sm:w-auto">
-            Reset Display Settings
-          </GlowButton>
-          <GlowButton variant="crimson" onClick={logout} className="w-full sm:w-auto">
-            Logout
-          </GlowButton>
-        </div>
       </div>
     </PageLayout>
   );

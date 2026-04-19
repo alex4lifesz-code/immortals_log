@@ -1261,7 +1261,7 @@ export default function HistoryPage() {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-                        className="absolute inset-0 z-20"
+                        className="fixed inset-0 z-[245]"
                         style={{ backgroundColor: "color-mix(in srgb, var(--void-black) 72%, transparent)" }}
                         onClick={() => setMobileDrawerFilterOpen(false)}
                       />
@@ -1271,14 +1271,14 @@ export default function HistoryPage() {
                         animate={{ x: 0, opacity: 1 }}
                         exit={{ x: "100%", opacity: 0.98 }}
                         transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-                        className="absolute inset-y-0 right-0 z-30 flex h-full w-[min(22rem,92vw)] flex-col overflow-hidden border-l shadow-2xl"
+                        className="fixed inset-y-0 right-0 z-[250] flex max-h-[100dvh] w-[min(22rem,92vw)] flex-col overflow-hidden border-l shadow-2xl safe-area-top safe-area-bottom safe-area-right"
                         style={{
                           borderColor: "color-mix(in srgb, var(--jade-glow) 18%, var(--ink-light))",
                           background: "linear-gradient(180deg, color-mix(in srgb, var(--ink-dark) 98%, transparent) 0%, color-mix(in srgb, var(--ink-mid) 92%, transparent) 100%)",
                           boxShadow: "0 18px 56px rgba(0, 0, 0, 0.45)",
                         }}
                       >
-                        <div className="shrink-0 border-b px-4 pb-3 pt-4" style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)" }}>
+                        <div className="shrink-0 border-b px-4 pb-3 pt-[max(env(safe-area-inset-top,0px),1rem)]" style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)" }}>
                           <div className="flex items-start justify-between gap-3">
                             <div>
                               <p className="text-[10px] uppercase tracking-[0.14em] text-[#949ba4]">Filters</p>
@@ -1299,7 +1299,7 @@ export default function HistoryPage() {
                           </div>
                         </div>
 
-                        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4" style={{ WebkitOverflowScrolling: "touch" }}>
+                        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4" style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: "contain" }}>
                           <div className="space-y-4">
                             <div>
                               <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">Progression</label>
@@ -1397,7 +1397,7 @@ export default function HistoryPage() {
                           </div>
                         </div>
 
-                        <div className="shrink-0 border-t px-4 pb-4 pt-3" style={{ borderTopColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)" }}>
+                        <div className="shrink-0 border-t px-4 pb-[max(env(safe-area-inset-bottom,0px),1rem)] pt-3" style={{ borderTopColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)" }}>
                           <div className="grid grid-cols-2 gap-2">
                             <button
                               type="button"

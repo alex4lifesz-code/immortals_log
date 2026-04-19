@@ -169,12 +169,12 @@ export default function ProfilePage() {
   const pageItems = [
     { id: "profile", label: "Profile", path: DASHBOARD_ROUTES.profile, icon: "👤" },
     { id: "checkin", label: "Check-In", path: DASHBOARD_ROUTES.checkIn, icon: "📝" },
-    { id: "settings", label: "Settings", path: DASHBOARD_ROUTES.settings, icon: "⚙️" },
-    { id: "friends", label: "Friends", path: DASHBOARD_ROUTES.friends, icon: "👥" },
     { id: "train", label: "Train", path: DASHBOARD_ROUTES.workoutHistory, icon: "🕘" },
-    { id: "community", label: "Community Feed", path: DASHBOARD_ROUTES.community, icon: "🌐" },
     { id: "completionist", label: "Completionist", path: DASHBOARD_ROUTES.rankUp, icon: "✅" },
+    { id: "community", label: "Community Feed", path: DASHBOARD_ROUTES.community, icon: "🌐" },
+    { id: "friends", label: "Friends", path: DASHBOARD_ROUTES.friends, icon: "👥" },
     { id: "exercises", label: "Exercise Library", path: DASHBOARD_ROUTES.exercises, icon: "📚" },
+    { id: "settings", label: "Settings", path: DASHBOARD_ROUTES.settings, icon: "⚙️" },
   ] as const;
 
   const adminItems = user?.role === "admin"
