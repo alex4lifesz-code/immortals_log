@@ -81,12 +81,6 @@ function calculateLogVolume(log: ExerciseLog): number {
 
 const ITEMS_PER_PAGE = 7;
 
-const themedCommunityCardStyle = {
-  borderColor: "color-mix(in srgb, var(--border) 78%, transparent)",
-  background: "color-mix(in srgb, var(--surface) 92%, black)",
-  boxShadow: "var(--shadow-elev-1), 0 1px 0 color-mix(in srgb, var(--cloud-white) 3%, transparent) inset",
-} as const;
-
 export default function CommunityFeedClient() {
   const { user } = useAuth();
   const { settings } = useDisplaySettings();
@@ -340,7 +334,7 @@ export default function CommunityFeedClient() {
         <div className="dashboard-modern-feed">
           {allExercises.length > 0 && (
             <section className="mb-3 sm:mb-4">
-              <GlowCard glow="none" hoverable={false} className="dashboard-modern-hero !p-0 overflow-hidden" style={themedCommunityCardStyle}>
+              <GlowCard glow="none" hoverable={false} className="dashboard-modern-hero !p-0 overflow-hidden">
                 <ExerciseStatsCarousel
                   exercises={allExercises}
                   communityLogs={exerciseLogs}
@@ -355,7 +349,7 @@ export default function CommunityFeedClient() {
 
           {allGroupedByMemberDay.length === 0 ? (
             selectedFilter !== "" ? (
-              <GlowCard glow="none" hoverable={false} className="dashboard-modern-empty mt-8" style={themedCommunityCardStyle}>
+              <GlowCard glow="none" hoverable={false} className="dashboard-modern-empty mt-8">
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <div className="text-4xl mb-4 opacity-40">🏛️</div>
                   <h3 className="text-sm text-jade-glow uppercase tracking-wider mb-2">The Hall is Silent</h3>
@@ -376,7 +370,6 @@ export default function CommunityFeedClient() {
                     glow="none"
                     hoverable={false}
                     className="dashboard-modern-member"
-                    style={themedCommunityCardStyle}
                   >
                     {(() => {
                       const memberKey = `${member.userId}-${member.dateKey}`;
@@ -387,49 +380,26 @@ export default function CommunityFeedClient() {
                           <button
                             type="button"
                             onClick={() => toggleMemberGroup(memberKey)}
-                            className="dashboard-modern-member-trigger w-full rounded-xl border px-2 py-2 text-left transition-[border-color,background-color,box-shadow]"
-                            style={{
-                              borderColor: isMemberExpanded
-                                ? "color-mix(in srgb, var(--accent) 48%, var(--border))"
-                                : "color-mix(in srgb, var(--border) 74%, transparent)",
-                              background: isMemberExpanded
-                                ? "linear-gradient(180deg, color-mix(in srgb, var(--accent) 12%, var(--surface-hover)) 0%, color-mix(in srgb, var(--surface) 94%, black) 100%)"
-                                : "linear-gradient(180deg, color-mix(in srgb, var(--surface) 94%, black) 0%, color-mix(in srgb, var(--surface-hover) 72%, var(--surface)) 100%)",
-                              boxShadow: isMemberExpanded
-                                ? "0 0 0 1px color-mix(in srgb, var(--accent) 10%, transparent) inset"
-                                : "none",
-                            }}
+                            className="dashboard-modern-member-trigger w-full text-left"
                             aria-expanded={isMemberExpanded}
                           >
                             <div className="grid grid-cols-[36px_1fr_auto] sm:grid-cols-[40px_1fr_auto] gap-2 sm:gap-3 items-center">
-                              <div
-                                className="grid h-9 w-9 place-items-center rounded-md border sm:h-10 sm:w-10"
-                                style={{
-                                  borderColor: "color-mix(in srgb, var(--border) 78%, transparent)",
-                                  backgroundColor: "color-mix(in srgb, var(--surface) 92%, black)",
-                                }}
-                              >
-                                <span className="text-base font-bold text-[color:var(--text-primary)] sm:text-lg">
+                              <div className="grid h-9 w-9 place-items-center rounded-md border border-[#3b3f48] bg-[#313338] sm:h-10 sm:w-10">
+                                <span className="text-base font-bold text-[#f2f3f5] sm:text-lg">
                                   {member.userName.charAt(0).toUpperCase()}
                                 </span>
                               </div>
                               <div className="min-w-0">
-                                <h3 className="truncate text-sm font-semibold text-[color:var(--text-primary)] sm:text-base">{member.userName}</h3>
-                                <p className="truncate text-[10px] text-[color:var(--text-secondary)] sm:text-xs">
+                                <h3 className="truncate text-sm font-semibold text-[#f2f3f5] sm:text-base">{member.userName}</h3>
+                                <p className="truncate text-[10px] text-[#b5bac1] sm:text-xs">
                                   {member.exerciseGroups.length} {member.exerciseGroups.length === 1 ? "exercise" : "exercises"} • {member.logs.length} {member.logs.length === 1 ? "entry" : "entries"} • active {timeAgo(member.stats.lastActiveAt)}
                                 </p>
                               </div>
                               <div className="justify-self-end flex flex-col items-end gap-1 shrink-0">
-                                <div
-                                  className="whitespace-nowrap rounded-md border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[color:var(--text-secondary)] sm:px-2.5 sm:py-1 sm:text-[10px]"
-                                  style={{
-                                    borderColor: "color-mix(in srgb, var(--border) 78%, transparent)",
-                                    backgroundColor: "color-mix(in srgb, var(--surface) 92%, black)",
-                                  }}
-                                >
+                                <div className="rounded-md border border-[#3b3f48] bg-[#232428] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[#b5bac1] whitespace-nowrap sm:px-2.5 sm:py-1 sm:text-[10px]">
                                   {formatDayHeader(member.dateKey)}
                                 </div>
-                                <span className="text-[10px] text-[color:var(--text-muted)]">
+                                <span className="text-[10px] text-[#949ba4]">
                                   {isMemberExpanded ? "Hide exercises" : "Show exercises"}
                                 </span>
                               </div>
@@ -453,18 +423,7 @@ export default function CommunityFeedClient() {
                                     <button
                                       type="button"
                                       onClick={() => toggleExerciseGroup(exerciseKey)}
-                                      className="w-full rounded-md border px-1 py-1 text-left transition-[border-color,background-color,box-shadow]"
-                                      style={{
-                                        borderColor: isExerciseExpanded
-                                          ? "color-mix(in srgb, var(--accent) 44%, var(--border))"
-                                          : "color-mix(in srgb, var(--border) 68%, transparent)",
-                                        background: isExerciseExpanded
-                                          ? "linear-gradient(180deg, color-mix(in srgb, var(--accent) 10%, var(--surface-hover)) 0%, color-mix(in srgb, var(--surface) 92%, black) 100%)"
-                                          : "linear-gradient(180deg, color-mix(in srgb, var(--surface) 94%, black) 0%, color-mix(in srgb, var(--surface-hover) 70%, var(--surface)) 100%)",
-                                        boxShadow: isExerciseExpanded
-                                          ? "0 0 0 1px color-mix(in srgb, var(--accent) 8%, transparent) inset"
-                                          : "none",
-                                      }}
+                                      className="w-full rounded-md px-1 py-1 text-left transition-colors hover:bg-[#313338]/55"
                                       aria-expanded={isExerciseExpanded}
                                     >
                                       <article
@@ -477,14 +436,14 @@ export default function CommunityFeedClient() {
                                         }}
                                       >
                                         <div className="flex items-start justify-between gap-2">
-                                          <p className="text-sm font-semibold leading-tight text-[color:var(--text-primary)]">
+                                          <p className="text-sm font-semibold leading-tight text-[#f2f3f5]">
                                             {exerciseGroup.exerciseName}
                                           </p>
-                                          <span className="shrink-0 text-[11px] text-[color:var(--text-muted)]">
+                                          <span className="shrink-0 text-[11px] text-[#949ba4]">
                                             {timeAgo(exerciseGroup.lastActiveAt)}
                                           </span>
                                         </div>
-                                        <p className="mt-0.5 text-[11px] italic text-[color:var(--text-muted)]">
+                                        <p className="mt-0.5 text-[11px] italic text-[#949ba4]">
                                           {`Recent: ${exerciseGroup.logs.length} ${exerciseGroup.logs.length === 1 ? "entry" : "entries"} • ${isExerciseExpanded ? "hide logs" : "show logs"}`}
                                         </p>
                                       </article>
@@ -499,14 +458,14 @@ export default function CommunityFeedClient() {
                                             style={{ borderTop: "1px solid color-mix(in srgb, var(--ink-light) 72%, transparent)" }}
                                           >
                                             <div className="flex items-start justify-between gap-2">
-                                              <p className="text-sm font-semibold leading-tight text-[color:var(--accent)]">
+                                              <p className="text-sm font-semibold leading-tight text-[#8ea1ff]">
                                                 {log.progressionName || `Progression ${log.level}`}
                                               </p>
-                                              <span className="shrink-0 text-[11px] text-[color:var(--text-muted)]">
+                                              <span className="shrink-0 text-[11px] text-[#949ba4]">
                                                 {timeAgo(log.createdAt)}
                                               </span>
                                             </div>
-                                            <div className="mt-1.5 space-y-0.5 text-[11px] leading-relaxed text-[color:var(--text-primary)]">
+                                            <div className="mt-1.5 space-y-0.5 text-[11px] leading-relaxed text-[#dbdee1]">
                                               {[1, 2, 3].map((setNumber) => {
                                                 const weight = log[`weight${setNumber}` as keyof ExerciseLog] as number | undefined;
                                                 const reps = log[`reps${setNumber}` as keyof ExerciseLog] as number | undefined;
@@ -514,38 +473,38 @@ export default function CommunityFeedClient() {
                                                 return (
                                                   <div key={`${log.id}-set-${setNumber}`} className="grid grid-cols-2 gap-x-3">
                                                     <div className="min-w-0 truncate">
-                                                      <span className="text-[color:var(--text-muted)]">Weight {setNumber}:</span>{" "}
-                                                      <span className="text-[color:var(--accent)]">
+                                                      <span className="text-[#949ba4]">Weight {setNumber}:</span>{" "}
+                                                      <span className="text-[#33b9ff]">
                                                         {formatSetValue(weight, weight > 0 ? "weighted" : "bodyweight", weightUnit)} {weight > 0 ? (weightUnit === "kg" ? "Kg" : "Lbs") : "seconds"}
                                                       </span>
                                                     </div>
                                                     <div className="min-w-0 truncate">
-                                                      <span className="text-[color:var(--text-muted)]">Reps:</span>{" "}
-                                                      <span className="text-[color:var(--forest)]">{reps}</span>
+                                                      <span className="text-[#949ba4]">Reps:</span>{" "}
+                                                      <span className="text-[#57f287]">{reps}</span>
                                                     </div>
                                                   </div>
                                                 );
                                               })}
                                               <div className="grid grid-cols-2 gap-x-3">
                                                 <div className="min-w-0 truncate">
-                                                  <span className="text-[color:var(--text-muted)]">Notes:</span>{" "}
-                                                  <span className="text-[color:var(--text-primary)]">{log.notes?.trim() || "-"}</span>
+                                                  <span className="text-[#949ba4]">Notes:</span>{" "}
+                                                  <span className="text-[#dbdee1]">{log.notes?.trim() || "-"}</span>
                                                 </div>
                                                 <div className="min-w-0 truncate">
-                                                  <span className="text-[color:var(--text-muted)]">Status:</span>{" "}
-                                                  <span className={log.completed ? "text-[color:var(--forest)]" : "text-[color:var(--text-secondary)]"}>
+                                                  <span className="text-[#949ba4]">Status:</span>{" "}
+                                                  <span className={log.completed ? "text-[#57f287]" : "text-[#b5bac1]"}>
                                                     {log.completed ? "Completed" : "Logged"}
                                                   </span>
                                                 </div>
                                               </div>
                                               <div className="grid grid-cols-2 gap-x-3">
                                                 <div className="min-w-0 truncate">
-                                                  <span className="text-[color:var(--text-muted)]">Sets:</span>{" "}
-                                                  <span className="text-[color:var(--text-primary)]">{countLogSets(log)}</span>
+                                                  <span className="text-[#949ba4]">Sets:</span>{" "}
+                                                  <span className="text-[#f2f3f5]">{countLogSets(log)}</span>
                                                 </div>
                                                 <div className="min-w-0 truncate">
-                                                  <span className="text-[color:var(--text-muted)]">Volume:</span>{" "}
-                                                  <span className="text-[color:var(--warning)]">{calculateLogVolume(log).toFixed(1)} {weightUnit}-reps</span>
+                                                  <span className="text-[#949ba4]">Volume:</span>{" "}
+                                                  <span className="text-[#ff7b7d]">{calculateLogVolume(log).toFixed(1)} {weightUnit}-reps</span>
                                                 </div>
                                               </div>
                                             </div>
@@ -580,7 +539,7 @@ export default function CommunityFeedClient() {
                   <button
                     type="button"
                     onClick={() => setDisplayCount((prev) => Math.min(prev + ITEMS_PER_PAGE, allGroupedByMemberDay.length))}
-                    className="theme-control-btn dashboard-modern-loadmore-btn rounded-md border px-3 py-1.5 text-xs transition-colors"
+                    className="dashboard-modern-loadmore-btn rounded-md border border-ink-light/30 bg-ink-dark/60 px-3 py-1.5 text-xs text-jade-glow hover:bg-ink-dark/80 transition-colors"
                   >
                     Load more activity
                   </button>

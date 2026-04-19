@@ -737,13 +737,7 @@ export default function HistoryPage() {
 
                               {!isFriendTrainOverlay ? (
                                 <div className="mt-2 -mx-0.5 overflow-x-auto scrollbar-hide">
-                                  <div
-                                    className="flex min-w-max items-center gap-2 rounded-xl border px-2 py-1"
-                                    style={{
-                                      borderColor: "color-mix(in srgb, var(--border) 70%, transparent)",
-                                      background: "linear-gradient(180deg, color-mix(in srgb, var(--surface) 94%, black) 0%, color-mix(in srgb, var(--surface-hover) 48%, var(--surface)) 100%)",
-                                    }}
-                                  >
+                                  <div className="flex min-w-max items-center gap-2">
                                     {trainQuickNavItems.map((item) => {
                                       const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
                                       return (
@@ -751,10 +745,18 @@ export default function HistoryPage() {
                                           key={item.href}
                                           type="button"
                                           onClick={() => router.push(item.href)}
-                                          className={`rounded-lg border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-[border-color,background-color,box-shadow,color] ${
-                                            isActive ? "theme-action-btn" : "theme-control-btn"
-                                          }`}
-                                          style={{ minWidth: "fit-content" }}
+                                          className="rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-[border-color,background-color,color]"
+                                          style={{
+                                            minWidth: "fit-content",
+                                            borderColor: isActive
+                                              ? "color-mix(in srgb, var(--accent) 20%, var(--border))"
+                                              : "var(--border)",
+                                            backgroundColor: isActive
+                                              ? "color-mix(in srgb, var(--surface) 72%, var(--surface-hover))"
+                                              : "var(--surface-hover)",
+                                            color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
+                                            boxShadow: "none",
+                                          }}
                                           aria-current={isActive ? "page" : undefined}
                                         >
                                           {item.label}
