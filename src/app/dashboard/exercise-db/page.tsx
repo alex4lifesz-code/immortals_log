@@ -1327,125 +1327,126 @@ export default function ExerciseDBPage() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.18 }}
-              className="fixed inset-0 z-[237]"
+              className="fixed inset-0 z-[250]"
               style={{ backgroundColor: "color-mix(in srgb, var(--void-black) 74%, transparent)" }}
               onClick={() => setFilterDrawerOpen(false)}
             />
             <motion.aside
               key="exercise-db-filter-drawer"
-              initial={{ x: "100%" }}
-              animate={{ x: "0%" }}
-              exit={{ x: "100%" }}
+              initial={{ x: "100%", opacity: 0.98 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: "100%", opacity: 0.98 }}
               transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-              className="fixed inset-y-0 right-0 z-[239] w-[min(320px,88vw)] overflow-hidden border-l"
+              className="fixed inset-y-0 right-0 z-[260] flex h-[100dvh] max-h-[100dvh] w-[min(22rem,92vw)] flex-col overflow-hidden border-l shadow-2xl sm:my-3 sm:mr-3 sm:h-[calc(100dvh-1.5rem)] sm:max-h-[52rem] sm:rounded-2xl sm:border"
               style={{
-                borderLeftColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
-                backgroundColor: "color-mix(in srgb, var(--ink-deep) 97%, var(--ink-mid))",
+                borderColor: "color-mix(in srgb, var(--jade-glow) 18%, var(--ink-light))",
+                background: "linear-gradient(180deg, color-mix(in srgb, var(--ink-dark) 98%, transparent) 0%, color-mix(in srgb, var(--ink-mid) 92%, transparent) 100%)",
+                boxShadow: "0 18px 56px rgba(0, 0, 0, 0.45)",
               }}
             >
-              <div className="flex h-full min-h-0 flex-col overflow-hidden">
-                <div className="border-b px-3 py-2.5" style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)" }}>
-                  <div className="flex items-center justify-between gap-2">
-                    <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-mist-light">
-                      Exercise DB Filters
-                    </h2>
-                    <button
-                      type="button"
-                      onClick={() => setFilterDrawerOpen(false)}
-                      className="h-8 w-8 rounded-md border text-sm"
-                      style={{
-                        borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                        color: "var(--mist-light)",
-                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
-                      }}
-                      aria-label="Close exercise DB filters"
-                    >
-                      ×
-                    </button>
+              <div className="shrink-0 border-b px-4 pb-3 pt-[max(env(safe-area-inset-top,0px),1rem)]" style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)" }}>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.14em] text-[#949ba4]">Filters</p>
+                    <h2 className="mt-1 text-base font-semibold text-[#f2f3f5]">Exercise DB</h2>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setFilterDrawerOpen(false)}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-md border text-[#b5bac1] transition hover:text-[#f2f3f5]"
+                    style={{
+                      borderColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)",
+                      backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
+                    }}
+                    aria-label="Close exercise DB filters"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+
+              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4" style={{ WebkitOverflowScrolling: "touch" }}>
+                <div>
+                  <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">Category</label>
+                  <select
+                    value={categoryFilter}
+                    onChange={(event) => setCategoryFilter(event.target.value)}
+                    className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
+                    style={{
+                      borderColor: "#3b3f48",
+                      backgroundColor: "#232428",
+                      color: "#f2f3f5",
+                    }}
+                  >
+                    {categoryOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option === "all" ? "All categories" : option}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
-                <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3 py-3">
-                  <div>
-                    <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-mist-dark">Category</label>
-                    <select
-                      value={categoryFilter}
-                      onChange={(event) => setCategoryFilter(event.target.value)}
-                      className="h-9 w-full rounded-md border px-2.5 text-sm outline-none"
-                      style={{
-                        borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
-                        color: "var(--cloud-white)",
-                      }}
-                    >
-                      {categoryOptions.map((option) => (
-                        <option key={option} value={option}>
-                          {option === "all" ? "All categories" : option}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-mist-dark">Type</label>
-                    <select
-                      value={typeFilter}
-                      onChange={(event) => setTypeFilter(event.target.value)}
-                      className="h-9 w-full rounded-md border px-2.5 text-sm outline-none"
-                      style={{
-                        borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
-                        color: "var(--cloud-white)",
-                      }}
-                    >
-                      {typeOptions.map((option) => (
-                        <option key={option} value={option}>
-                          {option === "all" ? "All types" : option}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-mist-dark">Status</label>
-                    <select
-                      value={statusFilter}
-                      onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
-                      className="h-9 w-full rounded-md border px-2.5 text-sm outline-none"
-                      style={{
-                        borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
-                        color: "var(--cloud-white)",
-                      }}
-                    >
-                      <option value="all">All status</option>
-                      <option value="custom">Custom only</option>
-                      <option value="pending">Pending only</option>
-                      <option value="regular">Core only</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-mist-dark">Sort</label>
-                    <select
-                      value={sortBy}
-                      onChange={(event) => setSortBy(event.target.value as SortBy)}
-                      className="h-9 w-full rounded-md border px-2.5 text-sm outline-none"
-                      style={{
-                        borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
-                        color: "var(--cloud-white)",
-                      }}
-                    >
-                      <option value="relevant">Relevant</option>
-                      <option value="recent">Last updated</option>
-                      <option value="name">Name A-Z</option>
-                      <option value="created">Recently added</option>
-                    </select>
-                  </div>
+                <div>
+                  <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">Type</label>
+                  <select
+                    value={typeFilter}
+                    onChange={(event) => setTypeFilter(event.target.value)}
+                    className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
+                    style={{
+                      borderColor: "#3b3f48",
+                      backgroundColor: "#232428",
+                      color: "#f2f3f5",
+                    }}
+                  >
+                    {typeOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option === "all" ? "All types" : option}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
-                <div className="border-t px-3 py-3" style={{ borderTopColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)" }}>
+                <div>
+                  <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">Status</label>
+                  <select
+                    value={statusFilter}
+                    onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
+                    className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
+                    style={{
+                      borderColor: "#3b3f48",
+                      backgroundColor: "#232428",
+                      color: "#f2f3f5",
+                    }}
+                  >
+                    <option value="all">All status</option>
+                    <option value="custom">Custom only</option>
+                    <option value="pending">Pending only</option>
+                    <option value="regular">Core only</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">Sort by</label>
+                  <select
+                    value={sortBy}
+                    onChange={(event) => setSortBy(event.target.value as SortBy)}
+                    className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
+                    style={{
+                      borderColor: "#3b3f48",
+                      backgroundColor: "#232428",
+                      color: "#f2f3f5",
+                    }}
+                  >
+                    <option value="relevant">Relevant</option>
+                    <option value="recent">Last updated</option>
+                    <option value="name">Name A-Z</option>
+                    <option value="created">Recently added</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="shrink-0 border-t px-4 pb-[max(env(safe-area-inset-bottom,0px),1rem)] pt-3" style={{ borderTopColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)" }}>
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => {
@@ -1453,16 +1454,19 @@ export default function ExerciseDBPage() {
                       setTypeFilter("all");
                       setStatusFilter("all");
                       setSortBy("recent");
-                      setFilterDrawerOpen(false);
                     }}
-                    className="w-full rounded-md border px-3 py-2 text-sm font-semibold"
-                    style={{
-                      borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                      backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
-                      color: "var(--mist-light)",
-                    }}
+                    className="h-11 rounded-xl border px-3 text-sm font-medium text-[#f2f3f5] transition-colors"
+                    style={{ borderColor: "#3b3f48", backgroundColor: "#232428" }}
                   >
-                    Clear filters
+                    Reset
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFilterDrawerOpen(false)}
+                    className="h-11 rounded-xl border px-3 text-sm font-semibold text-[#08120c] transition-colors"
+                    style={{ borderColor: "rgba(87, 242, 135, 0.42)", backgroundColor: "#57f287" }}
+                  >
+                    Done
                   </button>
                 </div>
               </div>

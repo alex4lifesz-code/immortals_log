@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import PageLayout from "@/components/layout/PageLayout";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { api } from "@/lib/api-client";
@@ -182,6 +183,17 @@ export default function CompletionistPage() {
       window.removeEventListener(PROGRESSION_EXERCISES_UPDATED_EVENT, handleProgressionUpdate);
     };
   }, [loadSkills]);
+
+  useEffect(() => {
+    if (!filterDrawerOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [filterDrawerOpen]);
 
   const categoryOptions = useMemo(() => {
     const categories = Array.from(new Set(skills.map((skill) => skill.category).filter(Boolean)));
@@ -586,120 +598,161 @@ export default function CompletionistPage() {
               </div>
             </section>
 
-            <AnimatePresence>
-              {filterDrawerOpen ? (
-                <>
-                  <motion.button
-                    type="button"
-                    aria-label="Close filters"
-                    className="fixed inset-0 z-40 bg-black/45"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    onClick={() => setFilterDrawerOpen(false)}
-                  />
+            {typeof document !== "undefined" && createPortal(
+              <AnimatePresence>
+                {filterDrawerOpen ? (
+                  <>
+                    <motion.button
+                      type="button"
+                      aria-label="Close filters"
+                      className="fixed inset-0 z-[250] bg-black/55"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      onClick={() => setFilterDrawerOpen(false)}
+                    />
 
-                  <motion.aside
-                    className="fixed inset-y-0 right-0 z-50 w-[min(24rem,calc(100vw-0.75rem))] border-l px-4 py-4 shadow-2xl"
-                    initial={{ x: "100%", opacity: 0.98 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    exit={{ x: "100%", opacity: 0.98 }}
-                    transition={{ duration: 0.24, ease: "easeOut" }}
-                    style={{
-                      borderLeftColor: "color-mix(in srgb, var(--jade-glow) 18%, var(--ink-light))",
-                      background: "linear-gradient(180deg, color-mix(in srgb, var(--ink-dark) 98%, transparent) 0%, color-mix(in srgb, var(--ink-mid) 92%, transparent) 100%)",
-                    }}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-[10px] uppercase tracking-[0.14em] text-[#949ba4]">Filters</p>
-                        <h3 className="mt-1 text-base font-semibold text-[#f2f3f5]">Refine Completionist</h3>
-                        <p className="mt-1 text-xs text-[#b5bac1]">Search the train library, sort by activity, and focus on what still needs a session.</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setFilterDrawerOpen(false)}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-md border text-[#b5bac1] transition hover:text-[#f2f3f5]"
+                    <div className="fixed inset-0 z-[260] pointer-events-none">
+                      <motion.aside
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="Completionist filters"
+                        className="pointer-events-auto ml-auto flex h-[100dvh] max-h-[100dvh] w-[min(22rem,92vw)] flex-col overflow-hidden border-l shadow-2xl sm:my-3 sm:mr-3 sm:h-[calc(100dvh-1.5rem)] sm:max-h-[52rem] sm:rounded-2xl sm:border"
+                        initial={{ x: "100%", opacity: 0.98 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        exit={{ x: "100%", opacity: 0.98 }}
+                        transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
                         style={{
-                          borderColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)",
-                          backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
+                          borderColor: "color-mix(in srgb, var(--jade-glow) 18%, var(--ink-light))",
+                          background: "linear-gradient(180deg, color-mix(in srgb, var(--ink-dark) 98%, transparent) 0%, color-mix(in srgb, var(--ink-mid) 92%, transparent) 100%)",
+                          boxShadow: "0 18px 56px rgba(0, 0, 0, 0.45)",
                         }}
-                        aria-label="Close filter drawer"
                       >
-                        ×
-                      </button>
+                        <div
+                          className="shrink-0 border-b px-4 pb-3 pt-[max(env(safe-area-inset-top,0px),1rem)]"
+                          style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)" }}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-[10px] uppercase tracking-[0.14em] text-[#949ba4]">Filters</p>
+                              <h3 className="mt-1 text-base font-semibold text-[#f2f3f5]">Refine Completionist</h3>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setFilterDrawerOpen(false)}
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-md border text-[#b5bac1] transition hover:text-[#f2f3f5]"
+                              style={{
+                                borderColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)",
+                                backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
+                              }}
+                              aria-label="Close filter drawer"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        </div>
+
+                        <div
+                          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4"
+                          style={{ WebkitOverflowScrolling: "touch" }}
+                        >
+                          <div className="space-y-4">
+                            <div>
+                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">Category</label>
+                              <select
+                                value={categoryFilter}
+                                onChange={(event) => setCategoryFilter(event.target.value as CategoryFilter)}
+                                className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
+                                style={{ borderColor: "#3b3f48", backgroundColor: "#232428", color: "#f2f3f5" }}
+                              >
+                                {categoryOptions.map((option) => (
+                                  <option key={option} value={option}>
+                                    {option === "all" ? "All categories" : option}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">Activity</label>
+                              <select
+                                value={activityFilter}
+                                onChange={(event) => setActivityFilter(event.target.value as ActivityFilter)}
+                                className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
+                                style={{ borderColor: "#3b3f48", backgroundColor: "#232428", color: "#f2f3f5" }}
+                              >
+                                <option value="all">All exercises</option>
+                                <option value="active">Active in 14 days</option>
+                                <option value="stale">Stale 30+ days</option>
+                                <option value="untouched">Never logged</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">Sort by</label>
+                              <select
+                                value={sortBy}
+                                onChange={(event) => setSortBy(event.target.value as SortBy)}
+                                className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
+                                style={{ borderColor: "#3b3f48", backgroundColor: "#232428", color: "#f2f3f5" }}
+                              >
+                                <option value="recent">Recently trained</option>
+                                <option value="coverage">Best coverage</option>
+                                <option value="sessions">Most sessions</option>
+                                <option value="name">Name A-Z</option>
+                              </select>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => setShowLoggedOnly((prev) => !prev)}
+                              className="h-11 w-full rounded-xl border px-3 text-sm font-medium transition-colors"
+                              style={{
+                                borderColor: showLoggedOnly ? "rgba(87, 242, 135, 0.42)" : "#3b3f48",
+                                backgroundColor: showLoggedOnly ? "rgba(87, 242, 135, 0.1)" : "#232428",
+                                color: showLoggedOnly ? "#c9f7d6" : "#f2f3f5",
+                              }}
+                            >
+                              {showLoggedOnly ? "Showing logged exercises" : "Show logged only"}
+                            </button>
+                          </div>
+                        </div>
+
+                        <div
+                          className="shrink-0 border-t px-4 pb-[max(env(safe-area-inset-bottom,0px),1rem)] pt-3"
+                          style={{ borderTopColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)" }}
+                        >
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCategoryFilter("all");
+                                setActivityFilter("all");
+                                setSortBy("recent");
+                                setShowLoggedOnly(false);
+                              }}
+                              className="h-11 rounded-xl border px-3 text-sm font-medium text-[#f2f3f5] transition-colors"
+                              style={{ borderColor: "#3b3f48", backgroundColor: "#232428" }}
+                            >
+                              Reset
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setFilterDrawerOpen(false)}
+                              className="h-11 rounded-xl border px-3 text-sm font-semibold text-[#08120c] transition-colors"
+                              style={{ borderColor: "rgba(87, 242, 135, 0.42)", backgroundColor: "#57f287" }}
+                            >
+                              Done
+                            </button>
+                          </div>
+                        </div>
+                      </motion.aside>
                     </div>
-
-                    <div className="mt-4 space-y-3">
-                      <select
-                        value={categoryFilter}
-                        onChange={(event) => setCategoryFilter(event.target.value as CategoryFilter)}
-                        className="h-10 w-full rounded-md border px-3 text-sm outline-none"
-                        style={{ borderColor: "#3b3f48", backgroundColor: "#232428", color: "#f2f3f5" }}
-                      >
-                        {categoryOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {option === "all" ? "All categories" : option}
-                          </option>
-                        ))}
-                      </select>
-
-                      <select
-                        value={activityFilter}
-                        onChange={(event) => setActivityFilter(event.target.value as ActivityFilter)}
-                        className="h-10 w-full rounded-md border px-3 text-sm outline-none"
-                        style={{ borderColor: "#3b3f48", backgroundColor: "#232428", color: "#f2f3f5" }}
-                      >
-                        <option value="all">All exercises</option>
-                        <option value="active">Active in 14 days</option>
-                        <option value="stale">Stale 30+ days</option>
-                        <option value="untouched">Never logged</option>
-                      </select>
-
-                      <select
-                        value={sortBy}
-                        onChange={(event) => setSortBy(event.target.value as SortBy)}
-                        className="h-10 w-full rounded-md border px-3 text-sm outline-none"
-                        style={{ borderColor: "#3b3f48", backgroundColor: "#232428", color: "#f2f3f5" }}
-                      >
-                        <option value="recent">Recently trained</option>
-                        <option value="coverage">Best coverage</option>
-                        <option value="sessions">Most sessions</option>
-                        <option value="name">Name A-Z</option>
-                      </select>
-
-                      <button
-                        type="button"
-                        onClick={() => setShowLoggedOnly((prev) => !prev)}
-                        className="h-10 w-full rounded-md border px-3 text-sm font-medium transition-colors"
-                        style={{
-                          borderColor: showLoggedOnly ? "rgba(87, 242, 135, 0.42)" : "#3b3f48",
-                          backgroundColor: showLoggedOnly ? "rgba(87, 242, 135, 0.1)" : "#232428",
-                          color: showLoggedOnly ? "#c9f7d6" : "#f2f3f5",
-                        }}
-                      >
-                        {showLoggedOnly ? "Showing logged" : "Logged only"}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCategoryFilter("all");
-                          setActivityFilter("all");
-                          setSortBy("recent");
-                          setShowLoggedOnly(false);
-                          setFilterDrawerOpen(false);
-                        }}
-                        className="h-10 w-full rounded-md border px-3 text-sm font-medium text-[#f2f3f5] transition-colors"
-                        style={{ borderColor: "#3b3f48", backgroundColor: "#232428" }}
-                      >
-                        Clear filters
-                      </button>
-                    </div>
-                  </motion.aside>
-                </>
-              ) : null}
-            </AnimatePresence>
+                  </>
+                ) : null}
+              </AnimatePresence>,
+              document.body,
+            )}
           </>
         ) : null}
       </div>

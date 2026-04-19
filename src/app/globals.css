@@ -462,11 +462,11 @@ main {
 @keyframes pageRise {
   0% {
     opacity: 0;
-    transform: translate3d(0, 14px, 0) scale(0.99);
+    transform: none;
   }
   100% {
     opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
+    transform: none;
   }
 }
 

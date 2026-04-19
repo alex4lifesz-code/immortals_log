@@ -854,55 +854,56 @@ export default function HistoryPage() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-              className="fixed inset-0 z-[237]"
+              className="fixed inset-0 z-[250]"
               style={{ backgroundColor: "color-mix(in srgb, var(--void-black) 74%, transparent)" }}
               onClick={() => setMobileHistoryFilterOpen(false)}
             />
             <motion.aside
               key="mobile-history-filter-drawer"
-              initial={{ x: "100%" }}
-              animate={{ x: "0%" }}
-              exit={{ x: "100%" }}
+              initial={{ x: "100%", opacity: 0.98 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: "100%", opacity: 0.98 }}
               transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-              className="fixed inset-y-0 right-0 z-[239] w-[min(320px,88vw)] border-l overflow-hidden safe-area-top safe-area-bottom safe-area-right"
+              className="fixed inset-y-0 right-0 z-[260] flex h-[100dvh] max-h-[100dvh] w-[min(22rem,92vw)] flex-col overflow-hidden border-l shadow-2xl safe-area-top safe-area-bottom safe-area-right sm:my-3 sm:mr-3 sm:h-[calc(100dvh-1.5rem)] sm:max-h-[52rem] sm:rounded-2xl sm:border"
               style={{
-                borderLeftColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
-                backgroundColor: "color-mix(in srgb, var(--ink-deep) 97%, var(--ink-mid))",
+                borderColor: "color-mix(in srgb, var(--jade-glow) 18%, var(--ink-light))",
+                background: "linear-gradient(180deg, color-mix(in srgb, var(--ink-dark) 98%, transparent) 0%, color-mix(in srgb, var(--ink-mid) 92%, transparent) 100%)",
+                boxShadow: "0 18px 56px rgba(0, 0, 0, 0.45)",
               }}
             >
-              <div className="flex h-full min-h-0 flex-col overflow-hidden">
-                <div className="border-b px-3 py-2.5" style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)" }}>
-                  <div className="flex items-center justify-between gap-2">
-                    <h2 className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--mist-light)" }}>
-                      Exercise Filters
-                    </h2>
-                    <button
-                      type="button"
-                      onClick={() => setMobileHistoryFilterOpen(false)}
-                      className="h-8 w-8 rounded-md border text-sm"
-                      style={{
-                        borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                        color: "var(--mist-light)",
-                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
-                      }}
-                      aria-label="Close exercise filters"
-                    >
-                      x
-                    </button>
-                  </div>
-                </div>
-
-                <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 space-y-3">
+              <div className="shrink-0 border-b px-4 pb-3 pt-[max(env(safe-area-inset-top,0px),1rem)]" style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)" }}>
+                <div className="flex items-start justify-between gap-3">
                   <div>
-                    <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Category</label>
+                    <p className="text-[10px] uppercase tracking-[0.14em] text-[#949ba4]">Filters</p>
+                    <h2 className="mt-1 text-base font-semibold text-[#f2f3f5]">Train History</h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setMobileHistoryFilterOpen(false)}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-md border text-[#b5bac1] transition hover:text-[#f2f3f5]"
+                    style={{
+                      borderColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)",
+                      backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
+                    }}
+                    aria-label="Close exercise filters"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4" style={{ WebkitOverflowScrolling: "touch" }}>
+                <div className="space-y-4">
+                  <div>
+                    <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">Category</label>
                     <select
                       value={mobileHistoryCategory}
                       onChange={(event) => setMobileHistoryCategory(event.target.value)}
-                      className="h-9 w-full rounded-md border px-2.5 text-sm outline-none"
+                      className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
                       style={{
-                        borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
-                        color: "var(--cloud-white)",
+                        borderColor: "#3b3f48",
+                        backgroundColor: "#232428",
+                        color: "#f2f3f5",
                       }}
                     >
                       {mobileHistoryCategoryOptions.map((category) => (
@@ -914,15 +915,15 @@ export default function HistoryPage() {
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Sort</label>
+                    <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">Sort by</label>
                     <select
                       value={mobileHistorySort}
                       onChange={(event) => setMobileHistorySort(event.target.value as "recent" | "oldest" | "name-az" | "relevant")}
-                      className="h-9 w-full rounded-md border px-2.5 text-sm outline-none"
+                      className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
                       style={{
-                        borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
-                        color: "var(--cloud-white)",
+                        borderColor: "#3b3f48",
+                        backgroundColor: "#232428",
+                        color: "#f2f3f5",
                       }}
                     >
                       <option value="relevant">Relevant</option>
@@ -933,15 +934,15 @@ export default function HistoryPage() {
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Updated</label>
+                    <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">Updated</label>
                     <select
                       value={mobileHistoryRecency}
                       onChange={(event) => setMobileHistoryRecency(event.target.value as "all" | "7d" | "30d")}
-                      className="h-9 w-full rounded-md border px-2.5 text-sm outline-none"
+                      className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
                       style={{
-                        borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
-                        color: "var(--cloud-white)",
+                        borderColor: "#3b3f48",
+                        backgroundColor: "#232428",
+                        color: "#f2f3f5",
                       }}
                     >
                       <option value="all">All time</option>
@@ -950,24 +951,29 @@ export default function HistoryPage() {
                     </select>
                   </div>
                 </div>
+              </div>
 
-                <div className="border-t px-3 py-3" style={{ borderTopColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)" }}>
+              <div className="shrink-0 border-t px-4 pb-[max(env(safe-area-inset-bottom,0px),1rem)] pt-3" style={{ borderTopColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)" }}>
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => {
                       setMobileHistoryCategory("all");
                       setMobileHistorySort("recent");
                       setMobileHistoryRecency("all");
-                      setMobileHistoryFilterOpen(false);
                     }}
-                    className="w-full rounded-md border px-3 py-2 text-sm font-semibold"
-                    style={{
-                      borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                      backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
-                      color: "var(--mist-light)",
-                    }}
+                    className="h-11 rounded-xl border px-3 text-sm font-medium text-[#f2f3f5] transition-colors"
+                    style={{ borderColor: "#3b3f48", backgroundColor: "#232428" }}
                   >
-                    Clear filters
+                    Reset
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMobileHistoryFilterOpen(false)}
+                    className="h-11 rounded-xl border px-3 text-sm font-semibold text-[#08120c] transition-colors"
+                    style={{ borderColor: "rgba(87, 242, 135, 0.42)", backgroundColor: "#57f287" }}
+                  >
+                    Done
                   </button>
                 </div>
               </div>
@@ -1261,49 +1267,50 @@ export default function HistoryPage() {
                       />
                       <motion.aside
                         key="mobile-inner-log-filter-drawer"
-                        initial={{ x: "100%" }}
-                        animate={{ x: "0%" }}
-                        exit={{ x: "100%" }}
+                        initial={{ x: "100%", opacity: 0.98 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        exit={{ x: "100%", opacity: 0.98 }}
                         transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-                        className="absolute inset-y-0 right-0 z-30 w-[min(320px,88vw)] border-l overflow-hidden"
+                        className="absolute inset-y-0 right-0 z-30 flex h-full w-[min(22rem,92vw)] flex-col overflow-hidden border-l shadow-2xl"
                         style={{
-                          borderLeftColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
-                          backgroundColor: "color-mix(in srgb, var(--ink-deep) 97%, var(--ink-mid))",
+                          borderColor: "color-mix(in srgb, var(--jade-glow) 18%, var(--ink-light))",
+                          background: "linear-gradient(180deg, color-mix(in srgb, var(--ink-dark) 98%, transparent) 0%, color-mix(in srgb, var(--ink-mid) 92%, transparent) 100%)",
+                          boxShadow: "0 18px 56px rgba(0, 0, 0, 0.45)",
                         }}
                       >
-                        <div className="flex h-full min-h-0 flex-col overflow-hidden">
-                          <div className="border-b px-3 py-2.5" style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)" }}>
-                            <div className="flex items-center justify-between gap-2">
-                              <h2 className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--mist-light)" }}>
-                                Log Filters
-                              </h2>
-                              <button
-                                type="button"
-                                onClick={() => setMobileDrawerFilterOpen(false)}
-                                className="h-8 w-8 rounded-md border text-sm"
-                                style={{
-                                  borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                                  color: "var(--mist-light)",
-                                  backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
-                                }}
-                                aria-label="Close log filters"
-                              >
-                                x
-                              </button>
-                            </div>
-                          </div>
-
-                          <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 space-y-3">
+                        <div className="shrink-0 border-b px-4 pb-3 pt-4" style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)" }}>
+                          <div className="flex items-start justify-between gap-3">
                             <div>
-                              <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Progression</label>
+                              <p className="text-[10px] uppercase tracking-[0.14em] text-[#949ba4]">Filters</p>
+                              <h2 className="mt-1 text-base font-semibold text-[#f2f3f5]">Log Filters</h2>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setMobileDrawerFilterOpen(false)}
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-md border text-[#b5bac1] transition hover:text-[#f2f3f5]"
+                              style={{
+                                borderColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)",
+                                backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
+                              }}
+                              aria-label="Close log filters"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4" style={{ WebkitOverflowScrolling: "touch" }}>
+                          <div className="space-y-4">
+                            <div>
+                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">Progression</label>
                               <select
                                 value={mobileDrawerLevelFilter}
                                 onChange={(event) => setMobileDrawerLevelFilter(event.target.value)}
-                                className="h-9 w-full rounded-md border px-2.5 text-sm outline-none"
+                                className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
                                 style={{
-                                  borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                                  backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
-                                  color: "var(--cloud-white)",
+                                  borderColor: "#3b3f48",
+                                  backgroundColor: "#232428",
+                                  color: "#f2f3f5",
                                 }}
                               >
                                 <option value="all">All progressions</option>
@@ -1314,15 +1321,15 @@ export default function HistoryPage() {
                             </div>
 
                             <div>
-                              <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Variation</label>
+                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">Variation</label>
                               <select
                                 value={mobileDrawerVariantFilter}
                                 onChange={(event) => setMobileDrawerVariantFilter(event.target.value)}
-                                className="h-9 w-full rounded-md border px-2.5 text-sm outline-none"
+                                className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
                                 style={{
-                                  borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                                  backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
-                                  color: "var(--cloud-white)",
+                                  borderColor: "#3b3f48",
+                                  backgroundColor: "#232428",
+                                  color: "#f2f3f5",
                                 }}
                               >
                                 <option value="all">All variations</option>
@@ -1333,15 +1340,15 @@ export default function HistoryPage() {
                             </div>
 
                             <div>
-                              <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Weight</label>
+                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">Weight</label>
                               <select
                                 value={mobileDrawerWeightFilter}
                                 onChange={(event) => setMobileDrawerWeightFilter(event.target.value as "all" | "weighted" | "bodyweight")}
-                                className="h-9 w-full rounded-md border px-2.5 text-sm outline-none"
+                                className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
                                 style={{
-                                  borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                                  backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
-                                  color: "var(--cloud-white)",
+                                  borderColor: "#3b3f48",
+                                  backgroundColor: "#232428",
+                                  color: "#f2f3f5",
                                 }}
                               >
                                 <option value="all">All loads</option>
@@ -1351,15 +1358,15 @@ export default function HistoryPage() {
                             </div>
 
                             <div>
-                              <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Reps</label>
+                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">Reps</label>
                               <select
                                 value={mobileDrawerRepsFilter}
                                 onChange={(event) => setMobileDrawerRepsFilter(event.target.value as "all" | "1-5" | "6-10" | "11+")}
-                                className="h-9 w-full rounded-md border px-2.5 text-sm outline-none"
+                                className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
                                 style={{
-                                  borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                                  backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
-                                  color: "var(--cloud-white)",
+                                  borderColor: "#3b3f48",
+                                  backgroundColor: "#232428",
+                                  color: "#f2f3f5",
                                 }}
                               >
                                 <option value="all">All rep ranges</option>
@@ -1370,15 +1377,15 @@ export default function HistoryPage() {
                             </div>
 
                             <div>
-                              <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Sort</label>
+                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">Sort by</label>
                               <select
                                 value={mobileDrawerSort}
                                 onChange={(event) => setMobileDrawerSort(event.target.value as "recent" | "oldest" | "progression-asc" | "progression-desc")}
-                                className="h-9 w-full rounded-md border px-2.5 text-sm outline-none"
+                                className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
                                 style={{
-                                  borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                                  backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
-                                  color: "var(--cloud-white)",
+                                  borderColor: "#3b3f48",
+                                  backgroundColor: "#232428",
+                                  color: "#f2f3f5",
                                 }}
                               >
                                 <option value="recent">Recent first</option>
@@ -1388,8 +1395,10 @@ export default function HistoryPage() {
                               </select>
                             </div>
                           </div>
+                        </div>
 
-                          <div className="border-t px-3 py-3" style={{ borderTopColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)" }}>
+                        <div className="shrink-0 border-t px-4 pb-4 pt-3" style={{ borderTopColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)" }}>
+                          <div className="grid grid-cols-2 gap-2">
                             <button
                               type="button"
                               onClick={() => {
@@ -1398,16 +1407,19 @@ export default function HistoryPage() {
                                 setMobileDrawerWeightFilter("all");
                                 setMobileDrawerRepsFilter("all");
                                 setMobileDrawerSort("recent");
-                                setMobileDrawerFilterOpen(false);
                               }}
-                              className="w-full rounded-md border px-3 py-2 text-sm font-semibold"
-                              style={{
-                                borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                                backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
-                                color: "var(--mist-light)",
-                              }}
+                              className="h-11 rounded-xl border px-3 text-sm font-medium text-[#f2f3f5] transition-colors"
+                              style={{ borderColor: "#3b3f48", backgroundColor: "#232428" }}
                             >
-                              Clear filters
+                              Reset
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setMobileDrawerFilterOpen(false)}
+                              className="h-11 rounded-xl border px-3 text-sm font-semibold text-[#08120c] transition-colors"
+                              style={{ borderColor: "rgba(87, 242, 135, 0.42)", backgroundColor: "#57f287" }}
+                            >
+                              Done
                             </button>
                           </div>
                         </div>
