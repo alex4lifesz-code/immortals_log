@@ -23,9 +23,9 @@ export default function ChartUserFilter({
   onSelectionChange,
   userColors,
 }: Props) {
-  const controlButtonBase = "rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-colors";
-  const activeControlButton = `${controlButtonBase} border-[#5865f2]/70 bg-[#5865f2]/18 text-[#f2f3f5]`;
-  const inactiveControlButton = `${controlButtonBase} border-[#3b3f48] bg-[#383a40]/65 text-[#b5bac1] hover:border-[#5865f2]/60 hover:text-[#f2f3f5]`;
+  const controlButtonBase = "theme-control-btn rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-colors";
+  const activeControlButton = `${controlButtonBase} theme-control-btn-active`;
+  const inactiveControlButton = controlButtonBase;
 
   const toggleUser = (id: string) => {
     if (selectedUserIds.includes(id)) {
@@ -64,7 +64,7 @@ export default function ChartUserFilter({
         .filter((u) => u.id !== currentUserId)
         .map((u) => {
           const selected = selectedUserIds.includes(u.id);
-          const color = userColors[u.id] || "#b5bac1";
+          const color = userColors[u.id] || "var(--text-secondary)";
           return (
             <button
               key={u.id}

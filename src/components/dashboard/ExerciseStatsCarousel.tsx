@@ -135,22 +135,22 @@ export default function ExerciseStatsCarousel({
     railScrollRef.current.scrollBy({ left: delta, behavior: "smooth" });
   };
 
-  const segmentButtonBase = "rounded-md border px-3 py-1.5 text-[11px] font-medium whitespace-nowrap transition-colors duration-150";
-  const activeControlButton = `${segmentButtonBase} border-[#4e5058] bg-[#404249] text-[#ffffff]`;
-  const inactiveControlButton = `${segmentButtonBase} border-transparent bg-transparent text-[#b5bac1] hover:bg-[#35373c] hover:text-[#ffffff]`;
-  const chipButtonBase = "rounded-md border px-3 py-1.5 text-[11px] font-medium whitespace-nowrap transition-colors duration-150";
-  const activeChipButton = `${chipButtonBase} border-[#4e5058] bg-[#404249] text-[#ffffff]`;
-  const inactiveChipButton = `${chipButtonBase} border-[#32353b] bg-[#2b2d31] text-[#dbdee1] hover:bg-[#35373c] hover:text-[#ffffff]`;
+  const segmentButtonBase = "theme-control-btn rounded-md border px-3 py-1.5 text-[11px] font-medium whitespace-nowrap transition-colors duration-150";
+  const activeControlButton = `${segmentButtonBase} theme-control-btn-active`;
+  const inactiveControlButton = segmentButtonBase;
+  const chipButtonBase = "theme-control-btn rounded-md border px-3 py-1.5 text-[11px] font-medium whitespace-nowrap transition-colors duration-150";
+  const activeChipButton = `${chipButtonBase} theme-control-btn-active`;
+  const inactiveChipButton = chipButtonBase;
 
   return (
     <div className="flex flex-col gap-3 bg-transparent px-3 py-2.5 sm:px-4 sm:py-3">
-      <div className="flex flex-col gap-2 border-b border-[#32353b] pb-3">
+      <div className="flex flex-col gap-2 border-b pb-3" style={{ borderBottomColor: "color-mix(in srgb, var(--border) 72%, transparent)" }}>
         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#949ba4]">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-muted)]">
               Feed controls
             </p>
-            <p className="mt-1 text-[12px] text-[#dbdee1]">
+            <p className="mt-1 text-[12px] text-[color:var(--text-primary)]">
               {selectedFilter
                 ? `Showing ${selectedFilter} activity in ${scope === "friends" ? "friends" : "community"}.`
                 : scope === "friends"
@@ -159,7 +159,7 @@ export default function ExerciseStatsCarousel({
             </p>
           </div>
 
-          <div className="text-[11px] text-[#949ba4] sm:text-right">
+          <div className="text-[11px] text-[color:var(--text-muted)] sm:text-right">
             {communityLogsWithoutUser.length} entries • {new Set(communityLogsWithoutUser.map((log) => log.userId)).size} athletes
           </div>
         </div>
@@ -179,7 +179,7 @@ export default function ExerciseStatsCarousel({
           >
             Community
           </button>
-          <span className="mx-1 hidden h-4 w-px bg-[#3b3f48] sm:block" />
+          <span className="mx-1 hidden h-4 w-px sm:block" style={{ backgroundColor: "color-mix(in srgb, var(--border) 78%, transparent)" }} />
           {["category", "muscle-group"].map((mode) => (
             <button
               key={mode}
@@ -204,10 +204,10 @@ export default function ExerciseStatsCarousel({
 
       <div>
         <div className="mb-2 flex items-center justify-between gap-2 px-1">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#949ba4]">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--text-muted)]">
             {filterMode === "category" ? "Exercise categories" : "Primary muscles"}
           </span>
-          <span className="text-[10px] text-[#949ba4]">{filterOptions.length} options</span>
+          <span className="text-[10px] text-[color:var(--text-muted)]">{filterOptions.length} options</span>
         </div>
 
         <div className="relative">
@@ -216,7 +216,7 @@ export default function ExerciseStatsCarousel({
               type="button"
               onClick={() => handleRailHintClick("left")}
               aria-label="Scroll filters left"
-              className="absolute inset-y-0 left-0 z-20 flex items-center px-1 text-[#b5bac1]"
+              className="absolute inset-y-0 left-0 z-20 flex items-center px-1 text-[color:var(--text-secondary)]"
             >
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 5l-7 7 7 7" />
@@ -229,7 +229,7 @@ export default function ExerciseStatsCarousel({
               type="button"
               onClick={() => handleRailHintClick("right")}
               aria-label="Scroll filters right"
-              className="absolute inset-y-0 right-0 z-20 flex items-center px-1 text-[#b5bac1]"
+              className="absolute inset-y-0 right-0 z-20 flex items-center px-1 text-[color:var(--text-secondary)]"
             >
               <svg className="h-4 w-4 animate-[swipe-hint_1.2s_ease-in-out_infinite]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -251,7 +251,7 @@ export default function ExerciseStatsCarousel({
                 onClick={() => handleFilterSelect("")}
                 className={selectedFilter === "" ? activeChipButton : inactiveChipButton}
               >
-                All activity <span className="ml-1 text-[#949ba4]">{communityLogsWithoutUser.length}</span>
+                All activity <span className="ml-1 text-[color:var(--text-muted)]">{communityLogsWithoutUser.length}</span>
               </motion.button>
 
               {filterOptions.map((option, idx) => {
@@ -271,7 +271,7 @@ export default function ExerciseStatsCarousel({
                     onClick={() => handleFilterSelect(option)}
                     className={selectedFilter === option ? activeChipButton : inactiveChipButton}
                   >
-                    {option} <span className="ml-1 text-[#949ba4]">{matchingLogs.length}</span>
+                    {option} <span className="ml-1 text-[color:var(--text-muted)]">{matchingLogs.length}</span>
                   </motion.button>
                 );
               })}

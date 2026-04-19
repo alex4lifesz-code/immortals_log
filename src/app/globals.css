@@ -138,86 +138,14 @@
     --state-error-border: color-mix(in srgb, var(--crimson-light) 70%, transparent);
 
     /* Theme preview swatches */
-    --theme-preview-midnight-1: #0d0f14;
-    --theme-preview-midnight-2: #1a1e2e;
-    --theme-preview-midnight-3: #3a8f8f;
-    --theme-preview-midnight-4: #c43030;
-    --theme-preview-mountain-1: #f5f0eb;
-    --theme-preview-mountain-2: #c8c0b8;
-    --theme-preview-mountain-3: #2d7a7a;
-    --theme-preview-mountain-4: #a04040;
-    --theme-preview-calligraphy-1: #1a1a1a;
-    --theme-preview-calligraphy-2: #303030;
-    --theme-preview-calligraphy-3: #5a5a5a;
-    --theme-preview-calligraphy-4: #808080;
-    --theme-preview-sakura-1: #faf6f5;
-    --theme-preview-sakura-2: #f5d0d2;
-    --theme-preview-sakura-3: #f5e0d0;
-    --theme-preview-sakura-4: #b8c8d8;
-    --theme-preview-sakura-dark-1: #0c080e;
-    --theme-preview-sakura-dark-2: #1a1420;
-    --theme-preview-sakura-dark-3: #d4508a;
-    --theme-preview-sakura-dark-4: #e898aa;
-
-    /* Eternal Theme preview colors */
-    --theme-preview-eternal-1: #fafbfc;
-    --theme-preview-eternal-2: #f1f3f5;
-    --theme-preview-eternal-3: #7ac943;
-    --theme-preview-eternal-4: #4b5563;
-
-    /* Discord Theme preview colors */
     --theme-preview-discord-1: #1e1f22;
     --theme-preview-discord-2: #2b2d31;
     --theme-preview-discord-3: #5865f2;
     --theme-preview-discord-4: #f2f3f5;
-
-    /* Document Theme preview colors */
-    --theme-preview-document-1: #f8f5f2;
-    --theme-preview-document-2: #d4cdc5;
-    --theme-preview-document-3: #3a58a0;
-    --theme-preview-document-4: #201c18;
-
-    /* Nyaa Theme preview colors */
-    --theme-preview-nyaa-1: #edf2f8;
-    --theme-preview-nyaa-2: #ffffff;
-    --theme-preview-nyaa-3: #2e51a2;
-    --theme-preview-nyaa-4: #6aa84f;
-
-    /* Emerald Lotus preview colors */
-    --theme-preview-emerald-lotus-1: #f0f7f4;
-    --theme-preview-emerald-lotus-2: #dfeee8;
-    --theme-preview-emerald-lotus-3: #1f7858;
-    --theme-preview-emerald-lotus-4: #b04a3a;
-
-    /* Gilded Bamboo preview colors */
-    --theme-preview-gilded-bamboo-1: #f8f4eb;
-    --theme-preview-gilded-bamboo-2: #ebe4d6;
-    --theme-preview-gilded-bamboo-3: #7a6020;
-    --theme-preview-gilded-bamboo-4: #a05038;
-
-    /* Crane Peak preview colors */
-    --theme-preview-crane-peak-1: #f4f6fa;
-    --theme-preview-crane-peak-2: #e4e8f0;
-    --theme-preview-crane-peak-3: #3858a0;
-    --theme-preview-crane-peak-4: #985898;
-
-    /* Obsidian Void preview colors */
-    --theme-preview-obsidian-void-1: #08060e;
-    --theme-preview-obsidian-void-2: #141020;
-    --theme-preview-obsidian-void-3: #8858d8;
-    --theme-preview-obsidian-void-4: #a848c0;
-
-    /* Crimson Gate preview colors */
-    --theme-preview-crimson-gate-1: #0a0606;
-    --theme-preview-crimson-gate-2: #1c1212;
-    --theme-preview-crimson-gate-3: #d04030;
-    --theme-preview-crimson-gate-4: #d8b060;
-
-    /* Frost Sanctuary preview colors */
-    --theme-preview-frost-sanctuary-1: #060a10;
-    --theme-preview-frost-sanctuary-2: #101820;
-    --theme-preview-frost-sanctuary-3: #20a0d0;
-    --theme-preview-frost-sanctuary-4: #4080d0;
+    --theme-preview-cherry-1: #181216;
+    --theme-preview-cherry-2: #2a1f28;
+    --theme-preview-cherry-3: #ef8fbc;
+    --theme-preview-cherry-4: #f7f2f5;
 
     /* Cultivator colors */
     --cultivator-jade: #3a8f8f;
@@ -275,6 +203,107 @@
   --glow-difficulty-pink: 0 0 15px rgba(236, 72, 153, 0.3), 0 0 30px rgba(236, 72, 153, 0.1);
   --glow-difficulty-light-pink: 0 0 15px rgba(249, 168, 212, 0.3), 0 0 30px rgba(249, 168, 212, 0.1);
   --glow-difficulty-cyan: 0 0 15px rgba(103, 232, 249, 0.3), 0 0 30px rgba(103, 232, 249, 0.1);
+}
+
+html.cherry-blossom {
+  --void-black: #181216;
+  --ink-deep: #221920;
+  --ink-dark: #2a1f28;
+  --ink-mid: #352633;
+  --ink-light: #4a3746;
+  --mist-dark: #9a8593;
+  --mist-mid: #bda8b5;
+  --mist-light: #ddd2d9;
+  --mist-pale: #f1e9ee;
+  --cloud-white: #f7f2f5;
+  --pure-white: #ffffff;
+
+  --jade-deep: #6f3757;
+  --jade: #d16b97;
+  --jade-glow: #ef8fbc;
+  --jade-light: #f7b7d4;
+  --crimson-deep: #5f2b3e;
+  --crimson: #e0688b;
+  --crimson-glow: #ff8dac;
+  --crimson-light: #ffb6ca;
+  --mountain-blue: #8fa8ff;
+  --mountain-blue-glow: #b4c3ff;
+  --forest-deep: #244033;
+  --forest: #78d8a6;
+  --gold-dim: #8e6c3a;
+  --gold: #f0ca78;
+  --gold-glow: #ffe5a8;
+
+  --difficulty-green: #78d8a6;
+  --difficulty-green-glow: #57c38e;
+  --difficulty-amber: #f0ca78;
+  --difficulty-amber-glow: #dfb45d;
+  --difficulty-red: #ff8dac;
+  --difficulty-red-glow: #ff769a;
+  --difficulty-violet: #c7a3ff;
+  --difficulty-violet-glow: #b088ff;
+  --difficulty-pink: #ef8fbc;
+  --difficulty-pink-glow: #ff75b0;
+  --difficulty-light-pink: #f7b7d4;
+  --difficulty-light-pink-glow: #ff9fc6;
+  --difficulty-cyan: #9ed6ff;
+  --difficulty-cyan-glow: #7dc5ff;
+
+  --background: var(--void-black);
+  --foreground: var(--cloud-white);
+  --surface: var(--ink-deep);
+  --surface-hover: var(--ink-mid);
+  --border: var(--ink-light);
+  --border-glow: var(--jade-light);
+  --text-primary: var(--cloud-white);
+  --text-secondary: var(--mist-light);
+  --text-muted: var(--mist-dark);
+  --accent: var(--jade-glow);
+  --accent-hover: var(--jade-light);
+  --category-cali: #ef8fbc;
+  --category-gym: #f0ca78;
+  --category-yoga: #78d8a6;
+  --category-cardio: #ff8dac;
+  --label-progression: #c7a3ff;
+  --label-variant: #9ed6ff;
+  --link: color-mix(in srgb, var(--accent) 86%, var(--text-primary));
+  --link-hover: color-mix(in srgb, var(--accent-hover) 90%, var(--text-primary));
+  --link-visited: color-mix(in srgb, var(--accent) 68%, var(--mist-mid));
+  --danger: var(--crimson);
+  --danger-hover: var(--crimson-glow);
+  --header-bg: color-mix(in srgb, var(--surface) 82%, var(--border));
+
+  --glow-jade: 0 0 16px rgba(239, 143, 188, 0.28), 0 0 30px rgba(239, 143, 188, 0.14);
+  --glow-crimson: 0 0 16px rgba(224, 104, 139, 0.24), 0 0 30px rgba(224, 104, 139, 0.12);
+  --glow-gold: 0 0 16px rgba(240, 202, 120, 0.18), 0 0 30px rgba(240, 202, 120, 0.10);
+  --glow-blue: 0 0 16px rgba(143, 168, 255, 0.22), 0 0 30px rgba(143, 168, 255, 0.12);
+  --glow-subtle: 0 0 8px rgba(239, 143, 188, 0.16);
+  --glow-modal: 0 0 34px rgba(239, 143, 188, 0.22), 0 0 68px rgba(239, 143, 188, 0.10), inset 0 0 30px rgba(247, 183, 212, 0.04);
+
+  --col-weight: var(--mountain-blue-glow);
+  --col-weight-bg: color-mix(in srgb, var(--mountain-blue-glow) 10%, transparent);
+  --col-reps: var(--gold);
+  --col-reps-bg: color-mix(in srgb, var(--gold) 10%, transparent);
+
+  --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 84%, var(--border));
+  --nyaa-table-head-text: var(--text-primary);
+  --nyaa-table-grid: var(--border);
+  --nyaa-table-row-text: var(--text-primary);
+  --nyaa-table-row-odd: var(--surface);
+  --nyaa-table-row-even: color-mix(in srgb, var(--surface) 90%, var(--ink-light));
+  --nyaa-table-row-hover: color-mix(in srgb, var(--surface) 82%, var(--accent));
+
+  --surface-panel: linear-gradient(180deg, color-mix(in srgb, var(--ink-deep) 98%, transparent) 0%, color-mix(in srgb, var(--ink-dark) 94%, transparent) 100%);
+  --surface-panel-strong: linear-gradient(180deg, color-mix(in srgb, var(--ink-dark) 98%, transparent) 0%, color-mix(in srgb, var(--ink-mid) 92%, transparent) 100%);
+  --page-gutter-bg: linear-gradient(180deg, #1a1317 0%, #21171d 100%);
+  --sidebar-canvas-bg: var(--page-gutter-bg);
+  --sidebar-canvas-card: linear-gradient(180deg, color-mix(in srgb, var(--ink-mid) 82%, var(--ink-deep)) 0%, color-mix(in srgb, var(--ink-dark) 92%, var(--ink-deep)) 100%);
+  --sidebar-canvas-border: color-mix(in srgb, var(--accent) 18%, var(--border));
+  --ring-accent: color-mix(in srgb, var(--jade-glow) 34%, transparent);
+}
+
+html.cherry-blossom * {
+  scrollbar-color: var(--ink-light) var(--background);
 }
 
 @media (hover: none) and (pointer: coarse) {
@@ -970,7 +999,8 @@ tbody tr:hover {
 }
 
 .page-rise {
-  animation: pageRise var(--motion-normal) var(--ease-polish) both;
+  animation: none;
+  opacity: 1;
 }
 
 .surface-panel {
@@ -1041,8 +1071,7 @@ tbody tr:hover {
 }
 
 /* ===== Theme & Scrollbar Styles (extracted) ===== */
-@import "./themes.css";
-@import "./themes-expansion.css";
+/* Legacy extra theme imports removed; the app now uses the single Discord canvas. */
 
 /* ===== Hide Number Input Spinners Globally ===== */
 
@@ -1150,13 +1179,15 @@ input[type="week"]::-webkit-calendar-picker-indicator {
 
 /* ===== ETERNAL THEME — Layout Adjustments ===== */
 html.eternal,
-html.discord {
+html.discord,
+html.cherry-blossom {
   /* Light theme optimizations */
   --ring-accent: color-mix(in srgb, var(--jade-glow) 28%, transparent);
 }
 
 html.eternal body,
-html.discord body {
+html.discord body,
+html.cherry-blossom body {
   background: var(--background);
   color: var(--foreground);
 }
@@ -1166,29 +1197,55 @@ html.eternal main,
 html.eternal .app-atmosphere,
 html.discord [role="main"],
 html.discord main,
-html.discord .app-atmosphere {
+html.discord .app-atmosphere,
+html.cherry-blossom [role="main"],
+html.cherry-blossom main,
+html.cherry-blossom .app-atmosphere {
   background: var(--background);
+}
+
+html.cherry-blossom body {
+  background:
+    radial-gradient(95rem 40rem at 8% -12%, color-mix(in srgb, var(--jade) 18%, transparent), transparent 58%),
+    radial-gradient(80rem 32rem at 88% -16%, color-mix(in srgb, var(--mountain-blue-glow) 14%, transparent), transparent 62%),
+    radial-gradient(65rem 30rem at 52% 118%, color-mix(in srgb, var(--gold) 10%, transparent), transparent 70%),
+    var(--page-gutter-bg);
+}
+
+html.cherry-blossom [role="main"],
+html.cherry-blossom main,
+html.cherry-blossom .app-atmosphere {
+  background: var(--page-gutter-bg);
 }
 
 /* Eternal theme content padding */
 html.eternal nav,
-html.discord nav {
+html.discord nav,
+html.cherry-blossom nav {
   background: var(--header-bg);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
+html.cherry-blossom nav {
+  box-shadow: 0 8px 18px rgba(143, 92, 120, 0.08);
+  backdrop-filter: blur(12px);
+}
+
 html.eternal a,
-html.discord a {
+html.discord a,
+html.cherry-blossom a {
   color: var(--link);
 }
 
 html.eternal a:hover,
-html.discord a:hover {
+html.discord a:hover,
+html.cherry-blossom a:hover {
   color: var(--link-hover);
 }
 
 html.eternal a:visited,
-html.discord a:visited {
+html.discord a:visited,
+html.cherry-blossom a:visited {
   color: var(--link-visited);
 }
 
@@ -1201,7 +1258,12 @@ html.discord button:focus-visible,
 html.discord a:focus-visible,
 html.discord input:focus-visible,
 html.discord select:focus-visible,
-html.discord textarea:focus-visible {
+html.discord textarea:focus-visible,
+html.cherry-blossom button:focus-visible,
+html.cherry-blossom a:focus-visible,
+html.cherry-blossom input:focus-visible,
+html.cherry-blossom select:focus-visible,
+html.cherry-blossom textarea:focus-visible {
   outline: none;
   box-shadow:
     0 0 0 2px color-mix(in srgb, var(--background) 85%, transparent),
@@ -1815,10 +1877,10 @@ html.discord textarea:focus-visible {
 .dashboard-modern-hero,
 .dashboard-modern-member,
 .dashboard-modern-empty {
-  border: 1px solid #32353b !important;
+  border: 1px solid color-mix(in srgb, var(--border) 74%, transparent) !important;
   border-radius: 0.8rem !important;
-  background: #2b2d31 !important;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset !important;
+  background: color-mix(in srgb, var(--surface) 92%, black) !important;
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--cloud-white) 3%, transparent) inset !important;
 }
 
 .dashboard-modern-member-trigger {
@@ -1827,7 +1889,7 @@ html.discord textarea:focus-visible {
 }
 
 .dashboard-modern-exercise {
-  border-top: 1px solid #3b3f48 !important;
+  border-top: 1px solid color-mix(in srgb, var(--border) 78%, transparent) !important;
   border-radius: 0 !important;
   background: transparent !important;
 }
@@ -1840,9 +1902,33 @@ html.discord textarea:focus-visible {
 }
 
 .dashboard-modern-loadmore-btn {
-  border-color: #3b3f48 !important;
-  background: #2b2d31 !important;
-  color: var(--mist-light) !important;
+  border-color: color-mix(in srgb, var(--border) 78%, transparent) !important;
+  background: color-mix(in srgb, var(--surface) 92%, black) !important;
+  color: var(--text-secondary) !important;
+}
+
+html.discord .dashboard-modern-hero,
+html.discord .dashboard-modern-member,
+html.discord .dashboard-modern-empty,
+html.cherry-blossom .dashboard-modern-hero,
+html.cherry-blossom .dashboard-modern-member,
+html.cherry-blossom .dashboard-modern-empty,
+html.discord .completionist-modern-hero-mobile,
+html.discord .completionist-modern-hero-main,
+html.discord .completionist-modern-hero-side,
+html.discord .completionist-modern-overview,
+html.discord .completionist-modern-filters,
+html.discord .completionist-modern-skill-mobile,
+html.discord .completionist-modern-skill-desktop,
+html.cherry-blossom .completionist-modern-hero-mobile,
+html.cherry-blossom .completionist-modern-hero-main,
+html.cherry-blossom .completionist-modern-hero-side,
+html.cherry-blossom .completionist-modern-overview,
+html.cherry-blossom .completionist-modern-filters,
+html.cherry-blossom .completionist-modern-skill-mobile,
+html.cherry-blossom .completionist-modern-skill-desktop {
+  border-color: color-mix(in srgb, var(--border) 78%, transparent) !important;
+  background: color-mix(in srgb, var(--surface) 92%, black) !important;
 }
 
 .completionist-modern-hero-mobile,
@@ -1852,7 +1938,7 @@ html.discord textarea:focus-visible {
 .completionist-modern-filters,
 .completionist-modern-skill-mobile,
 .completionist-modern-skill-desktop {
-  border: 1px solid #3b3f48 !important;
+  border: 1px solid color-mix(in srgb, var(--border) 78%, transparent) !important;
   background: color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid)) !important;
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cloud-white) 2%, transparent) !important;
 }
@@ -1863,7 +1949,7 @@ html.discord textarea:focus-visible {
 
 .completionist-modern-skill-desktop table thead th {
   background: color-mix(in srgb, var(--ink-mid) 82%, var(--ink-deep)) !important;
-  border-bottom: 1px solid #3b3f48 !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 78%, transparent) !important;
 }
 
 .dao-modern-page {
@@ -1880,9 +1966,9 @@ html.discord textarea:focus-visible {
 .dao-modern-monthly-chart,
 .dao-modern-weight-trend,
 .dao-modern-cultivation-view {
-  border: 1px solid #3b3f48 !important;
-  background: #2b2d31 !important;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.22) !important;
+  border: 1px solid color-mix(in srgb, var(--border) 94%, transparent) !important;
+  background: color-mix(in srgb, var(--surface) 96%, transparent) !important;
+  box-shadow: 0 10px 20px color-mix(in srgb, black 22%, transparent) !important;
 }
 
 .dao-modern-calendar-day {
@@ -1890,7 +1976,7 @@ html.discord textarea:focus-visible {
 }
 
 .dao-modern-calendar-day:hover {
-  box-shadow: 0 0 0 1px rgba(88, 101, 242, 0.18) inset;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent) inset;
 }
 
 .dao-modern-monthly-stats-panel,
@@ -1900,10 +1986,10 @@ html.discord textarea:focus-visible {
 }
 
 .dao-modern-monthly-stats-user {
-  border: 1px solid #3b3f48;
+  border: 1px solid color-mix(in srgb, var(--border) 94%, transparent);
   border-radius: 0.5rem;
   padding: 0.65rem 0.7rem;
-  background: #232428;
+  background: color-mix(in srgb, var(--surface-hover) 22%, var(--surface));
 }
 
 .dao-modern-cultivation-view table thead th {
@@ -2203,5 +2289,140 @@ html.discord textarea:focus-visible {
 
 .tl-cell-pad-exercise-compact {
   padding: 0.25rem 0.375rem;
+}
+
+/* Theme cleanup compatibility layer */
+html .text-\[\#f2f3f5\],
+html .text-\[\#ffffff\] {
+  color: var(--text-primary) !important;
+}
+
+html .text-\[\#b5bac1\],
+html .text-\[\#949ba4\],
+html .text-\[\#dbdee1\],
+html .text-\[\#c8cdfa\] {
+  color: var(--text-secondary) !important;
+}
+
+html .bg-\[\#2b2d31\],
+html .bg-\[\#232428\],
+html .bg-\[\#26272c\],
+html .bg-\[\#1f2126\] {
+  background-color: var(--surface) !important;
+}
+
+html .bg-\[\#383a40\],
+html .bg-\[\#404249\],
+html .bg-\[\#30333a\],
+html .hover\:bg-\[\#35373c\]:hover,
+html .hover\:bg-\[\#454852\]:hover {
+  background-color: color-mix(in srgb, var(--surface-hover) 88%, var(--surface)) !important;
+}
+
+html .border-\[\#32353b\],
+html .border-\[\#3b3f48\],
+html .border-\[\#34373f\],
+html .border-\[\#454b59\],
+html .border-\[\#4e5058\] {
+  border-color: color-mix(in srgb, var(--border) 94%, transparent) !important;
+}
+
+html .text-\[\#8ea1ff\] {
+  color: var(--accent) !important;
+}
+
+.theme-control-btn {
+  border-color: color-mix(in srgb, var(--accent) 24%, var(--border)) !important;
+  background:
+    radial-gradient(120% 140% at 50% -35%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 60%),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-hover) 84%, var(--surface)) 0%, color-mix(in srgb, var(--surface) 96%, black) 100%) !important;
+  color: var(--text-secondary) !important;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 8%, transparent) inset,
+    0 6px 14px color-mix(in srgb, black 16%, transparent) !important;
+}
+
+.theme-control-btn:hover {
+  border-color: color-mix(in srgb, var(--accent) 58%, var(--border)) !important;
+  background:
+    radial-gradient(120% 140% at 50% -35%, color-mix(in srgb, var(--accent) 28%, transparent), transparent 60%),
+    linear-gradient(180deg, color-mix(in srgb, var(--accent) 16%, var(--surface-hover)) 0%, color-mix(in srgb, var(--surface) 92%, black) 100%) !important;
+  color: var(--text-primary) !important;
+}
+
+.theme-control-btn-active {
+  border-color: color-mix(in srgb, var(--accent) 68%, var(--border)) !important;
+  background:
+    radial-gradient(120% 140% at 50% -35%, color-mix(in srgb, var(--accent) 34%, transparent), transparent 60%),
+    linear-gradient(180deg, color-mix(in srgb, var(--accent) 28%, var(--surface-hover)) 0%, color-mix(in srgb, var(--accent) 16%, var(--surface)) 100%) !important;
+  color: var(--text-primary) !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent) inset, 0 10px 20px color-mix(in srgb, black 20%, transparent) !important;
+}
+
+.theme-action-btn {
+  border-color: color-mix(in srgb, var(--accent) 48%, var(--border)) !important;
+  background:
+    radial-gradient(120% 140% at 50% -35%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 60%),
+    linear-gradient(180deg, color-mix(in srgb, var(--accent) 26%, var(--surface-hover)) 0%, color-mix(in srgb, var(--accent) 12%, var(--surface)) 100%) !important;
+  color: var(--text-primary) !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 14%, transparent) inset !important;
+}
+
+.theme-action-btn:hover {
+  border-color: color-mix(in srgb, var(--accent-hover) 62%, var(--border)) !important;
+  background:
+    radial-gradient(120% 140% at 50% -35%, color-mix(in srgb, var(--accent-hover) 34%, transparent), transparent 60%),
+    linear-gradient(180deg, color-mix(in srgb, var(--accent-hover) 28%, var(--surface-hover)) 0%, color-mix(in srgb, var(--accent) 18%, var(--surface)) 100%) !important;
+}
+
+.theme-danger-btn {
+  border-color: color-mix(in srgb, var(--danger) 42%, var(--border)) !important;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--danger) 18%, var(--surface-hover)) 0%, color-mix(in srgb, var(--danger) 10%, var(--surface)) 100%) !important;
+  color: var(--danger-hover) !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--danger) 10%, transparent) inset !important;
+}
+
+.theme-danger-btn:hover {
+  border-color: color-mix(in srgb, var(--danger-hover) 58%, var(--border)) !important;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--danger-hover) 22%, var(--surface-hover)) 0%, color-mix(in srgb, var(--danger) 16%, var(--surface)) 100%) !important;
+  color: var(--text-primary) !important;
+}
+
+.theme-empty-panel {
+  border: 1px solid color-mix(in srgb, var(--border) 94%, transparent);
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  color: var(--text-muted);
+}
+
+.theme-snapshot-card {
+  border-color: color-mix(in srgb, var(--border) 94%, transparent) !important;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-hover) 74%, var(--surface)) 0%, color-mix(in srgb, var(--surface) 96%, transparent) 100%) !important;
+  box-shadow: var(--shadow-elev-1) !important;
+}
+
+.theme-snapshot-header {
+  border-bottom-color: color-mix(in srgb, var(--border) 92%, transparent) !important;
+  background: color-mix(in srgb, var(--surface-hover) 36%, var(--surface)) !important;
+}
+
+.theme-snapshot-label {
+  color: var(--text-secondary) !important;
+  background: color-mix(in srgb, var(--surface-hover) 28%, var(--surface)) !important;
+}
+
+.theme-snapshot-value {
+  color: var(--text-primary) !important;
+}
+
+.theme-snapshot-accent {
+  color: var(--accent) !important;
+}
+
+.theme-snapshot-success {
+  color: var(--forest) !important;
+}
+
+.theme-snapshot-warning {
+  color: var(--gold) !important;
 }
 

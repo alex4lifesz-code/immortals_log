@@ -188,12 +188,24 @@ function MobileNavBar({
     setMenuOpen(false);
     setMobileSidebarOpen(false);
 
-    if (path === DASHBOARD_ROUTES.workoutHistory && typeof window !== "undefined") {
-      window.dispatchEvent(new Event("train-reset-view"));
+    if (typeof window !== "undefined") {
+      if (path === DASHBOARD_ROUTES.workoutHistory) {
+        window.dispatchEvent(new Event("train-reset-view"));
+      }
+      if (path === DASHBOARD_ROUTES.checkIn || path === DASHBOARD_ROUTES.checkinLegacy) {
+        window.dispatchEvent(new Event("checkin-notes-updated"));
+      }
     }
 
-    router.push(path);
-  }, [router, setMobileSidebarOpen]);
+    const isSameRoute = pathname === path || pathname?.startsWith(`${path}/`);
+    if (isSameRoute) {
+      router.replace(path, { scroll: false });
+      router.refresh();
+      return;
+    }
+
+    router.push(path, { scroll: false });
+  }, [pathname, router, setMobileSidebarOpen]);
 
   const handleMenuToggle = useCallback(() => {
     setMobileSidebarOpen(false);
@@ -214,7 +226,7 @@ function MobileNavBar({
         || pathname.startsWith(`${DASHBOARD_ROUTES.checkinLegacy}/`);
     }
 
-    return pathname === path || pathname.startsWith(`${path}/`);
+    return pathname === path || pathname?.startsWith(`${path}/`);
   }, [pathname]);
 
   const isMeSectionActive = useMemo(

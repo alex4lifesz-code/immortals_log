@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useEffect, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 
@@ -11,6 +11,7 @@ interface GlowCardProps {
   glow?: "jade" | "crimson" | "gold" | "blue" | "none";
   hoverable?: boolean;
   onClick?: () => void;
+  style?: CSSProperties;
 }
 
 const glowHover = {
@@ -27,6 +28,7 @@ export default function GlowCard({
   glow = "jade",
   hoverable = true,
   onClick,
+  style,
 }: GlowCardProps) {
   const glowBase = {
     jade: "rgba(58,143,143,0.22)",
@@ -49,6 +51,7 @@ export default function GlowCard({
       `}
       style={{
         boxShadow: `var(--shadow-elev-1), 0 0 0 1px ${glowBase[glow]} inset`,
+        ...style,
       }}
     >
       {children}
@@ -119,8 +122,14 @@ export function GlowModal({
               aria-modal="true"
               aria-label={title}
               onClick={(e) => e.stopPropagation()}
-              className={`surface-panel surface-panel-strong w-full max-w-lg max-h-[84vh] overflow-hidden pointer-events-auto glow-modal-container rounded-lg border border-[#32353b] bg-[#2b2d31] shadow-[0_12px_32px_rgba(0,0,0,0.48)] ${panelClassName}`}
-              style={glowColor ? { boxShadow: `0 18px 48px rgba(0,0,0,0.55), 0 0 0 1px ${glowColor} inset` } : undefined}
+              className={`surface-panel surface-panel-strong w-full max-w-lg max-h-[84vh] overflow-hidden pointer-events-auto glow-modal-container rounded-lg border ${panelClassName}`}
+              style={{
+                borderColor: "color-mix(in srgb, var(--border) 94%, transparent)",
+                background: "linear-gradient(165deg, color-mix(in srgb, var(--surface) 96%, transparent) 0%, color-mix(in srgb, var(--surface-hover) 80%, transparent) 100%)",
+                boxShadow: glowColor
+                  ? `0 18px 48px rgba(0,0,0,0.55), 0 0 0 1px ${glowColor} inset`
+                  : "var(--shadow-elev-2), 0 0 0 1px color-mix(in srgb, var(--accent) 10%, transparent) inset",
+              }}
             >
               {!hideHeader && (
                 <div
@@ -138,7 +147,7 @@ export function GlowModal({
                     whileTap={{ scale: 0.94 }}
                     onClick={onClose}
                     aria-label="Close dialog"
-                    className="flex h-8 w-8 items-center justify-center rounded-md border border-[#3b3f48] bg-[#383a40]/65 text-[#b5bac1] transition-colors hover:border-[#5865f2]/60 hover:text-[#f2f3f5]"
+                    className="theme-control-btn flex h-8 w-8 items-center justify-center rounded-md border transition-colors"
                   >
                     ✕
                   </motion.button>

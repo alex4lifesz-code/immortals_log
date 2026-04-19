@@ -109,7 +109,7 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
   const isMobile = useIsMobile();
   const { user } = useAuth();
 
-  const isActive = pathname === DASHBOARD_ROUTES.friends || pathname.startsWith(`${DASHBOARD_ROUTES.friends}/`);
+  const isActive = pathname === DASHBOARD_ROUTES.friends || pathname?.startsWith(`${DASHBOARD_ROUTES.friends}/`);
   const drawerFriendId = searchParams.get("friendDrawerId") || "";
   const rawFriendView = searchParams.get("friendView") || "";
   const selectedFriendExerciseId = searchParams.get("friendExerciseId") || "";

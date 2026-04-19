@@ -112,10 +112,7 @@ function PageLayout({
 
 
   return (
-    <motion.div
-      initial={disableMotion ? false : { opacity: 0 }}
-      animate={disableMotion ? { opacity: 1 } : { opacity: 1 }}
-      transition={{ duration: disableMotion ? 0 : 0.25, ease: [0.22, 1, 0.36, 1] }}
+    <div
       className="relative flex min-h-full flex-col"
       style={{ background: "var(--page-gutter-bg)" }}
     >
@@ -124,16 +121,11 @@ function PageLayout({
           data-mobile-scroll-container={mobileScrollContainerEnabled ? "true" : undefined}
           className={`flex-1 min-w-0 ${mobileScrollContainerEnabled ? "overflow-y-auto scrollbar-hide" : "overflow-hidden"} ${mobileContentPaddingClass} overflow-x-hidden`}
         >
-          <motion.div
-            initial={disableMotion ? false : { opacity: 0 }}
-            animate={disableMotion ? { opacity: 1 } : { opacity: 1 }}
-            transition={{ delay: disableMotion ? 0 : 0.04, duration: disableMotion ? 0 : 0.25, ease: [0.22, 1, 0.36, 1] }}
-            className="page-rise"
-          >
+          <div className="page-rise">
             <div className={contentContainerClass}>
               {children}
             </div>
-          </motion.div>
+          </div>
         </div>
       </div>
 
@@ -197,7 +189,7 @@ function PageLayout({
         )}
       </AnimatePresence>
 
-    </motion.div>
+    </div>
   );
 }
 

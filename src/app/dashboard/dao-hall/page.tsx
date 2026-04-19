@@ -880,9 +880,10 @@ export default function DaoHallPage() {
 
   if (!user) return null;
 
-  const controlButtonBase = "rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-colors";
-  const activeControlButton = `${controlButtonBase} border-[#5865f2]/70 bg-[#5865f2]/18 text-[#f2f3f5]`;
-  const inactiveControlButton = `${controlButtonBase} border-[#3b3f48] bg-[#383a40]/65 text-[#b5bac1] hover:border-[#5865f2]/60 hover:text-[#f2f3f5]`;
+  const controlButtonBase = "theme-control-btn rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-colors";
+  const activeControlButton = `${controlButtonBase} theme-control-btn-active`;
+  const inactiveControlButton = controlButtonBase;
+  const historySurfaceClass = "rounded-xl border border-[color:var(--border)] bg-[color:var(--surface)] shadow-[0_10px_20px_rgba(0,0,0,0.22)]";
 
   return (
     <PageLayout
@@ -897,11 +898,11 @@ export default function DaoHallPage() {
         <div className="dao-modern-page space-y-4 px-0 py-2 sm:py-3">
           {/* Upcoming Notes */}
           {scopedFutureNotes.length > 0 && (
-            <GlowCard glow="none" hoverable={false} className="rounded-xl border border-[#3b3f48] bg-[#2b2d31] shadow-[0_10px_20px_rgba(0,0,0,0.22)]">
+            <GlowCard glow="none" hoverable={false} className={historySurfaceClass}>
               <div className="space-y-2.5">
                 <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-semibold uppercase tracking-wider text-[#f2f3f5]">Upcoming Notes</h4>
-                  <span className="rounded-md border border-[#3b3f48] bg-[#232428] px-2 py-0.5 text-[9px] font-medium text-[#b5bac1]">{scopedFutureNotes.length}</span>
+                  <h4 className="text-sm font-semibold uppercase tracking-wider text-[color:var(--text-primary)]">Upcoming Notes</h4>
+                  <span className="rounded-md border border-[color:var(--border)] bg-[color:var(--surface-hover)] px-2 py-0.5 text-[9px] font-medium text-[color:var(--text-secondary)]">{scopedFutureNotes.length}</span>
                 </div>
                 <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
                   {scopedFutureNotes.map((note) => {
@@ -910,22 +911,22 @@ export default function DaoHallPage() {
                       <button
                         key={note.id}
                         onClick={() => handleDayClick(note.date)}
-                        className="w-full border border-[#3b3f48] bg-[#232428] p-2 text-left transition-colors duration-200 hover:bg-[#313338]"
+                        className="w-full rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] p-2 text-left transition-colors duration-200 hover:bg-[color:var(--surface-hover)]"
                         title="Jump to this date"
                       >
                         <div className="flex items-start gap-2">
                           <div
-                            className="w-2 h-2 rounded-full shrink-0 mt-1.5 shadow-lg"
+                            className="mt-1.5 h-2 w-2 shrink-0 rounded-full shadow-lg"
                             style={{ backgroundColor: noteColor, boxShadow: `0 0 6px ${getCultivatorGlowColor(noteColor, 0.6)}` }}
                           />
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5 mb-0.5">
-                              <span className="text-[11px] font-semibold truncate" style={{ color: noteColor }}>{note.user.name}</span>
-                              <span className="rounded-md border border-[#3b3f48] bg-[#313338] px-1.5 py-0.5 text-[9px] text-[#949ba4]">
+                            <div className="mb-0.5 flex items-center gap-1.5">
+                              <span className="truncate text-[11px] font-semibold" style={{ color: noteColor }}>{note.user.name}</span>
+                              <span className="rounded-md border border-[color:var(--border)] bg-[color:var(--surface-hover)] px-1.5 py-0.5 text-[9px] text-[color:var(--text-muted)]">
                                 {formatDateWithPreference(note.date, dateFormat)}
                               </span>
                             </div>
-                            <p className="line-clamp-2 text-[10px] leading-relaxed text-[#b5bac1]">{note.content}</p>
+                            <p className="line-clamp-2 text-[10px] leading-relaxed text-[color:var(--text-secondary)]">{note.content}</p>
                           </div>
                         </div>
                       </button>
@@ -960,18 +961,18 @@ export default function DaoHallPage() {
           </div>
 
           {/* Check-In Feed — clean scrolling timeline */}
-          <GlowCard glow="none" hoverable={false} className="dao-modern-cultivation-view rounded-xl border border-[#3b3f48] bg-[#2b2d31] shadow-[0_10px_20px_rgba(0,0,0,0.22)]">
+          <GlowCard glow="none" hoverable={false} className={`dao-modern-cultivation-view ${historySurfaceClass}`}>
             <div ref={sectRegisterRef} className="space-y-4">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                  <h3 className="text-sm uppercase tracking-wider text-[#f2f3f5]">{t("Check-In History", "normal")}</h3>
-                  <p className="mt-1 text-xs text-[#b5bac1]">
+                  <h3 className="text-sm uppercase tracking-wider text-[color:var(--text-primary)]">{t("Check-In History", "normal")}</h3>
+                  <p className="mt-1 text-xs text-[color:var(--text-secondary)]">
                     {t("All recorded check-ins, displayed in the same cleaner history style as the train log.", "normal")}
                   </p>
                 </div>
 
                 <div className="flex flex-wrap items-center justify-end gap-2 lg:ml-auto">
-                  <span className="rounded-md border border-[#3b3f48] bg-[#383a40]/45 px-3 py-1.5 text-[11px] font-semibold text-[#b5bac1]">
+                  <span className="rounded-md border border-[color:var(--border)] bg-[color:var(--surface-hover)] px-3 py-1.5 text-[11px] font-semibold text-[color:var(--text-secondary)]">
                     {renderedCheckInRows.length} {t("entries", "normal")}
                   </span>
                   <div className="relative" ref={historyViewMenuRef}>
@@ -992,7 +993,7 @@ export default function DaoHallPage() {
                     {isHistoryViewMenuOpen && (
                       <div
                         role="menu"
-                        className="absolute right-0 top-full z-20 mt-2 min-w-[170px] rounded-lg border border-[#3b3f48] bg-[#232428] p-1.5 shadow-[0_10px_24px_rgba(0,0,0,0.35)]"
+                        className="absolute right-0 top-full z-20 mt-2 min-w-[170px] rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] p-1.5 shadow-[0_10px_24px_rgba(0,0,0,0.35)]"
                       >
                         {([
                           { id: "detailed", label: "Detailed" },
@@ -1009,10 +1010,10 @@ export default function DaoHallPage() {
                                 setHistoryViewMode(option.id);
                                 setIsHistoryViewMenuOpen(false);
                               }}
-                              className={`flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left text-[11px] transition-colors ${active ? "bg-[#5865f2]/18 text-[#f2f3f5]" : "text-[#b5bac1] hover:bg-[#383a40]/70 hover:text-[#f2f3f5]"}`}
+                              className={`flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left text-[11px] transition-colors ${active ? "bg-[color:var(--ring-accent)] text-[color:var(--text-primary)]" : "text-[color:var(--text-secondary)] hover:bg-[color:var(--surface-hover)] hover:text-[color:var(--text-primary)]"}`}
                             >
                               <span>{t(option.label, "normal")}</span>
-                              {active ? <span className="text-[#8ea1ff]">✓</span> : null}
+                              {active ? <span className="text-[color:var(--accent)]">✓</span> : null}
                             </button>
                           );
                         })}
@@ -1036,10 +1037,10 @@ export default function DaoHallPage() {
               </div>
 
               {renderedCheckInRows.length === 0 ? (
-                <div className="flex flex-col items-center border border-[#3b3f48] bg-[#232428] py-10 text-center">
+                <div className="flex flex-col items-center rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] py-10 text-center">
                   <div className="mb-2 text-2xl opacity-30">🧭</div>
-                  <p className="text-xs text-[#b5bac1]">{t("No entries for this view", "normal")}</p>
-                  <p className="mt-1 text-[10px] text-[#949ba4]">{t("Start checking in to build your history timeline", "normal")}</p>
+                  <p className="text-xs text-[color:var(--text-secondary)]">{t("No entries for this view", "normal")}</p>
+                  <p className="mt-1 text-[10px] text-[color:var(--text-muted)]">{t("Start checking in to build your history timeline", "normal")}</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -1049,7 +1050,7 @@ export default function DaoHallPage() {
                       return (
                         <article
                           key={date}
-                          className="rounded-lg border border-[#34373f] bg-[#26272c] px-3 py-2.5 shadow-[0_6px_14px_rgba(0,0,0,0.12)] transition-colors cursor-pointer"
+                          className="cursor-pointer rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] px-3 py-2.5 shadow-[0_6px_14px_rgba(0,0,0,0.12)] transition-colors hover:bg-[color:var(--surface-hover)]"
                           role="button"
                           tabIndex={0}
                           onClick={() => handleDayClick(date)}
@@ -1204,7 +1205,7 @@ export default function DaoHallPage() {
 
                   {(hasMoreRows || isLoadingMoreRows) && (
                     <div ref={rowsObserverTargetRef} className="flex justify-center px-3 py-2">
-                      <span className="text-[11px] text-[#949ba4]">
+                      <span className="text-[11px] text-[color:var(--text-muted)]">
                         {isLoadingMoreRows ? t("Loading more rows...", "normal") : t("Scroll for more", "normal")}
                       </span>
                     </div>
@@ -1249,9 +1250,9 @@ export default function DaoHallPage() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8ea1ff]">Training Canvas</p>
-                    <h2 className="mt-1 truncate text-[16px] font-semibold text-[#f2f3f5]">Day Check-In</h2>
-                    <p className="mt-1 text-[12px] text-[#b5bac1]">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--accent)]">Training Canvas</p>
+                    <h2 className="mt-1 truncate text-[16px] font-semibold text-[color:var(--text-primary)]">Day Check-In</h2>
+                    <p className="mt-1 text-[12px] text-[color:var(--text-secondary)]">
                       {formatDateWithPreference(checkInModal.date, dateFormat)}
                     </p>
                   </div>
@@ -1261,16 +1262,16 @@ export default function DaoHallPage() {
                       className="rounded-md border px-2 py-1 text-[10px] font-semibold"
                       style={{
                         borderColor: isFarFuture
-                          ? "rgba(240, 185, 106, 0.34)"
+                          ? "color-mix(in srgb, var(--gold) 50%, transparent)"
                           : currentUserEntry.present
-                            ? "rgba(87, 242, 135, 0.38)"
-                            : "rgba(88, 101, 242, 0.38)",
+                            ? "color-mix(in srgb, var(--forest) 52%, transparent)"
+                            : "color-mix(in srgb, var(--accent) 52%, transparent)",
                         backgroundColor: isFarFuture
-                          ? "rgba(240, 185, 106, 0.10)"
+                          ? "color-mix(in srgb, var(--gold) 12%, transparent)"
                           : currentUserEntry.present
-                            ? "rgba(87, 242, 135, 0.10)"
-                            : "rgba(88, 101, 242, 0.12)",
-                        color: isFarFuture ? "#f3cd8c" : currentUserEntry.present ? "#c9f7d6" : "#d6dcff",
+                            ? "color-mix(in srgb, var(--forest) 12%, transparent)"
+                            : "color-mix(in srgb, var(--accent) 14%, transparent)",
+                        color: isFarFuture ? "var(--gold-glow)" : currentUserEntry.present ? "var(--cloud-white)" : "var(--text-primary)",
                       }}
                     >
                       {isFarFuture ? "Note Only" : currentUserEntry.present ? "Checked In" : "Ready"}
@@ -1279,7 +1280,7 @@ export default function DaoHallPage() {
                       type="button"
                       onClick={() => setCheckInModal(null)}
                       aria-label="Close dialog"
-                      className="flex h-8 w-8 items-center justify-center rounded-md border text-[#b5bac1] transition-colors hover:text-[#f2f3f5]"
+                      className="flex h-8 w-8 items-center justify-center rounded-md border text-[color:var(--text-secondary)] transition-colors hover:text-[color:var(--text-primary)]"
                       style={{
                         borderColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)",
                         backgroundColor: "color-mix(in srgb, var(--ink-mid) 54%, transparent)",
@@ -1300,9 +1301,9 @@ export default function DaoHallPage() {
                     <div
                       className="rounded-lg border px-3 py-2 text-[11px]"
                       style={{
-                        borderColor: "rgba(240, 185, 106, 0.34)",
-                        backgroundColor: "rgba(240, 185, 106, 0.08)",
-                        color: "#f3cd8c",
+                        borderColor: "color-mix(in srgb, var(--gold) 50%, transparent)",
+                        backgroundColor: "color-mix(in srgb, var(--gold) 10%, transparent)",
+                        color: "var(--gold-glow)",
                       }}
                     >
                       Future days only support a personal note. Full check-in is available on the day itself.
@@ -1310,16 +1311,16 @@ export default function DaoHallPage() {
                   ) : (
                     <div className="grid grid-cols-3 gap-2">
                       <div className="rounded-md border px-2.5 py-2" style={{ borderColor: "color-mix(in srgb, var(--ink-light) 50%, transparent)", backgroundColor: "color-mix(in srgb, var(--ink-mid) 62%, var(--ink-deep))" }}>
-                        <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Status</p>
-                        <p className="mt-1 text-[12px] font-semibold text-[#f2f3f5]">{currentUserEntry.present ? "In" : "Open"}</p>
+                        <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Status</p>
+                        <p className="mt-1 text-[12px] font-semibold text-[color:var(--text-primary)]">{currentUserEntry.present ? "In" : "Open"}</p>
                       </div>
                       <div className="rounded-md border px-2.5 py-2" style={{ borderColor: "color-mix(in srgb, var(--ink-light) 50%, transparent)", backgroundColor: "color-mix(in srgb, var(--ink-mid) 62%, var(--ink-deep))" }}>
-                        <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Weight</p>
-                        <p className="mt-1 text-[12px] font-semibold text-[#f2f3f5]">{currentUserEntry.weight || "--"}</p>
+                        <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Weight</p>
+                        <p className="mt-1 text-[12px] font-semibold text-[color:var(--text-primary)]">{currentUserEntry.weight || "--"}</p>
                       </div>
                       <div className="rounded-md border px-2.5 py-2" style={{ borderColor: "color-mix(in srgb, var(--ink-light) 50%, transparent)", backgroundColor: "color-mix(in srgb, var(--ink-mid) 62%, var(--ink-deep))" }}>
-                        <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Present</p>
-                        <p className="mt-1 text-[12px] font-semibold text-[#f2f3f5]">{checkedInUsers.length}</p>
+                        <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Present</p>
+                        <p className="mt-1 text-[12px] font-semibold text-[color:var(--text-primary)]">{checkedInUsers.length}</p>
                       </div>
                     </div>
                   )}
@@ -1332,16 +1333,20 @@ export default function DaoHallPage() {
                         backgroundColor: "color-mix(in srgb, var(--ink-deep) 90%, var(--ink-mid))",
                       }}
                     >
-                      <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Today’s check-in</p>
-                      <p className="mt-1 text-[11px] text-[#b5bac1]">Logging training for the day will also count toward attendance.</p>
+                      <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Today’s check-in</p>
+                      <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">Logging training for the day will also count toward attendance.</p>
                       <button
                         type="button"
                         onClick={() => updateCheckInModalEntry(user.id, "present", !currentUserEntry.present)}
                         className="mt-3 w-full rounded-lg border px-3 py-2.5 text-[12px] font-semibold transition-colors"
                         style={{
-                          borderColor: currentUserEntry.present ? "rgba(87, 242, 135, 0.42)" : "rgba(88, 101, 242, 0.42)",
-                          backgroundColor: currentUserEntry.present ? "rgba(87, 242, 135, 0.10)" : "rgba(88, 101, 242, 0.12)",
-                          color: currentUserEntry.present ? "#c9f7d6" : "#eef1ff",
+                          borderColor: currentUserEntry.present
+                            ? "color-mix(in srgb, var(--forest) 52%, transparent)"
+                            : "color-mix(in srgb, var(--accent) 52%, transparent)",
+                          backgroundColor: currentUserEntry.present
+                            ? "color-mix(in srgb, var(--forest) 12%, transparent)"
+                            : "color-mix(in srgb, var(--accent) 14%, transparent)",
+                          color: currentUserEntry.present ? "var(--cloud-white)" : "var(--text-primary)",
                         }}
                       >
                         {currentUserEntry.present ? "✓ Checked In" : "Mark Check-In"}
@@ -1357,13 +1362,13 @@ export default function DaoHallPage() {
                         backgroundColor: "color-mix(in srgb, var(--ink-deep) 90%, var(--ink-mid))",
                       }}
                     >
-                      <label className="block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Body weight</label>
+                      <label className="block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Body weight</label>
                       <input
                         type="number"
                         placeholder="Weight in kg"
                         value={currentUserEntry.weight}
                         onChange={(e) => updateCheckInModalEntry(user.id, "weight", e.target.value)}
-                        className="mt-2 w-full rounded-md border px-3 py-2 text-[12px] text-[#f2f3f5] outline-none placeholder:text-[#8f98a3]"
+                        className="mt-2 w-full rounded-md border px-3 py-2 text-[12px] text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)]"
                         style={{
                           borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)",
                           backgroundColor: "color-mix(in srgb, var(--ink-mid) 58%, var(--ink-deep))",
@@ -1382,8 +1387,8 @@ export default function DaoHallPage() {
                       backgroundColor: "color-mix(in srgb, var(--ink-deep) 90%, var(--ink-mid))",
                     }}
                   >
-                    <label className="block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Personal note</label>
-                    <p className="mt-1 text-[11px] text-[#b5bac1]">Keep it short and relevant to the day.</p>
+                    <label className="block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Personal note</label>
+                    <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">Keep it short and relevant to the day.</p>
                     <textarea
                       placeholder="Add a short note for this day"
                       value={user?.id ? checkInModal.entries[user.id]?.comment || "" : ""}
@@ -1393,7 +1398,7 @@ export default function DaoHallPage() {
                         }
                       }}
                       rows={4}
-                      className="mt-2 w-full resize-none rounded-md border px-3 py-2 text-[12px] text-[#f2f3f5] outline-none placeholder:text-[#8f98a3]"
+                      className="mt-2 w-full resize-none rounded-md border px-3 py-2 text-[12px] text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)]"
                       style={{
                         borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)",
                         backgroundColor: "color-mix(in srgb, var(--ink-mid) 58%, var(--ink-deep))",
@@ -1409,12 +1414,12 @@ export default function DaoHallPage() {
                         backgroundColor: "color-mix(in srgb, var(--ink-deep) 90%, var(--ink-mid))",
                       }}
                     >
-                      <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Checked in today</p>
+                      <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Checked in today</p>
                       <div className="mt-2 flex flex-wrap gap-2">
                         {checkedInUsers.map((u) => (
                           <span
                             key={u.id}
-                            className="inline-flex items-center gap-2 rounded-md border px-2 py-1 text-[11px] text-[#dbdee1]"
+                            className="inline-flex items-center gap-2 rounded-md border px-2 py-1 text-[11px] text-[color:var(--text-secondary)]"
                             style={{
                               borderColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)",
                               backgroundColor: "color-mix(in srgb, var(--ink-mid) 52%, transparent)",
@@ -1445,7 +1450,7 @@ export default function DaoHallPage() {
                     <button
                       type="button"
                       onClick={() => setCheckInModal(null)}
-                      className="flex-1 rounded-md border px-3 py-2.5 text-sm font-semibold text-[#dbdee1]"
+                      className="flex-1 rounded-md border px-3 py-2.5 text-sm font-semibold text-[color:var(--text-secondary)]"
                       style={{
                         borderColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)",
                         backgroundColor: "color-mix(in srgb, var(--ink-mid) 52%, transparent)",
@@ -1483,10 +1488,10 @@ export default function DaoHallPage() {
                             });
                           }
                         }}
-                        className="flex-1 rounded-md border px-3 py-2.5 text-sm font-semibold text-[#ffd8dc]"
+                        className="flex-1 rounded-md border px-3 py-2.5 text-sm font-semibold text-[color:var(--danger-hover)]"
                         style={{
-                          borderColor: "rgba(237, 66, 69, 0.34)",
-                          backgroundColor: "rgba(237, 66, 69, 0.10)",
+                          borderColor: "color-mix(in srgb, var(--danger) 46%, transparent)",
+                          backgroundColor: "color-mix(in srgb, var(--danger) 12%, transparent)",
                         }}
                       >
                         Clear
@@ -1495,11 +1500,11 @@ export default function DaoHallPage() {
                     <button
                       type="button"
                       onClick={handleSaveCheckIn}
-                      className="flex-1 rounded-md border px-3 py-2.5 text-sm font-semibold text-white"
+                      className="flex-1 rounded-md border px-3 py-2.5 text-sm font-semibold text-[color:var(--cloud-white)]"
                       style={{
-                        borderColor: "rgba(88, 101, 242, 0.45)",
-                        backgroundColor: "rgba(88, 101, 242, 0.88)",
-                        boxShadow: "0 8px 18px rgba(88, 101, 242, 0.22)",
+                        borderColor: "color-mix(in srgb, var(--accent) 56%, transparent)",
+                        backgroundColor: "color-mix(in srgb, var(--accent) 82%, transparent)",
+                        boxShadow: "0 8px 18px color-mix(in srgb, var(--accent) 24%, transparent)",
                       }}
                     >
                       Save Note
@@ -1510,7 +1515,7 @@ export default function DaoHallPage() {
                     <button
                       type="button"
                       onClick={() => setCheckInModal(null)}
-                      className="flex-1 rounded-md border px-3 py-2.5 text-sm font-semibold text-[#dbdee1]"
+                      className="flex-1 rounded-md border px-3 py-2.5 text-sm font-semibold text-[color:var(--text-secondary)]"
                       style={{
                         borderColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)",
                         backgroundColor: "color-mix(in srgb, var(--ink-mid) 52%, transparent)",
@@ -1521,11 +1526,11 @@ export default function DaoHallPage() {
                     <button
                       type="button"
                       onClick={handleSaveCheckIn}
-                      className="flex-1 rounded-md border px-3 py-2.5 text-sm font-semibold text-white"
+                      className="flex-1 rounded-md border px-3 py-2.5 text-sm font-semibold text-[color:var(--cloud-white)]"
                       style={{
-                        borderColor: "rgba(88, 101, 242, 0.45)",
-                        backgroundColor: "rgba(88, 101, 242, 0.88)",
-                        boxShadow: "0 8px 18px rgba(88, 101, 242, 0.22)",
+                        borderColor: "color-mix(in srgb, var(--accent) 56%, transparent)",
+                        backgroundColor: "color-mix(in srgb, var(--accent) 82%, transparent)",
+                        boxShadow: "0 8px 18px color-mix(in srgb, var(--accent) 24%, transparent)",
                       }}
                     >
                       Save Check-In
@@ -1545,11 +1550,11 @@ export default function DaoHallPage() {
         title="⚖️ Log Your Weight"
       >
         <div className="space-y-5">
-          <p className="text-xs text-[#b5bac1]">
+          <p className="text-xs text-[color:var(--text-secondary)]">
             You haven&apos;t logged your weight for this check-in. Tracking your weight helps monitor your cultivation progress.
           </p>
           <div>
-            <label className="mb-2 block text-[10px] uppercase tracking-wider text-[#f2f3f5]">Body Weight (kg)</label>
+            <label className="mb-2 block text-[10px] uppercase tracking-wider text-[color:var(--text-primary)]">Body Weight (kg)</label>
             <input
               type="number"
               placeholder="Enter your weight..."
@@ -1558,7 +1563,7 @@ export default function DaoHallPage() {
               onKeyDown={(e) => {
                 if (e.key === "Enter" && weightPromptValue) handleWeightPromptSubmit();
               }}
-              className="w-full rounded-md border border-[#3b3f48] bg-[#232428] px-4 py-4 text-center text-lg font-medium text-[#f2f3f5] placeholder:text-[#949ba4] outline-none transition-colors focus:border-[#5865f2]/60"
+              className="w-full rounded-md border border-[color:var(--border)] bg-[color:var(--surface)] px-4 py-4 text-center text-lg font-medium text-[color:var(--text-primary)] placeholder:text-[color:var(--text-muted)] outline-none transition-colors focus:border-[color:var(--accent)]"
               min="0"
               max="500"
               step="0.1"
@@ -1594,7 +1599,7 @@ export default function DaoHallPage() {
           </div>
           <button
             onClick={handleWeightPromptDismissToday}
-            className="w-full py-2 text-center text-[11px] text-[#949ba4] transition-colors hover:text-[#f2f3f5]"
+            className="w-full py-2 text-center text-[11px] text-[color:var(--text-muted)] transition-colors hover:text-[color:var(--text-primary)]"
           >
             Don&apos;t remind me today
           </button>

@@ -731,8 +731,8 @@ export default function TrainInputCanvasPage() {
   const getFieldHighlightStyle = (field: string) => (isFocusedField(field)
     ? {
         scrollMarginTop: "5.5rem",
-        borderColor: "rgba(87, 242, 135, 0.52)",
-        boxShadow: "0 0 0 1px rgba(87, 242, 135, 0.18) inset, 0 0 22px rgba(87, 242, 135, 0.12)",
+        borderColor: "color-mix(in srgb, var(--forest) 52%, transparent)",
+        boxShadow: "0 0 0 1px color-mix(in srgb, var(--forest) 18%, transparent) inset, 0 0 22px color-mix(in srgb, var(--forest) 12%, transparent)",
         transition: "border-color 320ms ease, box-shadow 320ms ease, opacity 320ms ease",
       }
     : {
@@ -813,9 +813,9 @@ export default function TrainInputCanvasPage() {
                 onClick={() => void handleDeleteLoggedSession()}
                 className="h-9 min-w-[78px] justify-center rounded-lg px-3"
                 style={{
-                  borderColor: "rgba(237, 66, 69, 0.38)",
+                  borderColor: "color-mix(in srgb, var(--danger) 42%, transparent)",
                   backgroundColor: "transparent",
-                  color: "#ffb3b8",
+                  color: "var(--danger-hover)",
                 }}
               >
                 {deleting ? "Deleting..." : "Delete"}
@@ -828,9 +828,9 @@ export default function TrainInputCanvasPage() {
               onClick={() => void handleSave()}
               className="h-9 min-w-[78px] justify-center rounded-lg px-3"
               style={{
-                borderColor: "rgba(88, 101, 242, 0.38)",
-                backgroundColor: "color-mix(in srgb, var(--jade-glow) 16%, var(--ink-dark))",
-                color: "#f2f3f5",
+                borderColor: "color-mix(in srgb, var(--accent) 44%, transparent)",
+                backgroundColor: "color-mix(in srgb, var(--accent) 16%, var(--ink-dark))",
+                color: "var(--text-primary)",
               }}
             >
               {saving ? "Saving..." : isEditingExistingLog ? "Update" : "Save"}
@@ -843,9 +843,9 @@ export default function TrainInputCanvasPage() {
             onClick={goToNextPanel}
             className="h-9 min-w-[78px] justify-center rounded-lg px-3"
             style={{
-              borderColor: "rgba(88, 101, 242, 0.38)",
-              backgroundColor: "color-mix(in srgb, var(--jade-glow) 16%, var(--ink-dark))",
-              color: "#f2f3f5",
+              borderColor: "color-mix(in srgb, var(--accent) 44%, transparent)",
+              backgroundColor: "color-mix(in srgb, var(--accent) 16%, var(--ink-dark))",
+              color: "var(--text-primary)",
             }}
           >
             Next →
@@ -895,9 +895,9 @@ export default function TrainInputCanvasPage() {
                     </svg>
                   </Link>
                   <div className="min-w-0">
-                    <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Training Canvas</p>
-                    <h2 className="mt-0.5 text-xs font-semibold uppercase tracking-[0.08em] text-[#f2f3f5]">{editorPageTitle}</h2>
-                    <p className="mt-0.5 text-[11px] text-[#b5bac1]">{editorPageDescription}</p>
+                    <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Training Canvas</p>
+                    <h2 className="mt-0.5 text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--text-primary)]">{editorPageTitle}</h2>
+                    <p className="mt-0.5 text-[11px] text-[color:var(--text-secondary)]">{editorPageDescription}</p>
                   </div>
                 </div>
 
@@ -909,9 +909,9 @@ export default function TrainInputCanvasPage() {
                       disabled={saving || deleting}
                       className="rounded-md border px-2.5 py-1 text-[11px] font-semibold transition-colors"
                       style={{
-                        borderColor: "rgba(237, 66, 69, 0.45)",
-                        backgroundColor: "rgba(237, 66, 69, 0.08)",
-                        color: "#ffb3b8",
+                        borderColor: "color-mix(in srgb, var(--danger) 46%, transparent)",
+                        backgroundColor: "color-mix(in srgb, var(--danger) 10%, transparent)",
+                        color: "var(--danger-hover)",
                         opacity: saving || deleting ? 0.7 : 1,
                       }}
                     >
@@ -923,9 +923,9 @@ export default function TrainInputCanvasPage() {
                       disabled={saving || deleting}
                       className="rounded-md border px-2.5 py-1 text-[11px] font-semibold transition-colors"
                       style={{
-                        borderColor: hasPendingEditChanges ? "rgba(87, 242, 135, 0.42)" : "color-mix(in srgb, var(--ink-light) 55%, transparent)",
-                        backgroundColor: hasPendingEditChanges ? "rgba(87, 242, 135, 0.10)" : "rgba(79, 84, 92, 0.16)",
-                        color: hasPendingEditChanges ? "#c9f7d6" : "#f2f3f5",
+                        borderColor: hasPendingEditChanges ? "color-mix(in srgb, var(--forest) 48%, transparent)" : "color-mix(in srgb, var(--ink-light) 55%, transparent)",
+                        backgroundColor: hasPendingEditChanges ? "color-mix(in srgb, var(--forest) 12%, transparent)" : "color-mix(in srgb, var(--surface-hover) 36%, transparent)",
+                        color: hasPendingEditChanges ? "var(--cloud-white)" : "var(--text-primary)",
                         opacity: saving || deleting ? 0.7 : 1,
                       }}
                     >
@@ -941,9 +941,13 @@ export default function TrainInputCanvasPage() {
                 <div
                   className="rounded-lg border px-3 py-2 text-[11px]"
                   style={{
-                    borderColor: message.type === "success" ? "rgba(87, 242, 135, 0.35)" : "rgba(237, 66, 69, 0.4)",
-                    backgroundColor: message.type === "success" ? "rgba(87, 242, 135, 0.08)" : "rgba(237, 66, 69, 0.08)",
-                    color: message.type === "success" ? "#c9f7d6" : "#ffb3b8",
+                    borderColor: message.type === "success"
+                      ? "color-mix(in srgb, var(--forest) 42%, transparent)"
+                      : "color-mix(in srgb, var(--danger) 46%, transparent)",
+                    backgroundColor: message.type === "success"
+                      ? "color-mix(in srgb, var(--forest) 10%, transparent)"
+                      : "color-mix(in srgb, var(--danger) 10%, transparent)",
+                    color: message.type === "success" ? "var(--cloud-white)" : "var(--danger-hover)",
                   }}
                 >
                   {message.text}
@@ -953,7 +957,7 @@ export default function TrainInputCanvasPage() {
               <div className="flex min-h-0 flex-1 flex-row gap-2 sm:gap-3 overflow-hidden">
                 <aside className="w-[56px] shrink-0 sm:w-[60px]">
                   <div className="flex h-full min-h-0 flex-col items-center py-1">
-                    <p className="mb-2 text-[9px] uppercase tracking-[0.14em] text-[#949ba4]">Steps</p>
+                    <p className="mb-2 text-[9px] uppercase tracking-[0.14em] text-[color:var(--text-muted)]">Steps</p>
 
                     <div className="flex min-h-0 flex-1 flex-col items-center gap-2 overflow-y-auto">
                       {SESSION_PANELS.map((panel, index) => {
@@ -970,21 +974,21 @@ export default function TrainInputCanvasPage() {
                             className="flex h-10 w-10 items-center justify-center rounded-full border text-center transition-all"
                             style={{
                               borderColor: isComplete
-                                ? "rgba(87, 242, 135, 0.45)"
+                                ? "color-mix(in srgb, var(--forest) 46%, transparent)"
                                 : isActive
-                                  ? "rgba(88, 101, 242, 0.55)"
-                                  : "rgba(59, 63, 72, 0.72)",
+                                  ? "color-mix(in srgb, var(--accent) 56%, transparent)"
+                                  : "color-mix(in srgb, var(--border) 72%, transparent)",
                               backgroundColor: isComplete
-                                ? "rgba(87, 242, 135, 0.12)"
+                                ? "color-mix(in srgb, var(--forest) 12%, transparent)"
                                 : isActive
-                                  ? "rgba(88, 101, 242, 0.16)"
+                                  ? "color-mix(in srgb, var(--accent) 16%, transparent)"
                                   : "transparent",
                               color: isComplete
-                                ? "#c9f7d6"
+                                ? "var(--cloud-white)"
                                 : isActive
-                                  ? "#f2f3f5"
-                                  : "#949ba4",
-                              boxShadow: isActive || isComplete ? "0 0 14px rgba(88, 101, 242, 0.12)" : "none",
+                                  ? "var(--text-primary)"
+                                  : "var(--text-muted)",
+                              boxShadow: isActive || isComplete ? "0 0 14px color-mix(in srgb, var(--accent) 12%, transparent)" : "none",
                             }}
                             aria-label={panel.label}
                             title={`${index + 1}. ${panel.label}`}
@@ -1000,9 +1004,9 @@ export default function TrainInputCanvasPage() {
                       onClick={resetForm}
                       className="mt-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors"
                       style={{
-                        border: "1px solid rgba(59, 63, 72, 0.72)",
+                        border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
                         backgroundColor: "transparent",
-                        color: "#949ba4",
+                        color: "var(--text-muted)",
                       }}
                       aria-label="Reset session"
                       title="Reset session"
@@ -1021,29 +1025,29 @@ export default function TrainInputCanvasPage() {
                     <section className="flex flex-col overflow-hidden px-1 py-1" style={panelShellStyle}>
                       <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">
                         <div className="min-w-0">
-                          <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Selected exercise</p>
+                          <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Selected exercise</p>
                         </div>
 
                         <div
                           className="mt-2 flex min-w-0 flex-col rounded-lg px-3 py-2.5"
                           style={{
-                            backgroundColor: "rgba(17, 18, 20, 0.42)",
+                            backgroundColor: "color-mix(in srgb, var(--surface) 88%, black)",
                             border: "1px solid color-mix(in srgb, var(--ink-light) 42%, transparent)",
                           }}
                         >
-                          <p className="text-[11px] text-[#b5bac1]">Selected movement</p>
-                          <p className="mt-1 text-base font-semibold text-[#f2f3f5]">{selectedExercise?.name || customExerciseName || "No exercise selected"}</p>
-                          <p className="mt-1 text-[11px] text-[#b5bac1]">{selectedExerciseMeta}</p>
+                          <p className="text-[11px] text-[color:var(--text-secondary)]">Selected movement</p>
+                          <p className="mt-1 text-base font-semibold text-[color:var(--text-primary)]">{selectedExercise?.name || customExerciseName || "No exercise selected"}</p>
+                          <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">{selectedExerciseMeta}</p>
                         </div>
 
                         <div id="editor-field-session-date" className="mt-3 rounded-lg px-1 py-1" style={getFieldHighlightStyle("session-date")}>
-                          <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Session date</label>
+                          <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Session date</label>
                           <input
                             type="date"
                             value={trainingDate}
                             onChange={(event) => setTrainingDate(event.target.value)}
                             className="h-10 w-full rounded-md border px-3 text-sm outline-none"
-                            style={{ borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)", backgroundColor: "rgba(17, 18, 20, 0.45)", color: "#f2f3f5" }}
+                            style={{ borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--text-primary)" }}
                           />
                         </div>
 
@@ -1057,19 +1061,19 @@ export default function TrainInputCanvasPage() {
                     <section className="flex flex-col overflow-hidden px-1 py-1" style={panelShellStyle}>
                       <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">
                         <div>
-                          <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Exercise setup</p>
-                          <p className="mt-1 text-[11px] text-[#b5bac1]">Choose progression and variant</p>
+                          <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Exercise setup</p>
+                          <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">Choose progression and variant</p>
                         </div>
 
                         <div className="mt-4 grid gap-3 lg:grid-cols-2">
                           <div id="editor-field-progression" className="rounded-lg px-1 py-1" style={getFieldHighlightStyle("progression")}>
-                            <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Progression</label>
+                            <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Progression</label>
                             <select
                               value={selectedLevel}
                               onChange={(event) => setSelectedLevel(event.target.value)}
                               disabled={inputMode !== "existing" || !selectedExercise}
                               className="h-10 w-full rounded-md border px-3 text-sm outline-none"
-                              style={{ borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)", backgroundColor: "rgba(17, 18, 20, 0.45)", color: "#f2f3f5", opacity: inputMode !== "existing" || !selectedExercise ? 0.6 : 1 }}
+                              style={{ borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--text-primary)", opacity: inputMode !== "existing" || !selectedExercise ? 0.6 : 1 }}
                             >
                               {(selectedExercise?.tiers.length ? selectedExercise.tiers : [{ level: 1, name: "Progression 1" }]).map((tier) => (
                                 <option key={`${tier.level}-${tier.name}`} value={String(tier.level)}>
@@ -1080,13 +1084,13 @@ export default function TrainInputCanvasPage() {
                           </div>
 
                           <div id="editor-field-variation" className="rounded-lg px-1 py-1" style={getFieldHighlightStyle("variation")}>
-                            <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Variant</label>
+                            <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Variant</label>
                             <select
                               value={selectedVariant}
                               onChange={(event) => setSelectedVariant(event.target.value)}
                               disabled={inputMode !== "existing" || !selectedExercise}
                               className="h-10 w-full rounded-md border px-3 text-sm outline-none"
-                              style={{ borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)", backgroundColor: "rgba(17, 18, 20, 0.45)", color: "#f2f3f5", opacity: inputMode !== "existing" || !selectedExercise ? 0.6 : 1 }}
+                              style={{ borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--text-primary)", opacity: inputMode !== "existing" || !selectedExercise ? 0.6 : 1 }}
                             >
                               <option value="">Default</option>
                               {(selectedExercise?.variations || []).map((variation) => (
@@ -1106,8 +1110,8 @@ export default function TrainInputCanvasPage() {
                     <section className="flex flex-col overflow-hidden px-1 py-1" style={panelShellStyle}>
                       <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">
                         <div>
-                          <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Session format</p>
-                          <p className="mt-1 text-[11px] text-[#b5bac1]">Select log style</p>
+                          <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Session format</p>
+                          <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">Select log style</p>
                         </div>
 
                         <div className="mt-4 grid gap-3 lg:grid-cols-2">
@@ -1116,16 +1120,16 @@ export default function TrainInputCanvasPage() {
                             onClick={() => setValueMode("weight")}
                             className="rounded-xl border px-3 py-3 text-left transition-colors"
                             style={{
-                              borderColor: valueMode === "weight" ? "rgba(88, 101, 242, 0.62)" : "#3b3f48",
-                              backgroundColor: valueMode === "weight" ? "color-mix(in srgb, var(--jade-glow) 14%, var(--ink-dark))" : "rgba(35, 36, 40, 0.6)",
-                              color: valueMode === "weight" ? "#f2f3f5" : "#b5bac1",
-                              boxShadow: valueMode === "weight" ? "0 0 0 1px rgba(88, 101, 242, 0.18) inset" : "none",
+                              borderColor: valueMode === "weight" ? "color-mix(in srgb, var(--accent) 60%, transparent)" : "color-mix(in srgb, var(--border) 80%, transparent)",
+                              backgroundColor: valueMode === "weight" ? "color-mix(in srgb, var(--accent) 14%, var(--ink-dark))" : "color-mix(in srgb, var(--surface-hover) 60%, var(--surface))",
+                              color: valueMode === "weight" ? "var(--text-primary)" : "var(--text-secondary)",
+                              boxShadow: valueMode === "weight" ? "0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent) inset" : "none",
                             }}
                           >
                             <div className="flex items-center gap-3">
                               <span
                                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
-                                style={{ backgroundColor: valueMode === "weight" ? "rgba(88, 101, 242, 0.18)" : "rgba(255,255,255,0.05)" }}
+                                style={{ backgroundColor: valueMode === "weight" ? "color-mix(in srgb, var(--accent) 18%, transparent)" : "color-mix(in srgb, var(--cloud-white) 5%, transparent)" }}
                               >
                                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                                   <path strokeLinecap="round" strokeLinejoin="round" d="M6.5 9h11" />
@@ -1135,7 +1139,7 @@ export default function TrainInputCanvasPage() {
                               </span>
                               <span className="min-w-0">
                                 <span className="block text-sm font-semibold">Weight</span>
-                                <span className="mt-0.5 block text-[10px] text-[#949ba4]">Load and reps</span>
+                                <span className="mt-0.5 block text-[10px] text-[color:var(--text-muted)]">Load and reps</span>
                               </span>
                             </div>
                           </button>
@@ -1145,16 +1149,16 @@ export default function TrainInputCanvasPage() {
                             onClick={() => setValueMode("timed")}
                             className="rounded-xl border px-3 py-3 text-left transition-colors"
                             style={{
-                              borderColor: valueMode === "timed" ? "rgba(88, 101, 242, 0.62)" : "#3b3f48",
-                              backgroundColor: valueMode === "timed" ? "color-mix(in srgb, var(--jade-glow) 14%, var(--ink-dark))" : "rgba(35, 36, 40, 0.6)",
-                              color: valueMode === "timed" ? "#f2f3f5" : "#b5bac1",
-                              boxShadow: valueMode === "timed" ? "0 0 0 1px rgba(88, 101, 242, 0.18) inset" : "none",
+                              borderColor: valueMode === "timed" ? "color-mix(in srgb, var(--accent) 60%, transparent)" : "color-mix(in srgb, var(--border) 80%, transparent)",
+                              backgroundColor: valueMode === "timed" ? "color-mix(in srgb, var(--accent) 14%, var(--ink-dark))" : "color-mix(in srgb, var(--surface-hover) 60%, var(--surface))",
+                              color: valueMode === "timed" ? "var(--text-primary)" : "var(--text-secondary)",
+                              boxShadow: valueMode === "timed" ? "0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent) inset" : "none",
                             }}
                           >
                             <div className="flex items-center gap-3">
                               <span
                                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
-                                style={{ backgroundColor: valueMode === "timed" ? "rgba(88, 101, 242, 0.18)" : "rgba(255,255,255,0.05)" }}
+                                style={{ backgroundColor: valueMode === "timed" ? "color-mix(in srgb, var(--accent) 18%, transparent)" : "color-mix(in srgb, var(--cloud-white) 5%, transparent)" }}
                               >
                                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                                   <circle cx="12" cy="13" r="7" />
@@ -1164,7 +1168,7 @@ export default function TrainInputCanvasPage() {
                               </span>
                               <span className="min-w-0">
                                 <span className="block text-sm font-semibold">Timed</span>
-                                <span className="mt-0.5 block text-[10px] text-[#949ba4]">Seconds and holds</span>
+                                <span className="mt-0.5 block text-[10px] text-[color:var(--text-muted)]">Seconds and holds</span>
                               </span>
                             </div>
                           </button>
@@ -1176,25 +1180,25 @@ export default function TrainInputCanvasPage() {
                             style={{
                               borderColor: "color-mix(in srgb, var(--jade-glow) 36%, transparent)",
                               backgroundColor: "color-mix(in srgb, var(--jade-glow) 8%, var(--ink-dark))",
-                              color: "#b5bac1",
+                              color: "var(--text-secondary)",
                             }}
                           >
                             Timed entries will be saved in seconds.
                           </div>
                         ) : (
                           <div className="mt-3 max-w-[320px]">
-                            <p className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Input unit</p>
-                            <p className="mb-2 text-[11px] text-[#b5bac1]">Machine values logged in lbs or kg will be converted to your preferred unit from settings.</p>
+                            <p className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Input unit</p>
+                            <p className="mb-2 text-[11px] text-[color:var(--text-secondary)]">Machine values logged in lbs or kg will be converted to your preferred unit from settings.</p>
                             <div className="grid grid-cols-2 gap-2">
                               <button
                                 type="button"
                                 onClick={() => setWeightUnit("kg")}
                                 className="rounded-xl border px-3 py-2 text-[11px] font-semibold transition-all"
                                 style={{
-                                  borderColor: weightUnit === "kg" ? "rgba(88, 101, 242, 0.66)" : "rgba(59, 63, 72, 0.9)",
-                                  backgroundColor: weightUnit === "kg" ? "rgba(88, 101, 242, 0.24)" : "rgba(43, 46, 54, 0.95)",
-                                  color: weightUnit === "kg" ? "#f2f3f5" : "#d0d4db",
-                                  boxShadow: weightUnit === "kg" ? "inset 0 0 0 1px rgba(88, 101, 242, 0.22), inset 0 0 12px rgba(88, 101, 242, 0.16)" : "inset 0 0 0 1px rgba(255,255,255,0.03)",
+                                  borderColor: weightUnit === "kg" ? "color-mix(in srgb, var(--accent) 64%, transparent)" : "color-mix(in srgb, var(--border) 78%, transparent)",
+                                  backgroundColor: weightUnit === "kg" ? "color-mix(in srgb, var(--accent) 22%, transparent)" : "color-mix(in srgb, var(--surface-hover) 72%, var(--surface))",
+                                  color: weightUnit === "kg" ? "var(--text-primary)" : "var(--text-secondary)",
+                                  boxShadow: weightUnit === "kg" ? "inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent), inset 0 0 12px color-mix(in srgb, var(--accent) 16%, transparent)" : "inset 0 0 0 1px color-mix(in srgb, var(--cloud-white) 3%, transparent)",
                                 }}
                               >
                                 Kilograms (kg)
@@ -1204,10 +1208,10 @@ export default function TrainInputCanvasPage() {
                                 onClick={() => setWeightUnit("lbs")}
                                 className="rounded-xl border px-3 py-2 text-[11px] font-semibold transition-all"
                                 style={{
-                                  borderColor: weightUnit === "lbs" ? "rgba(88, 101, 242, 0.66)" : "rgba(59, 63, 72, 0.9)",
-                                  backgroundColor: weightUnit === "lbs" ? "rgba(88, 101, 242, 0.24)" : "rgba(43, 46, 54, 0.95)",
-                                  color: weightUnit === "lbs" ? "#f2f3f5" : "#d0d4db",
-                                  boxShadow: weightUnit === "lbs" ? "inset 0 0 0 1px rgba(88, 101, 242, 0.22), inset 0 0 12px rgba(88, 101, 242, 0.16)" : "inset 0 0 0 1px rgba(255,255,255,0.03)",
+                                  borderColor: weightUnit === "lbs" ? "color-mix(in srgb, var(--accent) 64%, transparent)" : "color-mix(in srgb, var(--border) 78%, transparent)",
+                                  backgroundColor: weightUnit === "lbs" ? "color-mix(in srgb, var(--accent) 22%, transparent)" : "color-mix(in srgb, var(--surface-hover) 72%, var(--surface))",
+                                  color: weightUnit === "lbs" ? "var(--text-primary)" : "var(--text-secondary)",
+                                  boxShadow: weightUnit === "lbs" ? "inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent), inset 0 0 12px color-mix(in srgb, var(--accent) 16%, transparent)" : "inset 0 0 0 1px color-mix(in srgb, var(--cloud-white) 3%, transparent)",
                                 }}
                               >
                                 Pounds (lbs)
@@ -1231,21 +1235,21 @@ export default function TrainInputCanvasPage() {
                               className="rounded-xl border px-3 py-3"
                               style={{
                                 ...getFieldHighlightStyle("modifier"),
-                                borderColor: "#3b3f48",
-                                backgroundColor: "rgba(35, 36, 40, 0.56)",
+                                borderColor: "color-mix(in srgb, var(--border) 78%, transparent)",
+                                backgroundColor: "color-mix(in srgb, var(--surface-hover) 68%, var(--surface))",
                               }}
                             >
                               <div className="flex items-start justify-between gap-2">
                                 <div className="min-w-0">
-                                  <p className="text-[10px] uppercase tracking-[0.08em] text-[#949ba4]">Weight modifier</p>
-                                  <p className="mt-1 text-[11px] text-[#b5bac1]">Assist or add load</p>
+                                  <p className="text-[10px] uppercase tracking-[0.08em] text-[color:var(--text-muted)]">Weight modifier</p>
+                                  <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">Assist or add load</p>
                                 </div>
                                 <div className="flex shrink-0 items-center gap-1.5">
                                   <span
-                                    className="min-w-[84px] rounded-full border px-2.5 py-1 text-center text-[10px] font-semibold text-[#f2f3f5]"
+                                    className="min-w-[84px] rounded-full border px-2.5 py-1 text-center text-[10px] font-semibold text-[color:var(--text-primary)]"
                                     style={{
-                                      borderColor: "rgba(88, 101, 242, 0.32)",
-                                      backgroundColor: "rgba(88, 101, 242, 0.09)",
+                                      borderColor: "color-mix(in srgb, var(--accent) 36%, transparent)",
+                                      backgroundColor: "color-mix(in srgb, var(--accent) 10%, transparent)",
                                     }}
                                   >
                                     {modifierKg === 0 ? "None" : formatSignedModifierKg(modifierKg)}
@@ -1255,7 +1259,7 @@ export default function TrainInputCanvasPage() {
                                       type="button"
                                       onClick={() => setModifierKg(0)}
                                       className="rounded-full border px-2.5 py-1 text-[10px] font-semibold"
-                                      style={{ borderColor: "rgba(59, 63, 72, 0.9)", backgroundColor: "rgba(43, 46, 54, 0.95)", color: "#d0d4db" }}
+                                      style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface-hover) 72%, var(--surface))", color: "var(--text-secondary)" }}
                                     >
                                       Reset
                                     </button>
@@ -1263,7 +1267,7 @@ export default function TrainInputCanvasPage() {
                                 </div>
                               </div>
 
-                              <div className="mt-3 rounded-xl px-2.5 py-2" style={{ backgroundColor: "rgba(17, 18, 20, 0.34)" }}>
+                              <div className="mt-3 rounded-xl px-2.5 py-2" style={{ backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)" }}>
                                 <input
                                   type="range"
                                   min="-50"
@@ -1274,7 +1278,7 @@ export default function TrainInputCanvasPage() {
                                   className="h-1.5 w-full cursor-pointer accent-[var(--jade-glow)]"
                                   aria-label="Weight modifier slider"
                                 />
-                                <div className="mt-2 flex items-center justify-between text-[9px] text-[#7f8791]">
+                                <div className="mt-2 flex items-center justify-between text-[9px] text-[color:var(--text-muted)]">
                                   <span>-50kg</span>
                                   <span>0</span>
                                   <span>+50kg</span>
@@ -1283,11 +1287,11 @@ export default function TrainInputCanvasPage() {
                             </div>
                           ) : null}
 
-                          <div className="rounded-xl border px-3 py-3" style={{ borderColor: "#3b3f48", backgroundColor: "rgba(35, 36, 40, 0.42)" }}>
+                          <div className="rounded-xl border px-3 py-3" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface-hover) 62%, var(--surface))" }}>
                             <div className="flex items-start justify-between gap-2">
                               <div>
-                                <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Sets</p>
-                                <p className="mt-1 text-[11px] text-[#b5bac1]">Start with one set and add more as you go</p>
+                                <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Sets</p>
+                                <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">Start with one set and add more as you go</p>
                               </div>
                               <GlowButton
                                 variant="jade"
@@ -1314,12 +1318,14 @@ export default function TrainInputCanvasPage() {
                                     className="rounded-xl border px-3 py-3 transition-all duration-700"
                                     style={{
                                       scrollMarginTop: "5.5rem",
-                                      borderColor: set.id === highlightedSetId || isFocusedField(`set-${index + 1}`) || isExpanded ? "rgba(87, 242, 135, 0.45)" : "#30343c",
+                                      borderColor: set.id === highlightedSetId || isFocusedField(`set-${index + 1}`) || isExpanded
+                                        ? "color-mix(in srgb, var(--forest) 46%, transparent)"
+                                        : "color-mix(in srgb, var(--border) 76%, transparent)",
                                       background: set.id === highlightedSetId || isExpanded
-                                        ? "linear-gradient(180deg, rgba(87, 242, 135, 0.035), rgba(26, 28, 32, 0.96))"
-                                        : "linear-gradient(180deg, rgba(30, 32, 37, 0.88), rgba(22, 24, 28, 0.92))",
+                                        ? "linear-gradient(180deg, color-mix(in srgb, var(--forest) 6%, transparent), color-mix(in srgb, var(--surface) 96%, var(--surface-hover)))"
+                                        : "linear-gradient(180deg, color-mix(in srgb, var(--surface-hover) 82%, var(--surface)), color-mix(in srgb, var(--surface) 96%, black))",
                                       boxShadow: set.id === highlightedSetId || isFocusedField(`set-${index + 1}`) || isExpanded
-                                        ? "0 0 0 1px rgba(87, 242, 135, 0.12), 0 0 16px rgba(87, 242, 135, 0.06)"
+                                        ? "0 0 0 1px color-mix(in srgb, var(--forest) 12%, transparent), 0 0 16px color-mix(in srgb, var(--forest) 6%, transparent)"
                                         : "none",
                                     }}
                                   >
@@ -1330,12 +1336,12 @@ export default function TrainInputCanvasPage() {
                                         className="flex min-w-0 flex-1 items-center gap-2 text-left"
                                       >
                                         <span
-                                          className="rounded-full px-2.5 py-1 text-[10px] font-semibold text-[#f2f3f5]"
-                                          style={{ backgroundColor: "rgba(88, 101, 242, 0.12)", border: "1px solid rgba(88, 101, 242, 0.24)" }}
+                                          className="rounded-full px-2.5 py-1 text-[10px] font-semibold text-[color:var(--text-primary)]"
+                                          style={{ backgroundColor: "color-mix(in srgb, var(--accent) 12%, transparent)", border: "1px solid color-mix(in srgb, var(--accent) 24%, transparent)" }}
                                         >
                                           Set {index + 1}
                                         </span>
-                                        <span className="truncate text-[10px] text-[#949ba4]">{setSummary}</span>
+                                        <span className="truncate text-[10px] text-[color:var(--text-muted)]">{setSummary}</span>
                                       </button>
 
                                       <div className="flex items-center gap-2">
@@ -1344,7 +1350,7 @@ export default function TrainInputCanvasPage() {
                                             type="button"
                                             onClick={() => setExpandedSetId(set.id)}
                                             className="rounded-full border px-2.5 py-1 text-[10px] font-medium"
-                                            style={{ borderColor: "rgba(59, 63, 72, 0.9)", backgroundColor: "rgba(43, 46, 54, 0.95)", color: "#d0d4db", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.03)" }}
+                                            style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface-hover) 72%, var(--surface))", color: "var(--text-secondary)", boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--cloud-white) 3%, transparent)" }}
                                           >
                                             Edit
                                           </button>
@@ -1355,11 +1361,11 @@ export default function TrainInputCanvasPage() {
                                           disabled={sets.length <= 1}
                                           className="rounded-full border px-2.5 py-1 text-[10px] font-medium transition-all"
                                           style={{
-                                            borderColor: "rgba(59, 63, 72, 0.9)",
-                                            backgroundColor: "rgba(43, 46, 54, 0.95)",
-                                            color: sets.length <= 1 ? "#6f7680" : "#d0d4db",
+                                            borderColor: "color-mix(in srgb, var(--border) 78%, transparent)",
+                                            backgroundColor: "color-mix(in srgb, var(--surface-hover) 72%, var(--surface))",
+                                            color: sets.length <= 1 ? "color-mix(in srgb, var(--text-muted) 72%, transparent)" : "var(--text-secondary)",
                                             opacity: sets.length <= 1 ? 0.45 : 0.96,
-                                            boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.03)",
+                                            boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--cloud-white) 3%, transparent)",
                                           }}
                                         >
                                           Remove
@@ -1370,7 +1376,7 @@ export default function TrainInputCanvasPage() {
                                     {isExpanded ? (
                                       <div className="mt-3 grid grid-cols-2 gap-2">
                                         <label className="block">
-                                          <span className="mb-1 block text-[10px] uppercase tracking-[0.08em] text-[#7f8791]">
+                                          <span className="mb-1 block text-[10px] uppercase tracking-[0.08em] text-[color:var(--text-muted)]">
                                             {valueMode === "timed" ? "Seconds" : "Weight"}
                                           </span>
                                           <input
@@ -1381,11 +1387,11 @@ export default function TrainInputCanvasPage() {
                                             onChange={(event) => updateSetRow(set.id, "value", event.target.value)}
                                             placeholder={setValuePlaceholder}
                                             className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
-                                            style={{ borderColor: "#3b3f48", backgroundColor: "rgba(17, 18, 20, 0.5)", color: "#f2f3f5" }}
+                                            style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--text-primary)" }}
                                           />
                                         </label>
                                         <label className="block">
-                                          <span className="mb-1 block text-[10px] uppercase tracking-[0.08em] text-[#7f8791]">Reps</span>
+                                          <span className="mb-1 block text-[10px] uppercase tracking-[0.08em] text-[color:var(--text-muted)]">Reps</span>
                                           <input
                                             type="number"
                                             min="0"
@@ -1394,7 +1400,7 @@ export default function TrainInputCanvasPage() {
                                             onChange={(event) => updateSetRow(set.id, "reps", event.target.value)}
                                             placeholder="reps"
                                             className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
-                                            style={{ borderColor: "#3b3f48", backgroundColor: "rgba(17, 18, 20, 0.5)", color: "#f2f3f5" }}
+                                            style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--text-primary)" }}
                                           />
                                         </label>
                                       </div>
@@ -1420,8 +1426,8 @@ export default function TrainInputCanvasPage() {
                         style={getFieldHighlightStyle("notes")}
                       >
                         <div className="shrink-0">
-                          <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Notes</p>
-                          <p className="mt-1 text-[11px] text-[#b5bac1]">Session notes</p>
+                          <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Notes</p>
+                          <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">Session notes</p>
                         </div>
 
                         <textarea
@@ -1429,11 +1435,10 @@ export default function TrainInputCanvasPage() {
                           onChange={(event) => setNotes(event.target.value)}
                           rows={8}
                           placeholder="Anything important from this session..."
-                          className="mt-3 min-h-[220px] flex-1 w-full rounded-lg border px-3 py-2.5 text-sm outline-none resize-none placeholder:text-[#7f8791]"
+                          className="mt-3 min-h-[220px] flex-1 w-full resize-none rounded-lg border px-3 py-2.5 text-sm text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)]"
                           style={{
                             borderColor: "color-mix(in srgb, var(--ink-light) 52%, transparent)",
-                            backgroundColor: "rgba(17, 18, 20, 0.55)",
-                            color: "#f2f3f5",
+                            backgroundColor: "color-mix(in srgb, var(--surface) 88%, black)",
                           }}
                         />
 
@@ -1449,65 +1454,65 @@ export default function TrainInputCanvasPage() {
                         <div
                           className="rounded-2xl border px-3 py-3"
                           style={{
-                            borderColor: "rgba(88, 101, 242, 0.22)",
-                            background: "linear-gradient(180deg, rgba(35, 36, 40, 0.9), rgba(24, 25, 28, 0.88))",
+                            borderColor: "color-mix(in srgb, var(--accent) 22%, var(--border))",
+                            background: "linear-gradient(180deg, color-mix(in srgb, var(--surface-hover) 78%, var(--surface)) 0%, color-mix(in srgb, var(--surface) 96%, black) 100%)",
                           }}
                         >
-                          <p className="text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">Review</p>
-                          <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">Ready for final save</p>
-                          <p className="mt-1 text-[11px] text-[#b5bac1]">Everything is filled out and prepared for submission.</p>
+                          <p className="text-[10px] uppercase tracking-[0.12em] text-[color:var(--text-muted)]">Review</p>
+                          <p className="mt-1 text-sm font-semibold text-[color:var(--text-primary)]">Ready for final save</p>
+                          <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">Everything is filled out and prepared for submission.</p>
                         </div>
 
                         <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                          <div className="rounded-xl border px-3 py-2.5" style={{ borderColor: "#3b3f48", backgroundColor: "rgba(35, 36, 40, 0.58)" }}>
-                            <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Exercise</p>
-                            <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{selectedExerciseLabel}</p>
+                          <div className="rounded-xl border px-3 py-2.5" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface-hover) 62%, var(--surface))" }}>
+                            <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Exercise</p>
+                            <p className="mt-1 text-sm font-semibold text-[color:var(--text-primary)]">{selectedExerciseLabel}</p>
                           </div>
-                          <div className="rounded-xl border px-3 py-2.5" style={{ borderColor: "#3b3f48", backgroundColor: "rgba(35, 36, 40, 0.58)" }}>
-                            <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Progression</p>
-                            <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{selectedProgressionLabel}</p>
+                          <div className="rounded-xl border px-3 py-2.5" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface-hover) 62%, var(--surface))" }}>
+                            <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Progression</p>
+                            <p className="mt-1 text-sm font-semibold text-[color:var(--text-primary)]">{selectedProgressionLabel}</p>
                           </div>
-                          <div className="rounded-xl border px-3 py-2.5" style={{ borderColor: "#3b3f48", backgroundColor: "rgba(35, 36, 40, 0.58)" }}>
-                            <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Variation</p>
-                            <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{selectedVariant || "Default"}</p>
+                          <div className="rounded-xl border px-3 py-2.5" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface-hover) 62%, var(--surface))" }}>
+                            <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Variation</p>
+                            <p className="mt-1 text-sm font-semibold text-[color:var(--text-primary)]">{selectedVariant || "Default"}</p>
                           </div>
-                          <div className="rounded-xl border px-3 py-2.5" style={{ borderColor: "#3b3f48", backgroundColor: "rgba(35, 36, 40, 0.58)" }}>
-                            <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Date</p>
-                            <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{trainingDate}</p>
+                          <div className="rounded-xl border px-3 py-2.5" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface-hover) 62%, var(--surface))" }}>
+                            <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Date</p>
+                            <p className="mt-1 text-sm font-semibold text-[color:var(--text-primary)]">{trainingDate}</p>
                           </div>
-                          <div className="rounded-xl border px-3 py-2.5" style={{ borderColor: "#3b3f48", backgroundColor: "rgba(35, 36, 40, 0.58)" }}>
-                            <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Format</p>
-                            <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">
+                          <div className="rounded-xl border px-3 py-2.5" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface-hover) 62%, var(--surface))" }}>
+                            <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Format</p>
+                            <p className="mt-1 text-sm font-semibold text-[color:var(--text-primary)]">
                               {valueMode === "timed" ? "Timed session" : `Weight · ${weightUnit === "kg" ? "Kilograms (kg)" : "Pounds (lbs)"}`}
                             </p>
                           </div>
-                          <div className="rounded-xl border px-3 py-2.5" style={{ borderColor: "#3b3f48", backgroundColor: "rgba(35, 36, 40, 0.58)" }}>
-                            <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Modifier</p>
-                            <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">
+                          <div className="rounded-xl border px-3 py-2.5" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface-hover) 62%, var(--surface))" }}>
+                            <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Modifier</p>
+                            <p className="mt-1 text-sm font-semibold text-[color:var(--text-primary)]">
                               {valueMode === "weight" && modifierKg !== 0 ? formatSignedModifierKg(modifierKg) : "No modifier"}
                             </p>
                           </div>
                         </div>
 
-                        <div className="mt-3 rounded-xl border px-3 py-3" style={{ borderColor: "#3b3f48", backgroundColor: "rgba(35, 36, 40, 0.52)" }}>
-                          <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Working sets</p>
+                        <div className="mt-3 rounded-xl border px-3 py-3" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface-hover) 58%, var(--surface))" }}>
+                          <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Working sets</p>
                           <div className="mt-2 space-y-2">
                             {reviewSetPreview.length ? reviewSetPreview.map((set) => (
-                              <div key={set.label} className="rounded-lg px-2.5 py-2" style={{ backgroundColor: "rgba(17, 18, 20, 0.45)" }}>
-                                <p className="text-[11px] text-[#b5bac1]">
-                                  <span className="font-semibold text-[#f2f3f5]">{set.label}</span>
+                              <div key={set.label} className="rounded-lg px-2.5 py-2" style={{ backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)" }}>
+                                <p className="text-[11px] text-[color:var(--text-secondary)]">
+                                  <span className="font-semibold text-[color:var(--text-primary)]">{set.label}</span>
                                 </p>
-                                <p className="mt-0.5 text-[11px] text-[#b5bac1]">{set.summary}</p>
+                                <p className="mt-0.5 text-[11px] text-[color:var(--text-secondary)]">{set.summary}</p>
                               </div>
                             )) : (
-                              <p className="text-[11px] text-[#b5bac1]">No sets added yet.</p>
+                              <p className="text-[11px] text-[color:var(--text-secondary)]">No sets added yet.</p>
                             )}
                           </div>
                         </div>
 
-                        <div className="mt-3 rounded-xl border px-3 py-3" style={{ borderColor: "#3b3f48", backgroundColor: "rgba(35, 36, 40, 0.52)" }}>
-                          <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Session notes</p>
-                          <p className="mt-2 text-[11px] leading-5 text-[#b5bac1]">{notes.trim() || "No notes added for this session."}</p>
+                        <div className="mt-3 rounded-xl border px-3 py-3" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface-hover) 58%, var(--surface))" }}>
+                          <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Session notes</p>
+                          <p className="mt-2 text-[11px] leading-5 text-[color:var(--text-secondary)]">{notes.trim() || "No notes added for this session."}</p>
                         </div>
                       </div>
 

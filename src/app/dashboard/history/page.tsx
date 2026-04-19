@@ -8,6 +8,7 @@ import GlowCard from "@/components/ui/GlowCard";
 import SearchField from "@/components/ui/SearchField";
 import { MemoTrainingLogTable } from "@/components/workout/TrainingLogTable";
 import { useAuth } from "@/context/AuthContext";
+import { useAppContext } from "@/context/AppContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { api } from "@/lib/api-client";
 import { getDeletedExerciseLabel } from "@/lib/exercise-name";
@@ -118,6 +119,7 @@ function getRecentExerciseTextColor(dateLike: string | null | undefined, isSelec
 
 export default function HistoryPage() {
   const { user } = useAuth();
+  const { themeStyle } = useAppContext();
   const { settings } = useDisplaySettings();
   const weightUnit = settings.defaultWeightUnit ?? "kg";
   const searchParams = useSearchParams();
@@ -260,7 +262,7 @@ export default function HistoryPage() {
   useEffect(() => {
     setLoading(true);
     void fetchExercises();
-  }, [fetchExercises]);
+  }, [fetchExercises, themeStyle]);
 
   useEffect(() => {
     const handleProgressionUpdate = () => {
@@ -721,33 +723,38 @@ export default function HistoryPage() {
                                 <button
                                   type="button"
                                   onClick={() => setMobileHistoryFilterOpen(true)}
-                                  className="relative inline-flex h-8 items-center justify-center text-[#b5bac1] transition-colors hover:text-[#f2f3f5]"
+                                  className="theme-control-btn relative inline-flex h-8 w-8 items-center justify-center rounded-md border transition-colors"
                                   aria-label="Open filters"
                                 >
                                   <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 5h18M6 12h12m-9 7h6" />
                                   </svg>
                                   {(mobileHistoryCategory !== "all" || mobileHistorySort !== "recent" || mobileHistoryRecency !== "all") ? (
-                                    <span className="absolute right-0.5 top-1 h-2 w-2 rounded-full bg-[#5865f2]" />
+                                    <span className="absolute right-0.5 top-1 h-2 w-2 rounded-full" style={{ backgroundColor: "var(--accent)" }} />
                                   ) : null}
                                 </button>
                               </div>
 
                               {!isFriendTrainOverlay ? (
                                 <div className="mt-2 -mx-0.5 overflow-x-auto scrollbar-hide">
-                                  <div className="flex min-w-max items-center gap-2 px-0.5 pb-0.5">
+                                  <div
+                                    className="flex min-w-max items-center gap-2 rounded-xl border px-2 py-1"
+                                    style={{
+                                      borderColor: "color-mix(in srgb, var(--border) 70%, transparent)",
+                                      background: "linear-gradient(180deg, color-mix(in srgb, var(--surface) 94%, black) 0%, color-mix(in srgb, var(--surface-hover) 48%, var(--surface)) 100%)",
+                                    }}
+                                  >
                                     {trainQuickNavItems.map((item) => {
-                                      const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                                      const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
                                       return (
                                         <button
                                           key={item.href}
                                           type="button"
                                           onClick={() => router.push(item.href)}
-                                          className={`rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-colors ${
-                                            isActive
-                                              ? "border-[#5865f2]/70 bg-[#5865f2]/18 text-[#f2f3f5]"
-                                              : "border-[#3b3f48] bg-[#383a40]/65 text-[#b5bac1] active:text-[#f2f3f5] active:border-[#5865f2]/60"
+                                          className={`rounded-lg border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-[border-color,background-color,box-shadow,color] ${
+                                            isActive ? "theme-action-btn" : "theme-control-btn"
                                           }`}
+                                          style={{ minWidth: "fit-content" }}
                                           aria-current={isActive ? "page" : undefined}
                                         >
                                           {item.label}

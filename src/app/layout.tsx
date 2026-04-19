@@ -70,7 +70,7 @@ export default function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var d=document.documentElement;var themes=['midnight-ink','mountain-mist','calligraphy','sakura','sakura-dark','eternal','discord','document','nyaa','emerald-lotus','gilded-bamboo','crane-peak','obsidian-void','crimson-gate','frost-sanctuary'];d.classList.remove.apply(d.classList,themes);var t=localStorage.getItem('cultivation-theme');if(t==='light'){d.classList.remove('dark');d.classList.add('light')}var s=localStorage.getItem('cultivation-theme-style');var applied=(s&&themes.indexOf(s)!==-1)?s:'discord';d.classList.add(applied);localStorage.setItem('cultivation-theme-style',applied)}catch(e){}})()`
+            __html: `(function(){try{var d=document.documentElement;var themes=['discord'];d.classList.remove.apply(d.classList,themes);var t=localStorage.getItem('cultivation-theme');if(t==='light'){d.classList.remove('dark');d.classList.add('light')}var applied='discord';d.classList.add(applied);localStorage.setItem('cultivation-theme-style',applied)}catch(e){}})()`
           }}
         />
       </head>

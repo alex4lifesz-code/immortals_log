@@ -1,21 +1,7 @@
 // src/lib/config.ts — Centralized application configuration
 
 export const THEME_CLASS_NAMES = [
-  "midnight-ink",
-  "mountain-mist",
-  "calligraphy",
-  "sakura",
-  "sakura-dark",
-  "eternal",
   "discord",
-  "document",
-  "nyaa",
-  "emerald-lotus",
-  "gilded-bamboo",
-  "crane-peak",
-  "obsidian-void",
-  "crimson-gate",
-  "frost-sanctuary",
 ] as const;
 
 export const CONFIG = {

@@ -5,7 +5,7 @@ import { AppProvider, useAppContext } from "@/context/AppContext";
 import { DisplaySettingsProvider } from "@/context/DisplaySettingsContext";
 import { useAuth } from "@/context/AuthContext";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { motion, AnimatePresence, MotionConfig, useReducedMotion } from "framer-motion";
+import { MotionConfig, useReducedMotion } from "framer-motion";
 import MobileNavBar from "@/components/navigation/MobileNavBar";
 import FloatingMobileSidebar from "@/components/navigation/FloatingMobileSidebar";
 import SwipeNavigation from "@/components/navigation/SwipeNavigation";
@@ -82,18 +82,9 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                 data-mobile-scroll-container={mobileRootScrollEnabled ? "true" : undefined}
                 className={`h-full min-w-0 ${!mobileRootScrollEnabled ? "overflow-hidden" : "overflow-y-auto"}`}
               >
-                <AnimatePresence mode="wait" initial={false}>
-                  <motion.div
-                    key={pathname}
-                    initial={disableMotion ? false : { opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={disableMotion ? { opacity: 1 } : { opacity: 0 }}
-                    transition={{ duration: disableMotion ? 0 : 0.1, ease: "easeOut" }}
-                    className="h-full"
-                  >
-                    {children}
-                  </motion.div>
-                </AnimatePresence>
+                <div key={`${pathname}-${searchParams.toString()}-${themeStyle}`} className="h-full">
+                  {children}
+                </div>
                 {showMobileNav && mobileRootScrollEnabled ? <div aria-hidden="true" className="h-[calc(env(safe-area-inset-bottom,0px)+4.25rem)]" /> : null}
               </div>
             </SwipeNavigation>

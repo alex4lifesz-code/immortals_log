@@ -14,21 +14,7 @@ import {
 import type { Theme } from "@/lib/config";
 
 const THEME_OPTIONS: Array<{ value: Theme; label: string; desc: string }> = [
-  { value: "discord", label: "Discord Default", desc: "Original Discord-style canvas" },
-  { value: "midnight-ink", label: "Midnight Ink", desc: "Deep void with jade accents" },
-  { value: "mountain-mist", label: "Mountain Mist", desc: "Misty parchment blues" },
-  { value: "calligraphy", label: "Calligraphy", desc: "Monochrome ink tones" },
-  { value: "sakura", label: "Sakura", desc: "Light blossom colors" },
-  { value: "sakura-dark", label: "Sakura Dark", desc: "Dusk rose tones" },
-  { value: "eternal", label: "Eternal", desc: "Clean minimal greens" },
-  { value: "document", label: "Document", desc: "Paper and slate tones" },
-  { value: "nyaa", label: "Nyaa", desc: "Blue-green contrast" },
-  { value: "emerald-lotus", label: "Emerald Lotus", desc: "Jade temple colors" },
-  { value: "gilded-bamboo", label: "Gilded Bamboo", desc: "Warm gold accents" },
-  { value: "crane-peak", label: "Crane Peak", desc: "Silver-blue highlights" },
-  { value: "obsidian-void", label: "Obsidian Void", desc: "Cosmic purple hues" },
-  { value: "crimson-gate", label: "Crimson Gate", desc: "Ember-red contrast" },
-  { value: "frost-sanctuary", label: "Frost Sanctuary", desc: "Icy aurora tones" },
+  { value: "discord", label: "Discord theme", desc: "Clean default canvas" },
 ];
 
 const DATE_OPTIONS: Array<{ value: DateFormatOption; label: string; sample: string }> = [
@@ -240,7 +226,7 @@ export default function SettingsPage() {
           </div>
         </SectionCard>
 
-        <SectionCard eyebrow="Appearance" title="Theme canvas" description="Choose the palette without changing the layout behavior." badge="Visual">
+        <SectionCard eyebrow="Appearance" title="Theme" description="Discord is now the single fixed app canvas." badge="Visual">
           <div className="grid gap-3 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
             <SettingsSelectField
               label="Theme style"

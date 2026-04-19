@@ -159,10 +159,14 @@ export default function ExerciseDetailPage() {
   const isFocusedField = (field: string) => highlightedField === field;
   const getEditorFieldStyle = (field: string) => ({
     scrollMarginTop: "5.5rem",
-    borderColor: isFocusedField(field) ? "rgba(87, 242, 135, 0.52)" : "#3b3f48",
-    backgroundColor: isFocusedField(field) ? "rgba(87, 242, 135, 0.10)" : "#232428",
+    borderColor: isFocusedField(field)
+      ? "color-mix(in srgb, var(--forest) 52%, transparent)"
+      : "color-mix(in srgb, var(--border) 78%, transparent)",
+    backgroundColor: isFocusedField(field)
+      ? "color-mix(in srgb, var(--forest) 12%, var(--surface))"
+      : "color-mix(in srgb, var(--surface) 92%, black)",
     boxShadow: isFocusedField(field)
-      ? "0 0 0 1px rgba(87, 242, 135, 0.18) inset, 0 0 22px rgba(87, 242, 135, 0.12)"
+      ? "0 0 0 1px color-mix(in srgb, var(--forest) 18%, transparent) inset, 0 0 22px color-mix(in srgb, var(--forest) 12%, transparent)"
       : "none",
     animation: isFocusedField(field) ? "exerciseEditorFieldFocus 1.9s ease-out 1" : "none",
     transition: "border-color 320ms ease, background-color 320ms ease, box-shadow 320ms ease, opacity 420ms ease",
@@ -475,9 +479,9 @@ export default function ExerciseDetailPage() {
                   </svg>
                 </Link>
                 <div className="min-w-0">
-                  <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Exercise Library</p>
-                  <h2 className="mt-0.5 text-xs font-semibold uppercase tracking-[0.08em] text-[#f2f3f5]">Edit Exercise</h2>
-                  <p className="mt-0.5 text-[11px] text-[#b5bac1]">A train-style stepper for updating exercise details.</p>
+                  <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Exercise Library</p>
+                  <h2 className="mt-0.5 text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--text-primary)]">Edit Exercise</h2>
+                  <p className="mt-0.5 text-[11px] text-[color:var(--text-secondary)]">A train-style stepper for updating exercise details.</p>
                 </div>
               </div>
             </div>
@@ -487,9 +491,9 @@ export default function ExerciseDetailPage() {
                 <div
                   className="rounded-lg border px-3 py-2 text-[11px]"
                   style={{
-                    borderColor: "rgba(237, 66, 69, 0.4)",
-                    backgroundColor: "rgba(237, 66, 69, 0.08)",
-                    color: "#ffb3b8",
+                    borderColor: "color-mix(in srgb, var(--danger) 40%, transparent)",
+                    backgroundColor: "color-mix(in srgb, var(--danger) 10%, transparent)",
+                    color: "color-mix(in srgb, var(--danger) 78%, white)",
                   }}
                 >
                   {error}
@@ -500,9 +504,9 @@ export default function ExerciseDetailPage() {
                 <div
                   className="rounded-lg border px-3 py-2 text-[11px]"
                   style={{
-                    borderColor: "rgba(87, 242, 135, 0.35)",
-                    backgroundColor: "rgba(87, 242, 135, 0.08)",
-                    color: "#c9f7d6",
+                    borderColor: "color-mix(in srgb, var(--forest) 35%, transparent)",
+                    backgroundColor: "color-mix(in srgb, var(--forest) 10%, transparent)",
+                    color: "color-mix(in srgb, var(--forest) 82%, white)",
                   }}
                 >
                   {status}
@@ -523,21 +527,25 @@ export default function ExerciseDetailPage() {
                             className="flex h-11 w-11 items-center justify-center rounded-full text-center transition-all"
                             style={{
                               border: completionByPanel[panel.id]
-                                ? "1px solid rgba(87, 242, 135, 0.42)"
+                                ? "1px solid color-mix(in srgb, var(--forest) 42%, transparent)"
                                 : isActive
-                                  ? "1px solid rgba(88, 101, 242, 0.42)"
-                                  : "1px solid rgba(59, 63, 72, 0.7)",
+                                  ? "1px solid color-mix(in srgb, var(--accent) 42%, transparent)"
+                                  : "1px solid color-mix(in srgb, var(--border) 80%, transparent)",
                               backgroundColor: completionByPanel[panel.id]
-                                ? "rgba(87, 242, 135, 0.14)"
+                                ? "color-mix(in srgb, var(--forest) 14%, transparent)"
                                 : isActive
-                                  ? "rgba(88, 101, 242, 0.14)"
+                                  ? "color-mix(in srgb, var(--accent) 14%, transparent)"
                                   : "transparent",
                               color: completionByPanel[panel.id]
-                                ? "#c9f7d6"
+                                ? "color-mix(in srgb, var(--forest) 82%, white)"
                                 : isActive
-                                  ? "#f2f3f5"
-                                  : "#949ba4",
-                              boxShadow: completionByPanel[panel.id] ? "0 0 16px rgba(87, 242, 135, 0.12)" : "none",
+                                  ? "var(--text-primary)"
+                                  : "var(--text-muted)",
+                              boxShadow: completionByPanel[panel.id]
+                                ? "0 0 16px color-mix(in srgb, var(--forest) 12%, transparent)"
+                                : isActive
+                                  ? "0 0 14px color-mix(in srgb, var(--accent) 10%, transparent)"
+                                  : "none",
                             }}
                             aria-label={panel.label}
                             title={`${panel.label} • ${panel.description}`}
@@ -554,7 +562,7 @@ export default function ExerciseDetailPage() {
                         style={{
                           border: "1px solid transparent",
                           backgroundColor: "transparent",
-                          color: "#949ba4",
+                          color: "var(--text-muted)",
                         }}
                         aria-label="Reset editor"
                         title="Reset editor"
@@ -574,13 +582,13 @@ export default function ExerciseDetailPage() {
                     <section className="flex flex-col overflow-hidden px-1 py-1" style={panelShellStyle}>
                       <div className="flex-1 overflow-y-auto pr-0.5">
                         <div className="min-w-0">
-                          <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Exercise identity</p>
-                          <p className="mt-1 text-[11px] text-[#b5bac1]">Confirm the parent exercise name before moving on.</p>
+                          <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Exercise identity</p>
+                          <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">Confirm the parent exercise name before moving on.</p>
                         </div>
 
-                        <div className="mt-4 rounded-lg border px-3 py-3" style={{ borderColor: "#3b3f48", backgroundColor: "#232428" }}>
+                        <div className="mt-4 rounded-lg border px-3 py-3" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 92%, black)" }}>
                           <label className="block space-y-2">
-                            <span className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Parent exercise</span>
+                            <span className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Parent exercise</span>
                             <input
                               type="text"
                               value={name}
@@ -590,7 +598,7 @@ export default function ExerciseDetailPage() {
                               placeholder="Enter exercise name"
                             />
                           </label>
-                          <p className="mt-2 text-[11px] text-[#b5bac1]">This is the label shown throughout the training system.</p>
+                          <p className="mt-2 text-[11px] text-[color:var(--text-secondary)]">This is the label shown throughout the training system.</p>
                         </div>
                       </div>
 
@@ -602,13 +610,13 @@ export default function ExerciseDetailPage() {
                     <section className="flex flex-col overflow-hidden px-1 py-1" style={panelShellStyle}>
                       <div className="flex-1 overflow-y-auto pr-0.5">
                         <div>
-                          <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Classification</p>
-                          <p className="mt-1 text-[11px] text-[#b5bac1]">Set the category, training type, and targeted muscle groups.</p>
+                          <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Classification</p>
+                          <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">Set the category, training type, and targeted muscle groups.</p>
                         </div>
 
                         <div className="mt-4 space-y-4">
                           <div id="editor-field-category" className="rounded-lg border px-3 py-3" style={getEditorFieldStyle("category")}>
-                            <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Category</label>
+                            <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Category</label>
                             <div className="flex flex-wrap gap-2">
                               {dbOptions.categories.map((item) => (
                                 <button
@@ -624,7 +632,7 @@ export default function ExerciseDetailPage() {
                           </div>
 
                           <div id="editor-field-type" className="rounded-lg border px-3 py-3" style={getEditorFieldStyle("type")}>
-                            <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Type</label>
+                            <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Type</label>
                             <div className="flex flex-wrap gap-2">
                               {dbOptions.types.map((item) => (
                                 <button
@@ -640,7 +648,7 @@ export default function ExerciseDetailPage() {
                           </div>
 
                           <div id="editor-field-muscles" className="rounded-lg border px-3 py-3" style={getEditorFieldStyle("muscles")}>
-                            <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Muscle groups</label>
+                            <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Muscle groups</label>
                             <div className="flex flex-wrap gap-2">
                               {dbOptions.muscles.map((item) => (
                                 <button
@@ -665,19 +673,19 @@ export default function ExerciseDetailPage() {
                     <section className="flex flex-col overflow-hidden px-1 py-1" style={panelShellStyle}>
                       <div className="flex-1 overflow-y-auto pr-0.5">
                         <div>
-                          <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Exercise structure</p>
-                          <p className="mt-1 text-[11px] text-[#b5bac1]">Define the progression stages and optional variations used in the library.</p>
+                          <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Exercise structure</p>
+                          <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">Define the progression stages and optional variations used in the library.</p>
                         </div>
 
                         <div className="mt-4 grid gap-3 lg:grid-cols-2">
                           <div id="editor-field-progression" className="rounded-lg border px-3 py-3" style={getEditorFieldStyle("progression")}>
-                            <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Progression</label>
+                            <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Progression</label>
                             <div className="mb-3 flex flex-wrap gap-1.5">
                               {progression.length === 0 ? (
-                                <span className="text-[11px] text-[#b5bac1]">No progression stages yet.</span>
+                                <span className="text-[11px] text-[color:var(--text-secondary)]">No progression stages yet.</span>
                               ) : progression.map((value, index) => (
-                                <span key={`${value}-${index}`} className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px]" style={{ borderColor: "#3b3f48", color: "#f2f3f5", backgroundColor: "rgba(255,255,255,0.03)" }}>
-                                  <span className="rounded px-1 text-[10px]" style={{ backgroundColor: "rgba(88, 101, 242, 0.16)", color: "#cfd3ff" }}>
+                                <span key={`${value}-${index}`} className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px]" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", color: "var(--text-primary)", backgroundColor: "color-mix(in srgb, var(--surface) 92%, black)" }}>
+                                  <span className="rounded px-1 text-[10px]" style={{ backgroundColor: "color-mix(in srgb, var(--accent) 16%, transparent)", color: "color-mix(in srgb, var(--accent) 70%, white)" }}>
                                     {index + 1}
                                   </span>
                                   <span>{value}</span>
@@ -701,7 +709,7 @@ export default function ExerciseDetailPage() {
                                   >
                                     ↓
                                   </button>
-                                  <button type="button" onClick={() => setProgression((prev) => prev.filter((item, itemIndex) => itemIndex !== index))} style={{ color: "#ff6b78" }}>
+                                  <button type="button" onClick={() => setProgression((prev) => prev.filter((item, itemIndex) => itemIndex !== index))} style={{ color: "var(--danger)" }}>
                                     x
                                   </button>
                                 </span>
@@ -727,8 +735,7 @@ export default function ExerciseDetailPage() {
                                   const added = addUniqueLabel(progressionDraft, progression, setProgression);
                                   if (added) setProgressionDraft("");
                                 }}
-                                className="rounded-md border px-3 py-1.5 text-xs"
-                                style={{ borderColor: "rgba(88, 101, 242, 0.62)", color: "#f2f3f5", backgroundColor: "rgba(88, 101, 242, 0.12)" }}
+                                className="theme-action-btn rounded-md border px-3 py-1.5 text-xs"
                               >
                                 Add
                               </button>
@@ -736,14 +743,14 @@ export default function ExerciseDetailPage() {
                           </div>
 
                           <div id="editor-field-variation" className="rounded-lg border px-3 py-3" style={getEditorFieldStyle("variation")}>
-                            <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Variants</label>
+                            <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Variants</label>
                             <div className="mb-3 flex flex-wrap gap-1.5">
                               {variations.length === 0 ? (
-                                <span className="text-[11px] text-[#b5bac1]">No variants yet.</span>
+                                <span className="text-[11px] text-[color:var(--text-secondary)]">No variants yet.</span>
                               ) : variations.map((value) => (
-                                <span key={value} className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px]" style={{ borderColor: "#3b3f48", color: "#f2f3f5", backgroundColor: "rgba(255,255,255,0.03)" }}>
+                                <span key={value} className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px]" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", color: "var(--text-primary)", backgroundColor: "color-mix(in srgb, var(--surface) 92%, black)" }}>
                                   {value}
-                                  <button type="button" onClick={() => setVariations((prev) => prev.filter((item) => item !== value))} style={{ color: "#ff6b78" }}>
+                                  <button type="button" onClick={() => setVariations((prev) => prev.filter((item) => item !== value))} style={{ color: "var(--danger)" }}>
                                     x
                                   </button>
                                 </span>
@@ -769,8 +776,7 @@ export default function ExerciseDetailPage() {
                                   const added = addUniqueLabel(variationDraft, variations, setVariations);
                                   if (added) setVariationDraft("");
                                 }}
-                                className="rounded-md border px-3 py-1.5 text-xs"
-                                style={{ borderColor: "rgba(88, 101, 242, 0.62)", color: "#f2f3f5", backgroundColor: "rgba(88, 101, 242, 0.12)" }}
+                                className="theme-action-btn rounded-md border px-3 py-1.5 text-xs"
                               >
                                 Add
                               </button>
@@ -787,39 +793,45 @@ export default function ExerciseDetailPage() {
                     <section className="flex flex-col overflow-hidden px-1 py-1" style={panelShellStyle}>
                       <div className="flex-1 overflow-y-auto pr-0.5">
                         <div>
-                          <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Review changes</p>
-                          <p className="mt-1 text-[11px] text-[#b5bac1]">Check the full setup before saving back to the exercise library.</p>
+                          <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Review changes</p>
+                          <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">Check the full setup before saving back to the exercise library.</p>
                         </div>
 
                         <div className="mt-4 grid gap-3 lg:grid-cols-2">
-                          <div className="rounded-lg border px-3 py-3" style={{ borderColor: "#3b3f48", backgroundColor: "#232428" }}>
-                            <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Identity</p>
-                            <p className="mt-2 text-sm font-semibold text-[#f2f3f5]">{name.trim() || "—"}</p>
-                            <p className="mt-3 text-[11px] text-[#b5bac1]">{category} • {exerciseType}</p>
+                          <div className="rounded-lg border px-3 py-3" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 92%, black)" }}>
+                            <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Identity</p>
+                            <p className="mt-2 text-sm font-semibold text-[color:var(--text-primary)]">{name.trim() || "—"}</p>
+                            <p className="mt-3 text-[11px] text-[color:var(--text-secondary)]">{category} • {exerciseType}</p>
                           </div>
 
-                          <div className="rounded-lg border px-3 py-3" style={{ borderColor: "#3b3f48", backgroundColor: "#232428" }}>
-                            <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Muscle groups</p>
-                            <p className="mt-2 text-[11px] text-[#f2f3f5]">{muscleGroups.length > 0 ? muscleGroups.join(", ") : "None selected"}</p>
+                          <div className="rounded-lg border px-3 py-3" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 92%, black)" }}>
+                            <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Muscle groups</p>
+                            <p className="mt-2 text-[11px] text-[color:var(--text-primary)]">{muscleGroups.length > 0 ? muscleGroups.join(", ") : "None selected"}</p>
                           </div>
 
-                          <div className="rounded-lg border px-3 py-3" style={{ borderColor: "#3b3f48", backgroundColor: "#232428" }}>
-                            <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Progression</p>
-                            <p className="mt-2 text-[11px] text-[#f2f3f5]">{progression.length > 0 ? progression.join(" → ") : "No progression stages"}</p>
+                          <div className="rounded-lg border px-3 py-3" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 92%, black)" }}>
+                            <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Progression</p>
+                            <p className="mt-2 text-[11px] text-[color:var(--text-primary)]">{progression.length > 0 ? progression.join(" → ") : "No progression stages"}</p>
                           </div>
 
-                          <div className="rounded-lg border px-3 py-3" style={{ borderColor: "#3b3f48", backgroundColor: "#232428" }}>
-                            <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Variants</p>
-                            <p className="mt-2 text-[11px] text-[#f2f3f5]">{variations.length > 0 ? variations.join(", ") : "No variants"}</p>
+                          <div className="rounded-lg border px-3 py-3" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 92%, black)" }}>
+                            <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Variants</p>
+                            <p className="mt-2 text-[11px] text-[color:var(--text-primary)]">{variations.length > 0 ? variations.join(", ") : "No variants"}</p>
                           </div>
                         </div>
 
                         <div
                           className="mt-3 rounded-lg border px-3 py-2 text-[11px]"
                           style={{
-                            borderColor: saveReady ? "rgba(87, 242, 135, 0.35)" : "rgba(240, 178, 50, 0.35)",
-                            backgroundColor: saveReady ? "rgba(87, 242, 135, 0.08)" : "rgba(240, 178, 50, 0.08)",
-                            color: saveReady ? "#c9f7d6" : "#f6d08a",
+                            borderColor: saveReady
+                              ? "color-mix(in srgb, var(--forest) 35%, transparent)"
+                              : "color-mix(in srgb, var(--warning) 35%, transparent)",
+                            backgroundColor: saveReady
+                              ? "color-mix(in srgb, var(--forest) 10%, transparent)"
+                              : "color-mix(in srgb, var(--warning) 10%, transparent)",
+                            color: saveReady
+                              ? "color-mix(in srgb, var(--forest) 82%, white)"
+                              : "color-mix(in srgb, var(--warning) 78%, white)",
                           }}
                         >
                           {saveReady

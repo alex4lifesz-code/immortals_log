@@ -275,6 +275,31 @@ function CalendarDay({ dayNumber, checkedInUsers, isToday, isPast, hasNote, hasF
   const hasCheckIns = checkedInUsers.length > 0;
   const visibleDots = checkedInUsers.slice(0, compact ? 3 : 4);
   const extraCount = checkedInUsers.length - visibleDots.length;
+  const dayStyle = isToday
+    ? {
+        borderColor: "color-mix(in srgb, var(--accent) 68%, var(--border))",
+        backgroundColor: "color-mix(in srgb, var(--accent) 12%, var(--surface-hover))",
+        boxShadow: "0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent) inset",
+      }
+    : hasFutureNote
+      ? {
+          borderColor: "color-mix(in srgb, var(--gold) 20%, var(--border))",
+          backgroundColor: "color-mix(in srgb, var(--gold) 6%, var(--surface-hover))",
+        }
+      : hasCheckIns
+        ? {
+            borderColor: "color-mix(in srgb, var(--border) 94%, transparent)",
+            backgroundColor: "color-mix(in srgb, var(--surface-hover) 78%, var(--surface))",
+          }
+        : isPast
+          ? {
+              borderColor: "color-mix(in srgb, var(--border) 74%, transparent)",
+              backgroundColor: "color-mix(in srgb, var(--surface) 92%, black)",
+            }
+          : {
+              borderColor: "color-mix(in srgb, var(--border) 58%, transparent)",
+              backgroundColor: "color-mix(in srgb, var(--surface) 88%, black)",
+            };
 
   return (
     <motion.button
@@ -282,22 +307,13 @@ function CalendarDay({ dayNumber, checkedInUsers, isToday, isPast, hasNote, hasF
       whileHover={compact ? undefined : { scale: 1.01 }}
       whileTap={{ scale: 0.985 }}
       onClick={onClick}
-      className={`dao-modern-calendar-day relative aspect-square w-full overflow-hidden rounded-[10px] border text-left transition-all duration-150 ${
-        isToday
-          ? "border-[#5865f2]/65 bg-[#404249] shadow-[0_0_0_1px_rgba(88,101,242,0.18)_inset]"
-          : hasFutureNote
-            ? "border-[#454b59] bg-[#30333a]"
-            : hasCheckIns
-              ? "border-[#3b3f48] bg-[#2f3136]"
-              : isPast
-                ? "border-[#2f3136] bg-[#26282d]"
-                : "border-[#232428] bg-[#1f2126]"
-      }`}
+      className="dao-modern-calendar-day relative aspect-square w-full overflow-hidden rounded-[10px] border text-left transition-all duration-150"
+      style={dayStyle}
     >
       <div className="flex h-full flex-col justify-between p-1.5">
         <div className="flex items-start justify-between gap-1">
-          <span className={`${compact ? "text-xs" : "text-sm"} font-semibold ${isPast && !isToday ? "text-[#b5bac1]" : "text-[#f2f3f5]"}`}>{dayNumber}</span>
-          {isToday ? <span className="rounded-sm bg-[#5865f2]/18 px-1 py-[1px] text-[7px] font-bold uppercase tracking-[0.08em] text-[#c8cdfa]">Now</span> : null}
+          <span className={`${compact ? "text-xs" : "text-sm"} font-semibold`} style={{ color: isPast && !isToday ? "var(--text-secondary)" : "var(--text-primary)" }}>{dayNumber}</span>
+          {isToday ? <span className="rounded-sm px-1 py-[1px] text-[7px] font-bold uppercase tracking-[0.08em]" style={{ backgroundColor: "color-mix(in srgb, var(--accent) 18%, transparent)", color: "color-mix(in srgb, var(--accent-hover) 80%, var(--text-primary))" }}>Now</span> : null}
         </div>
 
         <div className="flex items-end justify-between gap-1">
@@ -310,11 +326,11 @@ function CalendarDay({ dayNumber, checkedInUsers, isToday, isPast, hasNote, hasF
                 style={{ backgroundColor: u.color }}
               />
             ))}
-            {extraCount > 0 ? <span className="text-[8px] text-[#949ba4]">+{extraCount}</span> : null}
+            {extraCount > 0 ? <span className="text-[8px]" style={{ color: "var(--text-muted)" }}>+{extraCount}</span> : null}
           </div>
 
           {(hasNote || hasFutureNote) ? (
-            <span className={`text-[9px] ${hasFutureNote ? "text-[#f0b96a]" : "text-[#8ea1ff]"}`}>{hasFutureNote ? "✦" : "•"}</span>
+            <span className="text-[9px]" style={{ color: hasFutureNote ? "var(--gold)" : "var(--accent)" }}>{hasFutureNote ? "✦" : "•"}</span>
           ) : null}
         </div>
       </div>
@@ -367,7 +383,7 @@ export function Calendar({
   const weekdayHeaders = weekStartsOn === 1
     ? ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const navButtonClass = "rounded-md border border-[#3b3f48] bg-[#2b2d31] px-2.5 py-1 text-xs text-[#b5bac1] transition-colors hover:bg-[#35373c] hover:text-[#f2f3f5]";
+  const navButtonClass = "theme-control-btn rounded-md border px-2.5 py-1 text-xs transition-colors";
 
   for (let i = 0; i < leadingBlankDays; i++) {
     days.push(null);
@@ -380,15 +396,17 @@ export function Calendar({
 
   return (
     <div
-      className={`dao-modern-calendar ${compactMode ? "p-2.5" : "p-4"} min-w-0 space-y-3 overflow-hidden rounded-xl border border-[#32353b] bg-[#2b2d31]`}
+      className={`dao-modern-calendar ${compactMode ? "p-2.5" : "p-4"} min-w-0 space-y-3 overflow-hidden rounded-xl border`}
       style={{
-        boxShadow: "0 1px 0 rgba(255,255,255,0.03) inset",
+        borderColor: "color-mix(in srgb, var(--border) 94%, transparent)",
+        backgroundColor: "color-mix(in srgb, var(--surface) 96%, transparent)",
+        boxShadow: "0 1px 0 color-mix(in srgb, var(--text-primary) 3%, transparent) inset",
       }}
     >
-      <div className={`border-b border-[#32353b] ${compactMode ? "space-y-2 pb-2" : "flex items-center justify-between gap-3 pb-3"}`}>
+      <div className={`border-b ${compactMode ? "space-y-2 pb-2" : "flex items-center justify-between gap-3 pb-3"}`} style={{ borderBottomColor: "color-mix(in srgb, var(--border) 94%, transparent)" }}>
         <div className="min-w-0">
-          <p className="text-[9px] uppercase tracking-[0.1em] text-[#949ba4]">Check-In Calendar</p>
-          <h3 className="mt-0.5 text-sm font-semibold uppercase tracking-wider text-[#f2f3f5]">
+          <p className="text-[9px] uppercase tracking-[0.1em]" style={{ color: "var(--text-muted)" }}>Check-In Calendar</p>
+          <h3 className="mt-0.5 text-sm font-semibold uppercase tracking-wider" style={{ color: "var(--text-primary)" }}>
             {formatCalendarMonthLabel(currentMonth, timeZone)}
           </h3>
         </div>
@@ -422,7 +440,7 @@ export function Calendar({
 
       <div className={`grid grid-cols-7 ${compactMode ? "gap-1 mb-1" : "gap-2 mb-2"}`}>
         {weekdayHeaders.map((day) => (
-          <div key={day} className={`text-center ${compactMode ? "text-[10px]" : "text-xs"} font-semibold uppercase tracking-wider text-[#b5bac1]`}>
+          <div key={day} className={`text-center ${compactMode ? "text-[10px]" : "text-xs"} font-semibold uppercase tracking-wider`} style={{ color: "var(--text-secondary)" }}>
             {compactMode ? day[0] : day}
           </div>
         ))}
@@ -508,16 +526,16 @@ export function Calendar({
         </div>
       )}
 
-      <div className={`flex flex-wrap border-t border-[#32353b] pt-3 ${compactMode ? "gap-2 text-[10px]" : "gap-3 text-xs"}`}>
-        <div className="flex items-center gap-2 text-[#b5bac1]">
-          <div className="h-2.5 w-2.5 rounded-sm border border-[#5865f2]/70 bg-[#404249]" />
+      <div className={`flex flex-wrap border-t pt-3 ${compactMode ? "gap-2 text-[10px]" : "gap-3 text-xs"}`} style={{ borderTopColor: "color-mix(in srgb, var(--border) 94%, transparent)" }}>
+        <div className="flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
+          <div className="h-2.5 w-2.5 rounded-sm border" style={{ borderColor: "color-mix(in srgb, var(--accent) 68%, var(--border))", backgroundColor: "color-mix(in srgb, var(--accent) 12%, var(--surface-hover))" }} />
           <span>{t("Today", "normal")}</span>
         </div>
-        <div className="flex items-center gap-2 text-[#b5bac1]">
-          <span className="text-sm font-bold text-[#8ea1ff]">•</span>
+        <div className="flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
+          <span className="text-sm font-bold" style={{ color: "var(--accent)" }}>•</span>
           <span>{t("Check-In", "normal")}</span>
         </div>
-        <div className="flex items-center gap-1 text-[#b5bac1]">
+        <div className="flex items-center gap-1" style={{ color: "var(--text-secondary)" }}>
           {allUsers.slice(0, compactMode ? 3 : 4).map((u) => (
             <span
               key={u.id}

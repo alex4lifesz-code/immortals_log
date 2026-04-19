@@ -35,12 +35,26 @@ function FloatingMobileSidebar() {
   }, [setMobileSidebarOpen]);
 
   const handleNavigate = useCallback((path: string) => {
-    if (path === "/dashboard/train" && typeof window !== "undefined") {
-      window.dispatchEvent(new Event("train-reset-view"));
+    if (typeof window !== "undefined") {
+      if (path === "/dashboard/train") {
+        window.dispatchEvent(new Event("train-reset-view"));
+      }
+      if (path === "/dashboard/check-in" || path === "/dashboard/checkin") {
+        window.dispatchEvent(new Event("checkin-notes-updated"));
+      }
     }
-    router.push(path);
+
+    const isSameRoute = pathname === path || pathname?.startsWith(`${path}/`);
+    if (isSameRoute) {
+      router.replace(path, { scroll: false });
+      router.refresh();
+      setMobileSidebarOpen(false);
+      return;
+    }
+
+    router.push(path, { scroll: false });
     setMobileSidebarOpen(false);
-  }, [router, setMobileSidebarOpen]);
+  }, [pathname, router, setMobileSidebarOpen]);
 
   const onSidebarTouchStart = (event: React.TouchEvent<HTMLElement>) => {
     touchStartXRef.current = event.touches[0]?.clientX ?? null;
@@ -169,7 +183,7 @@ function FloatingMobileSidebar() {
                   <p className="px-2 pb-2 text-[10px] uppercase tracking-[0.1em] text-gold-dim/85">{t("Admin", "normal")}</p>
                   <div className="space-y-1.5">
                     {adminItems.map((item, index) => {
-                      const isActive = pathname === item.path || pathname.startsWith(`${item.path}/`);
+                      const isActive = pathname === item.path || pathname?.startsWith(`${item.path}/`);
                       return (
                         <motion.button
                           key={item.id}

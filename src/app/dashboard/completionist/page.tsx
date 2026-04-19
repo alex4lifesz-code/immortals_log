@@ -88,6 +88,14 @@ function getBestStatText(logs: ProgressionLog[]): string {
   return "-";
 }
 
+function getCategoryTint(category: string): string {
+  const key = category.toLowerCase();
+  if (key.includes("gym")) return "var(--warning)";
+  if (key.includes("yoga")) return "var(--forest)";
+  if (key.includes("cardio")) return "var(--danger)";
+  return "var(--accent)";
+}
+
 export default function CompletionistPage() {
   const { settings } = useDisplaySettings();
   const displayTerminologyMode = !settings.showExerciseForeignLanguage && settings.languageMode === "english"
@@ -307,9 +315,9 @@ export default function CompletionistPage() {
               backgroundColor: "color-mix(in srgb, var(--ink-deep) 94%, var(--ink-mid))",
             }}
           >
-            <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Completionist canvas</p>
-            <h2 className="mt-0.5 text-xs font-semibold uppercase tracking-[0.08em] text-[#f2f3f5]">Train coverage</h2>
-            <p className="mt-0.5 text-[11px] text-[#b5bac1]">A cleaner Train-aligned view of what has been logged and what is still untouched.</p>
+            <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Completionist canvas</p>
+            <h2 className="mt-0.5 text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--text-primary)]">Train coverage</h2>
+            <p className="mt-0.5 text-[11px] text-[color:var(--text-secondary)]">A cleaner Train-aligned view of what has been logged and what is still untouched.</p>
           </div>
 
           <div className="px-3 py-3">
@@ -318,7 +326,7 @@ export default function CompletionistPage() {
                 <div
                   className="relative h-28 w-28 rounded-full"
                   style={{
-                    background: `conic-gradient(#57f287 0 ${summary.coveragePct}%, rgba(59, 63, 72, 0.85) ${summary.coveragePct}% 100%)`,
+                    background: `conic-gradient(color-mix(in srgb, var(--forest) 86%, transparent) 0 ${summary.coveragePct}%, color-mix(in srgb, var(--surface) 84%, black) ${summary.coveragePct}% 100%)`,
                   }}
                 >
                   <div
@@ -328,37 +336,31 @@ export default function CompletionistPage() {
                       backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))",
                     }}
                   >
-                    <span className="text-xl font-semibold text-[#f2f3f5]">{summary.coveragePct}%</span>
-                    <span className="text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">logged once</span>
+                    <span className="text-xl font-semibold text-[color:var(--text-primary)]">{summary.coveragePct}%</span>
+                    <span className="text-[10px] uppercase tracking-[0.12em] text-[color:var(--text-muted)]">logged once</span>
                   </div>
                 </div>
               </div>
 
               <div className="space-y-3">
-                <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs">
-                  <span className="text-[#b5bac1]">Progressions: <span className="font-semibold text-[#f2f3f5]">{summary.totalExercises}</span></span>
-                  <span className="text-[#b5bac1]">Logged once: <span className="font-semibold text-[#57f287]">{summary.loggedExercises}</span></span>
-                  <span className="text-[#b5bac1]">Untouched: <span className="font-semibold text-[#f2f3f5]">{summary.untouched}</span></span>
-                  <span className="text-[#b5bac1]">Sessions: <span className="font-semibold text-[#57f287]">{summary.totalSessions}</span></span>
+                <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-[color:var(--text-secondary)]">
+                  <span>Progressions: <span className="font-semibold text-[color:var(--text-primary)]">{summary.totalExercises}</span></span>
+                  <span>Logged once: <span className="font-semibold text-[color:var(--forest)]">{summary.loggedExercises}</span></span>
+                  <span>Untouched: <span className="font-semibold text-[color:var(--text-primary)]">{summary.untouched}</span></span>
+                  <span>Sessions: <span className="font-semibold text-[color:var(--forest)]">{summary.totalSessions}</span></span>
                 </div>
 
                 <div className="space-y-2">
                   {categoryProgress.map((item) => {
-                    const tint = item.category.toLowerCase().includes("gym")
-                      ? "#faa61a"
-                      : item.category.toLowerCase().includes("yoga")
-                        ? "#57f287"
-                        : item.category.toLowerCase().includes("cardio")
-                          ? "#ed4245"
-                          : "#7289da";
+                    const tint = getCategoryTint(item.category);
 
                     return (
                       <div key={item.category} className="space-y-1">
                         <div className="flex items-center justify-between gap-3 text-[11px]">
-                          <span className="font-medium text-[#f2f3f5]">{item.category}</span>
-                          <span className="text-[#b5bac1]">{item.logged}/{item.total} • {item.pct}%</span>
+                          <span className="font-medium text-[color:var(--text-primary)]">{item.category}</span>
+                          <span className="text-[color:var(--text-secondary)]">{item.logged}/{item.total} • {item.pct}%</span>
                         </div>
-                        <div className="h-2 overflow-hidden rounded-full" style={{ backgroundColor: "rgba(59, 63, 72, 0.75)" }}>
+                        <div className="h-2 overflow-hidden rounded-full" style={{ backgroundColor: "color-mix(in srgb, var(--surface) 82%, black)" }}>
                           <div
                             className="h-full rounded-full transition-all duration-300"
                             style={{
@@ -372,7 +374,7 @@ export default function CompletionistPage() {
                   })}
                 </div>
 
-                <p className="text-[11px] text-[#949ba4]">Each bar counts a progression once as soon as it has at least one logged session.</p>
+                <p className="text-[11px] text-[color:var(--text-muted)]">Each bar counts a progression once as soon as it has at least one logged session.</p>
               </div>
             </div>
           </div>
@@ -380,20 +382,26 @@ export default function CompletionistPage() {
 
 
         {errorMessage ? (
-          <section className="rounded-xl border px-3 py-2.5" style={{ borderColor: "rgba(237, 66, 69, 0.4)", backgroundColor: "rgba(237, 66, 69, 0.08)" }}>
-            <p className="text-sm text-[#ffb3b8]">{errorMessage}</p>
+          <section
+            className="rounded-xl border px-3 py-2.5"
+            style={{
+              borderColor: "color-mix(in srgb, var(--danger) 40%, transparent)",
+              backgroundColor: "color-mix(in srgb, var(--danger) 10%, transparent)",
+            }}
+          >
+            <p className="text-sm" style={{ color: "color-mix(in srgb, var(--danger) 78%, white)" }}>{errorMessage}</p>
           </section>
         ) : null}
 
         {loading ? (
-          <section className="rounded-xl border px-3 py-3" style={{ borderColor: "#3b3f48", backgroundColor: "#2b2d31" }}>
-            <p className="text-sm text-[#b5bac1]">Loading train coverage...</p>
+          <section className="rounded-xl border px-3 py-3" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 92%, black)" }}>
+            <p className="text-sm text-[color:var(--text-secondary)]">Loading train coverage...</p>
           </section>
         ) : null}
 
         {!loading && visibleSkills.length === 0 ? (
-          <section className="rounded-xl border px-3 py-3" style={{ borderColor: "#3b3f48", backgroundColor: "#2b2d31" }}>
-            <p className="text-sm text-[#b5bac1]">No exercises match the current filters.</p>
+          <section className="rounded-xl border px-3 py-3" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 92%, black)" }}>
+            <p className="text-sm text-[color:var(--text-secondary)]">No exercises match the current filters.</p>
           </section>
         ) : null}
 
@@ -415,20 +423,15 @@ export default function CompletionistPage() {
               >
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <h2 className="text-base font-semibold text-[#f2f3f5]">Completion list</h2>
-                    <p className="text-xs text-[#b5bac1]">Tap a row to expand.</p>
+                    <h2 className="text-base font-semibold text-[color:var(--text-primary)]">Completion list</h2>
+                    <p className="text-xs text-[color:var(--text-secondary)]">Tap a row to expand.</p>
                   </div>
 
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => setSearchOpen((prev) => !prev)}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-md border transition hover:text-[#f2f3f5]"
-                      style={{
-                        borderColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)",
-                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
-                        color: "#b5bac1",
-                      }}
+                      className="theme-control-btn inline-flex h-8 w-8 items-center justify-center rounded-md border"
                       aria-label="Toggle search"
                     >
                       <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden>
@@ -440,18 +443,13 @@ export default function CompletionistPage() {
                     <button
                       type="button"
                       onClick={() => setFilterDrawerOpen(true)}
-                      className="relative inline-flex h-8 w-8 items-center justify-center rounded-md border transition hover:text-[#f2f3f5]"
-                      style={{
-                        borderColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)",
-                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
-                        color: "#b5bac1",
-                      }}
+                      className="theme-control-btn relative inline-flex h-8 w-8 items-center justify-center rounded-md border"
                       aria-label="Open filters"
                     >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} aria-hidden>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 5h18M6 12h12m-9 7h6" />
                       </svg>
-                      {filtersActive ? <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[#7289da]" /> : null}
+                      {filtersActive ? <span className="absolute right-1 top-1 h-2 w-2 rounded-full" style={{ backgroundColor: "var(--accent)" }} /> : null}
                     </button>
                   </div>
                 </div>
@@ -474,9 +472,9 @@ export default function CompletionistPage() {
                       placeholder="Search exercise..."
                       className="w-full rounded-lg border px-3 py-2 text-sm outline-none"
                       style={{
-                        borderColor: "color-mix(in srgb, var(--ink-light) 45%, transparent)",
-                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
-                        color: "#f2f3f5",
+                        borderColor: "color-mix(in srgb, var(--border) 72%, transparent)",
+                        backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)",
+                        color: "var(--text-primary)",
                       }}
                     />
                   </motion.div>
@@ -506,30 +504,30 @@ export default function CompletionistPage() {
                       key={skill.id}
                       className="overflow-hidden rounded-xl border"
                       style={{
-                        borderColor: "#3b3f48",
-                        backgroundColor: "#2b2d31",
+                        borderColor: "color-mix(in srgb, var(--border) 78%, transparent)",
+                        backgroundColor: "color-mix(in srgb, var(--surface) 92%, black)",
                       }}
                     >
                       <button
                         type="button"
                         onClick={() => toggleExpanded(skill.id)}
                         className="flex w-full items-start justify-between gap-3 px-3 py-3 text-left"
-                        style={{ backgroundColor: isExpanded ? "rgba(35, 36, 40, 0.4)" : "transparent" }}
+                        style={{ backgroundColor: isExpanded ? "color-mix(in srgb, var(--surface) 84%, transparent)" : "transparent" }}
                       >
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
                             <span
                               className="inline-flex h-5 w-5 items-center justify-center rounded-full border text-[10px]"
-                              style={{ borderColor: "#3b3f48", color: "#b5bac1" }}
+                              style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", color: "var(--text-secondary)" }}
                             >
                               {isExpanded ? "−" : "+"}
                             </span>
                             <div className="min-w-0">
-                              <p className="text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">{skill.category}</p>
-                              <h3 className="truncate text-sm font-semibold text-[#f2f3f5]">{displayName}</h3>
+                              <p className="text-[10px] uppercase tracking-[0.12em] text-[color:var(--text-muted)]">{skill.category}</p>
+                              <h3 className="truncate text-sm font-semibold text-[color:var(--text-primary)]">{displayName}</h3>
                             </div>
                           </div>
-                          <p className="mt-1 pl-7 text-[11px] text-[#b5bac1]">
+                          <p className="mt-1 pl-7 text-[11px] text-[color:var(--text-secondary)]">
                             {isLogged
                               ? `${skill.performed} logs • ${skill.coveragePct}% coverage • ${formatDaysAgo(skill.lastLogAt)}`
                               : `${skill.tierNames.length} tiers available • no sessions logged yet`}
@@ -539,9 +537,9 @@ export default function CompletionistPage() {
                         <span
                           className="shrink-0 rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.1em]"
                           style={{
-                            borderColor: isLogged ? "rgba(87, 242, 135, 0.36)" : "#3b3f48",
-                            backgroundColor: isLogged ? "rgba(87, 242, 135, 0.1)" : "rgba(35, 36, 40, 0.55)",
-                            color: isLogged ? "#c9f7d6" : "#b5bac1",
+                            borderColor: isLogged ? "color-mix(in srgb, var(--forest) 36%, transparent)" : "color-mix(in srgb, var(--border) 78%, transparent)",
+                            backgroundColor: isLogged ? "color-mix(in srgb, var(--forest) 10%, transparent)" : "color-mix(in srgb, var(--surface) 86%, black)",
+                            color: isLogged ? "color-mix(in srgb, var(--forest) 82%, white)" : "var(--text-secondary)",
                           }}
                         >
                           {isLogged ? "Logged" : "Untouched"}
@@ -551,24 +549,24 @@ export default function CompletionistPage() {
                       {isExpanded ? (
                         <div
                           className="border-t px-3 py-3"
-                          style={{ borderTopColor: "#3b3f48", backgroundColor: "rgba(35, 36, 40, 0.22)" }}
+                          style={{ borderTopColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 84%, transparent)" }}
                         >
-                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-[#b5bac1]">
-                            <span>Coverage: <span className="font-semibold text-[#57f287]">{skill.coveragePct}%</span></span>
-                            <span>Sessions: <span className="font-semibold text-[#f2f3f5]">{skill.performed}</span></span>
-                            <span>Last: <span className="font-semibold text-[#f2f3f5]">{formatDate(skill.lastLogAt)}</span></span>
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-[color:var(--text-secondary)]">
+                            <span>Coverage: <span className="font-semibold text-[color:var(--forest)]">{skill.coveragePct}%</span></span>
+                            <span>Sessions: <span className="font-semibold text-[color:var(--text-primary)]">{skill.performed}</span></span>
+                            <span>Last: <span className="font-semibold text-[color:var(--text-primary)]">{formatDate(skill.lastLogAt)}</span></span>
                           </div>
 
-                          <div className="mt-3 divide-y" style={{ borderColor: "rgba(59, 63, 72, 0.7)" }}>
+                          <div className="mt-3 divide-y" style={{ borderColor: "color-mix(in srgb, var(--border) 72%, transparent)" }}>
                             {skill.tierNames.map((tierName, index) => {
                               const stat = skill.tierStats[index];
                               return (
                                 <div key={skill.id + "-" + tierName + "-" + index} className="flex items-center justify-between gap-3 py-2">
                                   <div className="min-w-0">
-                                    <p className="truncate text-[11px] font-medium text-[#f2f3f5]">{tierName}</p>
-                                    <p className="mt-0.5 text-[10px] text-[#949ba4]">{stat.attempts} attempts • {stat.best}</p>
+                                    <p className="truncate text-[11px] font-medium text-[color:var(--text-primary)]">{tierName}</p>
+                                    <p className="mt-0.5 text-[10px] text-[color:var(--text-muted)]">{stat.attempts} attempts • {stat.best}</p>
                                   </div>
-                                  <span className="shrink-0 text-[10px] text-[#b5bac1]">{formatDate(stat.lastPerformedAt)}</span>
+                                  <span className="shrink-0 text-[10px] text-[color:var(--text-secondary)]">{formatDate(stat.lastPerformedAt)}</span>
                                 </div>
                               );
                             })}
@@ -577,15 +575,13 @@ export default function CompletionistPage() {
                           <div className="mt-3 flex gap-2">
                             <Link
                               href={historyHref}
-                              className="inline-flex flex-1 items-center justify-center rounded-md border px-3 py-2 text-sm font-medium transition-colors"
-                              style={{ borderColor: "#3b3f48", backgroundColor: "#232428", color: "#f2f3f5" }}
+                              className="theme-control-btn inline-flex flex-1 items-center justify-center rounded-md border px-3 py-2 text-sm font-medium"
                             >
                               History
                             </Link>
                             <Link
                               href={logHref}
-                              className="inline-flex flex-1 items-center justify-center rounded-md border px-3 py-2 text-sm font-medium transition-colors"
-                              style={{ borderColor: "rgba(87, 242, 135, 0.36)", backgroundColor: "rgba(87, 242, 135, 0.1)", color: "#c9f7d6" }}
+                              className="theme-action-btn inline-flex flex-1 items-center justify-center rounded-md border px-3 py-2 text-sm font-medium"
                             >
                               Log session
                             </Link>
@@ -634,17 +630,13 @@ export default function CompletionistPage() {
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div>
-                              <p className="text-[10px] uppercase tracking-[0.14em] text-[#949ba4]">Filters</p>
-                              <h3 className="mt-1 text-base font-semibold text-[#f2f3f5]">Refine Completionist</h3>
+                              <p className="text-[10px] uppercase tracking-[0.14em] text-[color:var(--text-muted)]">Filters</p>
+                              <h3 className="mt-1 text-base font-semibold text-[color:var(--text-primary)]">Refine Completionist</h3>
                             </div>
                             <button
                               type="button"
                               onClick={() => setFilterDrawerOpen(false)}
-                              className="inline-flex h-9 w-9 items-center justify-center rounded-md border text-[#b5bac1] transition hover:text-[#f2f3f5]"
-                              style={{
-                                borderColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)",
-                                backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
-                              }}
+                              className="theme-control-btn inline-flex h-9 w-9 items-center justify-center rounded-md border"
                               aria-label="Close filter drawer"
                             >
                               ×
@@ -658,12 +650,12 @@ export default function CompletionistPage() {
                         >
                           <div className="space-y-4">
                             <div>
-                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">Category</label>
+                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[color:var(--text-muted)]">Category</label>
                               <select
                                 value={categoryFilter}
                                 onChange={(event) => setCategoryFilter(event.target.value as CategoryFilter)}
                                 className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
-                                style={{ borderColor: "#3b3f48", backgroundColor: "#232428", color: "#f2f3f5" }}
+                                style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 92%, black)", color: "var(--text-primary)" }}
                               >
                                 {categoryOptions.map((option) => (
                                   <option key={option} value={option}>
@@ -674,12 +666,12 @@ export default function CompletionistPage() {
                             </div>
 
                             <div>
-                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">Activity</label>
+                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[color:var(--text-muted)]">Activity</label>
                               <select
                                 value={activityFilter}
                                 onChange={(event) => setActivityFilter(event.target.value as ActivityFilter)}
                                 className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
-                                style={{ borderColor: "#3b3f48", backgroundColor: "#232428", color: "#f2f3f5" }}
+                                style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 92%, black)", color: "var(--text-primary)" }}
                               >
                                 <option value="all">All exercises</option>
                                 <option value="active">Active in 14 days</option>
@@ -689,12 +681,12 @@ export default function CompletionistPage() {
                             </div>
 
                             <div>
-                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">Sort by</label>
+                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[color:var(--text-muted)]">Sort by</label>
                               <select
                                 value={sortBy}
                                 onChange={(event) => setSortBy(event.target.value as SortBy)}
                                 className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
-                                style={{ borderColor: "#3b3f48", backgroundColor: "#232428", color: "#f2f3f5" }}
+                                style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 92%, black)", color: "var(--text-primary)" }}
                               >
                                 <option value="recent">Recently trained</option>
                                 <option value="coverage">Best coverage</option>
@@ -708,9 +700,9 @@ export default function CompletionistPage() {
                               onClick={() => setShowLoggedOnly((prev) => !prev)}
                               className="h-11 w-full rounded-xl border px-3 text-sm font-medium transition-colors"
                               style={{
-                                borderColor: showLoggedOnly ? "rgba(87, 242, 135, 0.42)" : "#3b3f48",
-                                backgroundColor: showLoggedOnly ? "rgba(87, 242, 135, 0.1)" : "#232428",
-                                color: showLoggedOnly ? "#c9f7d6" : "#f2f3f5",
+                                borderColor: showLoggedOnly ? "color-mix(in srgb, var(--forest) 42%, transparent)" : "color-mix(in srgb, var(--border) 78%, transparent)",
+                                backgroundColor: showLoggedOnly ? "color-mix(in srgb, var(--forest) 10%, transparent)" : "color-mix(in srgb, var(--surface) 92%, black)",
+                                color: showLoggedOnly ? "color-mix(in srgb, var(--forest) 82%, white)" : "var(--text-primary)",
                               }}
                             >
                               {showLoggedOnly ? "Showing logged exercises" : "Show logged only"}
@@ -731,16 +723,14 @@ export default function CompletionistPage() {
                                 setSortBy("recent");
                                 setShowLoggedOnly(false);
                               }}
-                              className="h-11 rounded-xl border px-3 text-sm font-medium text-[#f2f3f5] transition-colors"
-                              style={{ borderColor: "#3b3f48", backgroundColor: "#232428" }}
+                              className="theme-control-btn h-11 rounded-xl border px-3 text-sm font-medium"
                             >
                               Reset
                             </button>
                             <button
                               type="button"
                               onClick={() => setFilterDrawerOpen(false)}
-                              className="h-11 rounded-xl border px-3 text-sm font-semibold text-[#08120c] transition-colors"
-                              style={{ borderColor: "rgba(87, 242, 135, 0.42)", backgroundColor: "#57f287" }}
+                              className="theme-action-btn h-11 rounded-xl border px-3 text-sm font-semibold"
                             >
                               Done
                             </button>
