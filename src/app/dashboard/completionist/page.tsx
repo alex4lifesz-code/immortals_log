@@ -680,6 +680,19 @@ export default function CompletionistPage() {
                               </select>
                             </div>
 
+                            <button
+                              type="button"
+                              onClick={() => setShowLoggedOnly((prev) => !prev)}
+                              className="h-11 w-full rounded-xl border px-3 text-sm font-medium transition-colors"
+                              style={{
+                                borderColor: showLoggedOnly ? "color-mix(in srgb, var(--forest) 42%, transparent)" : "color-mix(in srgb, var(--border) 78%, transparent)",
+                                backgroundColor: showLoggedOnly ? "color-mix(in srgb, var(--forest) 10%, transparent)" : "color-mix(in srgb, var(--surface) 92%, black)",
+                                color: showLoggedOnly ? "color-mix(in srgb, var(--forest) 82%, white)" : "var(--text-primary)",
+                              }}
+                            >
+                              {showLoggedOnly ? "Showing logged exercises" : "Show logged only"}
+                            </button>
+
                             <div>
                               <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[color:var(--text-muted)]">Sort by</label>
                               <select
@@ -695,45 +708,27 @@ export default function CompletionistPage() {
                               </select>
                             </div>
 
-                            <button
-                              type="button"
-                              onClick={() => setShowLoggedOnly((prev) => !prev)}
-                              className="h-11 w-full rounded-xl border px-3 text-sm font-medium transition-colors"
-                              style={{
-                                borderColor: showLoggedOnly ? "color-mix(in srgb, var(--forest) 42%, transparent)" : "color-mix(in srgb, var(--border) 78%, transparent)",
-                                backgroundColor: showLoggedOnly ? "color-mix(in srgb, var(--forest) 10%, transparent)" : "color-mix(in srgb, var(--surface) 92%, black)",
-                                color: showLoggedOnly ? "color-mix(in srgb, var(--forest) 82%, white)" : "var(--text-primary)",
-                              }}
-                            >
-                              {showLoggedOnly ? "Showing logged exercises" : "Show logged only"}
-                            </button>
-                          </div>
-                        </div>
-
-                        <div
-                          className="shrink-0 border-t px-4 pb-[max(env(safe-area-inset-bottom,0px),1rem)] pt-3"
-                          style={{ borderTopColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)" }}
-                        >
-                          <div className="grid grid-cols-2 gap-2">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setCategoryFilter("all");
-                                setActivityFilter("all");
-                                setSortBy("recent");
-                                setShowLoggedOnly(false);
-                              }}
-                              className="theme-control-btn h-11 rounded-xl border px-3 text-sm font-medium"
-                            >
-                              Reset
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setFilterDrawerOpen(false)}
-                              className="theme-action-btn h-11 rounded-xl border px-3 text-sm font-semibold"
-                            >
-                              Done
-                            </button>
+                            <div className="grid grid-cols-2 gap-2 pt-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setCategoryFilter("all");
+                                  setActivityFilter("all");
+                                  setSortBy("recent");
+                                  setShowLoggedOnly(false);
+                                }}
+                                className="theme-control-btn h-11 rounded-xl border px-3 text-sm font-medium"
+                              >
+                                Reset
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setFilterDrawerOpen(false)}
+                                className="theme-action-btn h-11 rounded-xl border px-3 text-sm font-semibold"
+                              >
+                                Done
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </motion.aside>

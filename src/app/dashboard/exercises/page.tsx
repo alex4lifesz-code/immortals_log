@@ -632,31 +632,29 @@ export default function ExercisesCanvasPage() {
                       <option value="name">Name A-Z</option>
                     </select>
                   </div>
-                </div>
-              </div>
 
-              <div className="shrink-0 border-t px-4 pb-[max(env(safe-area-inset-bottom,0px),1rem)] pt-3" style={{ borderTopColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)" }}>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCategoryFilter("all");
-                      setActivityFilter("all");
-                      setSortBy("recent");
-                    }}
-                    className="h-11 rounded-xl border px-3 text-sm font-medium text-[color:var(--text-primary)] transition-colors"
-                    style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 92%, black)" }}
-                  >
-                    Reset
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFilterDrawerOpen(false)}
-                    className="h-11 rounded-xl border px-3 text-sm font-semibold text-[color:var(--cloud-white)] transition-colors"
-                    style={{ borderColor: "color-mix(in srgb, var(--forest) 42%, transparent)", backgroundColor: "color-mix(in srgb, var(--forest) 88%, transparent)" }}
-                  >
-                    Done
-                  </button>
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCategoryFilter("all");
+                        setActivityFilter("all");
+                        setSortBy("recent");
+                      }}
+                      className="h-11 rounded-xl border px-3 text-sm font-medium text-[color:var(--text-primary)] transition-colors"
+                      style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 92%, black)" }}
+                    >
+                      Reset
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFilterDrawerOpen(false)}
+                      className="h-11 rounded-xl border px-3 text-sm font-semibold text-[color:var(--cloud-white)] transition-colors"
+                      style={{ borderColor: "color-mix(in srgb, var(--forest) 42%, transparent)", backgroundColor: "color-mix(in srgb, var(--forest) 88%, transparent)" }}
+                    >
+                      Done
+                    </button>
+                  </div>
                 </div>
               </div>
             </motion.aside>

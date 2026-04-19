@@ -957,31 +957,29 @@ export default function HistoryPage() {
                       <option value="30d">Last 30 days</option>
                     </select>
                   </div>
-                </div>
-              </div>
 
-              <div className="shrink-0 border-t px-4 pb-[max(env(safe-area-inset-bottom,0px),1rem)] pt-3" style={{ borderTopColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)" }}>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMobileHistoryCategory("all");
-                      setMobileHistorySort("recent");
-                      setMobileHistoryRecency("all");
-                    }}
-                    className="h-11 rounded-xl border px-3 text-sm font-medium text-[#f2f3f5] transition-colors"
-                    style={{ borderColor: "#3b3f48", backgroundColor: "#232428" }}
-                  >
-                    Reset
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMobileHistoryFilterOpen(false)}
-                    className="h-11 rounded-xl border px-3 text-sm font-semibold text-[#08120c] transition-colors"
-                    style={{ borderColor: "rgba(87, 242, 135, 0.42)", backgroundColor: "#57f287" }}
-                  >
-                    Done
-                  </button>
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileHistoryCategory("all");
+                        setMobileHistorySort("recent");
+                        setMobileHistoryRecency("all");
+                      }}
+                      className="h-11 rounded-xl border px-3 text-sm font-medium text-[#f2f3f5] transition-colors"
+                      style={{ borderColor: "#3b3f48", backgroundColor: "#232428" }}
+                    >
+                      Reset
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMobileHistoryFilterOpen(false)}
+                      className="h-11 rounded-xl border px-3 text-sm font-semibold text-[#08120c] transition-colors"
+                      style={{ borderColor: "rgba(87, 242, 135, 0.42)", backgroundColor: "#57f287" }}
+                    >
+                      Done
+                    </button>
+                  </div>
                 </div>
               </div>
             </motion.aside>
@@ -1401,33 +1399,31 @@ export default function HistoryPage() {
                                 <option value="progression-desc">Progression descending</option>
                               </select>
                             </div>
-                          </div>
-                        </div>
 
-                        <div className="shrink-0 border-t px-4 pb-[max(env(safe-area-inset-bottom,0px),1rem)] pt-3" style={{ borderTopColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)" }}>
-                          <div className="grid grid-cols-2 gap-2">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setMobileDrawerLevelFilter("all");
-                                setMobileDrawerVariantFilter("all");
-                                setMobileDrawerWeightFilter("all");
-                                setMobileDrawerRepsFilter("all");
-                                setMobileDrawerSort("recent");
-                              }}
-                              className="h-11 rounded-xl border px-3 text-sm font-medium text-[#f2f3f5] transition-colors"
-                              style={{ borderColor: "#3b3f48", backgroundColor: "#232428" }}
-                            >
-                              Reset
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setMobileDrawerFilterOpen(false)}
-                              className="h-11 rounded-xl border px-3 text-sm font-semibold text-[#08120c] transition-colors"
-                              style={{ borderColor: "rgba(87, 242, 135, 0.42)", backgroundColor: "#57f287" }}
-                            >
-                              Done
-                            </button>
+                            <div className="grid grid-cols-2 gap-2 pt-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setMobileDrawerLevelFilter("all");
+                                  setMobileDrawerVariantFilter("all");
+                                  setMobileDrawerWeightFilter("all");
+                                  setMobileDrawerRepsFilter("all");
+                                  setMobileDrawerSort("recent");
+                                }}
+                                className="h-11 rounded-xl border px-3 text-sm font-medium text-[#f2f3f5] transition-colors"
+                                style={{ borderColor: "#3b3f48", backgroundColor: "#232428" }}
+                              >
+                                Reset
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setMobileDrawerFilterOpen(false)}
+                                className="h-11 rounded-xl border px-3 text-sm font-semibold text-[#08120c] transition-colors"
+                                style={{ borderColor: "rgba(87, 242, 135, 0.42)", backgroundColor: "#57f287" }}
+                              >
+                                Done
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </motion.aside>

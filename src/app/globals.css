@@ -1979,6 +1979,27 @@ html.cherry-blossom .completionist-modern-skill-desktop {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent) inset;
 }
 
+.dao-modern-page .theme-control-btn {
+  border-color: color-mix(in srgb, var(--border) 96%, transparent) !important;
+  background: color-mix(in srgb, var(--surface-hover) 26%, var(--surface)) !important;
+  color: var(--text-muted) !important;
+  box-shadow: none !important;
+}
+
+.dao-modern-page .theme-control-btn:hover {
+  border-color: color-mix(in srgb, var(--accent) 18%, var(--border)) !important;
+  background: color-mix(in srgb, var(--surface-hover) 42%, var(--surface)) !important;
+  color: var(--text-secondary) !important;
+  box-shadow: none !important;
+}
+
+.dao-modern-page .theme-control-btn-active {
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--border)) !important;
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface)) !important;
+  color: var(--text-primary) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 8%, transparent) !important;
+}
+
 .dao-modern-monthly-stats-panel,
 .dao-modern-monthly-chart-panel,
 .dao-modern-weight-trend-panel {

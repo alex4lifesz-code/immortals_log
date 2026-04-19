@@ -1443,10 +1443,8 @@ export default function ExerciseDBPage() {
                     <option value="created">Recently added</option>
                   </select>
                 </div>
-              </div>
 
-              <div className="shrink-0 border-t px-4 pb-[max(env(safe-area-inset-bottom,0px),1rem)] pt-3" style={{ borderTopColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)" }}>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2 pt-1">
                   <button
                     type="button"
                     onClick={() => {
