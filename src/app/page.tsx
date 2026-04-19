@@ -15,8 +15,6 @@ export default function LoginPage() {
   const DISPLAY_SETTINGS_STORAGE_KEY = "cultivateos-display-settings";
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
-  const [isRegister, setIsRegister] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
@@ -71,16 +69,11 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const endpoint = isRegister ? "/api/auth/register" : "/api/auth/login";
-      const body = isRegister
-        ? { username, password, name }
-        : { username, password, rememberMe };
-
-      const res = await fetch(endpoint, {
+      const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify(body),
+        body: JSON.stringify({ username, password, rememberMe }),
       });
 
       const data = await res.json();
@@ -98,16 +91,10 @@ export default function LoginPage() {
         login(userData, rememberMe);
       }
 
-      // New registrations go to onboarding, logins go to dashboard
-      if (isRegister) {
+      if (userData && !userData.onboardingCompleted && !userData.onboardingSkipped) {
         router.push("/onboarding");
       } else {
-        // Existing users who haven't completed onboarding also redirect
-        if (userData && !userData.onboardingCompleted && !userData.onboardingSkipped) {
-          router.push("/onboarding");
-        } else {
-          router.push("/dashboard");
-        }
+        router.push("/dashboard");
       }
     } catch {
       setError("Cannot connect to server/database. Please verify the server URL and your network connection.");
@@ -200,7 +187,7 @@ export default function LoginPage() {
             transition={{ delay: 0.5 }}
             className="text-center text-mist-dark text-xs mb-6 italic"
           >
-            {isRegister ? "踏入修仙界 — Enter the realm of cultivation" : "欢迎回来，修士 — Welcome back, cultivator"}
+            欢迎回来，修士 — Welcome back, cultivator
           </motion.p>
 
           {/* Form */}
@@ -219,21 +206,6 @@ export default function LoginPage() {
               />
             </motion.div>
 
-            {isRegister && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-              >
-                <GlowInput
-                  label={`真名 · ${lt("True Name")}`}
-                  placeholder={lt("Your display name")}
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-              </motion.div>
-            )}
 
             <motion.div
               initial={{ opacity: 0, x: -20 }}
@@ -276,27 +248,25 @@ export default function LoginPage() {
             </motion.div>
 
             {/* Login options */}
-            {!isRegister && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.55 }}
-                className="space-y-2"
-              >
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="rememberMe"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-3.5 h-3.5 rounded border-ink-light bg-ink-dark accent-jade-glow cursor-pointer"
-                  />
-                  <label htmlFor="rememberMe" className="text-xs text-mist-mid cursor-pointer select-none">
-                    记住我 · {lt("Remember Me")}
-                  </label>
-                </div>
-              </motion.div>
-            )}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.55 }}
+              className="space-y-2"
+            >
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="rememberMe"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-3.5 h-3.5 rounded border-ink-light bg-ink-dark accent-jade-glow cursor-pointer"
+                />
+                <label htmlFor="rememberMe" className="text-xs text-mist-mid cursor-pointer select-none">
+                  记住我 · {lt("Remember Me")}
+                </label>
+              </div>
+            </motion.div>
 
             {error && (
               <motion.p
@@ -325,8 +295,6 @@ export default function LoginPage() {
               >
                 {loading
                   ? lt("Channeling Qi...")
-                  : isRegister
-                  ? `${lt("Begin Cultivation")} 开始修炼`
                   : `${lt("Enter the Sect")} 进入宗门`}
               </GlowButton>
             </motion.div>
@@ -364,24 +332,15 @@ export default function LoginPage() {
             </motion.div>
           </form>
 
-          {/* Toggle register/login */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.7 }}
             className="mt-6 text-center"
           >
-            <button
-              onClick={() => {
-                setIsRegister(!isRegister);
-                setError("");
-              }}
-              className="text-xs text-mist-mid hover:text-jade-glow transition-colors"
-            >
-              {isRegister
-                ? `${lt("Already a cultivator?")} 已有账号 — ${lt("Return to the sect")}`
-                : `${lt("New cultivator?")} 新弟子 — ${lt("Join the sect")}`}
-            </button>
+            <p className="text-xs text-mist-mid">
+              {lt("Accounts are created by admins only. Please contact an administrator for access.")}
+            </p>
           </motion.div>
 
           {/* Bottom decoration */}

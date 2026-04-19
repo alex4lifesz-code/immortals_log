@@ -1,8 +1,9 @@
 "use client";
 
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { ReactNode, useEffect, useRef, memo } from "react";
+import { ReactNode, useState, useEffect, useRef, memo } from "react";
 import { useAppContext } from "@/context/AppContext";
+import { DISPLAY_DEFAULTS } from "@/context/DisplaySettingsContext";
 
 interface PageLayoutProps {
   children: ReactNode;
@@ -27,12 +28,17 @@ function PageLayout({
   mobileContentPaddingClass = "p-4 pb-24",
   mobileScrollContainerEnabled = true,
 }: PageLayoutProps) {
-  const { isMobile, mobileSidebarOpen, setMobileSidebarOpen, themeStyle } = useAppContext();
+  const { panelPosition, isMobile, mobileSidebarOpen, setMobileSidebarOpen, themeStyle } = useAppContext();
   const prefersReducedMotion = useReducedMotion();
   const disableMotion = themeStyle === "discord" || prefersReducedMotion;
+  const effectivePosition = isMobile ? "top" : panelPosition;
+  const mobileMode = isMobile;
   const mobileSidebarHistoryArmedRef = useRef(false);
   const sidebarTouchStartXRef = useRef<number | null>(null);
   const sidebarTouchCurrentXRef = useRef<number | null>(null);
+  const sidebarWidth = DISPLAY_DEFAULTS.sidebarWidth;
+
+  const MIN_SIDEBAR_WIDTH = 200;
 
   const contentContainerClass = contentWidth === "centered"
     ? `mx-auto w-full ${contentMaxWidthClass}`
@@ -110,19 +116,71 @@ function PageLayout({
     }
   };
 
+  // Close sidebars when switching away from mobile
+  useEffect(() => {
+    if (!isMobile) {
+      const timer = window.setTimeout(() => {
+        setMobileSidebarOpen(false);
+      }, 0);
+      return () => window.clearTimeout(timer);
+    }
+  }, [isMobile, setMobileSidebarOpen]);
+
+  // Desktop sidebar element
+  const desktopSidebar = sidebar && !isMobile && effectivePosition !== "top" ? (
+    <motion.div
+      layout={!disableMotion}
+      className="sticky top-0 safe-area-top safe-area-bottom self-start h-full border-l-0 surface-panel surface-panel-strong shrink-0 overflow-hidden flex flex-col"
+      style={{
+        width: `${sidebarWidth}px`,
+        minWidth: `${MIN_SIDEBAR_WIDTH}px`,
+        borderRightWidth: 0,
+        background: "var(--sidebar-canvas-bg)",
+      }}
+    >
+      <div className="px-5 pt-4 pb-2.5 shrink-0 flex items-center justify-between">
+        <h2 className="text-xs text-jade-glow uppercase tracking-widest font-semibold">{title}</h2>
+      </div>
+      <div className="flex-1 min-h-0 px-1.5 overflow-y-auto sidebar-scroll overscroll-contain">
+        {sidebar}
+      </div>
+      <div className="h-2 shrink-0" />
+    </motion.div>
+  ) : sidebar && !isMobile && effectivePosition === "top" ? (
+    <motion.div
+      layout={!disableMotion}
+      className="w-full border-b surface-panel surface-panel-strong shrink-0 overflow-hidden flex flex-col max-h-[40vh]"
+      style={{
+        borderColor: "var(--sidebar-canvas-border)",
+        background: "var(--sidebar-canvas-bg)",
+      }}
+    >
+      <div className="px-5 pt-4 pb-2.5 shrink-0 flex items-center justify-between">
+        <h2 className="text-xs text-jade-glow uppercase tracking-widest font-semibold">{title}</h2>
+      </div>
+      <div className="flex-1 min-h-0 px-1.5 overflow-y-auto scrollbar-hide">
+        {sidebar}
+      </div>
+      <div className="h-2 shrink-0" />
+    </motion.div>
+  ) : null;
 
   return (
     <motion.div
       initial={disableMotion ? false : { opacity: 0 }}
       animate={disableMotion ? { opacity: 1 } : { opacity: 1 }}
       transition={{ duration: disableMotion ? 0 : 0.25, ease: [0.22, 1, 0.36, 1] }}
-      className="relative flex min-h-full flex-col"
+      className={`flex ${effectivePosition === "top" || isMobile ? "flex-col" : "flex-row"} relative ${isMobile ? "min-h-full" : "h-full overflow-hidden"}`}
       style={{ background: "var(--page-gutter-bg)" }}
     >
+      {/* Desktop sidebar */}
+      {desktopSidebar}
+
+      {/* Main Content — full width on mobile */}
       <div className="flex-1 min-w-0">
         <div
-          data-mobile-scroll-container={mobileScrollContainerEnabled ? "true" : undefined}
-          className={`flex-1 min-w-0 ${mobileScrollContainerEnabled ? "overflow-y-auto scrollbar-hide" : "overflow-hidden"} ${mobileContentPaddingClass} overflow-x-hidden`}
+          data-mobile-scroll-container={isMobile && mobileScrollContainerEnabled ? "true" : undefined}
+          className={`flex-1 min-w-0 ${isMobile ? `${mobileScrollContainerEnabled ? "overflow-y-auto scrollbar-hide" : "overflow-hidden"} ${mobileContentPaddingClass} overflow-x-hidden` : "h-full overscroll-contain [scrollbar-gutter:stable] overflow-x-auto p-2"}`}
         >
           <motion.div
             initial={disableMotion ? false : { opacity: 0 }}
@@ -130,7 +188,7 @@ function PageLayout({
             transition={{ delay: disableMotion ? 0 : 0.04, duration: disableMotion ? 0 : 0.25, ease: [0.22, 1, 0.36, 1] }}
             className="page-rise"
           >
-            <div className={contentContainerClass}>
+            <div className={`${contentContainerClass} ${isMobile ? "" : "rounded-2xl"}`}>
               {children}
             </div>
           </motion.div>
@@ -140,7 +198,7 @@ function PageLayout({
 
       {/* ── Mobile slide-in sidebar (page panel) — native APK only ── */}
       <AnimatePresence>
-        {mobileSidebarOpen && sidebar && (
+        {mobileSidebarOpen && mobileMode && sidebar && (
           <>
             <motion.div
               key="page-sidebar-backdrop"

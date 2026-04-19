@@ -5,12 +5,13 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import PageLayout from "@/components/layout/PageLayout";
 import GlowCard from "@/components/ui/GlowCard";
+import SearchField from "@/components/ui/SearchField";
 import { MemoTrainingLogTable } from "@/components/workout/TrainingLogTable";
-import { useIsMobile } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { api } from "@/lib/api-client";
 import { getDeletedExerciseLabel } from "@/lib/exercise-name";
+import { rankExerciseSearchResults } from "@/lib/exercise-search";
 import { DASHBOARD_ROUTES } from "@/lib/navigation";
 import { isDeletedExerciseDescription } from "@/lib/pending-exercises";
 import { DEFAULT_USER_PHYSIQUE, loadUserPhysique } from "@/lib/user-physique";
@@ -117,7 +118,6 @@ function getRecentExerciseTextColor(dateLike: string | null | undefined, isSelec
 
 export default function HistoryPage() {
   const { user } = useAuth();
-  const isMobile = useIsMobile();
   const { settings } = useDisplaySettings();
   const weightUnit = settings.defaultWeightUnit ?? "kg";
   const searchParams = useSearchParams();
@@ -131,7 +131,7 @@ export default function HistoryPage() {
   const [mobileSearchQuery, setMobileSearchQuery] = useState("");
   const [mobileHistoryFilterOpen, setMobileHistoryFilterOpen] = useState(false);
   const [mobileHistoryCategory, setMobileHistoryCategory] = useState("all");
-  const [mobileHistorySort, setMobileHistorySort] = useState<"recent" | "oldest" | "name-az">("recent");
+  const [mobileHistorySort, setMobileHistorySort] = useState<"recent" | "oldest" | "name-az" | "relevant">("recent");
   const [mobileHistoryRecency, setMobileHistoryRecency] = useState<"all" | "7d" | "30d">("all");
   const [mobileDrawerSearchOpen, setMobileDrawerSearchOpen] = useState(false);
   const [mobileDrawerSearchQuery, setMobileDrawerSearchQuery] = useState("");
@@ -146,8 +146,10 @@ export default function HistoryPage() {
   const [mobileLogFabOpen, setMobileLogFabOpen] = useState(false);
   const [mobileLogFabSearchQuery, setMobileLogFabSearchQuery] = useState("");
   const [mobileLogFabCategory, setMobileLogFabCategory] = useState("all");
-  const [mobileLogFabSort, setMobileLogFabSort] = useState<"recent" | "oldest" | "name-az">("recent");
+  const [mobileLogFabSort, setMobileLogFabSort] = useState<"recent" | "oldest" | "name-az" | "relevant">("recent");
   const mobileDrawerSearchInputRef = useRef<HTMLInputElement | null>(null);
+  const mobileHistorySortPreferenceRef = useRef<"recent" | "oldest" | "name-az">("recent");
+  const mobileLogFabSortPreferenceRef = useRef<"recent" | "oldest" | "name-az">("recent");
 
   const userId = user?.id ?? "";
   const targetUserId = searchParams.get("targetUserId") || "";
@@ -167,6 +169,36 @@ export default function HistoryPage() {
     });
     return () => window.cancelAnimationFrame(frame);
   }, [mobileDrawerSearchOpen]);
+
+  useEffect(() => {
+    if (mobileHistorySort !== "relevant") {
+      mobileHistorySortPreferenceRef.current = mobileHistorySort;
+    }
+  }, [mobileHistorySort]);
+
+  useEffect(() => {
+    if (mobileLogFabSort !== "relevant") {
+      mobileLogFabSortPreferenceRef.current = mobileLogFabSort;
+    }
+  }, [mobileLogFabSort]);
+
+  useEffect(() => {
+    const hasQuery = mobileSearchQuery.trim().length > 0;
+    if (hasQuery) {
+      if (mobileHistorySort !== "relevant") setMobileHistorySort("relevant");
+    } else if (mobileHistorySort === "relevant") {
+      setMobileHistorySort(mobileHistorySortPreferenceRef.current);
+    }
+  }, [mobileHistorySort, mobileSearchQuery]);
+
+  useEffect(() => {
+    const hasQuery = mobileLogFabSearchQuery.trim().length > 0;
+    if (hasQuery) {
+      if (mobileLogFabSort !== "relevant") setMobileLogFabSort("relevant");
+    } else if (mobileLogFabSort === "relevant") {
+      setMobileLogFabSort(mobileLogFabSortPreferenceRef.current);
+    }
+  }, [mobileLogFabSearchQuery, mobileLogFabSort]);
 
   useEffect(() => {
     const hasPrefill = Boolean(prefillExerciseId || prefillExerciseName || prefillProgression || prefillVariant);
@@ -285,8 +317,8 @@ export default function HistoryPage() {
   const subtitle = targetUserDisplayName
     ? `Review ${targetUserDisplayName}'s training logs and cultivation entries`
     : "Review your training logs and cultivation entries";
-  const isFriendTrainOverlay = isMobile && Boolean(targetUserId);
-  const friendRailWidthPx = isMobile ? 64 : 76;
+  const isFriendTrainOverlay = Boolean(targetUserId);
+  const friendRailWidthPx = 64;
 
   const handleUserScopeChange = (nextUserId: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -365,6 +397,22 @@ export default function HistoryPage() {
       return matchesQuery && matchesCategory && matchesRecency;
     });
 
+    if (mobileHistorySort === "relevant" && query) {
+      return rankExerciseSearchResults(
+        filtered.map((row) => ({
+          ...row,
+          exerciseId: row.exerciseId,
+          displayLabel: row.exerciseName,
+          canonicalName: row.exerciseName,
+          searchLabel: `${row.exerciseName} ${row.progression} ${row.variant} ${row.category}`,
+          hasHistory: true,
+          lastLoggedAt: row.date,
+          matchSource: "name" as const,
+        })),
+        query,
+      );
+    }
+
     const sorted = [...filtered];
     if (mobileHistorySort === "oldest") {
       sorted.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -429,6 +477,22 @@ export default function HistoryPage() {
       const haystack = `${row.exerciseName} ${row.progression} ${row.variant} ${row.category}`.toLowerCase();
       return haystack.includes(query);
     });
+
+    if (mobileLogFabSort === "relevant" && query) {
+      return rankExerciseSearchResults(
+        filtered.map((row) => ({
+          ...row,
+          exerciseId: row.exerciseId,
+          displayLabel: row.exerciseName,
+          canonicalName: row.exerciseName,
+          searchLabel: `${row.exerciseName} ${row.progression} ${row.variant} ${row.category}`,
+          hasHistory: Boolean(row.date),
+          lastLoggedAt: row.date,
+          matchSource: "name" as const,
+        })),
+        query,
+      );
+    }
 
     const sorted = [...filtered];
     if (mobileLogFabSort === "oldest") {
@@ -519,12 +583,6 @@ export default function HistoryPage() {
   }, [mobileDrawerLevelFilter, mobileDrawerRepsFilter, mobileDrawerSearchQuery, mobileDrawerSort, mobileDrawerVariantFilter, mobileDrawerWeightFilter, selectedMobileExercise, selectedMobileExerciseLogs, weightUnit]);
 
   useEffect(() => {
-    if (!isMobile && mobileExerciseDrawerExerciseId) {
-      setMobileExerciseDrawerExerciseId(null);
-    }
-  }, [isMobile, mobileExerciseDrawerExerciseId]);
-
-  useEffect(() => {
     setMobileDrawerSearchOpen(false);
     setMobileDrawerSearchQuery("");
     setMobileDrawerFilterOpen(false);
@@ -534,12 +592,6 @@ export default function HistoryPage() {
     setMobileDrawerRepsFilter("all");
     setMobileDrawerSort("recent");
   }, [mobileExerciseDrawerExerciseId]);
-
-  useEffect(() => {
-    if (!isMobile && mobileLogFabOpen) {
-      setMobileLogFabOpen(false);
-    }
-  }, [isMobile, mobileLogFabOpen]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -601,9 +653,7 @@ export default function HistoryPage() {
           </GlowCard>
         ) : (
           <>
-            {isMobile ? (
-              <>
-              <motion.section
+            <motion.section
                   key={isFriendTrainOverlay ? `friend-train-${targetUserId}` : "self-train"}
                   initial={isFriendTrainOverlay ? { x: "100%" } : false}
                   animate={isFriendTrainOverlay ? { x: "0%" } : { x: 0 }}
@@ -655,12 +705,13 @@ export default function HistoryPage() {
                           {friendView === "history" && (
                             <>
                               <div className="mt-2 flex items-center gap-2">
-                                <input
-                                  type="text"
+                                <SearchField
                                   value={mobileSearchQuery}
-                                  onChange={(event) => setMobileSearchQuery(event.target.value)}
+                                  onChange={setMobileSearchQuery}
                                   placeholder="Search exercises"
-                                  className="h-8 min-w-0 flex-1 rounded-md border px-2.5 text-sm outline-none"
+                                  aria-label="Search exercises"
+                                  wrapperClassName="min-w-0 flex-1"
+                                  className="h-8 min-w-0 text-sm"
                                   style={{
                                     borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
                                     backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
@@ -789,58 +840,13 @@ export default function HistoryPage() {
                     </div>
                   </div>
               </motion.section>
-
-              </>
-            ) : (
-              <>
-                {!isFriendTrainOverlay ? (
-                  <div className="mb-2 overflow-x-auto scrollbar-hide">
-                    <div className="flex min-w-max items-center gap-2 px-0.5 pb-0.5">
-                      {trainQuickNavItems.map((item) => {
-                        const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
-                        return (
-                          <button
-                            key={item.href}
-                            type="button"
-                            onClick={() => router.push(item.href)}
-                            className={`rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-colors ${
-                              isActive
-                                ? "border-[#5865f2]/70 bg-[#5865f2]/18 text-[#f2f3f5]"
-                                : "border-[#3b3f48] bg-[#383a40]/65 text-[#b5bac1] hover:text-[#f2f3f5] hover:border-[#5865f2]/60"
-                            }`}
-                            aria-current={isActive ? "page" : undefined}
-                          >
-                            {item.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : null}
-
-                <div className="nyaa-history-table-shell">
-                  <MemoTrainingLogTable
-                    exercises={exercises}
-                    physique={physique}
-                    onRefresh={fetchExercises}
-                    userId={userId}
-                    historyTargetUserId={targetUserId || undefined}
-                    historyTargetUserName={targetUserDisplayName}
-                    prefillExerciseId={prefillExerciseId}
-                    prefillExerciseName={prefillExerciseName}
-                    prefillProgression={prefillProgression}
-                    prefillVariant={prefillVariant}
-                  />
-                </div>
-              </>
-            )}
           </>
         )}
       </div>
       </PageLayout>
 
       <AnimatePresence>
-        {isMobile && friendView === "history" && mobileHistoryFilterOpen ? (
+        {friendView === "history" && mobileHistoryFilterOpen ? (
           <>
             <motion.div
               key="mobile-history-filter-backdrop"
@@ -911,7 +917,7 @@ export default function HistoryPage() {
                     <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Sort</label>
                     <select
                       value={mobileHistorySort}
-                      onChange={(event) => setMobileHistorySort(event.target.value as "recent" | "oldest" | "name-az")}
+                      onChange={(event) => setMobileHistorySort(event.target.value as "recent" | "oldest" | "name-az" | "relevant")}
                       className="h-9 w-full rounded-md border px-2.5 text-sm outline-none"
                       style={{
                         borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
@@ -919,6 +925,7 @@ export default function HistoryPage() {
                         color: "var(--cloud-white)",
                       }}
                     >
+                      <option value="relevant">Relevant</option>
                       <option value="recent">Recent first</option>
                       <option value="oldest">Oldest first</option>
                       <option value="name-az">Name A-Z</option>
@@ -970,7 +977,7 @@ export default function HistoryPage() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {isMobile && mobileLogFabOpen ? (
+        {mobileLogFabOpen ? (
           <>
             <motion.div
               key="train-log-fab-backdrop"
@@ -1022,12 +1029,12 @@ export default function HistoryPage() {
                     </div>
                   </div>
                   <div className="px-3 py-2.5 border-t" style={{ borderTopColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)" }}>
-                    <input
-                      type="text"
+                    <SearchField
                       value={mobileLogFabSearchQuery}
-                      onChange={(event) => setMobileLogFabSearchQuery(event.target.value)}
+                      onChange={setMobileLogFabSearchQuery}
                       placeholder="Search exercises"
-                      className="h-8 w-full rounded-md border px-2.5 text-sm outline-none"
+                      aria-label="Search exercises"
+                      className="h-8 text-sm"
                       style={{
                         borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
                         backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
@@ -1054,7 +1061,7 @@ export default function HistoryPage() {
                       </select>
                       <select
                         value={mobileLogFabSort}
-                        onChange={(event) => setMobileLogFabSort(event.target.value as "recent" | "oldest" | "name-az")}
+                        onChange={(event) => setMobileLogFabSort(event.target.value as "recent" | "oldest" | "name-az" | "relevant")}
                         className="h-8 rounded-md border px-2 text-xs outline-none"
                         style={{
                           borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
@@ -1063,6 +1070,7 @@ export default function HistoryPage() {
                         }}
                         aria-label="Sort exercises"
                       >
+                        <option value="relevant">Relevant</option>
                         <option value="recent">Recent first</option>
                         <option value="oldest">Oldest first</option>
                         <option value="name-az">Name A-Z</option>
@@ -1121,7 +1129,7 @@ export default function HistoryPage() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {isMobile && mobileExerciseDrawerExerciseId ? (
+        {mobileExerciseDrawerExerciseId ? (
           <>
             <motion.div
               key="mobile-exercise-drawer-backdrop"
@@ -1218,14 +1226,15 @@ export default function HistoryPage() {
                         transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
                         className="overflow-hidden"
                       >
-                        <input
+                        <SearchField
                           ref={mobileDrawerSearchInputRef}
                           autoFocus
-                          type="text"
                           value={mobileDrawerSearchQuery}
-                          onChange={(event) => setMobileDrawerSearchQuery(event.target.value)}
+                          onChange={setMobileDrawerSearchQuery}
                           placeholder="Search logs"
-                          className="mt-2 h-8 w-full rounded-md border px-2.5 text-sm outline-none"
+                          aria-label="Search logs"
+                          wrapperClassName="mt-2"
+                          className="h-8 text-sm"
                           style={{
                             borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
                             backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
@@ -1541,7 +1550,7 @@ export default function HistoryPage() {
         ) : null}
       </AnimatePresence>
 
-      {isMobile && !mobileExerciseDrawerExerciseId && !mobileLogFabOpen ? (
+      {!mobileExerciseDrawerExerciseId && !mobileLogFabOpen ? (
         <motion.button
           key="train-log-fab"
           type="button"

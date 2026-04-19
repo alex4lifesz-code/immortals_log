@@ -31,10 +31,10 @@ describe("classifyRoute", () => {
     expect(ctx.route).toBe("public-api");
   });
 
-  it("classifies /api/auth/register as public", () => {
+  it("classifies /api/auth/register as protected", () => {
     const ctx = mockCtx("/api/auth/register");
     classifyRoute(ctx);
-    expect(ctx.route).toBe("public-api");
+    expect(ctx.route).toBe("protected-api");
   });
 
   it("classifies /api/health as public", () => {

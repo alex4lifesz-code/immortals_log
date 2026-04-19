@@ -12,6 +12,7 @@ import { useIsMobile } from "@/context/AppContext";
 import { buildIsoAtUserDateTime, formatDateLocal, formatDateWithPreference } from "@/lib/constants";
 import { api, ApiRequestError } from "@/lib/api-client";
 import { getDeletedExerciseLabel, getExerciseDisplayName } from "@/lib/exercise-name";
+import { rankExerciseSearchResults, type ExerciseSearchMatchSource } from "@/lib/exercise-search";
 import { DASHBOARD_ROUTES } from "@/lib/navigation";
 import { t, tHint } from "@/lib/terminology";
 import { isDeletedExerciseDescription } from "@/lib/pending-exercises";
@@ -406,6 +407,10 @@ type InputExerciseSearchResult = {
   exercise: ProgressionExercise;
   displayLabel: string;
   searchLabel: string;
+  canonicalName: string;
+  hasHistory?: boolean;
+  lastLoggedAt?: string | null;
+  matchSource?: ExerciseSearchMatchSource;
   prefillLevel?: string;
   prefillVariant?: string;
 };
@@ -1394,12 +1399,19 @@ function TrainingLogTable({
         .map((variant) => String(variant.name || "").trim())
         .filter(Boolean);
 
+      const logs = exercise.userProgress?.[0]?.logs ?? [];
+      const latestLogDate = logs.length > 0
+        ? logs.reduce((latest, log) => new Date(log.createdAt).getTime() > new Date(latest).getTime() ? log.createdAt : latest, logs[0].createdAt)
+        : null;
+
       return {
         exercise,
         displayName,
         canonicalName,
         progressionNames,
         variantNames,
+        hasHistory: logs.length > 0,
+        lastLoggedAt: latestLogDate,
       };
     });
 
@@ -1408,6 +1420,10 @@ function TrainingLogTable({
         exercise: row.exercise,
         displayLabel: row.displayName,
         searchLabel: row.displayName,
+        canonicalName: row.canonicalName,
+        hasHistory: row.hasHistory,
+        lastLoggedAt: row.lastLoggedAt,
+        matchSource: "name",
       }));
     }
 
@@ -1426,6 +1442,10 @@ function TrainingLogTable({
           exercise: row.exercise,
           displayLabel: row.displayName,
           searchLabel: row.displayName,
+          canonicalName: row.canonicalName,
+          hasHistory: row.hasHistory,
+          lastLoggedAt: row.lastLoggedAt,
+          matchSource: "name",
         });
       }
 
@@ -1436,6 +1456,10 @@ function TrainingLogTable({
           exercise: row.exercise,
           displayLabel: contextual,
           searchLabel: contextual,
+          canonicalName: row.canonicalName,
+          hasHistory: row.hasHistory,
+          lastLoggedAt: row.lastLoggedAt,
+          matchSource: "progression",
           prefillLevel: progression.level,
         });
       }
@@ -1447,12 +1471,16 @@ function TrainingLogTable({
           exercise: row.exercise,
           displayLabel: contextual,
           searchLabel: contextual,
+          canonicalName: row.canonicalName,
+          hasHistory: row.hasHistory,
+          lastLoggedAt: row.lastLoggedAt,
+          matchSource: "variant",
           prefillVariant: variant,
         });
       }
     }
 
-    return next;
+    return rankExerciseSearchResults<InputExerciseSearchResult>(next, query);
   }, [exerciseMetaById, exerciseSearchTerm, sortedExercises]);
 
   const signedModifierOptions = useMemo(() => {
@@ -2705,6 +2733,25 @@ function TrainingLogTable({
                                 className="w-full h-7 rounded pl-6 pr-6 text-[11px] outline-none"
                                 style={{ backgroundColor: "var(--ink-dark)", border: "1px solid color-mix(in srgb, var(--jade-glow) 30%, var(--border))", boxShadow: "none", color: "var(--text-primary)", textShadow: "none" }}
                               />
+                              {exerciseSearchTerm.trim() ? (
+                                <button
+                                  type="button"
+                                  onMouseDown={(event) => {
+                                    event.preventDefault();
+                                  }}
+                                  onClick={() => {
+                                    setExerciseSearchTerm("");
+                                    syncExerciseDropdownPosition();
+                                    setExerciseDropdownOpen(true);
+                                    setExerciseHighlightIndex(-1);
+                                  }}
+                                  className="absolute inset-y-0 right-2 flex items-center text-[11px] font-semibold leading-none transition-colors hover:text-cloud-white"
+                                  style={{ color: "var(--text-secondary)" }}
+                                  aria-label="Clear exercise search"
+                                >
+                                  x
+                                </button>
+                              ) : null}
                               {exerciseSearchTerm.trim() !== "" && (
                                 <button
                                   type="button"

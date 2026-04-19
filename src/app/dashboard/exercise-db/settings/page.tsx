@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import PageLayout from "@/components/layout/PageLayout";
-import { useIsMobile } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import GlowButton from "@/components/ui/GlowButton";
@@ -414,7 +413,6 @@ function ExerciseRowLabelEditor({
 
 export function ExerciseDbSettingsPanel({ embedded = false }: { embedded?: boolean } = {}) {
   const router = useRouter();
-  const isMobile = useIsMobile();
   const { user } = useAuth();
   const { settings } = useDisplaySettings();
   const defaults = useMemo(() => getDefaultExerciseDbOptions(), []);
@@ -780,154 +778,65 @@ export function ExerciseDbSettingsPanel({ embedded = false }: { embedded?: boole
                   ))}
                 </select>
               </div>
-              {isMobile ? (
-                <div className="space-y-2 p-2" style={{ backgroundColor: "var(--surface)" }}>
-                  {filteredExerciseVariantRows.length === 0 ? (
-                    <div className="rounded border px-3 py-6 text-center text-xs" style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}>
-                      No exercises found.
-                    </div>
-                  ) : (
-                    filteredExerciseVariantRows.map((row) => (
-                      <div key={row.id} className="rounded border p-2 space-y-2" style={{ borderColor: "var(--border)", backgroundColor: "color-mix(in srgb, var(--surface) 95%, var(--border))" }}>
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px]" style={{ borderRadius: "2px", color: "var(--text-secondary)", backgroundColor: "color-mix(in srgb, var(--border) 10%, transparent)" }}>
-                            {row.category}
-                          </span>
-                          <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px]" style={{ borderRadius: "2px", color: "var(--text-secondary)", backgroundColor: "color-mix(in srgb, var(--border) 10%, transparent)" }}>
-                            {row.exerciseType}
-                          </span>
-                        </div>
-                        <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>{resolveRowDisplayName(row)}</p>
-
-                        <div className="rounded border p-2" style={{ borderColor: "var(--border)" }}>
-                          <p className="mb-1 text-[10px] font-semibold uppercase" style={{ color: "var(--text-secondary)" }}>Progression</p>
-                          <ExerciseRowLabelEditor
-                            row={row}
-                            values={row.progression}
-                            kind="progression"
-                            emptyLabel="No progression yet"
-                            addPlaceholder="Add progression"
-                            onSave={(exerciseId, exerciseName, previousValues, nextValues) => updateExerciseMetadata(
-                              exerciseId,
-                              exerciseName,
-                              previousValues,
-                              nextValues,
-                              row.variants,
-                              row.variants,
-                            )}
-                          />
-                        </div>
-
-                        <div className="rounded border p-2" style={{ borderColor: "var(--border)" }}>
-                          <p className="mb-1 text-[10px] font-semibold uppercase" style={{ color: "var(--text-secondary)" }}>Variants</p>
-                          <ExerciseRowLabelEditor
-                            row={row}
-                            values={row.variants}
-                            kind="variant"
-                            emptyLabel="No variants yet"
-                            addPlaceholder="Add variant"
-                            onSave={(exerciseId, exerciseName, previousValues, nextValues) => updateExerciseMetadata(
-                              exerciseId,
-                              exerciseName,
-                              row.progression,
-                              row.progression,
-                              previousValues,
-                              nextValues,
-                            )}
-                          />
-                        </div>
+              <div className="space-y-2 p-2" style={{ backgroundColor: "var(--surface)" }}>
+                {filteredExerciseVariantRows.length === 0 ? (
+                  <div className="rounded border px-3 py-6 text-center text-xs" style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}>
+                    No exercises found.
+                  </div>
+                ) : (
+                  filteredExerciseVariantRows.map((row) => (
+                    <div key={row.id} className="rounded border p-2 space-y-2" style={{ borderColor: "var(--border)", backgroundColor: "color-mix(in srgb, var(--surface) 95%, var(--border))" }}>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px]" style={{ borderRadius: "2px", color: "var(--text-secondary)", backgroundColor: "color-mix(in srgb, var(--border) 10%, transparent)" }}>
+                          {row.category}
+                        </span>
+                        <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px]" style={{ borderRadius: "2px", color: "var(--text-secondary)", backgroundColor: "color-mix(in srgb, var(--border) 10%, transparent)" }}>
+                          {row.exerciseType}
+                        </span>
                       </div>
-                    ))
-                  )}
-                </div>
-              ) : (
-              <div className="overflow-x-auto" style={{ backgroundColor: "var(--surface)" }}>
-                <table className="w-full text-[11px] border-collapse" style={{ minWidth: "880px" }}>
-                  <thead>
-                    <tr>
-                      <th className="px-2 py-2 text-center border-b whitespace-nowrap" style={{ borderColor: "var(--border)", color: "var(--text-secondary)", backgroundColor: "color-mix(in srgb, var(--border) 10%, transparent)", width: "12%" }}>Category</th>
-                      <th className="px-2 py-2 text-center border-b whitespace-nowrap" style={{ borderColor: "var(--border)", color: "var(--text-secondary)", backgroundColor: "color-mix(in srgb, var(--border) 10%, transparent)", width: "11%" }}>Type</th>
-                      <th className="px-3 py-2 text-left border-b" style={{ borderColor: "var(--border)", color: "var(--text-secondary)", backgroundColor: "color-mix(in srgb, var(--border) 10%, transparent)", width: "24%" }}>Exercise</th>
-                      <th className="px-3 py-2 text-left border-b" style={{ borderColor: "var(--border)", color: "var(--text-secondary)", backgroundColor: "color-mix(in srgb, var(--border) 10%, transparent)", width: "23%" }}>Progression</th>
-                      <th className="px-3 py-2 text-left border-b" style={{ borderColor: "var(--border)", color: "var(--text-secondary)", backgroundColor: "color-mix(in srgb, var(--border) 10%, transparent)" }}>Variants</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredExerciseVariantRows.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="px-3 py-6 text-center border-b" style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}>
-                          No exercises found.
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredExerciseVariantRows.map((row) => (
-                        <tr key={row.id}>
-                          <td className="px-2 py-2 align-top text-center border-b" style={{ borderColor: "var(--border)", color: "var(--text-secondary)" }}>
-                            <span
-                              className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] whitespace-nowrap"
-                              style={{
-                                borderRadius: "2px",
-                                backgroundColor: "color-mix(in srgb, var(--border) 10%, transparent)",
-                              }}
-                            >
-                              {row.category}
-                            </span>
-                          </td>
-                          <td className="px-2 py-2 align-top text-center border-b" style={{ borderColor: "var(--border)", color: "var(--text-secondary)" }}>
-                            <span
-                              className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] whitespace-nowrap"
-                              style={{
-                                borderRadius: "2px",
-                                backgroundColor: "color-mix(in srgb, var(--border) 10%, transparent)",
-                              }}
-                            >
-                              {row.exerciseType}
-                            </span>
-                          </td>
-                          <td className="px-3 py-2 align-top border-b" style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}>
-                            <div>{resolveRowDisplayName(row)}</div>
-                          </td>
-                          <td className="px-3 py-2 align-top border-b" style={{ borderColor: "var(--border)", color: "var(--text-secondary)" }}>
-                            <ExerciseRowLabelEditor
-                              row={row}
-                              values={row.progression}
-                              kind="progression"
-                              emptyLabel="No progression yet"
-                              addPlaceholder="Add progression"
-                              onSave={(exerciseId, exerciseName, previousValues, nextValues) => updateExerciseMetadata(
-                                exerciseId,
-                                exerciseName,
-                                previousValues,
-                                nextValues,
-                                row.variants,
-                                row.variants,
-                              )}
-                            />
-                          </td>
-                          <td className="px-3 py-2 border-b" style={{ borderColor: "var(--border)", color: "var(--text-secondary)" }}>
-                            <ExerciseRowLabelEditor
-                              row={row}
-                              values={row.variants}
-                              kind="variant"
-                              emptyLabel="No variants yet"
-                              addPlaceholder="Add variant"
-                              onSave={(exerciseId, exerciseName, previousValues, nextValues) => updateExerciseMetadata(
-                                exerciseId,
-                                exerciseName,
-                                row.progression,
-                                row.progression,
-                                previousValues,
-                                nextValues,
-                              )}
-                            />
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>{resolveRowDisplayName(row)}</p>
+
+                      <div className="rounded border p-2" style={{ borderColor: "var(--border)" }}>
+                        <p className="mb-1 text-[10px] font-semibold uppercase" style={{ color: "var(--text-secondary)" }}>Progression</p>
+                        <ExerciseRowLabelEditor
+                          row={row}
+                          values={row.progression}
+                          kind="progression"
+                          emptyLabel="No progression yet"
+                          addPlaceholder="Add progression"
+                          onSave={(exerciseId, exerciseName, previousValues, nextValues) => updateExerciseMetadata(
+                            exerciseId,
+                            exerciseName,
+                            previousValues,
+                            nextValues,
+                            row.variants,
+                            row.variants,
+                          )}
+                        />
+                      </div>
+
+                      <div className="rounded border p-2" style={{ borderColor: "var(--border)" }}>
+                        <p className="mb-1 text-[10px] font-semibold uppercase" style={{ color: "var(--text-secondary)" }}>Variants</p>
+                        <ExerciseRowLabelEditor
+                          row={row}
+                          values={row.variants}
+                          kind="variant"
+                          emptyLabel="No variants yet"
+                          addPlaceholder="Add variant"
+                          onSave={(exerciseId, exerciseName, previousValues, nextValues) => updateExerciseMetadata(
+                            exerciseId,
+                            exerciseName,
+                            row.progression,
+                            row.progression,
+                            previousValues,
+                            nextValues,
+                          )}
+                        />
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
-              )}
             </div>
 
             {message && (

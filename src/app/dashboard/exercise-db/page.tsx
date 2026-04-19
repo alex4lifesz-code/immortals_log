@@ -7,10 +7,12 @@ import { useRouter } from "next/navigation";
 import PageLayout from "@/components/layout/PageLayout";
 import GlowButton from "@/components/ui/GlowButton";
 import GlowCard, { GlowModal } from "@/components/ui/GlowCard";
+import SearchField from "@/components/ui/SearchField";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { api } from "@/lib/api-client";
 import { getExerciseDisplayName, matchesLooseSearchInFields } from "@/lib/exercise-name";
+import { rankExerciseSearchResults } from "@/lib/exercise-search";
 import { getDefaultExerciseDbOptions, type ExerciseDbOptions } from "@/lib/exercise-db-settings";
 import { PROGRESSION_EXERCISES_UPDATED_EVENT } from "@/lib/progression-events";
 import type {
@@ -36,7 +38,7 @@ interface ExerciseFormData {
 type CategoryFilter = "all" | string;
 type TypeFilter = "all" | string;
 type StatusFilter = "all" | "custom" | "pending" | "regular";
-type SortBy = "recent" | "name" | "created";
+type SortBy = "recent" | "name" | "created" | "relevant";
 
 function formatRelativeRecentDate(dateLike: string | null | undefined): string {
   if (!dateLike) return "Not updated";
@@ -373,6 +375,7 @@ export default function ExerciseDBPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [sortBy, setSortBy] = useState<SortBy>("recent");
   const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
+  const sortPreferenceRef = useRef<Exclude<SortBy, "relevant">>("recent");
   const [searchOpen, setSearchOpen] = useState(false);
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -441,6 +444,21 @@ export default function ExerciseDBPage() {
     };
   }, [loadExercises]);
 
+  useEffect(() => {
+    if (sortBy !== "relevant") {
+      sortPreferenceRef.current = sortBy;
+    }
+  }, [sortBy]);
+
+  useEffect(() => {
+    const hasQuery = search.trim().length > 0;
+    if (hasQuery) {
+      if (sortBy !== "relevant") setSortBy("relevant");
+    } else if (sortBy === "relevant") {
+      setSortBy(sortPreferenceRef.current);
+    }
+  }, [search, sortBy]);
+
   const categoryOptions = useMemo(() => {
     const values = Array.from(new Set(exercises.map((exercise) => exercise.category).filter(Boolean)));
     values.sort((a, b) => a.localeCompare(b));
@@ -476,6 +494,7 @@ export default function ExerciseDBPage() {
   }, [deletedExercises.length, rows]);
 
   const visibleRows = useMemo(() => {
+    const query = search.trim();
     const list = rows.filter((row) => {
       if (categoryFilter !== "all" && row.category !== categoryFilter) return false;
       if (typeFilter !== "all" && row.type !== typeFilter) return false;
@@ -483,9 +502,9 @@ export default function ExerciseDBPage() {
       if (statusFilter === "pending" && row.status !== "Pending") return false;
       if (statusFilter === "regular" && row.status !== "Core") return false;
 
-      if (!search.trim()) return true;
+      if (!query) return true;
 
-      return matchesLooseSearchInFields(search, [
+      return matchesLooseSearchInFields(query, [
         row.displayName,
         row.exercise.name,
         row.exercise.englishName,
@@ -497,6 +516,31 @@ export default function ExerciseDBPage() {
         ...row.variationValues,
       ]);
     });
+
+    if (sortBy === "relevant" && query) {
+      return rankExerciseSearchResults(
+        list.map((row) => ({
+          ...row,
+          displayLabel: row.displayName,
+          canonicalName: row.exercise.name || row.displayName,
+          searchLabel: [
+            row.displayName,
+            row.exercise.name,
+            row.exercise.englishName,
+            row.exercise.vietnameseName,
+            row.category,
+            row.type,
+            ...row.exercise.muscleGroups,
+            ...row.progressionValues,
+            ...row.variationValues,
+          ].filter(Boolean).join(" "),
+          hasHistory: row.status !== "Core" || Boolean(row.recentAt),
+          lastLoggedAt: row.recentAt,
+          matchSource: "name" as const,
+        })),
+        query,
+      );
+    }
 
     return [...list].sort((a, b) => {
       if (sortBy === "name") return a.displayName.localeCompare(b.displayName);
@@ -973,20 +1017,7 @@ export default function ExerciseDBPage() {
           </section>
         ) : null}
 
-        {!loading && !errorMessage && visibleRows.length === 0 ? (
-          <section
-            className="rounded-xl border px-4 py-8 text-center"
-            style={{
-              borderColor: "color-mix(in srgb, var(--ink-light) 50%, transparent)",
-              backgroundColor: "color-mix(in srgb, var(--ink-deep) 94%, var(--ink-mid))",
-            }}
-          >
-            <h2 className="text-lg font-semibold text-cloud-white">No exercises matched</h2>
-            <p className="mt-1 text-sm text-mist-light">Try loosening the search or switching filters.</p>
-          </section>
-        ) : null}
-
-        {!loading && !errorMessage && visibleRows.length > 0 ? (
+        {!loading && !errorMessage ? (
           <section
             className="overflow-hidden rounded-xl border"
             style={{
@@ -1045,11 +1076,12 @@ export default function ExerciseDBPage() {
 
             {searchOpen ? (
               <div className="border-b px-3 py-2.5 sm:px-4" style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 30%, transparent)" }}>
-                <input
+                <SearchField
                   value={search}
-                  onChange={(event) => setSearch(event.target.value)}
+                  onChange={setSearch}
                   placeholder="Search exercises"
-                  className="w-full rounded-lg border px-3 py-2 text-sm text-cloud-white outline-none"
+                  aria-label="Search exercises"
+                  className="rounded-lg py-2 text-sm text-cloud-white"
                   style={{
                     borderColor: "color-mix(in srgb, var(--ink-light) 45%, transparent)",
                     backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
@@ -1059,7 +1091,12 @@ export default function ExerciseDBPage() {
             ) : null}
 
             <div>
-              {visibleRows.map((row) => {
+              {visibleRows.length === 0 ? (
+                <div className="px-4 py-8 text-center">
+                  <h2 className="text-lg font-semibold text-cloud-white">No exercises matched</h2>
+                  <p className="mt-1 text-sm text-mist-light">Try loosening the search or switching filters.</p>
+                </div>
+              ) : visibleRows.map((row) => {
                 const isExpanded = Boolean(expandedIds[row.exercise.id]);
 
                 return (
@@ -1400,6 +1437,7 @@ export default function ExerciseDBPage() {
                         color: "var(--cloud-white)",
                       }}
                     >
+                      <option value="relevant">Relevant</option>
                       <option value="recent">Last updated</option>
                       <option value="name">Name A-Z</option>
                       <option value="created">Recently added</option>

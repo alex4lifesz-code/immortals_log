@@ -6,7 +6,6 @@ import { COOKIE_NAME } from "./cookieUtils";
 /** API routes that do NOT require authentication */
 const PUBLIC_API_ROUTES = new Set([
   "/api/auth/login",
-  "/api/auth/register",
   "/api/health",
 ]);
 

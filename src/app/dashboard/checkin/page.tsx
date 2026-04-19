@@ -7,7 +7,6 @@ import GlowButton from "@/components/ui/GlowButton";
 import PageSkeleton from "@/components/ui/PageSkeleton";
 import GlowCard, { GlowModal } from "@/components/ui/GlowCard";
 import { useAuth } from "@/context/AuthContext";
-import { useIsMobile } from "@/context/AppContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { useRouter } from "next/navigation";
 import { formatDateLocal as formatDateLocalForZone, formatDateWithPreference } from "@/lib/constants";
@@ -75,7 +74,6 @@ function getCompactUserLabel(name: string): string {
 
 export default function CheckInPage() {
   const { user } = useAuth();
-  const isMobile = useIsMobile();
   const { settings } = useDisplaySettings();
   const router = useRouter();
   const isAdmin = user?.role === "admin";
@@ -436,7 +434,7 @@ export default function CheckInPage() {
     [rows, users]
   );
 
-  const useMobileTableStyling = isMobile;
+  const useMobileTableStyling = true;
   const compactCheckinRegister = useMobileTableStyling && !isEditMode && !isAdmin;
 
   const getRowCommentSummary = useCallback(

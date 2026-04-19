@@ -22,7 +22,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   const searchParams = useSearchParams();
   const prefersReducedMotion = useReducedMotion();
   const { count: incomingFriendRequestCount } = useIncomingFriendRequestsCount(user?.id);
-  const { themeStyle } = useAppContext();
+  const { themeStyle, isMobile } = useAppContext();
   const [isTrainExerciseHistoryOpen, setIsTrainExerciseHistoryOpen] = useState(false);
   const disableMotion = themeStyle === "discord" || prefersReducedMotion;
   const isWorkoutInputFullscreen =
@@ -44,7 +44,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     || pathname === "/dashboard/mobile/profile"
     || pathname?.startsWith("/dashboard/mobile/profile/")
     || false;
-  const mobileRootScrollEnabled = !isFriendDrawerRoute;
+  const mobileRootScrollEnabled = !(isMobile && isFriendDrawerRoute);
   const showMobileNav = !isWorkoutInputFullscreen && !isTrainExerciseHistoryOpen;
 
   useEffect(() => {
@@ -79,8 +79,8 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
           <div className="flex-1 flex min-w-0 flex-col overflow-hidden nyaa-content-area">
             <SwipeNavigation>
               <div
-                data-mobile-scroll-container={mobileRootScrollEnabled ? "true" : undefined}
-                className={`h-full min-w-0 ${!mobileRootScrollEnabled ? "overflow-hidden" : "overflow-y-auto"}`}
+                data-mobile-scroll-container={isMobile && mobileRootScrollEnabled ? "true" : undefined}
+                className={`h-full min-w-0 ${isMobile && !mobileRootScrollEnabled ? "overflow-hidden" : "overflow-y-auto"}`}
               >
                 <AnimatePresence mode="wait" initial={false}>
                   <motion.div
@@ -94,7 +94,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                     {children}
                   </motion.div>
                 </AnimatePresence>
-                {showMobileNav && mobileRootScrollEnabled ? <div aria-hidden="true" className="h-[calc(env(safe-area-inset-bottom,0px)+4.25rem)]" /> : null}
+                {isMobile && showMobileNav && mobileRootScrollEnabled ? <div aria-hidden="true" className="h-[calc(env(safe-area-inset-bottom,0px)+4.25rem)]" /> : null}
               </div>
             </SwipeNavigation>
           </div>

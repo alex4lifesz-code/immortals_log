@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import PageLayout from "@/components/layout/PageLayout";
+import SearchField from "@/components/ui/SearchField";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { api } from "@/lib/api-client";
 import { getExerciseDisplayName, matchesLooseSearchInFields } from "@/lib/exercise-name";
+import { rankExerciseSearchResults } from "@/lib/exercise-search";
 import { DASHBOARD_ROUTES } from "@/lib/navigation";
 import { isDeletedExerciseDescription } from "@/lib/pending-exercises";
 import type { ProgressionExercise, ProgressionLog } from "../workout/types";
@@ -18,7 +20,7 @@ type ProgressionsResponse = {
 
 type CategoryFilter = "all" | string;
 type ActivityFilter = "all" | "logged" | "unlogged";
-type SortBy = "recent" | "name";
+type SortBy = "recent" | "name" | "relevant";
 
 function compareLogRecency(a: Pick<ProgressionLog, "id" | "createdAt">, b: Pick<ProgressionLog, "id" | "createdAt">): number {
   const timeDiff = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
@@ -109,6 +111,7 @@ export default function ExercisesCanvasPage() {
   const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
   const [searchOpen, setSearchOpen] = useState(false);
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+  const sortPreferenceRef = useRef<Exclude<SortBy, "relevant">>("recent");
 
   useEffect(() => {
     let cancelled = false;
@@ -144,6 +147,21 @@ export default function ExercisesCanvasPage() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (sortBy !== "relevant") {
+      sortPreferenceRef.current = sortBy;
+    }
+  }, [sortBy]);
+
+  useEffect(() => {
+    const hasQuery = search.trim().length > 0;
+    if (hasQuery) {
+      if (sortBy !== "relevant") setSortBy("relevant");
+    } else if (sortBy === "relevant") {
+      setSortBy(sortPreferenceRef.current);
+    }
+  }, [search, sortBy]);
 
   const categoryOptions = useMemo(() => {
     const values = Array.from(new Set(exercises.map((exercise) => getPrimaryCategory(exercise.category)).filter(Boolean)));
@@ -188,14 +206,15 @@ export default function ExercisesCanvasPage() {
   }, [exerciseRows]);
 
   const visibleRows = useMemo(() => {
+    const query = search.trim();
     const list = exerciseRows.filter((row) => {
       if (categoryFilter !== "all" && row.category !== categoryFilter) return false;
       if (activityFilter === "logged" && row.totalLogs === 0) return false;
       if (activityFilter === "unlogged" && row.totalLogs > 0) return false;
 
-      if (!search.trim()) return true;
+      if (!query) return true;
 
-      return matchesLooseSearchInFields(search, [
+      return matchesLooseSearchInFields(query, [
         row.displayName,
         row.exercise.name,
         row.exercise.englishName,
@@ -209,6 +228,33 @@ export default function ExercisesCanvasPage() {
         ...row.exercise.variations.map((variation) => variation.name),
       ]);
     });
+
+    if (sortBy === "relevant" && query) {
+      return rankExerciseSearchResults(
+        list.map((row) => ({
+          ...row,
+          displayLabel: row.displayName,
+          canonicalName: row.exercise.name || row.displayName,
+          searchLabel: [
+            row.displayName,
+            row.exercise.name,
+            row.exercise.englishName,
+            row.exercise.vietnameseName,
+            row.category,
+            row.formatLabel,
+            row.exercise.story,
+            row.exercise.primaryMuscles,
+            row.exercise.secondaryMuscles,
+            ...row.exercise.tiers.map((tier) => tier.name),
+            ...row.exercise.variations.map((variation) => variation.name),
+          ].filter(Boolean).join(" "),
+          hasHistory: row.totalLogs > 0,
+          lastLoggedAt: row.latestLogAt,
+          matchSource: "name" as const,
+        })),
+        query,
+      );
+    }
 
     return [...list].sort((a, b) => {
       if (sortBy === "name") return a.displayName.localeCompare(b.displayName);
@@ -305,20 +351,7 @@ export default function ExercisesCanvasPage() {
           </section>
         ) : null}
 
-        {!loading && !errorMessage && visibleRows.length === 0 ? (
-          <section
-            className="rounded-xl border px-4 py-8 text-center"
-            style={{
-              borderColor: "color-mix(in srgb, var(--ink-light) 50%, transparent)",
-              backgroundColor: "color-mix(in srgb, var(--ink-deep) 94%, var(--ink-mid))",
-            }}
-          >
-            <h2 className="text-lg font-semibold text-cloud-white">No exercises matched</h2>
-            <p className="mt-1 text-sm text-mist-light">Try loosening the search or switching filters.</p>
-          </section>
-        ) : null}
-
-        {!loading && !errorMessage && visibleRows.length > 0 ? (
+        {!loading && !errorMessage ? (
           <section
             className="overflow-hidden rounded-xl border"
             style={{
@@ -377,11 +410,12 @@ export default function ExercisesCanvasPage() {
 
             {searchOpen ? (
               <div className="border-b px-3 py-2.5 sm:px-4" style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 30%, transparent)" }}>
-                <input
+                <SearchField
                   value={search}
-                  onChange={(event) => setSearch(event.target.value)}
+                  onChange={setSearch}
                   placeholder="Search exercises"
-                  className="w-full rounded-lg border px-3 py-2 text-sm text-cloud-white outline-none"
+                  aria-label="Search exercises"
+                  className="rounded-lg py-2 text-sm text-cloud-white"
                   style={{
                     borderColor: "color-mix(in srgb, var(--ink-light) 45%, transparent)",
                     backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
@@ -391,7 +425,12 @@ export default function ExercisesCanvasPage() {
             ) : null}
 
             <div>
-              {visibleRows.map((row) => {
+              {visibleRows.length === 0 ? (
+                <div className="px-4 py-8 text-center">
+                  <h2 className="text-lg font-semibold text-cloud-white">No exercises matched</h2>
+                  <p className="mt-1 text-sm text-mist-light">Try loosening the search or switching filters.</p>
+                </div>
+              ) : visibleRows.map((row) => {
                 const detailHref = `/dashboard/train/${encodeURIComponent(row.exercise.id)}?from=exercises`;
                 const isExpanded = Boolean(expandedIds[row.exercise.id]);
 
@@ -587,6 +626,7 @@ export default function ExercisesCanvasPage() {
                         color: "var(--cloud-white)",
                       }}
                     >
+                      <option value="relevant">Relevant</option>
                       <option value="recent">Most recent</option>
                       <option value="name">Name A-Z</option>
                     </select>

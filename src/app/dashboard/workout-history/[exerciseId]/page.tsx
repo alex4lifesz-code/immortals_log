@@ -7,7 +7,6 @@ import PageLayout from "@/components/layout/PageLayout";
 import GlowCard from "@/components/ui/GlowCard";
 import { MemoTrainingLogTable } from "@/components/workout/TrainingLogTable";
 import { useAuth } from "@/context/AuthContext";
-import { useIsMobile } from "@/context/AppContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { api } from "@/lib/api-client";
 import { DASHBOARD_ROUTES } from "@/lib/navigation";
@@ -33,7 +32,6 @@ export default function WorkoutHistoryDetailPage() {
   const displayTerminologyMode = !settings.showExerciseForeignLanguage && settings.languageMode === "english"
     ? "normal"
     : settings.terminologyMode;
-  const isMobile = useIsMobile();
   const { user } = useAuth();
   const userId = user?.id ?? "";
 
@@ -341,7 +339,6 @@ export default function WorkoutHistoryDetailPage() {
                 trainingLogTitleOverride={`Training Log - ${displayName}`}
                 disableExerciseLinks
                 hideInputSection
-                forceDesktopTableOnMobile={isMobile}
               />
             </div>
             </GlowCard>

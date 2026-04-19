@@ -7,7 +7,6 @@ import PageLayout from "@/components/layout/PageLayout";
 import GlowCard from "@/components/ui/GlowCard";
 import GlowButton from "@/components/ui/GlowButton";
 import { MemoTrainingLogTable } from "@/components/workout/TrainingLogTable";
-import { useIsMobile } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { api } from "@/lib/api-client";
@@ -39,7 +38,6 @@ const DEFAULT_FILTERS: HistoryFilters = {
 
 export default function TrainingLogHistoryPage() {
   const { user } = useAuth();
-  const isMobile = useIsMobile();
   const { settings } = useDisplaySettings();
   const displayTerminologyMode = !settings.showExerciseForeignLanguage && settings.languageMode === "english"
     ? "normal"
@@ -323,51 +321,25 @@ export default function TrainingLogHistoryPage() {
                   className="rounded-lg border border-ink-light/30 bg-ink-dark px-2 py-1 text-xs text-cloud-white placeholder:text-mist-dark outline-none lg:col-span-2"
                 />
 
-                {isMobile ? (
-                  <button
-                    type="button"
-                    onClick={() => setMobileFilterPicker({ field: "category", title: "Category" })}
-                    className="flex items-center justify-between rounded-lg border border-ink-light/30 bg-ink-dark px-3 py-2 text-sm font-medium text-cloud-white"
-                    aria-label="Pick category"
-                  >
-                    <span className="truncate">{activeCategoryLabel}</span>
-                    <span className="ml-2 text-xs text-mist-dark">▾</span>
-                  </button>
-                ) : (
-                  <select
-                    value={filters.category}
-                    onChange={(event) => setFilters((prev) => ({ ...prev, category: event.target.value }))}
-                    className="rounded-lg border border-ink-light/30 bg-ink-dark px-2 py-1 text-xs text-cloud-white outline-none"
-                  >
-                    <option value="all">All categories</option>
-                    {categoryOptions.map((category) => (
-                      <option key={category} value={category}>{category}</option>
-                    ))}
-                  </select>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setMobileFilterPicker({ field: "category", title: "Category" })}
+                  className="flex items-center justify-between rounded-lg border border-ink-light/30 bg-ink-dark px-3 py-2 text-sm font-medium text-cloud-white"
+                  aria-label="Pick category"
+                >
+                  <span className="truncate">{activeCategoryLabel}</span>
+                  <span className="ml-2 text-xs text-mist-dark">▾</span>
+                </button>
 
-                {isMobile ? (
-                  <button
-                    type="button"
-                    onClick={() => setMobileFilterPicker({ field: "exercise", title: "Exercise" })}
-                    className="flex items-center justify-between rounded-lg border border-ink-light/30 bg-ink-dark px-3 py-2 text-sm font-medium text-cloud-white"
-                    aria-label="Pick exercise"
-                  >
-                    <span className="truncate">{activeExerciseLabel}</span>
-                    <span className="ml-2 text-xs text-mist-dark">▾</span>
-                  </button>
-                ) : (
-                  <select
-                    value={filters.exerciseId}
-                    onChange={(event) => setFilters((prev) => ({ ...prev, exerciseId: event.target.value }))}
-                    className="rounded-lg border border-ink-light/30 bg-ink-dark px-2 py-1 text-xs text-cloud-white outline-none"
-                  >
-                    <option value="all">All exercises</option>
-                    {exerciseOptions.map((exercise) => (
-                      <option key={exercise.id} value={exercise.id}>{exercise.label}</option>
-                    ))}
-                  </select>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setMobileFilterPicker({ field: "exercise", title: "Exercise" })}
+                  className="flex items-center justify-between rounded-lg border border-ink-light/30 bg-ink-dark px-3 py-2 text-sm font-medium text-cloud-white"
+                  aria-label="Pick exercise"
+                >
+                  <span className="truncate">{activeExerciseLabel}</span>
+                  <span className="ml-2 text-xs text-mist-dark">▾</span>
+                </button>
 
                 <div className="grid grid-cols-2 gap-2">
                   <div className="relative">
@@ -427,7 +399,6 @@ export default function TrainingLogHistoryPage() {
                 historyTargetUserName={targetUserDisplayName}
                 trainingLogTitleOverride="Training Log History"
                 hideInputSection
-                forceDesktopTableOnMobile={isMobile}
                 exerciseDetailSource="history"
               />
             </div>
@@ -435,7 +406,7 @@ export default function TrainingLogHistoryPage() {
           </>
         )}
       </div>
-      {isMobile && mobileFilterPicker && typeof document !== "undefined" && createPortal(
+      {mobileFilterPicker && typeof document !== "undefined" && createPortal(
         <>
           <div
             className="fixed inset-0 z-[95] bg-black/65"

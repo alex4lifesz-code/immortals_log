@@ -2,22 +2,14 @@
 
 import { motion } from "framer-motion";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import GlowButton from "@/components/ui/GlowButton";
 import PageSkeleton from "@/components/ui/PageSkeleton";
 import GlowCard, { GlowModal } from "@/components/ui/GlowCard";
-import dynamic from "next/dynamic";
-
-const MonthlyComparisonChart = dynamic(() => import("@/components/dashboard/MonthlyComparisonChart"), { ssr: false });
-const WeightTrendChart = dynamic(() => import("@/components/dashboard/WeightTrendChart"), { ssr: false });
-const CheckInStatsPanel = dynamic(() => import("@/components/dashboard/CheckInStatsPanel"), { ssr: false });
-import ChartUserFilter from "@/components/dashboard/ChartUserFilter";
 import PageLayout from "@/components/layout/PageLayout";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
-import { useIsMobile } from "@/context/AppContext";
 import { createCalendarMonthAnchor, formatDateWithPreference } from "@/lib/constants";
 import { t } from "@/lib/terminology";
 import {
@@ -27,9 +19,7 @@ import {
 } from "@/lib/checkin-history-view";
 import { syncWeightFromLatestCheckin } from "@/lib/user-physique";
 import { api } from "@/lib/api-client";
-import GettingStartedCard from "@/components/getting-started/GettingStartedCard";
 import {
-  DashboardSidebar,
   Calendar,
   getDeterministicCultivatorColor,
   getUserCultivatorColor,
@@ -93,7 +83,6 @@ export default function DaoHallPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { settings } = useDisplaySettings();
-  const isMobile = useIsMobile();
   const isAdmin = user?.role === "admin";
   const dateFormat = settings.dateFormat || "dd-mmm-yyyy";
   const router = useRouter();
@@ -106,52 +95,8 @@ export default function DaoHallPage() {
   const [futureNotes, setFutureNotes] = useState<CommunityNote[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [checkInRows, setCheckInRows] = useState<CheckInRow[]>([]);
-  const [chartUserIds, setChartUserIds] = useState<string[]>(() => {
-    if (typeof window === "undefined") return [];
-    try { const v = localStorage.getItem("dao-chart-users"); return v ? JSON.parse(v) : []; } catch { return []; }
-  });
   const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE);
   const [isLoadingMoreRows, setIsLoadingMoreRows] = useState(false);
-  // Initialise chart user filter to current user (fallback if nothing saved)
-  useEffect(() => {
-    if (user && chartUserIds.length === 0) setChartUserIds([user.id]);
-  }, [user, chartUserIds.length]);
-
-  // Persist chart user selection
-  useEffect(() => {
-    if (chartUserIds.length > 0) {
-      try { localStorage.setItem("dao-chart-users", JSON.stringify(chartUserIds)); } catch {}
-    }
-  }, [chartUserIds]);
-
-  const chartUserNames = useMemo(() => {
-    const m: Record<string, string> = {};
-    for (const u of allUsers) m[u.id] = u.name;
-    return m;
-  }, [allUsers]);
-
-  const effectiveChartUserIds = useMemo(() => {
-    const validUserIds = new Set(allUsers.map((u) => u.id));
-    const filtered = chartUserIds.filter((id) => validUserIds.has(id));
-    if (filtered.length > 0) return filtered;
-    if (user?.id && validUserIds.has(user.id)) return [user.id];
-    return [];
-  }, [allUsers, chartUserIds, user?.id]);
-
-  useEffect(() => {
-    if (!user) return;
-    const validUserIds = new Set(allUsers.map((u) => u.id));
-
-    setChartUserIds((prev) => {
-      const filtered = prev.filter((id) => validUserIds.has(id));
-      const fallback = validUserIds.has(user.id) ? [user.id] : [];
-      const next = filtered.length > 0 ? filtered : fallback;
-      if (next.length === prev.length && next.every((id, index) => id === prev[index])) {
-        return prev;
-      }
-      return next;
-    });
-  }, [allUsers, user]);
 
   const sectRegisterRef = useRef<HTMLDivElement>(null);
   const rowsObserverTargetRef = useRef<HTMLDivElement | null>(null);
@@ -164,16 +109,6 @@ export default function DaoHallPage() {
   // Weight prompt modal state
   const [showWeightPrompt, setShowWeightPrompt] = useState(false);
   const [weightPromptValue, setWeightPromptValue] = useState("");
-  const [statsTabOpen, setStatsTabOpen] = useState(false);
-  const [chartsOpen, setChartsOpen] = useState(() => {
-    if (typeof window === "undefined") return true;
-    try { return localStorage.getItem("dao-charts-open") !== "false"; } catch { return true; }
-  });
-
-  // Persist charts toggle
-  useEffect(() => {
-    try { localStorage.setItem("dao-charts-open", String(chartsOpen)); } catch {}
-  }, [chartsOpen]);
 
   const dayNotesStorageKey = useMemo(
     () => (user?.id ? `cultivation-day-notes:${user.id}` : "cultivation-day-notes"),
@@ -706,7 +641,7 @@ export default function DaoHallPage() {
     [displayCount, renderedCheckInRows],
   );
 
-  const historyPreviewLimit = getCheckInHistoryPreviewLimit(isMobile, historyViewMode);
+  const historyPreviewLimit = getCheckInHistoryPreviewLimit(true, historyViewMode);
   const hasMoreRows = displayCount < renderedCheckInRows.length;
 
   useEffect(() => {
@@ -789,7 +724,7 @@ export default function DaoHallPage() {
     return allCommentNotes.sort((a, b) => a.date.localeCompare(b.date));
   }, [allUsers, calendarScope, checkInRows, futureNotes, settings.timeZone, user?.id]);
 
-  const useMobileTableStyling = isMobile;
+  const useMobileTableStyling = true;
   const compactSectRegister = useMobileTableStyling && !isSectEditMode && !isAdmin;
 
   const getRowCommentSummary = useCallback(
@@ -960,9 +895,6 @@ export default function DaoHallPage() {
         <PageSkeleton statCards={4} wideBlock rows={3} />
       ) : (
         <div className="dao-modern-page space-y-4 px-0 py-2 sm:py-3">
-          {/* Getting Started checklist for new users */}
-          <GettingStartedCard />
-
           {/* Upcoming Notes */}
           {scopedFutureNotes.length > 0 && (
             <GlowCard glow="none" hoverable={false} className="rounded-xl border border-[#3b3f48] bg-[#2b2d31] shadow-[0_10px_20px_rgba(0,0,0,0.22)]">
@@ -1005,7 +937,7 @@ export default function DaoHallPage() {
           )}
 
           {/* Calendar — always visible */}
-          <div className={`grid ${isMobile ? "grid-cols-1" : "grid-cols-2"} gap-4 dao-modern-grid`}> 
+          <div className="grid grid-cols-1 gap-4 dao-modern-grid"> 
             <div className="min-w-0 dao-modern-calendar-wrap">
               <Calendar
                 checkInUsersByDate={scopedCheckInUsersByDate}
@@ -1021,79 +953,11 @@ export default function DaoHallPage() {
                 timeZone={settings.timeZone}
                 calendarWeekStart={settings.calendarWeekStart}
                 onManageNotes={undefined}
-                forceCompact={isMobile}
+                forceCompact
               />
             </div>
 
-            {/* Stats panel — always visible beside calendar on desktop */}
-            {!isMobile && (
-              <GlowCard glow="none" hoverable={false} className="dao-modern-monthly-stats flex min-h-[260px] flex-col rounded-xl border border-[#3b3f48] bg-[#2b2d31] shadow-[0_10px_20px_rgba(0,0,0,0.22)]">
-                {user && effectiveChartUserIds.length > 0 && (
-                  <CheckInStatsPanel
-                    checkInRows={checkInRows}
-                    currentMonth={currentMonth}
-                    selectedUserIds={effectiveChartUserIds}
-                    userNames={chartUserNames}
-                    userColors={userColors}
-                    currentUserId={user.id}
-                  />
-                )}
-              </GlowCard>
-            )}
           </div>
-
-          {/* Charts + cultivation stats are desktop-only */}
-          {!isMobile && (
-            <GlowCard glow="none" hoverable={false} className="dao-modern-chart-toolbar flex flex-wrap items-center gap-3 rounded-xl border border-[#3b3f48] bg-[#2b2d31] shadow-[0_10px_20px_rgba(0,0,0,0.22)]">
-              <button
-                type="button"
-                aria-pressed={chartsOpen}
-                onClick={() => setChartsOpen((prev) => !prev)}
-                className={chartsOpen ? activeControlButton : inactiveControlButton}
-              >
-                {chartsOpen ? t("Hide Charts", "normal") : t("Show Charts", "normal")}
-              </button>
-
-              {user && allUsers.length > 0 && (
-                <ChartUserFilter
-                  currentUserId={user.id}
-                  allUsers={allUsers}
-                  selectedUserIds={effectiveChartUserIds}
-                  onSelectionChange={setChartUserIds}
-                  userColors={userColors}
-                />
-              )}
-            </GlowCard>
-          )}
-
-          {!isMobile && chartsOpen && (
-            <div className={`grid ${isMobile ? "grid-cols-1" : "grid-cols-2"} gap-4`}>
-              {/* Monthly Comparison (last 6 months) */}
-              <GlowCard glow="jade" hoverable={false} className="dao-modern-monthly-chart flex flex-col min-h-[220px]">
-                {user && effectiveChartUserIds.length > 0 && (
-                  <MonthlyComparisonChart
-                    checkInRows={checkInRows}
-                    currentMonth={currentMonth}
-                    selectedUserIds={effectiveChartUserIds}
-                    userNames={chartUserNames}
-                    userColors={userColors}
-                  />
-                )}
-              </GlowCard>
-
-              {/* Weight Trend (all-time) */}
-              <GlowCard glow="jade" hoverable={false} className="dao-modern-weight-trend flex flex-col min-h-[220px]">
-                {user && effectiveChartUserIds.length > 0 && (
-                  <WeightTrendChart
-                    checkInRows={checkInRows}
-                    selectedUserIds={effectiveChartUserIds}
-                    userNames={chartUserNames}
-                    userColors={userColors}
-                  />
-                )}
-              </GlowCard>
-            </div>
-          )}
 
           {/* Check-In Feed — clean scrolling timeline */}
           <GlowCard glow="none" hoverable={false} className="dao-modern-cultivation-view rounded-xl border border-[#3b3f48] bg-[#2b2d31] shadow-[0_10px_20px_rgba(0,0,0,0.22)]">
@@ -1737,57 +1601,6 @@ export default function DaoHallPage() {
         </div>
       </GlowModal>
 
-      {!isMobile && typeof document !== "undefined" && createPortal(
-        <div className="fixed bottom-0 right-3 z-50">
-          {statsTabOpen ? (
-            <div
-              className="w-[min(320px,calc(100vw-0.75rem))] overflow-hidden rounded-t-xl border border-[#3b3f48] bg-[#2b2d31] shadow-2xl"
-            >
-              <div
-                className="flex items-center justify-between border-b border-[#3b3f48] px-3 py-2"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm uppercase tracking-wider text-[#f2f3f5]">
-                    Cultivation Stats
-                  </p>
-                  <p className="truncate text-[11px] text-[#949ba4]">
-                    Overview sidebar
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  aria-label="Close cultivation stats"
-                  title="Close"
-                  onClick={() => setStatsTabOpen(false)}
-                  className="inline-flex h-6 w-6 items-center justify-center rounded border border-[#3b3f48] text-xs font-bold text-[#949ba4] transition-colors hover:bg-[#313338] hover:text-[#f2f3f5]"
-                >
-                  x
-                </button>
-              </div>
-
-              <div className="max-h-[70vh] overflow-y-auto sidebar-scroll p-2">
-                <DashboardSidebar
-                  stats={stats}
-                  allUsers={allUsers}
-                  userColors={userColors}
-                  onColorChange={handleColorChange}
-                  currentUserId={user.id}
-                  isAdmin={isAdmin}
-                />
-              </div>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setStatsTabOpen(true)}
-              className="w-[min(220px,calc(100vw-0.75rem))] rounded-t-xl border border-[#3b3f48] border-b-0 bg-[#232428] px-4 py-2 text-xs font-semibold uppercase tracking-wider text-[#f2f3f5] shadow-lg transition-colors duration-200 hover:bg-[#313338]"
-            >
-              Cultivation Stats
-            </button>
-          )}
-        </div>,
-        document.body,
-      )}
     </PageLayout>
   );
 }
