@@ -32,6 +32,7 @@ interface ExerciseLog {
   reps1?: number;
   reps2?: number;
   reps3?: number;
+  modifier?: string | null;
   notes?: string;
   createdAt: string;
   completed: boolean;
@@ -137,6 +138,7 @@ export default function CommunityFeedClient() {
                 reps2?: number;
                 reps3?: number;
                 level: number;
+                modifier?: string | null;
                 notes?: string;
                 completed?: boolean;
               }>;
@@ -170,6 +172,7 @@ export default function CommunityFeedClient() {
                   reps1: log.reps1,
                   reps2: log.reps2,
                   reps3: log.reps3,
+                  modifier: log.modifier,
                   notes: log.notes,
                   createdAt: log.createdAt,
                   completed: log.completed || false,
@@ -490,6 +493,12 @@ export default function CommunityFeedClient() {
                                                   <span className="text-[#949ba4]">Notes:</span>{" "}
                                                   <span className="text-[#dbdee1]">{log.notes?.trim() || "-"}</span>
                                                 </div>
+                                                <div className="min-w-0 truncate">
+                                                  <span className="text-[#949ba4]">Mod:</span>{" "}
+                                                  <span className="text-[#fee75c]">{log.modifier?.trim() || "None"}</span>
+                                                </div>
+                                              </div>
+                                              <div className="grid grid-cols-2 gap-x-3">
                                                 <div className="min-w-0 truncate">
                                                   <span className="text-[#949ba4]">Status:</span>{" "}
                                                   <span className={log.completed ? "text-[#57f287]" : "text-[#b5bac1]"}>

@@ -110,7 +110,7 @@ export default function ExerciseHistoryModal({ exerciseId, exerciseName, isOpen,
                             ? { backgroundColor: 'var(--col-reps-bg)' }
                             : undefined
                       }
-                    >{v != null ? v : "—"}</td>
+                    >{v != null ? v : ""}</td>
                   ))}
                   <td className="py-1.5 px-1 text-center text-mountain-blue-glow">{entry.holdTime != null ? `${entry.holdTime}s` : "—"}</td>
                   <td className="py-1.5 px-1.5 text-mist-dark truncate max-w-[100px]" title={entry.notes || ""}>{entry.notes || "—"}</td>

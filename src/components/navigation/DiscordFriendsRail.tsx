@@ -1354,12 +1354,20 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                                           )}
                                         </div>
                                         <div className="min-w-0 grid grid-cols-2 gap-x-3">
-                                          <span className="truncate" style={{ color: "var(--mountain-blue-glow)" }}>
-                                            <span style={{ color: "var(--text-muted)" }}>Weight:</span> {metric.weight}
-                                          </span>
-                                          <span className="truncate" style={{ color: "var(--forest)" }}>
-                                            <span style={{ color: "var(--text-muted)" }}>Reps:</span> {metric.reps}
-                                          </span>
+                                          {metric.weight !== "-" ? (
+                                            <span className="truncate" style={{ color: "var(--mountain-blue-glow)" }}>
+                                              <span style={{ color: "var(--text-muted)" }}>Weight:</span> {metric.weight}
+                                            </span>
+                                          ) : (
+                                            <span aria-hidden="true" />
+                                          )}
+                                          {metric.reps !== "-" ? (
+                                            <span className="truncate" style={{ color: "var(--forest)" }}>
+                                              <span style={{ color: "var(--text-muted)" }}>Reps:</span> {metric.reps}
+                                            </span>
+                                          ) : (
+                                            <span aria-hidden="true" />
+                                          )}
                                         </div>
                                       </div>
                                     );

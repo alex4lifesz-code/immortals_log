@@ -2386,11 +2386,11 @@ function TrainingLogTable({
   const renderCellValue = (entry: UnifiedFlatLogEntry, colType: "value" | "reps", fieldIndex: number): string => {
     if (colType === "reps") {
       const val = fieldIndex === 0 ? entry.reps1 : fieldIndex === 1 ? entry.reps2 : entry.reps3;
-      return formatSetReps(val, entry.exerciseType);
+      return val == null ? "" : formatSetReps(val, entry.exerciseType);
     }
     // Value column
     const val = fieldIndex === 0 ? entry.val1 : fieldIndex === 1 ? entry.val2 : entry.val3;
-    return formatSetValue(val, entry.exerciseType, weightUnit);
+    return val == null ? "" : formatSetValue(val, entry.exerciseType, weightUnit);
   };
 
   /** Map visible column back to edit data field */
@@ -5011,10 +5011,22 @@ function TrainingLogTable({
                                 return (initials || progressionText.slice(0, 2).toUpperCase()).slice(0, 2);
                               })();
                           const progressionDisplayText = historyDockExpanded ? progressionText : compactProgressionText;
-                          const weightBreakdown = `W1:${entry.weight1 ?? "-"} W2:${entry.weight2 ?? "-"} W3:${entry.weight3 ?? "-"}`;
-                          const repsBreakdown = `R1:${entry.reps1 ?? "-"} R2:${entry.reps2 ?? "-"} R3:${entry.reps3 ?? "-"}`;
-                          const avgWeightTitle = `${weightBreakdown} | Mod: ${modifierText}`;
-                          const avgRepsTitle = `${repsBreakdown} | Mod: ${modifierText}`;
+                          const weightBreakdown = [
+                            entry.weight1 != null ? `W1:${entry.weight1}` : null,
+                            entry.weight2 != null ? `W2:${entry.weight2}` : null,
+                            entry.weight3 != null ? `W3:${entry.weight3}` : null,
+                          ].filter(Boolean).join(" ");
+                          const repsBreakdown = [
+                            entry.reps1 != null ? `R1:${entry.reps1}` : null,
+                            entry.reps2 != null ? `R2:${entry.reps2}` : null,
+                            entry.reps3 != null ? `R3:${entry.reps3}` : null,
+                          ].filter(Boolean).join(" ");
+                          const avgWeightTitle = [weightBreakdown || "No weight recorded", modifierText !== "-" ? `Mod: ${modifierText}` : null]
+                            .filter(Boolean)
+                            .join(" | ");
+                          const avgRepsTitle = [repsBreakdown || "No reps recorded", modifierText !== "-" ? `Mod: ${modifierText}` : null]
+                            .filter(Boolean)
+                            .join(" | ");
 
                           return (
                             <tr key={entry.id} className="border-b" style={{ borderColor: "color-mix(in srgb, var(--border) 55%, transparent)" }}>

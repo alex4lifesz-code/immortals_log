@@ -113,6 +113,7 @@ export default function DaoHallPage() {
   // Weight prompt modal state
   const [showWeightPrompt, setShowWeightPrompt] = useState(false);
   const [weightPromptValue, setWeightPromptValue] = useState("");
+  const [checkInTogglePulse, setCheckInTogglePulse] = useState(false);
 
   const dayNotesStorageKey = useMemo(
     () => (user?.id ? `cultivation-day-notes:${user.id}` : "cultivation-day-notes"),
@@ -157,6 +158,12 @@ export default function DaoHallPage() {
     if (typeof window === "undefined") return;
     localStorage.setItem("dao-hall-history-view", historyViewMode);
   }, [historyViewMode]);
+
+  useEffect(() => {
+    if (!checkInTogglePulse) return;
+    const timeout = window.setTimeout(() => setCheckInTogglePulse(false), 420);
+    return () => window.clearTimeout(timeout);
+  }, [checkInTogglePulse]);
 
   useEffect(() => {
     if (!isHistoryViewMenuOpen) return;
@@ -1248,7 +1255,7 @@ export default function DaoHallPage() {
 
           return (
             <div
-              className="overflow-hidden rounded-xl border"
+              className="flex min-h-0 max-h-[min(88vh,85dvh)] flex-col overflow-hidden rounded-xl border"
               style={{
                 borderColor: "color-mix(in srgb, var(--ink-light) 56%, transparent)",
                 backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))",
@@ -1304,7 +1311,7 @@ export default function DaoHallPage() {
               </div>
 
               <div
-                className="max-h-[calc(88vh-4.25rem)] overflow-y-auto px-3.5 py-3 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] scrollbar-hide"
+                className="min-h-0 flex-1 overflow-y-auto px-3.5 py-3 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] scrollbar-hide"
                 style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain", touchAction: "pan-y" }}
               >
                 <div className="space-y-3">
@@ -1319,103 +1326,7 @@ export default function DaoHallPage() {
                     >
                       Future days only support a personal note. Full check-in is available on the day itself.
                     </div>
-                  ) : (
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="rounded-md border px-2.5 py-2" style={{ borderColor: "color-mix(in srgb, var(--ink-light) 50%, transparent)", backgroundColor: "color-mix(in srgb, var(--ink-mid) 62%, var(--ink-deep))" }}>
-                        <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Status</p>
-                        <p className="mt-1 text-[12px] font-semibold text-[color:var(--text-primary)]">{currentUserEntry.present ? "In" : "Open"}</p>
-                      </div>
-                      <div className="rounded-md border px-2.5 py-2" style={{ borderColor: "color-mix(in srgb, var(--ink-light) 50%, transparent)", backgroundColor: "color-mix(in srgb, var(--ink-mid) 62%, var(--ink-deep))" }}>
-                        <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Weight</p>
-                        <p className="mt-1 text-[12px] font-semibold text-[color:var(--text-primary)]">{currentUserEntry.weight || "--"}</p>
-                      </div>
-                      <div className="rounded-md border px-2.5 py-2" style={{ borderColor: "color-mix(in srgb, var(--ink-light) 50%, transparent)", backgroundColor: "color-mix(in srgb, var(--ink-mid) 62%, var(--ink-deep))" }}>
-                        <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Present</p>
-                        <p className="mt-1 text-[12px] font-semibold text-[color:var(--text-primary)]">{checkedInUsers.length}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {!isFarFuture && user?.id ? (
-                    <section
-                      className="rounded-xl border p-3"
-                      style={{
-                        borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)",
-                        backgroundColor: "color-mix(in srgb, var(--ink-deep) 90%, var(--ink-mid))",
-                      }}
-                    >
-                      <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Today’s check-in</p>
-                      <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">Logging training for the day will also count toward attendance.</p>
-                      <button
-                        type="button"
-                        onClick={() => updateCheckInModalEntry(user.id, "present", !currentUserEntry.present)}
-                        className="mt-3 w-full rounded-lg border px-3 py-2.5 text-[12px] font-semibold transition-colors"
-                        style={{
-                          borderColor: currentUserEntry.present
-                            ? "color-mix(in srgb, var(--forest) 52%, transparent)"
-                            : "color-mix(in srgb, var(--accent) 52%, transparent)",
-                          backgroundColor: currentUserEntry.present
-                            ? "color-mix(in srgb, var(--forest) 12%, transparent)"
-                            : "color-mix(in srgb, var(--accent) 14%, transparent)",
-                          color: currentUserEntry.present ? "var(--cloud-white)" : "var(--text-primary)",
-                        }}
-                      >
-                        {currentUserEntry.present ? "✓ Checked In" : "Mark Check-In"}
-                      </button>
-                    </section>
                   ) : null}
-
-                  {!isFarFuture && user?.id ? (
-                    <section
-                      className="rounded-xl border p-3"
-                      style={{
-                        borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)",
-                        backgroundColor: "color-mix(in srgb, var(--ink-deep) 90%, var(--ink-mid))",
-                      }}
-                    >
-                      <label className="block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Body weight</label>
-                      <input
-                        type="number"
-                        placeholder="Weight in kg"
-                        value={currentUserEntry.weight}
-                        onChange={(e) => updateCheckInModalEntry(user.id, "weight", e.target.value)}
-                        className="mt-2 w-full rounded-md border px-3 py-2 text-[12px] text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)]"
-                        style={{
-                          borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)",
-                          backgroundColor: "color-mix(in srgb, var(--ink-mid) 58%, var(--ink-deep))",
-                        }}
-                        min="0"
-                        max="500"
-                        step="0.1"
-                      />
-                    </section>
-                  ) : null}
-
-                  <section
-                    className="rounded-xl border p-3"
-                    style={{
-                      borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)",
-                      backgroundColor: "color-mix(in srgb, var(--ink-deep) 90%, var(--ink-mid))",
-                    }}
-                  >
-                    <label className="block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Personal note</label>
-                    <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">Keep it short and relevant to the day.</p>
-                    <textarea
-                      placeholder="Add a short note for this day"
-                      value={user?.id ? checkInModal.entries[user.id]?.comment || "" : ""}
-                      onChange={(e) => {
-                        if (user?.id) {
-                          updateCheckInModalEntry(user.id, "comment", e.target.value);
-                        }
-                      }}
-                      rows={4}
-                      className="mt-2 w-full resize-none rounded-md border px-3 py-2 text-[12px] text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)]"
-                      style={{
-                        borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)",
-                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 58%, var(--ink-deep))",
-                      }}
-                    />
-                  </section>
 
                   {!isFarFuture && checkedInUsers.length > 0 ? (
                     <section
@@ -1446,11 +1357,129 @@ export default function DaoHallPage() {
                       </div>
                     </section>
                   ) : null}
+
+                  {!isFarFuture && user?.id ? (
+                    <section
+                      className="rounded-xl border p-3"
+                      style={{
+                        borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)",
+                        backgroundColor: "color-mix(in srgb, var(--ink-deep) 90%, var(--ink-mid))",
+                      }}
+                    >
+                      <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Today’s check-in</p>
+                      <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">Mark your check-in here to record your presence for the day.</p>
+                      <label className="mt-3 block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Body weight</label>
+                      <input
+                        type="number"
+                        placeholder="Weight in kg"
+                        value={currentUserEntry.weight}
+                        onChange={(e) => updateCheckInModalEntry(user.id, "weight", e.target.value)}
+                        className="mt-2 w-full rounded-md border px-3 py-2 text-[12px] text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)]"
+                        style={{
+                          borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)",
+                          backgroundColor: "color-mix(in srgb, var(--ink-mid) 58%, var(--ink-deep))",
+                        }}
+                        min="0"
+                        max="500"
+                        step="0.1"
+                      />
+                      <div className="mt-3 flex items-center gap-2">
+                        <motion.span
+                          initial={false}
+                          animate={{
+                            scale: checkInTogglePulse ? [1, 1.18, 1] : 1,
+                            rotate: currentUserEntry.present ? [0, -8, 0] : 0,
+                          }}
+                          transition={{ duration: 0.28, ease: "easeOut" }}
+                          className="flex h-5 w-5 shrink-0 items-center justify-center rounded border"
+                          style={{
+                            borderColor: currentUserEntry.present
+                              ? "color-mix(in srgb, var(--forest) 62%, transparent)"
+                              : "color-mix(in srgb, var(--text-muted) 55%, transparent)",
+                            backgroundColor: currentUserEntry.present
+                              ? "color-mix(in srgb, var(--forest) 18%, transparent)"
+                              : "transparent",
+                            color: currentUserEntry.present ? "var(--forest)" : "var(--text-muted)",
+                          }}
+                        >
+                          <motion.svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none">
+                            <motion.path
+                              d="M3.5 8.5l2.5 2.5 6-6"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              initial={false}
+                              animate={{
+                                pathLength: currentUserEntry.present ? 1 : 0,
+                                opacity: currentUserEntry.present ? 1 : 0,
+                              }}
+                              transition={{ duration: 0.24, ease: "easeOut" }}
+                            />
+                          </motion.svg>
+                        </motion.span>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCheckInTogglePulse(true);
+                            updateCheckInModalEntry(user.id, "present", !currentUserEntry.present);
+                          }}
+                          className="flex-1 rounded-lg border px-3 py-2.5 text-[12px] font-semibold transition-colors"
+                          style={{
+                            borderColor: currentUserEntry.present
+                              ? "color-mix(in srgb, var(--forest) 52%, transparent)"
+                              : "color-mix(in srgb, var(--accent) 52%, transparent)",
+                            backgroundColor: currentUserEntry.present
+                              ? "color-mix(in srgb, var(--forest) 12%, transparent)"
+                              : "color-mix(in srgb, var(--accent) 14%, transparent)",
+                            color: currentUserEntry.present ? "var(--cloud-white)" : "var(--text-primary)",
+                          }}
+                        >
+                          <motion.span
+                            initial={false}
+                            animate={{ scale: checkInTogglePulse ? [1, 1.03, 1] : 1 }}
+                            transition={{ duration: 0.26, ease: "easeOut" }}
+                            className="block"
+                          >
+                            {currentUserEntry.present ? "Checked In" : "Mark Check-In"}
+                          </motion.span>
+                        </button>
+                      </div>
+                    </section>
+                  ) : null}
+
+                  <section
+                    className="rounded-xl border p-3"
+                    style={{
+                      borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)",
+                      backgroundColor: "color-mix(in srgb, var(--ink-deep) 90%, var(--ink-mid))",
+                    }}
+                  >
+                    <label className="block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Personal note</label>
+                    <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">Keep it short and relevant to the day.</p>
+                    <textarea
+                      placeholder="Add a short note for this day"
+                      value={user?.id ? checkInModal.entries[user.id]?.comment || "" : ""}
+                      onChange={(e) => {
+                        if (user?.id) {
+                          updateCheckInModalEntry(user.id, "comment", e.target.value);
+                        }
+                      }}
+                      rows={4}
+                      className="mt-2 w-full resize-none rounded-md border px-3 py-2 text-[12px] text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)]"
+                      style={{
+                        borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)",
+                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 58%, var(--ink-deep))",
+                      }}
+                    />
+                  </section>
+
                 </div>
               </div>
 
               <div
-                className="border-t px-3.5 pt-2.5 pb-[calc(env(safe-area-inset-bottom,0px)+0.85rem)]"
+                className="shrink-0 border-t px-3.5 pt-2.5 pb-[calc(env(safe-area-inset-bottom,0px)+0.85rem)]"
                 style={{
                   borderTopColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)",
                   backgroundColor: "color-mix(in srgb, var(--ink-deep) 94%, var(--ink-mid))",
@@ -1544,7 +1573,7 @@ export default function DaoHallPage() {
                         boxShadow: "0 8px 18px color-mix(in srgb, var(--accent) 24%, transparent)",
                       }}
                     >
-                      Save Check-In
+                      Submit
                     </button>
                   </div>
                 )}

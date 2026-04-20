@@ -1544,39 +1544,47 @@ export default function HistoryPage() {
                                     )}
                                   </div>
                                   <div className="min-w-0 grid grid-cols-2 gap-x-3">
-                                    {targetUserId ? (
-                                      <span className="truncate" style={{ color: "var(--mountain-blue-glow)" }}>
-                                        <span style={{ color: "var(--text-muted)" }}>Weight:</span> {metric.weight}
-                                      </span>
+                                    {metric.weight !== "-" ? (
+                                      targetUserId ? (
+                                        <span className="truncate" style={{ color: "var(--mountain-blue-glow)" }}>
+                                          <span style={{ color: "var(--text-muted)" }}>Weight:</span> {metric.weight}
+                                        </span>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={(event) => {
+                                            event.stopPropagation();
+                                            openEditorField("session", `set-${Math.min(index + 1, 3)}`);
+                                          }}
+                                          className="cursor-pointer truncate text-left hover:opacity-90"
+                                          style={{ color: "var(--mountain-blue-glow)" }}
+                                        >
+                                          <span style={{ color: "var(--text-muted)" }}>Weight:</span> {metric.weight}
+                                        </button>
+                                      )
                                     ) : (
-                                      <button
-                                        type="button"
-                                        onClick={(event) => {
-                                          event.stopPropagation();
-                                          openEditorField("session", `set-${Math.min(index + 1, 3)}`);
-                                        }}
-                                        className="cursor-pointer truncate text-left hover:opacity-90"
-                                        style={{ color: "var(--mountain-blue-glow)" }}
-                                      >
-                                        <span style={{ color: "var(--text-muted)" }}>Weight:</span> {metric.weight}
-                                      </button>
+                                      <span aria-hidden="true" />
                                     )}
-                                    {targetUserId ? (
-                                      <span className="truncate" style={{ color: "var(--forest)" }}>
-                                        <span style={{ color: "var(--text-muted)" }}>Reps:</span> {metric.reps}
-                                      </span>
+                                    {metric.reps !== "-" ? (
+                                      targetUserId ? (
+                                        <span className="truncate" style={{ color: "var(--forest)" }}>
+                                          <span style={{ color: "var(--text-muted)" }}>Reps:</span> {metric.reps}
+                                        </span>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={(event) => {
+                                            event.stopPropagation();
+                                            openEditorField("session", `set-${Math.min(index + 1, 3)}`);
+                                          }}
+                                          className="cursor-pointer truncate text-left hover:opacity-90"
+                                          style={{ color: "var(--forest)" }}
+                                        >
+                                          <span style={{ color: "var(--text-muted)" }}>Reps:</span> {metric.reps}
+                                        </button>
+                                      )
                                     ) : (
-                                      <button
-                                        type="button"
-                                        onClick={(event) => {
-                                          event.stopPropagation();
-                                          openEditorField("session", `set-${Math.min(index + 1, 3)}`);
-                                        }}
-                                        className="cursor-pointer truncate text-left hover:opacity-90"
-                                        style={{ color: "var(--forest)" }}
-                                      >
-                                        <span style={{ color: "var(--text-muted)" }}>Reps:</span> {metric.reps}
-                                      </button>
+                                      <span aria-hidden="true" />
                                     )}
                                   </div>
                                 </div>

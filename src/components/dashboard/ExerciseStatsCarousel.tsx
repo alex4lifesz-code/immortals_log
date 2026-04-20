@@ -72,28 +72,42 @@ export default function ExerciseStatsCarousel({
     return map;
   }, [exercises]);
 
-  // Get all categories or muscle groups from exercises (not just community logs)
+  const getFilterValueForExercise = (exerciseName: string, mode: FilterMode) => {
+    const exercise = exerciseMap[exerciseName];
+    const rawValue = mode === "category" ? exercise?.category : exercise?.primaryMuscles;
+    return typeof rawValue === "string" ? rawValue.trim() : "";
+  };
+
+  // Get category or muscle options dynamically from the exercise database list,
+  // even when there is no recent user activity for them.
   const filterOptions = useMemo(() => {
-    const options = new Set<string>();
-    
+    const counts = new Map<string, number>();
+
     for (const exercise of exercises) {
-      const value = filterMode === "category" 
-        ? exercise.category 
-        : exercise.primaryMuscles;
-      
-      if (value) {
-        options.add(value);
-      }
+      const rawValue = filterMode === "category" ? exercise.category : exercise.primaryMuscles;
+      const value = typeof rawValue === "string" ? rawValue.trim() : "";
+      if (!value) continue;
+      if (value.toLowerCase() === "other" || value.toLowerCase() === "unspecified") continue;
+      counts.set(value, (counts.get(value) ?? 0) + 1);
     }
-    
-    return Array.from(options).sort();
+
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([value]) => value);
   }, [exercises, filterMode]);
 
   // Reset selected filter when mode changes
   useEffect(() => {
     setSelectedFilter("");
     onFilterChange(filterMode, "");
-  }, [filterMode]);
+  }, [filterMode, onFilterChange]);
+
+  useEffect(() => {
+    if (selectedFilter && !filterOptions.includes(selectedFilter)) {
+      setSelectedFilter("");
+      onFilterChange(filterMode, "");
+    }
+  }, [selectedFilter, filterOptions, filterMode, onFilterChange]);
 
   const handleFilterModeChange = (newMode: FilterMode) => {
     setFilterMode(newMode);
@@ -255,11 +269,9 @@ export default function ExerciseStatsCarousel({
               </motion.button>
 
               {filterOptions.map((option, idx) => {
-                const matchingLogs = communityLogsWithoutUser.filter((log) => {
-                  const exercise = exerciseMap[log.exerciseName];
-                  if (!exercise) return false;
-                  return (filterMode === "category" ? exercise.category : exercise.primaryMuscles) === option;
-                });
+                const matchingLogs = communityLogsWithoutUser.filter(
+                  (log) => getFilterValueForExercise(log.exerciseName, filterMode) === option,
+                );
 
                 return (
                   <motion.button
