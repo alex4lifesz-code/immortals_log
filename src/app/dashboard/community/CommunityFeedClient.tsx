@@ -454,16 +454,28 @@ export default function CommunityFeedClient() {
 
                                     {isExerciseExpanded && (
                                       <div className="mt-1 flex flex-col gap-1.5 pl-2 sm:pl-3">
-                                        {exerciseGroup.logs.map((log) => (
+                                        {exerciseGroup.logs.map((log) => {
+                                          const modifierValue = log.modifier?.trim() || "";
+                                          const notesValue = log.notes?.trim() || "";
+
+                                          return (
                                           <article
                                             key={log.id}
                                             className="dashboard-modern-log px-3 py-2.5 sm:px-3.5"
                                             style={{ borderTop: "1px solid color-mix(in srgb, var(--ink-light) 72%, transparent)" }}
                                           >
                                             <div className="flex items-start justify-between gap-2">
-                                              <p className="text-sm font-semibold leading-tight text-[#8ea1ff]">
-                                                {log.progressionName || `Progression ${log.level}`}
-                                              </p>
+                                              <div className="min-w-0">
+                                                <p className="text-sm font-semibold leading-tight text-[#8ea1ff]">
+                                                  {log.progressionName || `Progression ${log.level}`}
+                                                </p>
+                                                {modifierValue ? (
+                                                  <p className="mt-0.5 text-[10px] text-[#fee75c]">
+                                                    <span className="text-[#949ba4]">Mod:</span>{" "}
+                                                    <span>{modifierValue}</span>
+                                                  </p>
+                                                ) : null}
+                                              </div>
                                               <span className="shrink-0 text-[11px] text-[#949ba4]">
                                                 {timeAgo(log.createdAt)}
                                               </span>
@@ -488,16 +500,26 @@ export default function CommunityFeedClient() {
                                                   </div>
                                                 );
                                               })}
-                                              <div className="grid grid-cols-2 gap-x-3">
-                                                <div className="min-w-0 truncate">
-                                                  <span className="text-[#949ba4]">Notes:</span>{" "}
-                                                  <span className="text-[#dbdee1]">{log.notes?.trim() || "-"}</span>
+                                              {(notesValue || modifierValue) ? (
+                                                <div className="grid grid-cols-2 gap-x-3">
+                                                  <div className="min-w-0 truncate">
+                                                    {notesValue ? (
+                                                      <>
+                                                        <span className="text-[#949ba4]">Notes:</span>{" "}
+                                                        <span className="text-[#dbdee1]">{notesValue}</span>
+                                                      </>
+                                                    ) : <span aria-hidden="true" />}
+                                                  </div>
+                                                  <div className="min-w-0 truncate">
+                                                    {modifierValue ? (
+                                                      <>
+                                                        <span className="text-[#949ba4]">Mod:</span>{" "}
+                                                        <span className="text-[#fee75c]">{modifierValue}</span>
+                                                      </>
+                                                    ) : <span aria-hidden="true" />}
+                                                  </div>
                                                 </div>
-                                                <div className="min-w-0 truncate">
-                                                  <span className="text-[#949ba4]">Mod:</span>{" "}
-                                                  <span className="text-[#fee75c]">{log.modifier?.trim() || "None"}</span>
-                                                </div>
-                                              </div>
+                                              ) : null}
                                               <div className="grid grid-cols-2 gap-x-3">
                                                 <div className="min-w-0 truncate">
                                                   <span className="text-[#949ba4]">Status:</span>{" "}
@@ -518,7 +540,8 @@ export default function CommunityFeedClient() {
                                               </div>
                                             </div>
                                           </article>
-                                        ))}
+                                          );
+                                        })}
                                       </div>
                                     )}
                                   </motion.div>

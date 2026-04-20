@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import PageLayout from "@/components/layout/PageLayout";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
+import { api } from "@/lib/api-client";
 import { formatDateWithPreference } from "@/lib/constants";
 import { DASHBOARD_ROUTES } from "@/lib/navigation";
 import {
@@ -20,6 +21,7 @@ type ProfileCheckin = {
   userId?: string;
   weight?: number | string | null;
   date?: string | null;
+  present?: boolean | null;
 };
 
 export default function ProfilePage() {
@@ -87,13 +89,12 @@ export default function ProfilePage() {
 
     let cancelled = false;
 
-    fetch("/api/checkins", { credentials: "include" })
-      .then((res) => res.json())
-      .then((data) => {
+    api.get<{ checkins: ProfileCheckin[] }>("/api/checkins", { cache: "no-store" })
+      .then((payload) => {
         if (cancelled) return;
 
-        const rawCheckins: ProfileCheckin[] = Array.isArray(data?.checkins) ? (data.checkins as ProfileCheckin[]) : [];
-        const userCheckIns = rawCheckins.filter((checkin: ProfileCheckin) => checkin.userId === user.id);
+        const rawCheckins: ProfileCheckin[] = Array.isArray(payload?.checkins) ? payload.checkins : [];
+        const userCheckIns = rawCheckins.filter((checkin: ProfileCheckin) => checkin.userId === user.id && checkin.present !== false);
         setCheckInTotalCount(userCheckIns.length);
 
         const userWeights = userCheckIns

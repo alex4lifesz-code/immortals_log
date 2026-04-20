@@ -139,6 +139,8 @@ export const GET = withAuth(async (_request, { auth }) => {
       updatedAt?: Date;
       sessionCount?: number;
       checkInCount?: number;
+      lastWorkoutAt?: Date | null;
+      lastCheckInAt?: Date | null;
     }> = [];
     if (friendIds.length) {
       try {
@@ -152,6 +154,13 @@ export const GET = withAuth(async (_request, { auth }) => {
               friendCode: true,
               createdAt: true,
               updatedAt: true,
+              checkIns: {
+                select: {
+                  date: true,
+                },
+                orderBy: { date: "desc" },
+                take: 1,
+              },
               _count: {
                 select: {
                   checkIns: true,
@@ -164,6 +173,13 @@ export const GET = withAuth(async (_request, { auth }) => {
             where: { userId: { in: friendIds } },
             select: {
               userId: true,
+              logs: {
+                select: {
+                  createdAt: true,
+                },
+                orderBy: { createdAt: "desc" },
+                take: 1,
+              },
               _count: {
                 select: {
                   logs: true,
@@ -174,8 +190,15 @@ export const GET = withAuth(async (_request, { auth }) => {
         ]);
 
         const progressionLogCounts = new Map<string, number>();
+        const lastWorkoutAtByUser = new Map<string, Date>();
         for (const level of progressionLevels) {
           progressionLogCounts.set(level.userId, (progressionLogCounts.get(level.userId) ?? 0) + level._count.logs);
+
+          const latestLogAt = level.logs[0]?.createdAt;
+          const currentLatest = lastWorkoutAtByUser.get(level.userId);
+          if (latestLogAt && (!currentLatest || latestLogAt.getTime() > currentLatest.getTime())) {
+            lastWorkoutAtByUser.set(level.userId, latestLogAt);
+          }
         }
 
         friends = friendUsers.map((friend) => ({
@@ -187,6 +210,8 @@ export const GET = withAuth(async (_request, { auth }) => {
           updatedAt: friend.updatedAt,
           sessionCount: progressionLogCounts.get(friend.id) ?? 0,
           checkInCount: friend._count.checkIns,
+          lastWorkoutAt: lastWorkoutAtByUser.get(friend.id) ?? null,
+          lastCheckInAt: friend.checkIns[0]?.date ?? null,
         }));
       } catch (error) {
         if (isMissingFriendSchemaError(error)) {

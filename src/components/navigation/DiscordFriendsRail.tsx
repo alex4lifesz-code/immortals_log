@@ -18,6 +18,8 @@ interface FriendsPayload {
     updatedAt?: string | Date | null;
     sessionCount?: number | null;
     checkInCount?: number | null;
+    lastWorkoutAt?: string | Date | null;
+    lastCheckInAt?: string | Date | null;
   }>;
 }
 
@@ -123,6 +125,8 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
     updatedAt?: string;
     sessionCount?: number;
     checkInCount?: number;
+    lastWorkoutAt?: string;
+    lastCheckInAt?: string;
   }>>([]);
   const [friendActionsOpen, setFriendActionsOpen] = useState(false);
   const [activeFriend, setActiveFriend] = useState<{
@@ -133,6 +137,8 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
     updatedAt?: string;
     sessionCount?: number;
     checkInCount?: number;
+    lastWorkoutAt?: string;
+    lastCheckInAt?: string;
   } | null>(null);
   const [friendHistoryExercises, setFriendHistoryExercises] = useState<ProgressionExercise[]>([]);
   const [friendHistoryLoading, setFriendHistoryLoading] = useState(false);
@@ -190,6 +196,8 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                 updatedAt: friend.updatedAt ? new Date(friend.updatedAt).toISOString() : undefined,
                 sessionCount: typeof friend.sessionCount === "number" ? friend.sessionCount : 0,
                 checkInCount: typeof friend.checkInCount === "number" ? friend.checkInCount : 0,
+                lastWorkoutAt: friend.lastWorkoutAt ? new Date(friend.lastWorkoutAt).toISOString() : undefined,
+                lastCheckInAt: friend.lastCheckInAt ? new Date(friend.lastCheckInAt).toISOString() : undefined,
               }))
           : [];
 
@@ -277,6 +285,8 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
         && current?.updatedAt === ("updatedAt" in matchedFriend ? matchedFriend.updatedAt : undefined)
         && current?.sessionCount === ("sessionCount" in matchedFriend ? matchedFriend.sessionCount : undefined)
         && current?.checkInCount === ("checkInCount" in matchedFriend ? matchedFriend.checkInCount : undefined)
+        && current?.lastWorkoutAt === ("lastWorkoutAt" in matchedFriend ? matchedFriend.lastWorkoutAt : undefined)
+        && current?.lastCheckInAt === ("lastCheckInAt" in matchedFriend ? matchedFriend.lastCheckInAt : undefined)
       ) {
         return current;
       }
@@ -289,6 +299,8 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
         updatedAt: "updatedAt" in matchedFriend ? matchedFriend.updatedAt : undefined,
         sessionCount: "sessionCount" in matchedFriend ? matchedFriend.sessionCount : undefined,
         checkInCount: "checkInCount" in matchedFriend ? matchedFriend.checkInCount : undefined,
+        lastWorkoutAt: "lastWorkoutAt" in matchedFriend ? matchedFriend.lastWorkoutAt : undefined,
+        lastCheckInAt: "lastCheckInAt" in matchedFriend ? matchedFriend.lastCheckInAt : undefined,
       };
     });
     setFriendActionsOpen(!friendViewMode && !targetViewUserId);
@@ -464,6 +476,50 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
   const selectedRailFriendId = drawerFriendId || activeFriend?.id || "";
   const hasFriendDrawerOpen = Boolean(selectedRailFriendId && (friendActionsOpen || friendViewMode || targetViewUserId));
   const isFriendsHomeActive = isActive && !hasFriendDrawerOpen;
+
+  const selectedActivityMeta = useMemo(() => {
+    const latestKnownActivity = [activeFriend?.lastWorkoutAt, activeFriend?.lastCheckInAt, activeFriend?.updatedAt]
+      .filter((value): value is string => Boolean(value))
+      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
+
+    if (friendViewMode === "history") {
+      return { label: "Last History", value: activeFriend?.lastWorkoutAt ? formatRelativeRecentDate(activeFriend.lastWorkoutAt) : "-" };
+    }
+    if (friendViewMode === "chart") {
+      return { label: "Last Chart", value: activeFriend?.lastWorkoutAt ? formatRelativeRecentDate(activeFriend.lastWorkoutAt) : "-" };
+    }
+    if (friendViewMode === "checkin") {
+      return { label: "Last Check-In", value: activeFriend?.lastCheckInAt ? formatRelativeRecentDate(activeFriend.lastCheckInAt) : "-" };
+    }
+    if (friendViewMode === "chat") {
+      return { label: "Last Chat", value: activeFriend?.updatedAt ? formatRelativeRecentDate(activeFriend.updatedAt) : "-" };
+    }
+
+    return { label: "Last Activity", value: latestKnownActivity ? formatRelativeRecentDate(latestKnownActivity) : "-" };
+  }, [activeFriend?.lastCheckInAt, activeFriend?.lastWorkoutAt, activeFriend?.updatedAt, friendViewMode]);
+
+  const friendActionItems = useMemo(() => ([
+    {
+      id: "history" as const,
+      label: "History",
+      hint: activeFriend?.lastWorkoutAt ? `Last workout ${formatRelativeRecentDate(activeFriend.lastWorkoutAt)}` : "No workout history yet",
+    },
+    {
+      id: "chart" as const,
+      label: "Chart",
+      hint: activeFriend?.lastWorkoutAt ? `Uses workout data from ${formatRelativeRecentDate(activeFriend.lastWorkoutAt)}` : "No chart data yet",
+    },
+    {
+      id: "checkin" as const,
+      label: "Check-In",
+      hint: activeFriend?.lastCheckInAt ? `Last check-in ${formatRelativeRecentDate(activeFriend.lastCheckInAt)}` : "No check-ins yet",
+    },
+    {
+      id: "chat" as const,
+      label: "Chat",
+      hint: activeFriend?.updatedAt ? `Last seen ${formatRelativeRecentDate(activeFriend.updatedAt)}` : "Coming soon",
+    },
+  ]), [activeFriend?.lastCheckInAt, activeFriend?.lastWorkoutAt, activeFriend?.updatedAt]);
 
   return (
     <>
@@ -692,7 +748,7 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                             { label: "Sessions", value: String(activeFriend.sessionCount ?? 0) },
                             { label: "Check-Ins", value: String(activeFriend.checkInCount ?? 0) },
                             { label: "Member Since", value: activeFriend.createdAt ? new Date(activeFriend.createdAt).toLocaleDateString() : "-" },
-                            { label: "Last Login", value: activeFriend.updatedAt ? formatRelativeRecentDate(activeFriend.updatedAt) : "-" },
+                            { label: selectedActivityMeta.label, value: selectedActivityMeta.value },
                           ].map((item) => (
                             <div
                               key={item.label}
@@ -706,12 +762,7 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                         </div>
                       </div>
 
-                      {[
-                        { id: "history", label: "History", hint: "Open train history" },
-                        { id: "chart", label: "Chart", hint: "Coming soon" },
-                        { id: "checkin", label: "Check-in", hint: "Coming soon" },
-                        { id: "chat", label: "Chat", hint: "Coming soon" },
-                      ].map((item) => (
+                      {friendActionItems.map((item) => (
                         <article
                           key={item.id}
                           className="mx-1 my-0.5 rounded-md px-3 py-2.5"
