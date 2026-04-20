@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { withAuth, withAdmin } from "@/lib/auth/middleware";
 import { getAcceptedFriendIds, getVisibleSocialUserIds, normalizeScope } from "@/lib/friends";
 import { apiSuccess, ApiErrors } from "@/lib/api";
+import { buildDateFromDateKey } from "@/lib/constants";
 import { buildAutoCheckInDates, mergeCheckinsWithWorkoutDates } from "@/lib/checkins-autoPresence";
 
 export const GET = withAuth(async (request, { auth }) => {
@@ -103,8 +104,8 @@ export const POST = withAuth(async (request, { auth }) => {
       return ApiErrors.badRequest("Invalid date format");
     }
 
-    const dateObj = new Date(date);
-    if (isNaN(dateObj.getTime())) {
+    const dateObj = buildDateFromDateKey(date);
+    if (!dateObj || isNaN(dateObj.getTime())) {
       return ApiErrors.badRequest("Invalid date");
     }
 
@@ -167,8 +168,8 @@ export const DELETE = withAdmin(async (request) => {
       if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
         return ApiErrors.badRequest("Invalid date format");
       }
-      const dateObj = new Date(date + "T00:00:00.000Z");
-      if (isNaN(dateObj.getTime())) {
+      const dateObj = buildDateFromDateKey(date);
+      if (!dateObj || isNaN(dateObj.getTime())) {
         return ApiErrors.badRequest("Invalid date");
       }
       // Also delete notes for this date

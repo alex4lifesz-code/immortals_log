@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildDateFromDateKey,
   buildIsoAtUserDateTime,
   createCalendarMonthAnchor,
   formatDateLocal,
   getTimeZoneDateParts,
+  normalizeDateOnlyKey,
   resolveCalendarWeekStartsOn,
 } from "../constants";
 
@@ -48,5 +50,18 @@ describe("timezone-aware date preferences", () => {
 
     expect(getTimeZoneDateParts(anchor, "America/Los_Angeles").month).toBe(4);
     expect(getTimeZoneDateParts(anchor, "Pacific/Auckland").month).toBe(4);
+  });
+
+  it("normalizes date-only keys consistently for backup imports", () => {
+    expect(normalizeDateOnlyKey("2026-04-20")).toBe("2026-04-20");
+    expect(normalizeDateOnlyKey("2026-04-20T18:45:00.000Z")).toBe("2026-04-20");
+    expect(normalizeDateOnlyKey(new Date("2026-04-20T03:15:00.000Z"))).toBe("2026-04-20");
+  });
+
+  it("builds a stable stored check-in date from a date key", () => {
+    const stored = buildDateFromDateKey("2026-04-20");
+
+    expect(stored).toBeTruthy();
+    expect(stored?.toISOString()).toBe("2026-04-20T00:00:00.000Z");
   });
 });

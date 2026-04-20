@@ -12,6 +12,7 @@ import { api } from "@/lib/api-client";
 import { DASHBOARD_ROUTES } from "@/lib/navigation";
 import { getExerciseDisplayName } from "@/lib/exercise-name";
 import { DEFAULT_USER_PHYSIQUE, loadUserPhysique } from "@/lib/user-physique";
+import { formatDateTimeWithPreference } from "@/lib/constants";
 import { kgToLbs } from "@/lib/unit-conversion";
 import type { UserPhysiqueSettings } from "@/lib/user-physique";
 import type { ProgressionExercise } from "@/app/dashboard/workout/types";
@@ -180,10 +181,8 @@ export default function WorkoutHistoryDetailPage() {
 
   const lastLoggedDisplay = useMemo(() => {
     if (!lastLogDate) return "No logs yet";
-    return new Date(lastLogDate)
-      .toLocaleString("en-GB", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })
-      .replace(",", "");
-  }, [lastLogDate]);
+    return formatDateTimeWithPreference(lastLogDate, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone);
+  }, [lastLogDate, settings.dateFormat, settings.timeZone]);
 
   const backHref = useMemo(() => {
     const base = fromExercisesPage

@@ -7,6 +7,7 @@ import { createPortal } from "react-dom";
 import PageLayout from "@/components/layout/PageLayout";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { api } from "@/lib/api-client";
+import { formatDateWithPreference } from "@/lib/constants";
 import { getExerciseDisplayName } from "@/lib/exercise-name";
 import { DASHBOARD_ROUTES } from "@/lib/navigation";
 import { PROGRESSION_EXERCISES_UPDATED_EVENT } from "@/lib/progression-events";
@@ -52,11 +53,15 @@ function getLogsWithinDays(logs: ProgressionLog[], days: number): ProgressionLog
   return logs.filter((log) => now - new Date(log.createdAt).getTime() <= limit);
 }
 
-function formatDate(value: string | null): string {
+function formatDate(
+  value: string | null,
+  dateFormat: "dd-mm-yyyy" | "dd-mmm-yyyy" | "dd-mm-yy" | "dd-mmm-yy",
+  timeZone?: string,
+): string {
   if (!value) return "Never";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Never";
-  return date.toLocaleDateString();
+  return formatDateWithPreference(date, dateFormat, timeZone);
 }
 
 function formatDaysAgo(value: string | null): string {
@@ -554,7 +559,7 @@ export default function CompletionistPage() {
                           <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-[color:var(--text-secondary)]">
                             <span>Coverage: <span className="font-semibold text-[color:var(--forest)]">{skill.coveragePct}%</span></span>
                             <span>Sessions: <span className="font-semibold text-[color:var(--text-primary)]">{skill.performed}</span></span>
-                            <span>Last: <span className="font-semibold text-[color:var(--text-primary)]">{formatDate(skill.lastLogAt)}</span></span>
+                            <span>Last: <span className="font-semibold text-[color:var(--text-primary)]">{formatDate(skill.lastLogAt, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone)}</span></span>
                           </div>
 
                           <div className="mt-3 divide-y" style={{ borderColor: "color-mix(in srgb, var(--border) 72%, transparent)" }}>
@@ -566,7 +571,7 @@ export default function CompletionistPage() {
                                     <p className="truncate text-[11px] font-medium text-[color:var(--text-primary)]">{tierName}</p>
                                     <p className="mt-0.5 text-[10px] text-[color:var(--text-muted)]">{stat.attempts} attempts • {stat.best}</p>
                                   </div>
-                                  <span className="shrink-0 text-[10px] text-[color:var(--text-secondary)]">{formatDate(stat.lastPerformedAt)}</span>
+                                  <span className="shrink-0 text-[10px] text-[color:var(--text-secondary)]">{formatDate(stat.lastPerformedAt, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone)}</span>
                                 </div>
                               );
                             })}

@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
+import { useDisplaySettings } from "@/context/DisplaySettingsContext";
+import { formatCalendarMonthLabel } from "@/lib/constants";
 import { t, tHint } from "@/lib/terminology";
 
 interface CheckInRow {
@@ -25,6 +27,7 @@ export default function CheckInStatsPanel({
   userColors,
   currentUserId,
 }: Props) {
+  const { settings } = useDisplaySettings();
   const stats = useMemo(() => {
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
@@ -154,7 +157,7 @@ export default function CheckInStatsPanel({
     );
   }
 
-  const monthName = currentMonth.toLocaleString("default", { month: "long" });
+  const monthName = formatCalendarMonthLabel(currentMonth, settings.timeZone).replace(/\s+\d{4}$/, "");
 
   return (
     <div className="dao-modern-monthly-stats-panel flex flex-col h-full gap-2 overflow-y-auto">

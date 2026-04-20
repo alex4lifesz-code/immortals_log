@@ -469,12 +469,6 @@ export default function CommunityFeedClient() {
                                                 <p className="text-sm font-semibold leading-tight text-[#8ea1ff]">
                                                   {log.progressionName || `Progression ${log.level}`}
                                                 </p>
-                                                {modifierValue ? (
-                                                  <p className="mt-0.5 text-[10px] text-[#fee75c]">
-                                                    <span className="text-[#949ba4]">Mod:</span>{" "}
-                                                    <span>{modifierValue}</span>
-                                                  </p>
-                                                ) : null}
                                               </div>
                                               <span className="shrink-0 text-[11px] text-[#949ba4]">
                                                 {timeAgo(log.createdAt)}

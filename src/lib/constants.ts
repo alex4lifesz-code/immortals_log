@@ -224,6 +224,33 @@ export function getTodayInTimeZone(timeZone?: string): string {
   return formatDateLocal(new Date(), timeZone);
 }
 
+export function normalizeDateOnlyKey(dateInput: string | Date | null | undefined): string | null {
+  if (!dateInput) return null;
+
+  if (dateInput instanceof Date) {
+    if (Number.isNaN(dateInput.getTime())) return null;
+    return dateInput.toISOString().slice(0, 10);
+  }
+
+  const trimmed = String(dateInput).trim();
+  if (!trimmed) return null;
+
+  const leadingDateMatch = trimmed.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (leadingDateMatch) {
+    return leadingDateMatch[1];
+  }
+
+  const parsed = new Date(trimmed);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toISOString().slice(0, 10);
+}
+
+export function buildDateFromDateKey(dateInput: string | Date | null | undefined): Date | null {
+  const dateKey = normalizeDateOnlyKey(dateInput);
+  if (!dateKey) return null;
+  return new Date(`${dateKey}T00:00:00.000Z`);
+}
+
 export function getPreferredLocaleForTimeZone(timeZone?: string): string {
   const tz = resolvePreferredTimeZone(timeZone);
 
@@ -358,4 +385,28 @@ export function formatDateWithPreference(
     default:
       return `${dd}-${mmm}-${yyyy}`;
   }
+}
+
+export function formatDateTimeWithPreference(
+  dateInput: string | Date,
+  format: DateFormatOption,
+  timeZone?: string,
+  options?: Intl.DateTimeFormatOptions,
+): string {
+  const parsed = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+  if (Number.isNaN(parsed.getTime())) {
+    return "-";
+  }
+
+  const tz = resolvePreferredTimeZone(timeZone);
+  const locale = getPreferredLocaleForTimeZone(tz);
+  const dateLabel = formatDateWithPreference(parsed, format, tz);
+  const timeLabel = new Intl.DateTimeFormat(locale, {
+    timeZone: tz,
+    hour: "2-digit",
+    minute: "2-digit",
+    ...options,
+  }).format(parsed);
+
+  return `${dateLabel} ${timeLabel}`;
 }

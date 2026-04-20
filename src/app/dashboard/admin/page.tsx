@@ -9,9 +9,11 @@ import GlowInput from "@/components/ui/GlowInput";
 import GlowCard from "@/components/ui/GlowCard";
 import { GlowModal } from "@/components/ui/GlowCard";
 import { useAuth } from "@/context/AuthContext";
+import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { useRouter } from "next/navigation";
 import DataManagement from "@/components/admin/DataManagement";
 import { api } from "@/lib/api-client";
+import { formatDateTimeWithPreference, formatDateWithPreference } from "@/lib/constants";
 
 interface AdminActivityEntry {
   at: string;
@@ -81,7 +83,10 @@ function AdminSidebar() {
 
 export default function AdminPanelPage() {
   const { user, login } = useAuth();
+  const { settings } = useDisplaySettings();
   const router = useRouter();
+  const dateFormat = settings.dateFormat || "dd-mmm-yyyy";
+  const timeZone = settings.timeZone;
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [recycleBinUsers, setRecycleBinUsers] = useState<RecycleBinUser[]>([]);
   const [stats, setStats] = useState<SystemStats>({
@@ -349,7 +354,7 @@ export default function AdminPanelPage() {
                     {selectedActivityUser.lastActivityLabel || "No recent activity"}
                   </p>
                   <p className="mt-1 text-xs text-mist-dark">
-                    {selectedActivityUser.lastActivityAt ? new Date(selectedActivityUser.lastActivityAt).toLocaleString() : "Nothing logged yet"}
+                    {selectedActivityUser.lastActivityAt ? formatDateTimeWithPreference(selectedActivityUser.lastActivityAt, dateFormat, timeZone) : "Nothing logged yet"}
                   </p>
                 </div>
 
@@ -360,7 +365,7 @@ export default function AdminPanelPage() {
                     (selectedActivityUser.activityLog || []).map((entry, index) => (
                       <div key={`activity-entry-${entry.at}-${index}`} className="rounded-lg border border-ink-light/40 bg-ink-dark/30 p-2.5">
                         <p className="text-sm text-cloud-white">{entry.label}</p>
-                        <p className="mt-1 text-[11px] text-mist-dark">{new Date(entry.at).toLocaleString()}</p>
+                        <p className="mt-1 text-[11px] text-mist-dark">{formatDateTimeWithPreference(entry.at, dateFormat, timeZone)}</p>
                         <p className="mt-1 text-[10px] text-mountain-blue-glow/80">{entry.route}</p>
                       </div>
                     ))
@@ -406,7 +411,7 @@ export default function AdminPanelPage() {
                       <td className="px-3 py-2 text-cloud-white">{user.username}</td>
                       <td className="px-3 py-2 text-mist-light">{user.name}</td>
                       <td className="px-3 py-2 text-center text-mist-dark text-xs">
-                        {new Date(user.createdAt).toLocaleDateString()}
+                        {formatDateWithPreference(user.createdAt, dateFormat, timeZone)}
                       </td>
                       <td className="px-2 py-2 text-center">
                         <GlowButton
@@ -446,7 +451,7 @@ export default function AdminPanelPage() {
                     <div>
                       <p className="text-sm text-cloud-white">{entry.name} (@{entry.username})</p>
                       <p className="text-xs text-mist-dark">
-                        Deleted {new Date(entry.deletedAt).toLocaleString()} • {entry.summary.progressionLogCount} logs • {entry.summary.checkInCount} check-ins • {entry.summary.ownedExerciseCount} owned exercises
+                        Deleted {formatDateTimeWithPreference(entry.deletedAt, dateFormat, timeZone)} • {entry.summary.progressionLogCount} logs • {entry.summary.checkInCount} check-ins • {entry.summary.ownedExerciseCount} owned exercises
                       </p>
                     </div>
                     <div className="flex gap-2">
@@ -495,7 +500,7 @@ export default function AdminPanelPage() {
                   <div key={request.id} className="rounded-lg border border-ink-light/50 bg-ink-mid/20 p-3 flex items-center justify-between gap-3">
                     <div>
                       <p className="text-sm text-cloud-white">{request.requester.name} (@{request.requester.username})</p>
-                      <p className="text-xs text-mist-dark">Requested {new Date(request.createdAt).toLocaleDateString()} to connect with {request.receiver.name}</p>
+                      <p className="text-xs text-mist-dark">Requested {formatDateWithPreference(request.createdAt, dateFormat, timeZone)} to connect with {request.receiver.name}</p>
                     </div>
                     <div className="flex gap-2">
                       <GlowButton
@@ -592,7 +597,7 @@ export default function AdminPanelPage() {
             <div>
               <p className="text-xs text-mist-dark uppercase">Member Since</p>
               <p className="text-sm text-mist-light mt-1">
-                {new Date(selectedUser.createdAt).toLocaleDateString()}
+                {formatDateWithPreference(selectedUser.createdAt, dateFormat, timeZone)}
               </p>
             </div>
 

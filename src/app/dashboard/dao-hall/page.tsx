@@ -51,13 +51,17 @@ function hasCheckInContent(entry: { present: boolean; weight: string; comment: s
   return entry.present || Boolean(entry.weight?.trim()) || Boolean(entry.comment?.trim());
 }
 
-function formatRelativeRecentDate(dateLike: string): string {
+function formatRelativeRecentDate(
+  dateLike: string,
+  dateFormat: "dd-mm-yyyy" | "dd-mmm-yyyy" | "dd-mm-yy" | "dd-mmm-yy" = "dd-mmm-yyyy",
+  timeZone?: string,
+): string {
   const timestamp = new Date(dateLike).getTime();
   if (!Number.isFinite(timestamp)) return "";
 
   const diffMs = Date.now() - timestamp;
   if (diffMs < 0) {
-    return new Date(timestamp).toLocaleDateString();
+    return formatDateWithPreference(new Date(timestamp), dateFormat, timeZone);
   }
 
   const minuteMs = 60 * 1000;
@@ -80,7 +84,7 @@ function formatRelativeRecentDate(dateLike: string): string {
     return `${days} day${days === 1 ? "" : "s"} ago`;
   }
 
-  return new Date(timestamp).toLocaleDateString();
+  return formatDateWithPreference(new Date(timestamp), dateFormat, timeZone);
 }
 
 export default function DaoHallPage() {
@@ -1093,7 +1097,7 @@ export default function DaoHallPage() {
                                 {formatDateWithPreference(date, dateFormat)}
                               </p>
                               <span className="shrink-0 text-[11px]" style={{ color: "var(--text-muted)" }}>
-                                {formatRelativeRecentDate(date)}
+                                {formatRelativeRecentDate(date, dateFormat, settings.timeZone)}
                               </span>
                             </div>
                           )}

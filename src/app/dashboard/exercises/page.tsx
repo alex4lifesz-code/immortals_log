@@ -8,6 +8,7 @@ import SearchField from "@/components/ui/SearchField";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { api } from "@/lib/api-client";
+import { formatDateWithPreference } from "@/lib/constants";
 import { getExerciseDisplayName, matchesLooseSearchInFields } from "@/lib/exercise-name";
 import { rankExerciseSearchResults } from "@/lib/exercise-search";
 import { DASHBOARD_ROUTES } from "@/lib/navigation";
@@ -28,7 +29,11 @@ function compareLogRecency(a: Pick<ProgressionLog, "id" | "createdAt">, b: Pick<
   return b.id.localeCompare(a.id);
 }
 
-function formatRelativeRecentDate(dateLike: string | null | undefined): string {
+function formatRelativeRecentDate(
+  dateLike: string | null | undefined,
+  dateFormat: "dd-mm-yyyy" | "dd-mmm-yyyy" | "dd-mm-yy" | "dd-mmm-yy" = "dd-mmm-yyyy",
+  timeZone?: string,
+): string {
   if (!dateLike) return "Not logged";
   const timestamp = new Date(dateLike).getTime();
   if (!Number.isFinite(timestamp)) return "Not logged";
@@ -45,7 +50,7 @@ function formatRelativeRecentDate(dateLike: string | null | undefined): string {
     return `${days} day${days === 1 ? "" : "s"} ago`;
   }
 
-  return new Date(timestamp).toLocaleDateString();
+  return formatDateWithPreference(new Date(timestamp), dateFormat, timeZone);
 }
 
 function getRecentExerciseTextColor(dateLike: string | null | undefined): string {
@@ -459,7 +464,7 @@ export default function ExercisesCanvasPage() {
                       </div>
                       <div className="ml-2 flex items-center gap-2">
                         <span className="shrink-0 text-[10px]" style={{ color: "var(--text-muted)" }}>
-                          {formatRelativeRecentDate(row.latestLogAt)}
+                          {formatRelativeRecentDate(row.latestLogAt, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone)}
                         </span>
                         <span className="text-[10px] text-mist-light">{isExpanded ? "▾" : "▸"}</span>
                       </div>

@@ -48,11 +48,12 @@ function formatDateLocal(date: Date): string {
   return formatDateLocalForZone(date);
 }
 
-function formatDateDisplay(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00');
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return `${dayNames[date.getDay()]}, ${monthNames[date.getMonth()]} ${date.getDate()}`;
+function formatDateDisplay(
+  dateStr: string,
+  dateFormat: "dd-mm-yyyy" | "dd-mmm-yyyy" | "dd-mm-yy" | "dd-mmm-yy",
+  timeZone?: string,
+): string {
+  return formatDateWithPreference(dateStr, dateFormat, timeZone);
 }
 
 function getCompactUserLabel(name: string): string {
@@ -918,7 +919,7 @@ export default function CheckInPage() {
         <div className="space-y-4">
           {editingNote && (
             <>
-              <p className="text-xs text-[#949ba4]">{formatDateDisplay(editingNote.date)}</p>
+              <p className="text-xs text-[#949ba4]">{formatDateDisplay(editingNote.date, dateFormat, settings.timeZone)}</p>
               <div>
                 <label className="mb-2 block text-xs uppercase tracking-wider text-[#b5bac1]">
                   Cultivation Notes

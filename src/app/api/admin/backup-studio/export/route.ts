@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ApiErrors } from "@/lib/api";
+import { normalizeDateOnlyKey } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { withAdmin } from "@/lib/auth/middleware";
 
@@ -111,7 +112,7 @@ export const GET = withAdmin(async (request, { auth }) => {
           }
         : null,
       checkins: checkins.map((entry) => ({
-        date: toIsoString(entry.date),
+        date: normalizeDateOnlyKey(entry.date),
         weight: entry.weight,
         comment: entry.comment,
         present: entry.present,

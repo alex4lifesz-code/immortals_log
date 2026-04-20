@@ -11,6 +11,7 @@ import SearchField from "@/components/ui/SearchField";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { api } from "@/lib/api-client";
+import { formatDateWithPreference } from "@/lib/constants";
 import { getExerciseDisplayName, matchesLooseSearchInFields } from "@/lib/exercise-name";
 import { rankExerciseSearchResults } from "@/lib/exercise-search";
 import { getDefaultExerciseDbOptions, type ExerciseDbOptions } from "@/lib/exercise-db-settings";
@@ -40,7 +41,11 @@ type TypeFilter = "all" | string;
 type StatusFilter = "all" | "custom" | "pending" | "regular";
 type SortBy = "recent" | "name" | "created" | "relevant";
 
-function formatRelativeRecentDate(dateLike: string | null | undefined): string {
+function formatRelativeRecentDate(
+  dateLike: string | null | undefined,
+  dateFormat: "dd-mm-yyyy" | "dd-mmm-yyyy" | "dd-mm-yy" | "dd-mmm-yy" = "dd-mmm-yyyy",
+  timeZone?: string,
+): string {
   if (!dateLike) return "Not updated";
   const timestamp = new Date(dateLike).getTime();
   if (!Number.isFinite(timestamp)) return "Not updated";
@@ -57,7 +62,7 @@ function formatRelativeRecentDate(dateLike: string | null | undefined): string {
     return `${days} day${days === 1 ? "" : "s"} ago`;
   }
 
-  return new Date(timestamp).toLocaleDateString();
+  return formatDateWithPreference(new Date(timestamp), dateFormat, timeZone);
 }
 
 function getRecentExerciseTextColor(dateLike: string | null | undefined): string {
@@ -85,11 +90,15 @@ function buildDisplayItems(values: Array<string | null | undefined>): string[] {
   return items.length > 0 ? items : ["-"];
 }
 
-function formatCalendarDate(value: string | null | undefined): string {
+function formatCalendarDate(
+  value: string | null | undefined,
+  dateFormat: "dd-mm-yyyy" | "dd-mmm-yyyy" | "dd-mm-yy" | "dd-mmm-yy" = "dd-mmm-yyyy",
+  timeZone?: string,
+): string {
   if (!value) return "—";
   const timestamp = new Date(value).getTime();
   if (!Number.isFinite(timestamp)) return "—";
-  return new Date(timestamp).toLocaleDateString("en-GB");
+  return formatDateWithPreference(new Date(timestamp), dateFormat, timeZone);
 }
 
 function ExerciseAddModal({
@@ -912,7 +921,7 @@ export default function ExerciseDBPage() {
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-cloud-white">{row.displayName}</p>
                     <p className="mt-1 text-xs text-mist-light">
-                      {row.category} • {row.type} • Added {formatCalendarDate(row.exercise.createdAt)}
+                      {row.category} • {row.type} • Added {formatCalendarDate(row.exercise.createdAt, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone)}
                     </p>
                     <p className="mt-1 text-[11px] text-mist-dark">
                       Progressions: {row.progressionValues.join(" • ")} {row.variationValues[0] !== "-" ? `• Variants: ${row.variationValues.join(", ")}` : ""}
@@ -1071,7 +1080,7 @@ export default function ExerciseDBPage() {
                   >
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold text-cloud-white">{item.name}</p>
-                      <p className="text-xs text-mist-light">{item.category || "Other"} • Added {formatCalendarDate(item.createdAt)}</p>
+                      <p className="text-xs text-mist-light">{item.category || "Other"} • Added {formatCalendarDate(item.createdAt, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone)}</p>
                     </div>
 
                     <div className="flex flex-wrap gap-2">
@@ -1235,7 +1244,7 @@ export default function ExerciseDBPage() {
                       </div>
                       <div className="ml-2 flex items-center gap-2">
                         <span className="shrink-0 text-[10px]" style={{ color: "var(--text-muted)" }}>
-                          {formatRelativeRecentDate(row.recentAt)}
+                          {formatRelativeRecentDate(row.recentAt, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone)}
                         </span>
                         <span className="text-[10px] text-mist-light">{isExpanded ? "▾" : "▸"}</span>
                       </div>
@@ -1414,7 +1423,7 @@ export default function ExerciseDBPage() {
                                 >
                                   Dates:
                                 </button>
-                                <span className="break-words text-cloud-white">Added {formatCalendarDate(row.exercise.createdAt)} • Edited {formatCalendarDate(row.exercise.updatedAt || row.exercise.createdAt)}</span>
+                                <span className="break-words text-cloud-white">Added {formatCalendarDate(row.exercise.createdAt, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone)} • Edited {formatCalendarDate(row.exercise.updatedAt || row.exercise.createdAt, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone)}</span>
                               </div>
                             </div>
                           </div>

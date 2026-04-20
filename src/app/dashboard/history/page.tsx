@@ -17,6 +17,7 @@ import { DASHBOARD_ROUTES } from "@/lib/navigation";
 import { isDeletedExerciseDescription } from "@/lib/pending-exercises";
 import { DEFAULT_USER_PHYSIQUE, loadUserPhysique } from "@/lib/user-physique";
 import { PROGRESSION_EXERCISES_UPDATED_EVENT } from "@/lib/progression-events";
+import { formatDateWithPreference } from "@/lib/constants";
 import { formatSetValue, type WeightUnit } from "@/lib/unit-conversion";
 import type { UserPhysiqueSettings } from "@/lib/user-physique";
 import type { ProgressionExercise, ProgressionLog } from "../workout/types";
@@ -60,13 +61,17 @@ function compareLogRecency(a: Pick<ProgressionLog, "id" | "createdAt">, b: Pick<
   return b.id.localeCompare(a.id);
 }
 
-function formatRelativeRecentDate(dateLike: string): string {
+function formatRelativeRecentDate(
+  dateLike: string,
+  dateFormat: "dd-mm-yyyy" | "dd-mmm-yyyy" | "dd-mm-yy" | "dd-mmm-yy" = "dd-mmm-yyyy",
+  timeZone?: string,
+): string {
   const timestamp = new Date(dateLike).getTime();
   if (!Number.isFinite(timestamp)) return "";
 
   const diffMs = Date.now() - timestamp;
   if (diffMs < 0) {
-    return new Date(timestamp).toLocaleDateString();
+    return formatDateWithPreference(new Date(timestamp), dateFormat, timeZone);
   }
 
   const minuteMs = 60 * 1000;
@@ -89,7 +94,7 @@ function formatRelativeRecentDate(dateLike: string): string {
     return `${days} day${days === 1 ? "" : "s"} ago`;
   }
 
-  return new Date(timestamp).toLocaleDateString();
+  return formatDateWithPreference(new Date(timestamp), dateFormat, timeZone);
 }
 
 function getRecentExerciseTextColor(dateLike: string | null | undefined, isSelected = false): string {
@@ -823,7 +828,7 @@ export default function HistoryPage() {
                                   {row.exerciseName}
                                 </p>
                                   <span className="shrink-0 text-[11px]" style={{ color: "var(--text-muted)" }}>
-                                    {formatRelativeRecentDate(row.date)}
+                                    {formatRelativeRecentDate(row.date, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone)}
                                   </span>
                               </div>
                               <p className="mt-0.5 text-[11px] italic" style={{ color: row.isDeleted ? "var(--crimson-light)" : "var(--text-muted)" }}>
@@ -1151,7 +1156,7 @@ export default function HistoryPage() {
                             {row.exerciseName}
                           </p>
                           <span className="shrink-0 text-[11px]" style={{ color: "var(--text-muted)" }}>
-                            {row.date ? formatRelativeRecentDate(row.date) : "Never"}
+                            {row.date ? formatRelativeRecentDate(row.date, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone) : "Never"}
                           </span>
                         </div>
                         {row.date ? (
@@ -1508,7 +1513,7 @@ export default function HistoryPage() {
                               </button>
                             )}
                             <span className="shrink-0 text-[11px]" style={{ color: "var(--text-muted)" }}>
-                              {formatRelativeRecentDate(log.createdAt)}
+                              {formatRelativeRecentDate(log.createdAt, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone)}
                             </span>
                           </div>
                           <div className="mt-1.5 space-y-0.5 text-[11px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>

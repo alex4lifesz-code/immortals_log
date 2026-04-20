@@ -7,6 +7,8 @@ import { DASHBOARD_ROUTES } from "@/lib/navigation";
 import { api } from "@/lib/api-client";
 import { useIsMobile } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
+import { useDisplaySettings } from "@/context/DisplaySettingsContext";
+import { formatDateWithPreference } from "@/lib/constants";
 import type { ProgressionExercise, ProgressionLog } from "@/app/dashboard/workout/types";
 
 interface FriendsPayload {
@@ -32,7 +34,11 @@ function initials(value: string) {
   return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
 }
 
-function formatRelativeRecentDate(dateLike: string): string {
+function formatRelativeRecentDate(
+  dateLike: string,
+  dateFormat: "dd-mm-yyyy" | "dd-mmm-yyyy" | "dd-mm-yy" | "dd-mmm-yy" = "dd-mmm-yyyy",
+  timeZone?: string,
+): string {
   const timestamp = new Date(dateLike).getTime();
   if (!Number.isFinite(timestamp)) return "";
 
@@ -59,7 +65,7 @@ function formatRelativeRecentDate(dateLike: string): string {
     return `${days} day${days === 1 ? "" : "s"} ago`;
   }
 
-  return new Date(timestamp).toLocaleDateString();
+  return formatDateWithPreference(new Date(timestamp), dateFormat, timeZone);
 }
 
 function getRecentExerciseTextColor(dateLike: string | null | undefined, isSelected = false): string {
@@ -112,6 +118,9 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
   const searchParams = useSearchParams();
   const isMobile = useIsMobile();
   const { user } = useAuth();
+  const { settings } = useDisplaySettings();
+  const dateFormat = settings.dateFormat || "dd-mmm-yyyy";
+  const timeZone = settings.timeZone;
 
   const isActive = pathname === DASHBOARD_ROUTES.friends || pathname?.startsWith(`${DASHBOARD_ROUTES.friends}/`);
   const drawerFriendId = searchParams.get("friendDrawerId") || "";
@@ -496,49 +505,49 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
 
     const navigationLabel = activeFriend?.lastActivityLabel?.trim();
     const navigationValue = activeFriend?.lastActivityAt
-      ? `${navigationLabel ? `${navigationLabel} • ` : ""}${formatRelativeRecentDate(activeFriend.lastActivityAt)}`
+      ? `${navigationLabel ? `${navigationLabel} • ` : ""}${formatRelativeRecentDate(activeFriend.lastActivityAt, dateFormat, timeZone)}`
       : "-";
 
     if (friendViewMode === "history") {
-      return { label: "Last History", value: activeFriend?.lastWorkoutAt ? formatRelativeRecentDate(activeFriend.lastWorkoutAt) : navigationValue };
+      return { label: "Last History", value: activeFriend?.lastWorkoutAt ? formatRelativeRecentDate(activeFriend.lastWorkoutAt, dateFormat, timeZone) : navigationValue };
     }
     if (friendViewMode === "chart") {
-      return { label: "Last Chart", value: activeFriend?.lastWorkoutAt ? formatRelativeRecentDate(activeFriend.lastWorkoutAt) : navigationValue };
+      return { label: "Last Chart", value: activeFriend?.lastWorkoutAt ? formatRelativeRecentDate(activeFriend.lastWorkoutAt, dateFormat, timeZone) : navigationValue };
     }
     if (friendViewMode === "checkin") {
-      return { label: "Last Check-In", value: activeFriend?.lastCheckInAt ? formatRelativeRecentDate(activeFriend.lastCheckInAt) : navigationValue };
+      return { label: "Last Check-In", value: activeFriend?.lastCheckInAt ? formatRelativeRecentDate(activeFriend.lastCheckInAt, dateFormat, timeZone) : navigationValue };
     }
     if (friendViewMode === "chat") {
       return { label: "Last Chat", value: navigationValue };
     }
 
-    return { label: "Last Activity", value: latestKnownActivity ? (activeFriend?.lastActivityAt === latestKnownActivity ? navigationValue : formatRelativeRecentDate(latestKnownActivity)) : "-" };
-  }, [activeFriend?.lastActivityAt, activeFriend?.lastActivityLabel, activeFriend?.lastCheckInAt, activeFriend?.lastWorkoutAt, friendViewMode]);
+    return { label: "Last Activity", value: latestKnownActivity ? (activeFriend?.lastActivityAt === latestKnownActivity ? navigationValue : formatRelativeRecentDate(latestKnownActivity, dateFormat, timeZone)) : "-" };
+  }, [activeFriend?.lastActivityAt, activeFriend?.lastActivityLabel, activeFriend?.lastCheckInAt, activeFriend?.lastWorkoutAt, dateFormat, friendViewMode, timeZone]);
 
   const friendActionItems = useMemo(() => ([
     {
       id: "history" as const,
       label: "History",
-      hint: activeFriend?.lastWorkoutAt ? `Last workout ${formatRelativeRecentDate(activeFriend.lastWorkoutAt)}` : "No workout history yet",
+      hint: activeFriend?.lastWorkoutAt ? `Last workout ${formatRelativeRecentDate(activeFriend.lastWorkoutAt, dateFormat, timeZone)}` : "No workout history yet",
     },
     {
       id: "chart" as const,
       label: "Chart",
-      hint: activeFriend?.lastWorkoutAt ? `Uses workout data from ${formatRelativeRecentDate(activeFriend.lastWorkoutAt)}` : "No chart data yet",
+      hint: activeFriend?.lastWorkoutAt ? `Uses workout data from ${formatRelativeRecentDate(activeFriend.lastWorkoutAt, dateFormat, timeZone)}` : "No chart data yet",
     },
     {
       id: "checkin" as const,
       label: "Check-In",
-      hint: activeFriend?.lastCheckInAt ? `Last check-in ${formatRelativeRecentDate(activeFriend.lastCheckInAt)}` : "No check-ins yet",
+      hint: activeFriend?.lastCheckInAt ? `Last check-in ${formatRelativeRecentDate(activeFriend.lastCheckInAt, dateFormat, timeZone)}` : "No check-ins yet",
     },
     {
       id: "chat" as const,
       label: "Chat",
       hint: activeFriend?.lastActivityAt
-        ? `${activeFriend?.lastActivityLabel || "Last seen"} • ${formatRelativeRecentDate(activeFriend.lastActivityAt)}`
+        ? `${activeFriend?.lastActivityLabel || "Last seen"} • ${formatRelativeRecentDate(activeFriend.lastActivityAt, dateFormat, timeZone)}`
         : "Coming soon",
     },
-  ]), [activeFriend?.lastActivityAt, activeFriend?.lastActivityLabel, activeFriend?.lastCheckInAt, activeFriend?.lastWorkoutAt]);
+  ]), [activeFriend?.lastActivityAt, activeFriend?.lastActivityLabel, activeFriend?.lastCheckInAt, activeFriend?.lastWorkoutAt, dateFormat, timeZone]);
 
   return (
     <>
@@ -766,7 +775,7 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                           {[
                             { label: "Sessions", value: String(activeFriend.sessionCount ?? 0) },
                             { label: "Check-Ins", value: String(activeFriend.checkInCount ?? 0) },
-                            { label: "Member Since", value: activeFriend.createdAt ? new Date(activeFriend.createdAt).toLocaleDateString() : "-" },
+                            { label: "Member Since", value: activeFriend.createdAt ? formatDateWithPreference(activeFriend.createdAt, dateFormat, timeZone) : "-" },
                             { label: selectedActivityMeta.label, value: selectedActivityMeta.value },
                           ].map((item) => (
                             <div
@@ -954,7 +963,7 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                                   {row.exerciseName}
                                 </p>
                                 <span className="shrink-0 text-[11px]" style={{ color: "var(--text-muted)" }}>
-                                  {formatRelativeRecentDate(row.date)}
+                                  {formatRelativeRecentDate(row.date, dateFormat, timeZone)}
                                 </span>
                               </div>
                               <div className="mt-0.5 flex items-start justify-between gap-2">
@@ -1404,7 +1413,7 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                                     {tierName}
                                   </p>
                                   <span className="shrink-0 text-[11px]" style={{ color: "var(--text-muted)" }}>
-                                    {formatRelativeRecentDate(log.createdAt)}
+                                    {formatRelativeRecentDate(log.createdAt, dateFormat, timeZone)}
                                   </span>
                                 </div>
                                 <div className="mt-1.5 space-y-0.5 text-[11px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>

@@ -1,4 +1,5 @@
 import { apiSuccess, ApiErrors } from "@/lib/api";
+import { buildDateFromDateKey, normalizeDateOnlyKey } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { withAdmin } from "@/lib/auth/middleware";
 import { ensureAppExerciseLibraryOwner } from "@/lib/exercise-library-owner";
@@ -268,29 +269,93 @@ export const POST = withAdmin(async (request, { auth }) => {
       });
     }
 
-    let importedCheckins = 0;
-    for (const entry of Array.isArray(backup.checkins) ? backup.checkins : []) {
-      if (!entry?.date) continue;
-      await prisma.checkIn.upsert({
-        where: {
-          date_userId: {
-            date: parseDate(entry.date),
-            userId: targetUserId,
-          },
-        },
-        update: {
-          weight: parseNullableFloat(entry.weight),
-          comment: entry.comment ? clampText(entry.comment, 500) : null,
-          present: Boolean(entry.present),
-        },
-        create: {
-          date: parseDate(entry.date),
-          userId: targetUserId,
-          weight: parseNullableFloat(entry.weight),
-          comment: entry.comment ? clampText(entry.comment, 500) : null,
-          present: Boolean(entry.present),
+    const existingCheckins = await prisma.checkIn.findMany({
+      where: { userId: targetUserId },
+      orderBy: [{ date: "asc" }, { createdAt: "asc" }],
+    });
+
+    const existingCheckinByDay = new Map<string, { id: string; present: boolean; weight: number | null; comment: string | null }>();
+    for (const row of existingCheckins) {
+      const dayKey = normalizeDateOnlyKey(row.date);
+      if (!dayKey) continue;
+
+      const existing = existingCheckinByDay.get(dayKey);
+      if (!existing) {
+        existingCheckinByDay.set(dayKey, {
+          id: row.id,
+          present: Boolean(row.present),
+          weight: row.weight,
+          comment: row.comment,
+        });
+        continue;
+      }
+
+      const mergedPresent = existing.present || Boolean(row.present);
+      const mergedWeight = row.weight ?? existing.weight;
+      const mergedComment = row.comment?.trim() ? row.comment : existing.comment;
+
+      await prisma.checkIn.update({
+        where: { id: existing.id },
+        data: {
+          present: mergedPresent,
+          weight: mergedWeight,
+          comment: mergedComment,
         },
       });
+      await prisma.checkIn.delete({ where: { id: row.id } });
+
+      existingCheckinByDay.set(dayKey, {
+        id: existing.id,
+        present: mergedPresent,
+        weight: mergedWeight,
+        comment: mergedComment,
+      });
+    }
+
+    let importedCheckins = 0;
+    for (const entry of Array.isArray(backup.checkins) ? backup.checkins : []) {
+      const dayKey = normalizeDateOnlyKey(entry?.date);
+      const storedDate = buildDateFromDateKey(dayKey);
+      if (!dayKey || !storedDate) continue;
+
+      const existing = existingCheckinByDay.get(dayKey);
+      const parsedWeight = parseNullableFloat(entry.weight);
+      const nextWeight = parsedWeight ?? existing?.weight ?? null;
+      const nextComment = entry.comment ? clampText(entry.comment, 500) : existing?.comment ?? null;
+      const nextPresent = typeof entry.present === "boolean"
+        ? Boolean(entry.present) || Boolean(existing?.present)
+        : Boolean(existing?.present);
+
+      if (existing) {
+        await prisma.checkIn.update({
+          where: { id: existing.id },
+          data: {
+            date: storedDate,
+            weight: nextWeight,
+            comment: nextComment,
+            present: nextPresent,
+          },
+        });
+      } else {
+        const created = await prisma.checkIn.create({
+          data: {
+            date: storedDate,
+            userId: targetUserId,
+            weight: nextWeight,
+            comment: nextComment,
+            present: nextPresent,
+          },
+          select: { id: true },
+        });
+
+        existingCheckinByDay.set(dayKey, {
+          id: created.id,
+          present: nextPresent,
+          weight: nextWeight,
+          comment: nextComment,
+        });
+      }
+
       importedCheckins++;
     }
 
