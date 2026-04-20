@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AppProvider, useAppContext } from "@/context/AppContext";
 import { DisplaySettingsProvider } from "@/context/DisplaySettingsContext";
 import { useAuth } from "@/context/AuthContext";
@@ -13,6 +13,7 @@ import DiscordFriendsRail from "@/components/navigation/DiscordFriendsRail";
 import ConnectivityBanner from "@/components/system/ConnectivityBanner";
 import AtmosphericBackground from "@/components/atmosphere/AtmosphericBackground";
 import { useIncomingFriendRequestsCount } from "@/hooks/useIncomingFriendRequestsCount";
+import { api } from "@/lib/api-client";
 import { SystemBarsProvider } from "@/providers/SystemBarsProvider";
 import { DASHBOARD_ROUTES } from "@/lib/navigation";
 
@@ -47,6 +48,35 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     || false;
   const mobileRootScrollEnabled = !isFriendDrawerRoute;
   const showMobileNav = !isWorkoutInputFullscreen && !isTrainExerciseHistoryOpen;
+  const lastLoggedActivityKeyRef = useRef("");
+
+  const currentActivity = useMemo(() => {
+    const friendView = searchParams.get("friendView");
+
+    if (matchesRouteOrChild(DASHBOARD_ROUTES.admin)) return { label: "Admin Panel", route: pathname || DASHBOARD_ROUTES.admin };
+    if (matchesRouteOrChild(DASHBOARD_ROUTES.websiteInformation)) return { label: "Website Information", route: pathname || DASHBOARD_ROUTES.websiteInformation };
+    if (matchesRouteOrChild(DASHBOARD_ROUTES.community)) return { label: "Community Feed", route: pathname || DASHBOARD_ROUTES.community };
+    if (matchesRouteOrChild(DASHBOARD_ROUTES.rankUp)) return { label: "Completionist", route: pathname || DASHBOARD_ROUTES.rankUp };
+    if (matchesRouteOrChild(DASHBOARD_ROUTES.exercises)) return { label: "Exercise Library", route: pathname || DASHBOARD_ROUTES.exercises };
+    if (matchesRouteOrChild(DASHBOARD_ROUTES.profile)) return { label: "Profile", route: pathname || DASHBOARD_ROUTES.profile };
+    if (matchesRouteOrChild(DASHBOARD_ROUTES.settings)) return { label: "Settings", route: pathname || DASHBOARD_ROUTES.settings };
+    if (matchesRouteOrChild(DASHBOARD_ROUTES.checkIn) || matchesRouteOrChild(DASHBOARD_ROUTES.checkinLegacy)) return { label: "Check-In", route: pathname || DASHBOARD_ROUTES.checkIn };
+    if (matchesRouteOrChild(DASHBOARD_ROUTES.friends)) return { label: "Friends", route: pathname || DASHBOARD_ROUTES.friends };
+    if (matchesRouteOrChild(DASHBOARD_ROUTES.workoutHistory)) {
+      const label = friendView === "history"
+        ? "Friend History"
+        : friendView === "chart"
+          ? "Friend Chart"
+          : friendView === "checkin"
+            ? "Friend Check-In"
+            : friendView === "chat"
+              ? "Friend Chat"
+              : "Train";
+      return { label, route: pathname || DASHBOARD_ROUTES.workoutHistory };
+    }
+
+    return { label: "Dashboard", route: pathname || DASHBOARD_ROUTES.root };
+  }, [matchesRouteOrChild, pathname, searchParams]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -67,6 +97,30 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
       setIsTrainExerciseHistoryOpen(false);
     }
   }, [pathname]);
+
+  useEffect(() => {
+    if (!user?.id || !currentActivity.route) return;
+
+    const activityKey = `${currentActivity.label}:${currentActivity.route}:${searchParams.toString()}`;
+    if (lastLoggedActivityKeyRef.current === activityKey) return;
+    lastLoggedActivityKeyRef.current = activityKey;
+
+    const timer = window.setTimeout(() => {
+      api.put("/api/users/preferences", {
+        appPrefs: {
+          activityEvent: {
+            at: new Date().toISOString(),
+            label: currentActivity.label,
+            route: currentActivity.route,
+          },
+        },
+      }).catch(() => {
+        // Ignore activity sync errors.
+      });
+    }, 120);
+
+    return () => window.clearTimeout(timer);
+  }, [currentActivity.label, currentActivity.route, searchParams, user?.id]);
 
   return (
     <MotionConfig transition={disableMotion ? { duration: 0 } : undefined}>

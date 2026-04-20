@@ -10,6 +10,18 @@ function sanitizeAction(action: unknown): "accept" | "reject" {
   return action === "accept" ? "accept" : "reject";
 }
 
+function parseJsonObject(value: string | null | undefined): Record<string, unknown> | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 function isUniqueConstraintError(error: unknown): boolean {
   const maybeCode = typeof error === "object" && error !== null && "code" in error
     ? (error as { code?: unknown }).code
@@ -141,6 +153,8 @@ export const GET = withAuth(async (_request, { auth }) => {
       checkInCount?: number;
       lastWorkoutAt?: Date | null;
       lastCheckInAt?: Date | null;
+      lastActivityAt?: string | null;
+      lastActivityLabel?: string | null;
     }> = [];
     if (friendIds.length) {
       try {
@@ -154,6 +168,11 @@ export const GET = withAuth(async (_request, { auth }) => {
               friendCode: true,
               createdAt: true,
               updatedAt: true,
+              settings: {
+                select: {
+                  pinnedNavItems: true,
+                },
+              },
               checkIns: {
                 select: {
                   date: true,
@@ -201,18 +220,24 @@ export const GET = withAuth(async (_request, { auth }) => {
           }
         }
 
-        friends = friendUsers.map((friend) => ({
-          id: friend.id,
-          name: friend.name,
-          username: friend.username,
-          friendCode: friend.friendCode,
-          createdAt: friend.createdAt,
-          updatedAt: friend.updatedAt,
-          sessionCount: progressionLogCounts.get(friend.id) ?? 0,
-          checkInCount: friend._count.checkIns,
-          lastWorkoutAt: lastWorkoutAtByUser.get(friend.id) ?? null,
-          lastCheckInAt: friend.checkIns[0]?.date ?? null,
-        }));
+        friends = friendUsers.map((friend) => {
+          const appPrefs = parseJsonObject(friend.settings?.pinnedNavItems);
+
+          return {
+            id: friend.id,
+            name: friend.name,
+            username: friend.username,
+            friendCode: friend.friendCode,
+            createdAt: friend.createdAt,
+            updatedAt: friend.updatedAt,
+            sessionCount: progressionLogCounts.get(friend.id) ?? 0,
+            checkInCount: friend._count.checkIns,
+            lastWorkoutAt: lastWorkoutAtByUser.get(friend.id) ?? null,
+            lastCheckInAt: friend.checkIns[0]?.date ?? null,
+            lastActivityAt: typeof appPrefs?.lastActivityAt === "string" ? appPrefs.lastActivityAt : null,
+            lastActivityLabel: typeof appPrefs?.lastActivityLabel === "string" ? appPrefs.lastActivityLabel : null,
+          };
+        });
       } catch (error) {
         if (isMissingFriendSchemaError(error)) {
           friends = await prisma.user.findMany({

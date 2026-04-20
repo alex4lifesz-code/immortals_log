@@ -37,23 +37,43 @@ describe("check-in auto presence", () => {
     ]);
   });
 
-  it("preserves an explicit manual unchecked state for an existing check-in row", () => {
+  it("auto-completes an existing rest entry when a workout is logged that same day", () => {
     const merged = mergeCheckinsWithWorkoutDates({
       checkins: [
         {
           date: new Date("2026-04-17T00:00:00.000Z"),
           userId: "u3",
           present: false,
-          weight: null,
-          comment: "rest day",
+          weight: 72.5,
+          comment: "rest day note",
         },
       ],
       workoutDatesByUser: new Map([["u3", new Set(["2026-04-17"])]]),
     });
 
     expect(merged).toHaveLength(1);
+    expect(merged[0]?.present).toBe(true);
+    expect(merged[0]?.weight).toBe(72.5);
+    expect(merged[0]?.comment).toBe("rest day note");
+  });
+
+  it("keeps a note-only rest entry visible when no workout was logged", () => {
+    const merged = mergeCheckinsWithWorkoutDates({
+      checkins: [
+        {
+          date: new Date("2026-04-18T00:00:00.000Z"),
+          userId: "u4",
+          present: false,
+          weight: null,
+          comment: "recovery notes",
+        },
+      ],
+      workoutDatesByUser: new Map(),
+    });
+
+    expect(merged).toHaveLength(1);
     expect(merged[0]?.present).toBe(false);
-    expect(merged[0]?.comment).toBe("rest day");
+    expect(merged[0]?.comment).toBe("recovery notes");
   });
 
   it("extracts unique workout dates from training timestamps", () => {

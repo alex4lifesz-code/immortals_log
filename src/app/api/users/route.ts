@@ -6,6 +6,18 @@ import { validatePassword, validateUsername } from "@/lib/validation";
 import { CONFIG } from "@/lib/config";
 import { generateUniqueImmortalFriendCode } from "@/lib/friend-code";
 
+function parseJsonObject(value: string | null | undefined): Record<string, unknown> | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export const GET = withAuth(async (_request, { auth }) => {
   try {
     // Only admins can list all users
@@ -20,6 +32,11 @@ export const GET = withAuth(async (_request, { auth }) => {
           username: true,
           name: true,
           createdAt: true,
+          settings: {
+            select: {
+              pinnedNavItems: true,
+            },
+          },
           _count: {
             select: {
               checkIns: true,
@@ -50,11 +67,22 @@ export const GET = withAuth(async (_request, { auth }) => {
 
     const enrichedUsers = users.map((user) => {
       const progressionLogCount = progressionLogCounts.get(user.id) ?? 0;
+      const appPrefs = parseJsonObject(user.settings?.pinnedNavItems);
+      const activityLog = Array.isArray(appPrefs?.activityLog)
+        ? appPrefs.activityLog.filter((entry): entry is { at: string; label: string; route: string } => {
+            if (!entry || typeof entry !== "object" || Array.isArray(entry)) return false;
+            return typeof entry.at === "string" && typeof entry.label === "string" && typeof entry.route === "string";
+          }).slice(0, 40)
+        : [];
+      const { settings, ...restUser } = user;
 
       return {
-        ...user,
+        ...restUser,
         progressionLogCount,
         sessionCount: progressionLogCount,
+        lastActivityAt: typeof appPrefs?.lastActivityAt === "string" ? appPrefs.lastActivityAt : null,
+        lastActivityLabel: typeof appPrefs?.lastActivityLabel === "string" ? appPrefs.lastActivityLabel : null,
+        activityLog,
       };
     });
 

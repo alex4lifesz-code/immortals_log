@@ -600,7 +600,7 @@ export default function DaoHallPage() {
 
         return { date: row.date, entries: scopedEntries };
       })
-      .filter((row) => Object.values(row.entries).some((entry) => entry.present));
+      .filter((row) => Object.values(row.entries).some((entry) => hasCheckInContent(entry)));
   }, [checkInRows, user, visibleUserIds]);
 
   const userNameById = useMemo(() => {
@@ -636,7 +636,7 @@ export default function DaoHallPage() {
       );
 
       const everyoneDetails = Object.entries(entries)
-        .filter(([, entry]) => entry.present)
+        .filter(([, entry]) => hasCheckInContent(entry))
         .map(([userId, entry]) => ({
           id: userId,
           name: userNameById.get(userId) || "Unknown",
@@ -1068,7 +1068,7 @@ export default function DaoHallPage() {
               ) : (
                 <div className="space-y-3">
                   {visibleRenderedCheckInRows.map(({ date, mine, mineWeight, presentCount, everyoneDetails }) => {
-                      const hasCheckin = calendarScope === "mine" ? mine.present : presentCount > 0;
+                      const hasCheckin = calendarScope === "mine" ? hasCheckInContent(mine) : everyoneDetails.length > 0 || presentCount > 0;
 
                       return (
                         <article

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import GlowButton from "@/components/ui/GlowButton";
 import PageSkeleton from "@/components/ui/PageSkeleton";
@@ -13,6 +13,12 @@ import { useRouter } from "next/navigation";
 import DataManagement from "@/components/admin/DataManagement";
 import { api } from "@/lib/api-client";
 
+interface AdminActivityEntry {
+  at: string;
+  label: string;
+  route: string;
+}
+
 interface AdminUser {
   id: string;
   username: string;
@@ -20,6 +26,9 @@ interface AdminUser {
   createdAt: string;
   sessionCount?: number;
   progressionLogCount?: number;
+  lastActivityAt?: string | null;
+  lastActivityLabel?: string | null;
+  activityLog?: AdminActivityEntry[];
   _count?: { checkIns: number };
 }
 
@@ -82,6 +91,7 @@ export default function AdminPanelPage() {
     totalCheckIns: 0,
   });
   const [showNewUserModal, setShowNewUserModal] = useState(false);
+  const [selectedActivityUserId, setSelectedActivityUserId] = useState("");
   const [newUsername, setNewUsername] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [newName, setNewName] = useState("");
@@ -141,6 +151,17 @@ export default function AdminPanelPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    if (!selectedActivityUserId && users.length > 0) {
+      setSelectedActivityUserId(users[0].id);
+    }
+  }, [selectedActivityUserId, users]);
+
+  const selectedActivityUser = useMemo(
+    () => users.find((entry) => entry.id === selectedActivityUserId) ?? null,
+    [selectedActivityUserId, users],
+  );
 
   const createUser = async () => {
     if (!newUsername.trim() || !newPassword.trim() || !newName.trim()) return;
@@ -300,6 +321,56 @@ export default function AdminPanelPage() {
               {actionNotice.message}
             </div>
           ) : null}
+
+          <GlowCard glow="blue" hoverable={false}>
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div>
+                <h3 className="text-sm text-mountain-blue-glow uppercase tracking-wider">User Activity Log</h3>
+                <p className="text-xs text-mist-dark mt-1">Navigation-based activity is used for the friends rail last activity display.</p>
+              </div>
+              <select
+                value={selectedActivityUserId}
+                onChange={(event) => setSelectedActivityUserId(event.target.value)}
+                className="rounded-md border border-ink-light/60 bg-ink-dark/80 px-2.5 py-2 text-xs text-cloud-white outline-none"
+              >
+                {users.map((entry) => (
+                  <option key={`activity-user-${entry.id}`} value={entry.id}>
+                    {entry.name} (@{entry.username})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {selectedActivityUser ? (
+              <div className="space-y-2">
+                <div className="rounded-lg border border-ink-light/50 bg-ink-mid/20 p-3">
+                  <p className="text-xs text-mist-dark uppercase">Latest</p>
+                  <p className="mt-1 text-sm text-cloud-white">
+                    {selectedActivityUser.lastActivityLabel || "No recent activity"}
+                  </p>
+                  <p className="mt-1 text-xs text-mist-dark">
+                    {selectedActivityUser.lastActivityAt ? new Date(selectedActivityUser.lastActivityAt).toLocaleString() : "Nothing logged yet"}
+                  </p>
+                </div>
+
+                <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+                  {(selectedActivityUser.activityLog || []).length === 0 ? (
+                    <p className="text-xs text-mist-dark">No activity has been logged for this user yet.</p>
+                  ) : (
+                    (selectedActivityUser.activityLog || []).map((entry, index) => (
+                      <div key={`activity-entry-${entry.at}-${index}`} className="rounded-lg border border-ink-light/40 bg-ink-dark/30 p-2.5">
+                        <p className="text-sm text-cloud-white">{entry.label}</p>
+                        <p className="mt-1 text-[11px] text-mist-dark">{new Date(entry.at).toLocaleString()}</p>
+                        <p className="mt-1 text-[10px] text-mountain-blue-glow/80">{entry.route}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-mist-dark">Select a user to inspect activity.</p>
+            )}
+          </GlowCard>
 
           {/* User Management */}
           <GlowCard glow="jade" hoverable={false}>
