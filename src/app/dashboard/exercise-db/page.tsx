@@ -493,6 +493,17 @@ export default function ExerciseDBPage() {
     return { total, custom, pending, categories, deleted };
   }, [deletedExercises.length, rows]);
 
+  const pendingRows = useMemo(() => {
+    return rows
+      .filter((row) => row.status === "Pending")
+      .sort((a, b) => {
+        const left = a.exercise.createdAt ? new Date(a.exercise.createdAt).getTime() : 0;
+        const right = b.exercise.createdAt ? new Date(b.exercise.createdAt).getTime() : 0;
+        if (left !== right) return right - left;
+        return a.displayName.localeCompare(b.displayName);
+      });
+  }, [rows]);
+
   const visibleRows = useMemo(() => {
     const query = search.trim();
     const list = rows.filter((row) => {
@@ -847,6 +858,106 @@ export default function ExerciseDBPage() {
         <section
           className="overflow-hidden rounded-xl border"
           style={{
+            borderColor: "color-mix(in srgb, var(--forest) 34%, transparent)",
+            backgroundColor: "color-mix(in srgb, var(--ink-deep) 95%, var(--ink-mid))",
+          }}
+        >
+          <div
+            className="border-b px-3 py-3 sm:px-4"
+            style={{
+              borderBottomColor: "color-mix(in srgb, var(--forest) 26%, transparent)",
+              backgroundColor: "color-mix(in srgb, var(--ink-deep) 92%, var(--ink-mid))",
+            }}
+          >
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-jade-glow/80">Admin review</p>
+                <h2 className="mt-1 text-base font-semibold text-cloud-white">Pending Exercise Queue</h2>
+                <p className="text-xs text-mist-light">New custom exercises from Train will appear here for admin review, progression setup, and approval into the main library.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setStatusFilter("pending");
+                  setSearchOpen(true);
+                }}
+                className="rounded-lg border border-jade/45 bg-jade-deep px-3 py-2 text-sm font-medium text-jade-light transition hover:scale-[1.02] hover:border-jade-glow/60 hover:bg-jade/30"
+              >
+                View pending only
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-2 px-3 py-3 sm:px-4">
+            {pendingRows.length === 0 ? (
+              <div
+                className="rounded-lg border px-3 py-3 text-sm text-mist-light"
+                style={{
+                  borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)",
+                  backgroundColor: "color-mix(in srgb, var(--ink-mid) 42%, var(--ink-deep))",
+                }}
+              >
+                No pending exercises yet. When a user saves a custom exercise from Train, it will show up in this queue.
+              </div>
+            ) : (
+              pendingRows.map((row) => (
+                <div
+                  key={`pending-${row.exercise.id}`}
+                  className="flex flex-col gap-2 rounded-lg border px-3 py-3 sm:flex-row sm:items-start sm:justify-between"
+                  style={{
+                    borderColor: "color-mix(in srgb, var(--forest) 28%, transparent)",
+                    backgroundColor: "color-mix(in srgb, var(--forest) 8%, var(--ink-deep))",
+                  }}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-cloud-white">{row.displayName}</p>
+                    <p className="mt-1 text-xs text-mist-light">
+                      {row.category} • {row.type} • Added {formatCalendarDate(row.exercise.createdAt)}
+                    </p>
+                    <p className="mt-1 text-[11px] text-mist-dark">
+                      Progressions: {row.progressionValues.join(" • ")} {row.variationValues[0] !== "-" ? `• Variants: ${row.variationValues.join(", ")}` : ""}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/dashboard/exercise-db/${row.exercise.id}`)}
+                      className="rounded-md border border-jade/45 bg-jade-deep px-2.5 py-1 text-[11px] font-medium text-jade-light transition hover:border-jade-glow/60 hover:bg-jade/30"
+                    >
+                      Review & Configure
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busyId === row.exercise.id}
+                      onClick={() => { void handleAppendPendingExercise(row.exercise); }}
+                      className="theme-action-btn rounded-md border px-2.5 py-1 text-[11px] font-medium transition disabled:opacity-60"
+                    >
+                      {busyId === row.exercise.id ? "Working..." : "Approve to Library"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busyId === row.exercise.id}
+                      onClick={() => { void handleDeletePendingExercise(row.exercise); }}
+                      className="rounded-md border px-2.5 py-1 text-[11px] font-medium transition hover:border-rose-300/45 hover:bg-rose-500/10 hover:text-rose-100 disabled:opacity-60"
+                      style={{
+                        borderColor: "color-mix(in srgb, var(--ink-light) 60%, transparent)",
+                        backgroundColor: "transparent",
+                        color: "var(--text-muted)",
+                      }}
+                    >
+                      Delete Pending
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+
+        <section
+          className="overflow-hidden rounded-xl border"
+          style={{
             borderColor: "color-mix(in srgb, var(--ink-light) 52%, transparent)",
             backgroundColor: "color-mix(in srgb, var(--ink-deep) 95%, var(--ink-mid))",
           }}
@@ -1184,7 +1295,7 @@ export default function ExerciseDBPage() {
                                         onClick={() => { void handleAppendPendingExercise(row.exercise); }}
                                         className="theme-action-btn rounded-md border px-2.5 py-1 text-[11px] font-medium transition disabled:opacity-60"
                                       >
-                                        {busyId === row.exercise.id ? "Working..." : "Append"}
+                                        {busyId === row.exercise.id ? "Working..." : "Approve to Library"}
                                       </button>
                                     </>
                                   ) : (

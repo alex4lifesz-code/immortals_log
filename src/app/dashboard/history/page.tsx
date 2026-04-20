@@ -1097,6 +1097,34 @@ export default function HistoryPage() {
                   className="min-h-0 flex-1 overflow-y-auto scrollbar-hide overflow-x-hidden px-2 pb-[calc(env(safe-area-inset-bottom,0px)+5rem)]"
                   style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorY: "auto", touchAction: "pan-y" }}
                 >
+                  <button
+                    type="button"
+                    className="mx-1 my-0.5 block w-[calc(100%-0.5rem)] rounded-md px-3 py-2.5 text-left"
+                    style={{
+                      borderTop: "1px solid color-mix(in srgb, var(--ink-light) 72%, transparent)",
+                      backgroundColor: "transparent",
+                    }}
+                    onClick={() => {
+                      const params = new URLSearchParams();
+                      params.set("custom", "1");
+                      const customName = mobileLogFabSearchQuery.trim();
+                      if (customName) {
+                        params.set("prefillExercise", customName);
+                      }
+                      setMobileLogFabOpen(false);
+                      router.push(`/dashboard/train/input/new?${params.toString()}`);
+                    }}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-sm font-semibold leading-tight" style={{ color: "color-mix(in srgb, var(--forest) 72%, black 28%)" }}>
+                        + New Custom Exercise
+                      </p>
+                    </div>
+                    <p className="mt-0.5 text-[11px] italic" style={{ color: "var(--text-muted)" }}>
+                      Create a new exercise name and send it to review.
+                    </p>
+                  </button>
+
                   {filteredMobileLogFabRows.length === 0 ? (
                     <div className="px-3 py-4 text-center text-xs" style={{ color: "var(--text-muted)" }}>
                       No exercises match your search or filters.

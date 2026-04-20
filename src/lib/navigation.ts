@@ -33,6 +33,7 @@ export const NAV_LABELS: Record<string, string> = {
   history: "Train",
   "training-log-history": "History",
   checkin: "Check-In",
+  attendance: "Attendance",
   "exercise-db": "Exercise Library",
   friends: "Friends",
   settings: "Settings",
@@ -68,6 +69,7 @@ export const MAIN_NAV_IDS_ORDER: readonly string[] = [
 ];
 
 export const ADMIN_NAV_IDS_ORDER: readonly string[] = [
+  "attendance",
   "website-information",
   "admin",
 ];

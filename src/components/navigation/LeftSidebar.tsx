@@ -10,7 +10,7 @@ import { NavItem } from "@/lib/constants";
 import { t, tHint } from "@/lib/terminology";
 import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
 
-const ADMIN_NAV_IDS = new Set(["admin", "checkin", "website-information"]);
+const ADMIN_NAV_IDS = new Set(["attendance", "admin", "website-information"]);
 
 function LeftSidebar() {
   const { getSortedNavItems, isMobile, reorderNavItems } = useAppContext();

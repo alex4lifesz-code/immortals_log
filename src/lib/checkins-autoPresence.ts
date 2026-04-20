@@ -47,10 +47,9 @@ export function mergeCheckinsWithWorkoutDates<T extends CheckInShape>({
     const dateKey = normalizeDateKey(checkin.date);
     if (!dateKey) continue;
 
-    const workoutDates = workoutDatesByUser.get(checkin.userId);
     merged.set(`${checkin.userId}:${dateKey}`, {
       ...checkin,
-      present: checkin.present || workoutDates?.has(dateKey) === true,
+      present: Boolean(checkin.present),
     });
   }
 

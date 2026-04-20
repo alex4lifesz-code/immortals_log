@@ -12,7 +12,7 @@ import { api } from "@/lib/api-client";
 import { t, tHint } from "@/lib/terminology";
 import { ADMIN_NAV_IDS_ORDER, DASHBOARD_ROUTES, MAIN_NAV_IDS_ORDER, MOBILE_MORE_NAV_IDS_ORDER, MOBILE_PRIMARY_NAV_IDS, sortNavItemsByIdOrder } from "@/lib/navigation";
 
-const ADMIN_NAV_IDS = new Set(["admin", "website-information"]);
+const ADMIN_NAV_IDS = new Set(["attendance", "admin", "website-information"]);
 
 const NAV_ICON_MAP: Record<string, ReactNode> = {
   [DASHBOARD_ROUTES.community]: (

@@ -151,6 +151,7 @@ export default function TrainInputCanvasPage() {
   const prefillExerciseName = searchParams.get("prefillExercise") || "";
   const prefillProgression = searchParams.get("prefillProgression") || "";
   const prefillVariant = searchParams.get("prefillVariant") || "";
+  const prefillCustomExercise = searchParams.get("custom") === "1";
 
   const [exercises, setExercises] = useState<ProgressionExercise[]>([]);
   const [loading, setLoading] = useState(true);
@@ -159,7 +160,7 @@ export default function TrainInputCanvasPage() {
   const [editLogHydrated, setEditLogHydrated] = useState(!editLogId);
   const [initialEditSnapshot, setInitialEditSnapshot] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  const [inputMode, setInputMode] = useState<InputMode>(prefillExerciseName ? "existing" : "existing");
+  const [inputMode, setInputMode] = useState<InputMode>(prefillCustomExercise ? "custom" : "existing");
   const [valueMode, setValueMode] = useState<ValueMode>("weight");
   const [weightUnit, setWeightUnit] = useState<WeightUnit>(settings.defaultWeightUnit === "lbs" ? "lbs" : "kg");
   const [searchTerm, setSearchTerm] = useState(prefillExerciseName);
@@ -394,6 +395,15 @@ export default function TrainInputCanvasPage() {
   }, [exercises, searchTerm]);
 
   useEffect(() => {
+    if (prefillCustomExercise) {
+      setInputMode("custom");
+      setSelectedExerciseId("");
+      if (prefillExerciseName) {
+        setCustomExerciseName(prefillExerciseName);
+      }
+      return;
+    }
+
     if (!selectedExercise && !prefillExerciseId && !prefillExerciseName) return;
     if (!selectedExercise && exercises.length > 0) {
       const matched = exercises.find((exercise) => exercise.id === prefillExerciseId)
@@ -423,7 +433,7 @@ export default function TrainInputCanvasPage() {
       if (prefillVariant && selectedExercise.variations.some((variation) => variation.name === prefillVariant)) return prefillVariant;
       return "";
     });
-  }, [exercises, prefillExerciseId, prefillExerciseName, prefillProgression, prefillVariant, selectedExercise]);
+  }, [exercises, prefillCustomExercise, prefillExerciseId, prefillExerciseName, prefillProgression, prefillVariant, selectedExercise]);
 
   const addSetRow = () => {
     setSets((prev) => {
@@ -477,6 +487,17 @@ export default function TrainInputCanvasPage() {
     setInputMode("existing");
     setSelectedExerciseId(exercise.id);
     setSearchTerm(exercise.name);
+    setCustomExerciseName("");
+    setMessage(null);
+  };
+
+  const handleStartCustomExercise = (prefillName = "") => {
+    setInputMode("custom");
+    setSelectedExerciseId("");
+    setSearchTerm("");
+    setCustomExerciseName(prefillName.trim());
+    setSelectedLevel("1");
+    setSelectedVariant("");
     setMessage(null);
   };
 
@@ -651,9 +672,11 @@ export default function TrainInputCanvasPage() {
   }, [deleting, editLogId, isEditingExistingLog, returnHref, router, saving]);
 
   const shellMinHeight = "calc(var(--app-viewport-height) - 0.5rem)";
-  const selectedExerciseMeta = selectedExercise
-    ? `${selectedExercise.category || "Training"} • ${selectedExercise.tiers.length} progression tiers`
-    : "Choose an exercise from the train library or create a custom one.";
+  const selectedExerciseMeta = inputMode === "custom"
+    ? "This custom exercise will be saved to the pending section in Exercise DB for review."
+    : selectedExercise
+      ? `${selectedExercise.category || "Training"} • ${selectedExercise.tiers.length} progression tiers`
+      : "Choose an exercise from the previous screen.";
   const setValuePlaceholder = valueMode === "timed" ? "time" : weightUnit;
   const panelShellStyle = {
     minHeight: 0,
@@ -1024,23 +1047,7 @@ export default function TrainInputCanvasPage() {
                   {activePanel === "exercise" ? (
                     <section className="flex flex-col overflow-hidden px-1 py-1" style={panelShellStyle}>
                       <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">
-                        <div className="min-w-0">
-                          <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Selected exercise</p>
-                        </div>
-
-                        <div
-                          className="mt-2 flex min-w-0 flex-col rounded-lg px-3 py-2.5"
-                          style={{
-                            backgroundColor: "color-mix(in srgb, var(--surface) 88%, black)",
-                            border: "1px solid color-mix(in srgb, var(--ink-light) 42%, transparent)",
-                          }}
-                        >
-                          <p className="text-[11px] text-[color:var(--text-secondary)]">Selected movement</p>
-                          <p className="mt-1 text-base font-semibold text-[color:var(--text-primary)]">{selectedExercise?.name || customExerciseName || "No exercise selected"}</p>
-                          <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">{selectedExerciseMeta}</p>
-                        </div>
-
-                        <div id="editor-field-session-date" className="mt-3 rounded-lg px-1 py-1" style={getFieldHighlightStyle("session-date")}>
+                        <div id="editor-field-session-date" className="rounded-lg px-1 py-1" style={getFieldHighlightStyle("session-date")}>
                           <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Session date</label>
                           <input
                             type="date"
@@ -1050,6 +1057,45 @@ export default function TrainInputCanvasPage() {
                             style={{ borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--text-primary)" }}
                           />
                         </div>
+
+                        {inputMode !== "custom" ? (
+                          <>
+                            <div className="mt-3 min-w-0">
+                              <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Selected exercise</p>
+                            </div>
+
+                            <div
+                              className="mt-2 flex min-w-0 flex-col rounded-lg px-3 py-2.5"
+                              style={{
+                                backgroundColor: "color-mix(in srgb, var(--surface) 88%, black)",
+                                border: "1px solid color-mix(in srgb, var(--ink-light) 42%, transparent)",
+                              }}
+                            >
+                              <p className="text-[11px] text-[color:var(--text-secondary)]">Selected movement</p>
+                              <p className="mt-1 text-base font-semibold text-[color:var(--text-primary)]">{selectedExercise?.name || customExerciseName || "No exercise selected"}</p>
+                              <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">{selectedExerciseMeta}</p>
+                            </div>
+                          </>
+                        ) : null}
+
+                        {inputMode === "custom" ? (
+                          <div className="mt-3">
+                            <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Custom exercise name</label>
+                            <div className="rounded-xl border px-3 py-3" style={{ borderColor: "color-mix(in srgb, var(--forest) 46%, transparent)", backgroundColor: "color-mix(in srgb, var(--forest) 10%, transparent)" }}>
+                              <input
+                                type="text"
+                                value={customExerciseName}
+                                onChange={(event) => setCustomExerciseName(event.target.value)}
+                                placeholder="Type the exercise name you want"
+                                className="h-10 w-full rounded-md border px-3 text-sm outline-none"
+                                style={{ borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--text-primary)" }}
+                              />
+                              <p className="mt-2 text-[11px] text-[color:var(--text-secondary)]">
+                                When you save this workout, the exercise will appear in the pending section of Exercise DB where admins can review, edit, and approve it.
+                              </p>
+                            </div>
+                          </div>
+                        ) : null}
 
                       </div>
 

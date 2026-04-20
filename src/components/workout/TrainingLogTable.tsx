@@ -404,7 +404,8 @@ const TRAINING_LOG_SORT_STORAGE_KEY_PREFIX = "training-log-table-sort-v1";
 const TRAINING_LOG_COLUMN_ORDER_STORAGE_KEY_PREFIX = "training-log-column-order-v1";
 
 type InputExerciseSearchResult = {
-  exercise: ProgressionExercise;
+  mode?: "exercise" | "custom";
+  exercise?: ProgressionExercise;
   displayLabel: string;
   searchLabel: string;
   canonicalName: string;
@@ -1383,7 +1384,17 @@ function TrainingLogTable({
   }, [entries]);
 
   const filteredInputExercises = useMemo<InputExerciseSearchResult[]>(() => {
-    const query = exerciseSearchTerm.trim().toLowerCase();
+    const trimmedSearchTerm = exerciseSearchTerm.trim();
+    const query = trimmedSearchTerm.toLowerCase();
+    const customExerciseOption: InputExerciseSearchResult = {
+      mode: "custom",
+      displayLabel: trimmedSearchTerm ? `New Custom Exercise: ${trimmedSearchTerm}` : "New Custom Exercise",
+      searchLabel: trimmedSearchTerm,
+      canonicalName: trimmedSearchTerm,
+      hasHistory: false,
+      lastLoggedAt: null,
+      matchSource: "name",
+    };
 
     const baseResults = sortedExercises.map((exercise) => {
       const displayName = exerciseMetaById.get(exercise.id)?.displayName ?? exercise.name;
@@ -1416,20 +1427,25 @@ function TrainingLogTable({
     });
 
     if (!query) {
-      return baseResults.map((row) => ({
-        exercise: row.exercise,
-        displayLabel: row.displayName,
-        searchLabel: row.displayName,
-        canonicalName: row.canonicalName,
-        hasHistory: row.hasHistory,
-        lastLoggedAt: row.lastLoggedAt,
-        matchSource: "name",
-      }));
+      return [
+        customExerciseOption,
+        ...baseResults.map((row) => ({
+          mode: "exercise" as const,
+          exercise: row.exercise,
+          displayLabel: row.displayName,
+          searchLabel: row.displayName,
+          canonicalName: row.canonicalName,
+          hasHistory: row.hasHistory,
+          lastLoggedAt: row.lastLoggedAt,
+          matchSource: "name" as const,
+        })),
+      ];
     }
 
-    const next: InputExerciseSearchResult[] = [];
+    const next: InputExerciseSearchResult[] = [customExerciseOption];
     const seen = new Set<string>();
     const pushUnique = (item: InputExerciseSearchResult) => {
+      if (!item.exercise) return;
       const key = `${item.exercise.id}::${item.prefillLevel || ""}::${item.prefillVariant || ""}::${item.searchLabel.toLowerCase()}`;
       if (seen.has(key)) return;
       seen.add(key);
@@ -2064,11 +2080,31 @@ function TrainingLogTable({
     });
   };
 
+  const selectNewCustomExercise = useCallback((prefillName?: string) => {
+    const nextName = (prefillName ?? exerciseSearchTerm).trim();
+    setInputMode("new");
+    setWorkoutInput((prev) => ({
+      ...clearWorkoutInputEntryFields(prev, ""),
+      newExerciseName: nextName,
+    }));
+    setExerciseSearchTerm("");
+    setExerciseDropdownOpen(false);
+    setExerciseHighlightIndex(-1);
+    requestAnimationFrame(() => setActiveDesktopInputCell("newExerciseName"));
+  }, [exerciseSearchTerm]);
+
   const applyInputExerciseSelection = (result: InputExerciseSearchResult) => {
+    if (result.mode === "custom") {
+      selectNewCustomExercise(result.searchLabel);
+      return;
+    }
+
     const selectedExercise = result.exercise;
+    if (!selectedExercise) return;
     const defaultLevel = String(selectedExercise.userProgress?.[0]?.currentLevel ?? 1);
     const nextLevel = result.prefillLevel || defaultLevel;
 
+    setInputMode("existing");
     setWorkoutInput((prev) => ({
       ...clearWorkoutInputEntryFields(prev, selectedExercise.id),
       level: nextLevel,
@@ -2561,11 +2597,11 @@ function TrainingLogTable({
                     className={segmentedToggleButtonClass}
                     style={{
                       color: inputMode === "new" ? "var(--cloud-white)" : "var(--text-secondary)",
-                      backgroundColor: inputMode === "new" ? "color-mix(in srgb, var(--gold) 16%, transparent)" : "transparent",
-                      boxShadow: inputMode === "new" ? "0 0 0 1px color-mix(in srgb, var(--gold) 38%, transparent) inset" : "none",
+                      backgroundColor: inputMode === "new" ? "color-mix(in srgb, var(--forest) 18%, transparent)" : "transparent",
+                      boxShadow: inputMode === "new" ? "0 0 0 1px color-mix(in srgb, var(--forest) 42%, transparent) inset" : "none",
                     }}
                   >
-                    <span title={tHint("Add New Exercise", "normal") ?? undefined}>{t("Add New Exercise", "normal")}</span>
+                    <span title={tHint("New Custom Exercise", "normal") ?? undefined}>{t("New Custom Exercise", "normal")}</span>
                   </button>
                 </div>
               </div>
@@ -2781,7 +2817,7 @@ function TrainingLogTable({
                                 onBlur={() => setActiveDesktopInputCell(null)}
                                 onKeyDown={handleDesktopInputCellKeyDown}
                                 onChange={(event) => handleWorkoutInputChange("newExerciseName", event.target.value)}
-                                placeholder=""
+                                placeholder="Type custom exercise name"
                                 className="w-full h-7 rounded px-1.5 text-[11px] outline-none"
                                 style={{ backgroundColor: "var(--ink-dark)", border: "1px solid color-mix(in srgb, var(--jade-glow) 30%, var(--border))", boxShadow: "none", color: "var(--text-primary)", textShadow: "none" }}
                               />
@@ -3132,7 +3168,7 @@ function TrainingLogTable({
                   type="text"
                   value={workoutInput.newExerciseName}
                   onChange={(event) => handleWorkoutInputChange("newExerciseName", event.target.value)}
-                  placeholder=""
+                  placeholder="Type custom exercise name"
                   className={`training-log-mobile-control w-full rounded-md outline-none ${isMobile ? "flex-1 px-3 py-2 text-sm" : "px-2 py-1 text-xs"}`}
                   style={{ backgroundColor: "var(--surface)", borderColor: "color-mix(in srgb, var(--border) 82%, transparent)", border: "1px solid", color: "var(--text-primary)" }}
                 />
@@ -5057,9 +5093,10 @@ function TrainingLogTable({
             ) : (
               filteredInputExercises.map((result, idx) => {
                 const isHighlighted = idx === exerciseHighlightIndex;
+                const isCustomOption = result.mode === "custom";
                 return (
                   <button
-                    key={`${result.exercise.id}:${result.prefillLevel || ""}:${result.prefillVariant || ""}:${idx}`}
+                    key={`${result.mode || "exercise"}:${result.exercise?.id || "custom"}:${result.prefillLevel || ""}:${result.prefillVariant || ""}:${idx}`}
                     type="button"
                     onMouseDown={(e) => {
                       // prevent blur from firing before click, and stop the document
@@ -5070,14 +5107,17 @@ function TrainingLogTable({
                     onClick={() => {
                       applyInputExerciseSelection(result);
                     }}
-                    className="block w-full truncate px-2 py-1.5 text-left text-xs transition-none hover:bg-ink-mid/25"
+                    className={`block w-full px-2 py-1.5 text-left text-xs transition-none hover:bg-ink-mid/25 ${isCustomOption ? "font-semibold" : "truncate"}`}
                     style={{
-                      color: "var(--text-primary)",
-                      backgroundColor: isHighlighted ? "color-mix(in srgb, var(--accent) 18%, transparent)" : undefined,
+                      color: isCustomOption ? "var(--cloud-white)" : "var(--text-primary)",
+                      backgroundColor: isCustomOption
+                        ? (isHighlighted ? "color-mix(in srgb, var(--forest) 30%, var(--ink-dark))" : "color-mix(in srgb, var(--forest) 18%, var(--ink-dark))")
+                        : (isHighlighted ? "color-mix(in srgb, var(--accent) 18%, transparent)" : undefined),
+                      borderBottom: isCustomOption ? "1px solid color-mix(in srgb, var(--forest) 30%, transparent)" : undefined,
                     }}
-                    title={result.displayLabel}
+                    title={isCustomOption ? "Create a custom exercise and send it to pending review" : result.displayLabel}
                   >
-                    {result.displayLabel}
+                    {isCustomOption ? `+ ${result.displayLabel}` : result.displayLabel}
                   </button>
                 );
               })

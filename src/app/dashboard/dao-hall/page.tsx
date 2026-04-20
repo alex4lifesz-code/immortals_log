@@ -13,7 +13,6 @@ import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { createCalendarMonthAnchor, formatDateWithPreference } from "@/lib/constants";
 import { t } from "@/lib/terminology";
 import {
-  getCheckInHistoryPreviewLimit,
   getDetailLabelVisibility,
   type CheckInHistoryViewMode,
 } from "@/lib/checkin-history-view";
@@ -46,6 +45,11 @@ interface CommunityNote {
 }
 
 const ITEMS_PER_PAGE = 7;
+
+function hasCheckInContent(entry: { present: boolean; weight: string; comment: string } | undefined): boolean {
+  if (!entry) return false;
+  return entry.present || Boolean(entry.weight?.trim()) || Boolean(entry.comment?.trim());
+}
 
 function formatRelativeRecentDate(dateLike: string): string {
   const timestamp = new Date(dateLike).getTime();
@@ -315,7 +319,13 @@ export default function DaoHallPage() {
       // Update local rows
       setCheckInRows(prev => {
         const filtered = prev.filter(r => r.date !== checkInModal.date);
-        const newRow = { date: checkInModal.date, entries: checkInModal.entries };
+        const normalizedEntries = Object.fromEntries(
+          Object.entries(checkInModal.entries).filter(([, entry]) => hasCheckInContent(entry))
+        );
+        if (Object.keys(normalizedEntries).length === 0) {
+          return filtered;
+        }
+        const newRow = { date: checkInModal.date, entries: normalizedEntries };
         return [newRow, ...filtered].sort((a, b) => b.date.localeCompare(a.date));
       });
 
@@ -377,7 +387,13 @@ export default function DaoHallPage() {
 
       setCheckInRows(prev => {
         const filtered = prev.filter(r => r.date !== checkInModal.date);
-        const newRow = { date: checkInModal.date, entries: updatedEntries };
+        const normalizedEntries = Object.fromEntries(
+          Object.entries(updatedEntries).filter(([, entry]) => hasCheckInContent(entry))
+        );
+        if (Object.keys(normalizedEntries).length === 0) {
+          return filtered;
+        }
+        const newRow = { date: checkInModal.date, entries: normalizedEntries };
         return [newRow, ...filtered].sort((a, b) => b.date.localeCompare(a.date));
       });
 
@@ -570,14 +586,14 @@ export default function DaoHallPage() {
     return checkInRows
       .map((row) => {
         const scopedEntries = Object.fromEntries(
-          Object.entries(row.entries).filter(([userId]) => visibleUserIds.has(userId))
+          Object.entries(row.entries).filter(
+            ([userId, entry]) => visibleUserIds.has(userId) && hasCheckInContent(entry)
+          )
         );
 
         return { date: row.date, entries: scopedEntries };
       })
-      .filter((row) =>
-        Object.values(row.entries).some((entry) => entry.present || entry.weight || entry.comment?.trim())
-      );
+      .filter((row) => Object.values(row.entries).some((entry) => entry.present));
   }, [checkInRows, user, visibleUserIds]);
 
   const userNameById = useMemo(() => {
@@ -613,6 +629,7 @@ export default function DaoHallPage() {
       );
 
       const everyoneDetails = Object.entries(entries)
+        .filter(([, entry]) => entry.present)
         .map(([userId, entry]) => ({
           id: userId,
           name: userNameById.get(userId) || "Unknown",
@@ -641,7 +658,6 @@ export default function DaoHallPage() {
     [displayCount, renderedCheckInRows],
   );
 
-  const historyPreviewLimit = getCheckInHistoryPreviewLimit(true, historyViewMode);
   const hasMoreRows = displayCount < renderedCheckInRows.length;
 
   useEffect(() => {
@@ -1127,7 +1143,7 @@ export default function DaoHallPage() {
                               )
                             ) : (
                               <>
-                                {everyoneDetails.slice(0, historyPreviewLimit).map((detail, detailIndex) => {
+                                {everyoneDetails.map((detail, detailIndex) => {
                                   const c = getUserCultivatorColor(detail.id, userColors);
                                   return (
                                     <div
@@ -1191,11 +1207,6 @@ export default function DaoHallPage() {
                                     </div>
                                   );
                                 })}
-                                {everyoneDetails.length > historyPreviewLimit && (
-                                  <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>
-                                    +{everyoneDetails.length - historyPreviewLimit} {t("more people", "normal")}
-                                  </p>
-                                )}
                               </>
                             )}
                           </div>

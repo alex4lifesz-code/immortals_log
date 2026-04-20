@@ -40,6 +40,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     || matchesRouteOrChild(DASHBOARD_ROUTES.profile)
     || matchesRouteOrChild(DASHBOARD_ROUTES.settings)
     || matchesRouteOrChild(DASHBOARD_ROUTES.checkIn)
+    || matchesRouteOrChild(DASHBOARD_ROUTES.attendance)
     || matchesRouteOrChild(DASHBOARD_ROUTES.checkinLegacy)
     || pathname === "/dashboard/mobile/profile"
     || pathname?.startsWith("/dashboard/mobile/profile/")

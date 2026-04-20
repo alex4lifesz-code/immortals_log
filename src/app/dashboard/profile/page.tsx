@@ -179,6 +179,7 @@ export default function ProfilePage() {
 
   const adminItems = user?.role === "admin"
     ? [
+        { id: "attendance", label: "Attendance", path: DASHBOARD_ROUTES.attendance, icon: "🗓️" },
         { id: "website-information", label: "Website Information", path: DASHBOARD_ROUTES.websiteInformation, icon: "🛠️" },
         { id: "admin", label: "Admin Panel", path: DASHBOARD_ROUTES.admin, icon: "🛡️" },
       ] as const

@@ -18,6 +18,7 @@ export const defaultNavItems: NavItem[] = [
   { id: "training-log-history", label: NAV_LABELS["training-log-history"], icon: "🕘", path: DASHBOARD_ROUTES.trainingLogHistory, pinned: false, visible: true },
   { id: "checkin", label: NAV_LABELS.checkin, icon: "📋", path: DASHBOARD_ROUTES.checkIn, pinned: false, visible: true },
   { id: "exercise-db", label: NAV_LABELS["exercise-db"], icon: "📚", path: DASHBOARD_ROUTES.exercises, pinned: false, visible: true },
+  { id: "attendance", label: NAV_LABELS.attendance, icon: "🗓️", path: DASHBOARD_ROUTES.attendance, pinned: false, visible: true },
   { id: "friends", label: NAV_LABELS.friends, icon: "🤝", path: DASHBOARD_ROUTES.friends, pinned: false, visible: true },
   { id: "settings", label: NAV_LABELS.settings, icon: "⚙️", path: DASHBOARD_ROUTES.settings, pinned: false, visible: true },
   { id: "website-information", label: NAV_LABELS["website-information"], icon: "🗂️", path: DASHBOARD_ROUTES.websiteInformation, pinned: false, visible: true },
