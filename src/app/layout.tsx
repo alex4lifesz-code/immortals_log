@@ -70,7 +70,7 @@ export default function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var d=document.documentElement;var themes=['discord'];d.classList.remove.apply(d.classList,themes);var t=localStorage.getItem('cultivation-theme');if(t==='light'){d.classList.remove('dark');d.classList.add('light')}var applied='discord';d.classList.add(applied);localStorage.setItem('cultivation-theme-style',applied)}catch(e){}})()`
+            __html: `(function(){try{var d=document.documentElement;var themes=['discord','forest','ink-dragon','frost-sect','heavenly-sword'];d.classList.remove.apply(d.classList,themes);var saved=localStorage.getItem('cultivation-theme-style');var applied=themes.indexOf(saved)>=0?saved:'discord';var modes=['dark','light','auto'];var savedMode=localStorage.getItem('cultivation-theme-mode');var mode=modes.indexOf(savedMode)>=0?savedMode:'dark';var appearance;if(mode==='auto'){appearance=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';}else{appearance=mode;}if(applied==='discord')appearance='dark';d.classList.remove('light','dark');d.classList.add(appearance);d.classList.add(applied);d.setAttribute('data-theme',applied);localStorage.setItem('cultivation-theme-style',applied);localStorage.setItem('cultivation-theme-mode',mode);localStorage.setItem('cultivation-theme',appearance);}catch(e){}})()`
           }}
         />
       </head>

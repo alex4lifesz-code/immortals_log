@@ -330,7 +330,21 @@ function CalendarDay({ dayNumber, checkedInUsers, isToday, isPast, hasNote, hasF
           </div>
 
           {(hasNote || hasFutureNote) ? (
-            <span className="text-[9px]" style={{ color: hasFutureNote ? "var(--gold)" : "var(--accent)" }}>{hasFutureNote ? "✦" : "•"}</span>
+            hasFutureNote ? (
+              <span className="text-[9px]" style={{ color: "var(--gold)" }}>✦</span>
+            ) : (
+              <svg
+                viewBox="0 0 16 16"
+                aria-hidden="true"
+                className="h-2.5 w-2.5"
+                style={{ color: "var(--accent)" }}
+              >
+                <path
+                  fill="currentColor"
+                  d="M11.4 1.7a1.6 1.6 0 0 1 2.3 0l.6.6a1.6 1.6 0 0 1 0 2.3L5.9 13H3v-2.9l8.4-8.4Zm1.2 1.1L11.5 3.9l1.6 1.6 1.1-1.1-1.6-1.6Z"
+                />
+              </svg>
+            )
           ) : null}
         </div>
       </div>
@@ -532,8 +546,18 @@ export function Calendar({
           <span>{t("Today", "normal")}</span>
         </div>
         <div className="flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
-          <span className="text-sm font-bold" style={{ color: "var(--accent)" }}>•</span>
-          <span>{t("Check-In", "normal")}</span>
+          <svg
+            viewBox="0 0 16 16"
+            aria-hidden="true"
+            className="h-3 w-3"
+            style={{ color: "var(--accent)" }}
+          >
+            <path
+              fill="currentColor"
+              d="M11.4 1.7a1.6 1.6 0 0 1 2.3 0l.6.6a1.6 1.6 0 0 1 0 2.3L5.9 13H3v-2.9l8.4-8.4Zm1.2 1.1L11.5 3.9l1.6 1.6 1.1-1.1-1.6-1.6Z"
+            />
+          </svg>
+          <span>{t("Note", "normal")}</span>
         </div>
         <div className="flex items-center gap-1" style={{ color: "var(--text-secondary)" }}>
           {allUsers.slice(0, compactMode ? 3 : 4).map((u) => (

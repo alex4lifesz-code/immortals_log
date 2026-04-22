@@ -1,4 +1,5 @@
 ﻿@import "tailwindcss";
+@import "./themes.css";
 
 /* ===== Cultivation Workout — Wuxia Ink Painting Theme ===== */
 
@@ -142,6 +143,22 @@
     --theme-preview-discord-2: #2b2d31;
     --theme-preview-discord-3: #5865f2;
     --theme-preview-discord-4: #f2f3f5;
+    --theme-preview-forest-1: #232a2e;
+    --theme-preview-forest-2: #2d353b;
+    --theme-preview-forest-3: #a7c080;
+    --theme-preview-forest-4: #d3c6aa;
+    --theme-preview-ink-dragon-1: #0c0c12;
+    --theme-preview-ink-dragon-2: #16161e;
+    --theme-preview-ink-dragon-3: #9a6ee0;
+    --theme-preview-ink-dragon-4: #b8343a;
+    --theme-preview-frost-sect-1: #1f2933;
+    --theme-preview-frost-sect-2: #29333f;
+    --theme-preview-frost-sect-3: #7eb0d6;
+    --theme-preview-frost-sect-4: #82c0c8;
+    --theme-preview-heavenly-sword-1: #1c2738;
+    --theme-preview-heavenly-sword-2: #25324a;
+    --theme-preview-heavenly-sword-3: #7ea8d8;
+    --theme-preview-heavenly-sword-4: #d8b860;
     --theme-preview-cherry-1: #181216;
     --theme-preview-cherry-2: #2a1f28;
     --theme-preview-cherry-3: #ef8fbc;

@@ -31,6 +31,7 @@ export const GET = withAuth(async (_request, { auth }) => {
           id: true,
           username: true,
           name: true,
+          role: true,
           createdAt: true,
           settings: {
             select: {

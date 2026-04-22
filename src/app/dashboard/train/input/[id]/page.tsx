@@ -1072,7 +1072,31 @@ export default function TrainInputCanvasPage() {
                               }}
                             >
                               <p className="text-[11px] text-[color:var(--text-secondary)]">Selected movement</p>
-                              <p className="mt-1 text-base font-semibold text-[color:var(--text-primary)]">{selectedExercise?.name || customExerciseName || "No exercise selected"}</p>
+                              {isEditingExistingLog ? (
+                                <select
+                                  value={selectedExerciseId}
+                                  onChange={(event) => {
+                                    const nextExercise = exercises.find((exercise) => exercise.id === event.target.value);
+                                    if (nextExercise) {
+                                      handleSelectExercise(nextExercise);
+                                    }
+                                  }}
+                                  className="mt-1 h-10 w-full rounded-md border px-3 text-sm outline-none"
+                                  style={{ borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--text-primary)" }}
+                                >
+                                  <option value="" disabled>Select a parent exercise</option>
+                                  {exercises
+                                    .slice()
+                                    .sort((a, b) => a.name.localeCompare(b.name))
+                                    .map((exercise) => (
+                                      <option key={exercise.id} value={exercise.id}>
+                                        {exercise.name}
+                                      </option>
+                                    ))}
+                                </select>
+                              ) : (
+                                <p className="mt-1 text-base font-semibold text-[color:var(--text-primary)]">{selectedExercise?.name || customExerciseName || "No exercise selected"}</p>
+                              )}
                               <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">{selectedExerciseMeta}</p>
                             </div>
                           </>

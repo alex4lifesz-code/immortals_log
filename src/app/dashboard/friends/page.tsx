@@ -15,6 +15,14 @@ interface BasicUser {
   name: string;
   username: string;
   friendCode?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  sessionCount?: number | null;
+  checkInCount?: number | null;
+  lastWorkoutAt?: string | null;
+  lastCheckInAt?: string | null;
+  lastActivityAt?: string | null;
+  lastActivityLabel?: string | null;
 }
 
 interface FriendRequestRow {
@@ -52,11 +60,54 @@ interface FriendStats {
   totalCheckIns: number;
   lastCheckInDate: string | null;
   latestWeight: number | null;
+  totalSessions: number;
+  lastSeenAt: string | null;
+  lastSeenLabel: string;
+}
+
+function toTimestamp(value: string | null | undefined): number {
+  if (!value) return Number.NaN;
+  const parsed = new Date(value).getTime();
+  return Number.isFinite(parsed) ? parsed : Number.NaN;
+}
+
+function formatRelativeRecentDate(
+  dateLike: string,
+  dateFormat: "dd-mm-yyyy" | "dd-mmm-yyyy" | "dd-mm-yy" | "dd-mmm-yy" = "dd-mmm-yyyy",
+  timeZone?: string,
+): string {
+  const timestamp = toTimestamp(dateLike);
+  if (!Number.isFinite(timestamp)) return "-";
+
+  const diffMs = Date.now() - timestamp;
+  if (diffMs < 0) return "just now";
+
+  const minuteMs = 60 * 1000;
+  const hourMs = 60 * minuteMs;
+  const dayMs = 24 * hourMs;
+
+  if (diffMs < hourMs) {
+    const mins = Math.max(1, Math.floor(diffMs / minuteMs));
+    return `${mins}m ago`;
+  }
+
+  if (diffMs < dayMs) {
+    const hours = Math.max(1, Math.floor(diffMs / hourMs));
+    return `${hours}h ago`;
+  }
+
+  if (diffMs < 14 * dayMs) {
+    const days = Math.max(1, Math.floor(diffMs / dayMs));
+    return `${days}d ago`;
+  }
+
+  return formatDateWithPreference(new Date(timestamp), dateFormat, timeZone);
 }
 
 export default function FriendsPage() {
   const { settings } = useDisplaySettings();
   const dateFormat = settings.dateFormat || "dd-mmm-yyyy";
+  const timeZone = settings.timeZone;
 
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
@@ -117,9 +168,37 @@ export default function FriendsPage() {
         .sort((a, b) => b.date.localeCompare(a.date));
 
       statsByUser.set(friend.id, {
-        totalCheckIns: presentRows.length,
-        lastCheckInDate: presentRows[0]?.date || null,
+        totalCheckIns: presentRows.length || Number(friend.checkInCount || 0),
+        lastCheckInDate: presentRows[0]?.date || friend.lastCheckInAt || null,
         latestWeight: (weightedRows[0]?.weight as number | undefined) ?? null,
+        totalSessions: Number(friend.sessionCount || 0),
+        lastSeenAt: (() => {
+          const candidates: Array<string | null> = [
+            friend.lastActivityAt || null,
+            friend.lastWorkoutAt || null,
+            friend.lastCheckInAt || null,
+            presentRows[0]?.date ? `${presentRows[0].date}T00:00:00.000Z` : null,
+          ];
+
+          const sorted = candidates
+            .filter((value): value is string => Boolean(value))
+            .sort((left, right) => toTimestamp(right) - toTimestamp(left));
+
+          return sorted[0] || null;
+        })(),
+        lastSeenLabel: (() => {
+          const activityAt = friend.lastActivityAt || null;
+          const workoutAt = friend.lastWorkoutAt || null;
+          const checkInAt = friend.lastCheckInAt || null;
+          const latest = [activityAt, workoutAt, checkInAt]
+            .filter((value): value is string => Boolean(value))
+            .sort((left, right) => toTimestamp(right) - toTimestamp(left))[0];
+
+          if (!latest) return "Last seen";
+          if (activityAt && latest === activityAt) return (friend.lastActivityLabel || "Last seen").trim() || "Last seen";
+          if (workoutAt && latest === workoutAt) return "Last workout";
+          return "Last check-in";
+        })(),
       });
     }
 
@@ -130,9 +209,13 @@ export default function FriendsPage() {
     return [...data.friends].sort((left, right) => {
       const leftStats = friendStatsMap.get(left.id);
       const rightStats = friendStatsMap.get(right.id);
-      const leftDate = leftStats?.lastCheckInDate || "";
-      const rightDate = rightStats?.lastCheckInDate || "";
-      if (leftDate !== rightDate) return rightDate.localeCompare(leftDate);
+      const leftDate = toTimestamp(leftStats?.lastSeenAt || null);
+      const rightDate = toTimestamp(rightStats?.lastSeenAt || null);
+      if (Number.isFinite(leftDate) || Number.isFinite(rightDate)) {
+        if (!Number.isFinite(leftDate)) return 1;
+        if (!Number.isFinite(rightDate)) return -1;
+        if (leftDate !== rightDate) return rightDate - leftDate;
+      }
       return left.name.localeCompare(right.name);
     });
   }, [data.friends, friendStatsMap]);
@@ -244,14 +327,14 @@ export default function FriendsPage() {
       ) : (
         <div className="flex flex-col px-0" style={{ minHeight: shellMinHeight }}>
           <section
-            className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-tl-2xl border"
+            className="flex min-h-0 flex-1 flex-col rounded-tl-2xl border"
             style={{
               ...sectionShellStyle,
               minHeight: shellMinHeight,
             }}
           >
             <div
-              className="sticky top-0 z-10 border-b px-3 py-3"
+              className="sticky top-0 z-10 border-b rounded-tl-2xl px-3 py-3"
               style={{
                 borderBottomColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)",
                 backgroundColor: "color-mix(in srgb, var(--ink-deep) 94%, var(--ink-mid))",
@@ -262,7 +345,7 @@ export default function FriendsPage() {
               <p className="mt-1 text-[11px] text-[#b5bac1]">Open the social areas you want, with the same flatter train-style feed feel.</p>
             </div>
 
-            <div className="flex flex-1 flex-col space-y-3 px-2 py-2.5 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)]">
+            <div className="flex flex-1 flex-col space-y-3 px-2 py-2.5 pb-[calc(var(--mobile-nav-offset,calc(env(safe-area-inset-bottom,0px)+4.85rem))+0.75rem)]">
               <section className="grid grid-cols-3 gap-2">
                 <div className="rounded-md border px-2.5 py-2" style={tileStyle}>
                   <p className="text-[10px] uppercase tracking-[0.08em] text-[#949ba4]">Friends</p>
@@ -316,8 +399,8 @@ export default function FriendsPage() {
 
               <section className="flex flex-1 flex-col border-t pt-3" style={{ borderTopColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)" }}>
                 <div className="mb-2">
-                  <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Preview</p>
-                  <p className="mt-1 text-[11px] text-[#b5bac1]">A light feed preview of your current circle.</p>
+                  <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Circle Activity</p>
+                  <p className="mt-1 text-[11px] text-[#b5bac1]">Live at-a-glance summary for everyone in your current circle.</p>
                 </div>
 
                 {sortedFriends.length === 0 ? (
@@ -326,11 +409,14 @@ export default function FriendsPage() {
                   </div>
                 ) : (
                   <div className="flex flex-1 flex-col space-y-2.5">
-                    {sortedFriends.slice(0, 4).map((friend) => {
+                    {sortedFriends.map((friend) => {
                       const stats = friendStatsMap.get(friend.id) || {
                         totalCheckIns: 0,
                         lastCheckInDate: null,
                         latestWeight: null,
+                        totalSessions: Number(friend.sessionCount || 0),
+                        lastSeenAt: friend.lastActivityAt || friend.lastWorkoutAt || friend.lastCheckInAt || null,
+                        lastSeenLabel: "Last seen",
                       };
 
                       return (
@@ -340,13 +426,44 @@ export default function FriendsPage() {
                               <p className="truncate text-sm font-semibold text-[#f2f3f5]">{friend.name}</p>
                               <p className="truncate text-[11px] text-[#b5bac1]">@{friend.username}</p>
                             </div>
-                            <span className="rounded-md px-2 py-1 text-[11px] text-[#b5bac1]" style={{ backgroundColor: "color-mix(in srgb, var(--ink-light) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--ink-light) 34%, transparent)" }}>
-                              {stats.totalCheckIns} check-ins
+                            <span className="rounded-md px-2 py-1 text-[11px] text-[#dbdee1]" style={{ backgroundColor: "color-mix(in srgb, var(--accent) 14%, transparent)", border: "1px solid color-mix(in srgb, var(--accent) 34%, transparent)" }}>
+                              {stats.lastSeenAt ? `${stats.lastSeenLabel}: ${formatRelativeRecentDate(stats.lastSeenAt, dateFormat, timeZone)}` : "No recent activity"}
                             </span>
+                          </div>
+
+                          <div className="mt-2.5 grid grid-cols-2 gap-2 text-[11px]">
+                            <div className="rounded-md px-2 py-1.5" style={{ backgroundColor: "color-mix(in srgb, var(--ink-light) 8%, transparent)", border: "1px solid color-mix(in srgb, var(--ink-light) 24%, transparent)" }}>
+                              <p className="text-[10px] uppercase tracking-[0.08em] text-[#949ba4]">Sessions</p>
+                              <p className="mt-0.5 font-semibold text-[#f2f3f5]">{stats.totalSessions}</p>
+                            </div>
+                            <div className="rounded-md px-2 py-1.5" style={{ backgroundColor: "color-mix(in srgb, var(--ink-light) 8%, transparent)", border: "1px solid color-mix(in srgb, var(--ink-light) 24%, transparent)" }}>
+                              <p className="text-[10px] uppercase tracking-[0.08em] text-[#949ba4]">Check-ins</p>
+                              <p className="mt-0.5 font-semibold text-[#f2f3f5]">{stats.totalCheckIns}</p>
+                            </div>
+                            <div className="rounded-md px-2 py-1.5" style={{ backgroundColor: "color-mix(in srgb, var(--ink-light) 8%, transparent)", border: "1px solid color-mix(in srgb, var(--ink-light) 24%, transparent)" }}>
+                              <p className="text-[10px] uppercase tracking-[0.08em] text-[#949ba4]">Last Check-In</p>
+                              <p className="mt-0.5 font-semibold text-[#f2f3f5]">{stats.lastCheckInDate ? formatDateWithPreference(stats.lastCheckInDate, dateFormat, timeZone) : "-"}</p>
+                            </div>
+                            <div className="rounded-md px-2 py-1.5" style={{ backgroundColor: "color-mix(in srgb, var(--ink-light) 8%, transparent)", border: "1px solid color-mix(in srgb, var(--ink-light) 24%, transparent)" }}>
+                              <p className="text-[10px] uppercase tracking-[0.08em] text-[#949ba4]">Latest Weight</p>
+                              <p className="mt-0.5 font-semibold text-[#f2f3f5]">{typeof stats.latestWeight === "number" ? `${stats.latestWeight}` : "-"}</p>
+                            </div>
                           </div>
                         </article>
                       );
                     })}
+
+                    <div
+                      className="flex flex-1 min-h-[3rem] items-center justify-center rounded-lg px-3 py-3 text-center"
+                      style={{
+                        border: "1px dashed color-mix(in srgb, var(--ink-light) 32%, transparent)",
+                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 28%, var(--ink-deep))",
+                      }}
+                    >
+                      <p className="text-[11px] text-[#949ba4]">
+                        Showing {sortedFriends.length} {sortedFriends.length === 1 ? "cultivator" : "cultivators"} • activity refreshes when you return.
+                      </p>
+                    </div>
                   </div>
                 )}
               </section>

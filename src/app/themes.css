@@ -163,8 +163,626 @@
   --col-reps-bg: rgba(176, 160, 112, 0.06);
 }
 
-/* ===== Theme: Sakura — Cherry blossom & spring dawn ===== */
-.sakura {
+/* ===== Theme: Forest — Mossy woodland & moonlit canopy ===== */
+/* Dark, nature-inspired palette: deep forest greens, bark browns, lichen accents. */
+html.forest {
+  /* ===== FOREST — based on the Everforest palette =====
+   * A balanced 5-accent woodland scheme:
+   *  • Pine canvas    — cool deep teal-green
+   *  • Sage text      — warm desaturated cream
+   *  • Leaf green     — primary accent
+   *  • Amber          — secondary / warmth
+   *  • Aqua           — tertiary / water
+   *  • Terracotta     — danger / berry
+   *  • Lavender       — cool counterpoint
+   */
+
+  /* Canvas — deep pine, cool but not muddy */
+  --void-black: #232a2e;
+  --ink-deep: #2d353b;               /* surface */
+  --ink-dark: #343f44;               /* raised */
+  --ink-mid: #3d484d;                /* hover */
+  --ink-light: #475258;              /* borders */
+
+  /* Text — warm sage cream (Everforest fg) */
+  --mist-dark: #859289;              /* muted */
+  --mist-mid: #9da9a0;
+  --mist-light: #c2c8b9;             /* secondary */
+  --mist-pale: #d3c6aa;
+  --cloud-white: #d3c6aa;            /* primary — warm parchment */
+  --pure-white: #e7dcb8;
+
+  /* Accent #1 — Leaf green (primary) */
+  --jade-deep: #3c4841;
+  --jade: #83c092;                   /* aqua-green */
+  --jade-glow: #a7c080;               /* leaf — primary accent */
+  --jade-light: #c5d8a4;
+
+  /* Accent #2 — Aqua / stream water */
+  --mountain-blue: #4a7a87;
+  --mountain-blue-glow: #7fbbb3;     /* clear water */
+
+  /* Accent #3 — Amber / sun through canopy */
+  --gold-dim: #a08742;
+  --gold: #dbbc7f;
+  --gold-glow: #e9d4a1;
+
+  /* Accent #4 — Terracotta / berry (danger) */
+  --crimson-deep: #4c3434;
+  --crimson: #e67e80;
+  --crimson-glow: #f09a9c;
+  --crimson-light: #f5b8b9;
+
+  /* Accent #5 — Orange & lavender highlights */
+  --forest-deep: #2e3d31;
+  --forest: #a7c080;
+
+  /* Difficulty colors — Everforest spectrum */
+  --difficulty-green: #a7c080;
+  --difficulty-green-glow: #83c092;
+  --difficulty-amber: #dbbc7f;
+  --difficulty-amber-glow: #e69875;
+  --difficulty-red: #e67e80;
+  --difficulty-red-glow: #c45a5c;
+  --difficulty-violet: #d699b6;
+  --difficulty-violet-glow: #b87a96;
+  --difficulty-pink: #d699b6;
+  --difficulty-pink-glow: #b87a96;
+  --difficulty-light-pink: #e9b8cb;
+  --difficulty-light-pink-glow: #c293a8;
+  --difficulty-cyan: #7fbbb3;
+  --difficulty-cyan-glow: #5a9a92;
+
+  --glow-difficulty-green: 0 0 14px rgba(167, 192, 128, 0.34), 0 0 28px rgba(167, 192, 128, 0.14);
+  --glow-difficulty-amber: 0 0 14px rgba(219, 188, 127, 0.32), 0 0 28px rgba(219, 188, 127, 0.14);
+  --glow-difficulty-red: 0 0 14px rgba(230, 126, 128, 0.30), 0 0 28px rgba(230, 126, 128, 0.14);
+  --glow-difficulty-violet: 0 0 14px rgba(214, 153, 182, 0.30), 0 0 28px rgba(214, 153, 182, 0.14);
+  --glow-difficulty-pink: 0 0 14px rgba(214, 153, 182, 0.30), 0 0 28px rgba(214, 153, 182, 0.14);
+  --glow-difficulty-light-pink: 0 0 14px rgba(233, 184, 203, 0.30), 0 0 28px rgba(233, 184, 203, 0.14);
+  --glow-difficulty-cyan: 0 0 14px rgba(127, 187, 179, 0.32), 0 0 28px rgba(127, 187, 179, 0.14);
+
+  /* Semantic tokens */
+  --background: var(--void-black);
+  --foreground: var(--cloud-white);
+  --surface: var(--ink-deep);
+  --surface-hover: var(--ink-mid);
+  --border: var(--ink-light);
+  --border-glow: var(--jade-glow);
+  --text-primary: var(--cloud-white);
+  --text-secondary: var(--mist-light);
+  --text-muted: var(--mist-dark);
+  --accent: var(--jade-glow);
+  --accent-hover: var(--jade-light);
+  --danger: var(--crimson);
+  --danger-hover: var(--crimson-glow);
+
+  /* Glows — soft canopy luminance */
+  --glow-jade: 0 0 16px rgba(167, 192, 128, 0.32), 0 0 32px rgba(167, 192, 128, 0.14);
+  --glow-crimson: 0 0 16px rgba(230, 126, 128, 0.28), 0 0 32px rgba(230, 126, 128, 0.12);
+  --glow-gold: 0 0 16px rgba(219, 188, 127, 0.30), 0 0 32px rgba(219, 188, 127, 0.14);
+  --glow-blue: 0 0 16px rgba(127, 187, 179, 0.30), 0 0 32px rgba(127, 187, 179, 0.14);
+  --glow-subtle: 0 0 10px rgba(167, 192, 128, 0.16);
+  --glow-modal: 0 0 36px rgba(167, 192, 128, 0.30), 0 0 72px rgba(167, 192, 128, 0.16), inset 0 0 28px rgba(127, 187, 179, 0.06);
+
+  /* Column accents — aqua weight, leaf reps */
+  --col-weight: var(--mountain-blue-glow);
+  --col-weight-bg: color-mix(in srgb, var(--mountain-blue-glow) 12%, transparent);
+  --col-reps: var(--gold);
+  --col-reps-bg: color-mix(in srgb, var(--gold) 12%, transparent);
+
+  /* Charts & misc */
+  --chart-primary: #a7c080;
+  --chart-primary-rgb: 167 192 128;
+  --chart-secondary: #dbbc7f;
+  --chart-grid: rgba(211, 198, 170, 0.10);
+  --chart-bg: rgba(35, 42, 46, 0.55);
+  --timed-color: #7fbbb3;
+  --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 84%, var(--border));
+  --nyaa-table-row-hover: color-mix(in srgb, var(--surface) 84%, var(--jade-glow));
+  --system-bar-fallback: #232a2e;
+}
+
+html.forest * {
+  scrollbar-color: var(--ink-light) var(--void-black);
+}
+
+/* ----- Forest theme overlay -----
+ * Many components historically use Tailwind arbitrary classes with hardcoded
+ * Discord hex literals (e.g. bg-[#2b2d31], text-[#f2f3f5]). Re-map those
+ * literals to forest CSS variables so the theme is visible everywhere
+ * without rewriting every file. Using attribute selectors so we catch
+ * both base classes and opacity variants (e.g. bg-[#2b2d31]/55).
+ */
+html.forest [class*="bg-[#1e1f22]"] { background-color: var(--void-black) !important; }
+html.forest [class*="bg-[#2b2d31]"],
+html.forest [class*="bg-[#23252b]"],
+html.forest [class*="bg-[#232428]"] { background-color: var(--ink-deep) !important; }
+html.forest [class*="bg-[#313338]"] { background-color: var(--ink-dark) !important; }
+html.forest [class*="bg-[#383a40]"],
+html.forest [class*="bg-[#454852]"] { background-color: var(--ink-mid) !important; }
+html.forest [class*="bg-[#32353b]"] { background-color: var(--ink-light) !important; }
+html.forest [class*="bg-[#5865f2]"] { background-color: var(--accent) !important; }
+html.forest [class*="bg-[#7289da]"] { background-color: var(--jade) !important; }
+html.forest [class*="bg-[#57f287]"] { background-color: var(--forest) !important; }
+html.forest [class*="bg-[#fee75c]"] { background-color: var(--gold) !important; }
+html.forest [class*="bg-[#ed4245]"] { background-color: var(--crimson) !important; }
+
+html.forest [class*="text-[#f2f3f5]"],
+html.forest [class*="text-[#dbe3ff]"] { color: var(--text-primary) !important; }
+html.forest [class*="text-[#dbdee1]"],
+html.forest [class*="text-[#e3e5e8]"] { color: var(--mist-light) !important; }
+html.forest [class*="text-[#b5bac1]"] { color: var(--text-secondary) !important; }
+html.forest [class*="text-[#949ba4]"] { color: var(--text-muted) !important; }
+html.forest [class*="text-[#8ea1ff]"],
+html.forest [class*="text-[#8ea1e1]"],
+html.forest [class*="text-[#c9d2ff]"] { color: var(--accent) !important; }
+html.forest [class*="text-[#5865f2]"] { color: var(--accent) !important; }
+html.forest [class*="text-[#7289da]"] { color: var(--jade-light) !important; }
+html.forest [class*="text-[#57f287]"] { color: var(--forest) !important; }
+html.forest [class*="text-[#fee75c]"] { color: var(--gold) !important; }
+html.forest [class*="text-[#ed4245]"] { color: var(--crimson) !important; }
+html.forest [class*="text-[#ff8fa3]"],
+html.forest [class*="text-[#f0b96a]"] { color: var(--gold-glow) !important; }
+
+html.forest [class*="border-[#3b3f48]"],
+html.forest [class*="border-[#32353b]"],
+html.forest [class*="border-[#383a40]"],
+html.forest [class*="border-[#2b2d31]"] { border-color: var(--border) !important; }
+html.forest [class*="border-[#5865f2]"] { border-color: var(--accent) !important; }
+
+html.forest [class*="hover\\:bg-[#2b2d31]"]:hover,
+html.forest [class*="hover\\:bg-[#313338]"]:hover { background-color: var(--surface-hover) !important; }
+html.forest [class*="hover\\:bg-[#454852]"]:hover { background-color: color-mix(in srgb, var(--surface-hover) 60%, var(--accent)) !important; }
+html.forest [class*="hover\\:text-[#f2f3f5]"]:hover { color: var(--text-primary) !important; }
+html.forest [class*="hover\\:text-[#8ea1ff]"]:hover { color: var(--accent) !important; }/* =====================================================================
+ * THEME — INK DRAGON (墨龙)
+ * Inspired by sumi-e xianxia poster: charcoal storm sky, violet lightning
+ * dragon, silver chains across the void, and a vermilion calligraphic seal.
+ * ===================================================================== */
+html.ink-dragon {
+  /* Canvas — wet ink wash on iron */
+  --void-black: #0c0c12;
+  --ink-deep: #16161e;
+  --ink-dark: #1f1f2a;
+  --ink-mid: #2c2c38;
+  --ink-light: #3a3a4a;
+
+  /* Text — rice-paper silver */
+  --mist-dark: #8e8c86;
+  --mist-mid: #aaa8a2;
+  --mist-light: #c8c6c0;
+  --mist-pale: #d8d6d0;
+  --cloud-white: #ece9e0;
+  --pure-white: #ffffff;
+
+  /* Accent #1 — Violet thunder (primary) */
+  --jade-deep: #2a1a48;
+  --jade: #6a48a8;
+  --jade-glow: #9a6ee0;
+  --jade-light: #c8a4f0;
+
+  /* Accent #2 — Steel chain silver */
+  --gold-dim: #5a6070;
+  --gold: #9aa4b8;
+  --gold-glow: #c0c8d8;
+
+  /* Accent #3 — Vermilion seal (danger / warmth) */
+  --crimson-deep: #401418;
+  --crimson: #b8343a;
+  --crimson-glow: #d65a60;
+  --crimson-light: #e8888c;
+
+  /* Accent #4 — Dragon-eye azure */
+  --mountain-blue: #2a5878;
+  --mountain-blue-glow: #5a98c0;
+
+  /* Accent #5 — Plum violet (under-tone) */
+  --forest-deep: #1e1430;
+  --forest: #9a6ee0;
+
+  /* Difficulty */
+  --difficulty-green: #6ab088;
+  --difficulty-green-glow: #4a8868;
+  --difficulty-amber: #d6b070;
+  --difficulty-amber-glow: #a8884a;
+  --difficulty-red: #b8343a;
+  --difficulty-red-glow: #8a2228;
+  --difficulty-violet: #9a6ee0;
+  --difficulty-violet-glow: #7048b8;
+  --difficulty-pink: #c884b0;
+  --difficulty-pink-glow: #9a608a;
+  --difficulty-light-pink: #e0a8c4;
+  --difficulty-light-pink-glow: #b07a98;
+  --difficulty-cyan: #5a98c0;
+  --difficulty-cyan-glow: #3a7098;
+
+  --glow-difficulty-green: 0 0 14px rgba(106, 176, 136, 0.30), 0 0 28px rgba(106, 176, 136, 0.14);
+  --glow-difficulty-amber: 0 0 14px rgba(214, 176, 112, 0.28), 0 0 28px rgba(214, 176, 112, 0.12);
+  --glow-difficulty-red: 0 0 14px rgba(184, 52, 58, 0.34), 0 0 28px rgba(184, 52, 58, 0.16);
+  --glow-difficulty-violet: 0 0 14px rgba(154, 110, 224, 0.34), 0 0 28px rgba(154, 110, 224, 0.16);
+  --glow-difficulty-pink: 0 0 14px rgba(200, 132, 176, 0.30), 0 0 28px rgba(200, 132, 176, 0.14);
+  --glow-difficulty-light-pink: 0 0 14px rgba(224, 168, 196, 0.30), 0 0 28px rgba(224, 168, 196, 0.14);
+  --glow-difficulty-cyan: 0 0 14px rgba(90, 152, 192, 0.30), 0 0 28px rgba(90, 152, 192, 0.14);
+
+  /* Semantic */
+  --background: var(--void-black);
+  --foreground: var(--cloud-white);
+  --surface: var(--ink-deep);
+  --surface-hover: var(--ink-mid);
+  --border: var(--ink-light);
+  --border-glow: var(--jade-glow);
+  --text-primary: var(--cloud-white);
+  --text-secondary: var(--mist-light);
+  --text-muted: var(--mist-dark);
+  --accent: var(--jade-glow);
+  --accent-hover: var(--jade-light);
+  --danger: var(--crimson);
+  --danger-hover: var(--crimson-glow);
+
+  --glow-jade: 0 0 16px rgba(154, 110, 224, 0.36), 0 0 32px rgba(154, 110, 224, 0.18);
+  --glow-crimson: 0 0 16px rgba(184, 52, 58, 0.32), 0 0 32px rgba(184, 52, 58, 0.16);
+  --glow-gold: 0 0 16px rgba(154, 164, 184, 0.30), 0 0 32px rgba(154, 164, 184, 0.14);
+  --glow-blue: 0 0 16px rgba(90, 152, 192, 0.32), 0 0 32px rgba(90, 152, 192, 0.16);
+  --glow-subtle: 0 0 10px rgba(154, 110, 224, 0.18);
+  --glow-modal: 0 0 36px rgba(154, 110, 224, 0.28), 0 0 72px rgba(184, 52, 58, 0.12), inset 0 0 28px rgba(154, 164, 184, 0.06);
+
+  --col-weight: var(--mountain-blue-glow);
+  --col-weight-bg: color-mix(in srgb, var(--mountain-blue-glow) 12%, transparent);
+  --col-reps: var(--gold);
+  --col-reps-bg: color-mix(in srgb, var(--gold) 12%, transparent);
+
+  --chart-primary: #9a6ee0;
+  --chart-primary-rgb: 154 110 224;
+  --chart-secondary: #b8343a;
+  --chart-grid: rgba(236, 233, 224, 0.08);
+  --chart-bg: rgba(12, 12, 18, 0.55);
+  --timed-color: #5a98c0;
+  --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 84%, var(--border));
+  --nyaa-table-row-hover: color-mix(in srgb, var(--surface) 84%, var(--jade-glow));
+  --system-bar-fallback: #0c0c12;
+}
+
+html.ink-dragon * {
+  scrollbar-color: var(--ink-light) var(--void-black);
+}
+
+/* ----- Ink Dragon overlay (mirrors shared overlay for hardcoded Discord hex) ----- */
+html.ink-dragon [class*="bg-[#1e1f22]"] { background-color: var(--void-black) !important; }
+html.ink-dragon [class*="bg-[#2b2d31]"],
+html.ink-dragon [class*="bg-[#23252b]"],
+html.ink-dragon [class*="bg-[#232428]"] { background-color: var(--ink-deep) !important; }
+html.ink-dragon [class*="bg-[#313338]"] { background-color: var(--ink-dark) !important; }
+html.ink-dragon [class*="bg-[#383a40]"],
+html.ink-dragon [class*="bg-[#454852]"] { background-color: var(--ink-mid) !important; }
+html.ink-dragon [class*="bg-[#32353b]"] { background-color: var(--ink-light) !important; }
+html.ink-dragon [class*="bg-[#5865f2]"] { background-color: var(--accent) !important; }
+html.ink-dragon [class*="bg-[#7289da]"] { background-color: var(--jade) !important; }
+html.ink-dragon [class*="bg-[#57f287]"] { background-color: var(--forest) !important; }
+html.ink-dragon [class*="bg-[#fee75c]"] { background-color: var(--gold) !important; }
+html.ink-dragon [class*="bg-[#ed4245]"] { background-color: var(--crimson) !important; }
+
+html.ink-dragon [class*="text-[#f2f3f5]"],
+html.ink-dragon [class*="text-[#dbe3ff]"] { color: var(--text-primary) !important; }
+html.ink-dragon [class*="text-[#dbdee1]"],
+html.ink-dragon [class*="text-[#e3e5e8]"] { color: var(--mist-light) !important; }
+html.ink-dragon [class*="text-[#b5bac1]"] { color: var(--text-secondary) !important; }
+html.ink-dragon [class*="text-[#949ba4]"] { color: var(--text-muted) !important; }
+html.ink-dragon [class*="text-[#8ea1ff]"],
+html.ink-dragon [class*="text-[#8ea1e1]"],
+html.ink-dragon [class*="text-[#c9d2ff]"],
+html.ink-dragon [class*="text-[#5865f2]"] { color: var(--accent) !important; }
+html.ink-dragon [class*="text-[#7289da]"] { color: var(--jade-light) !important; }
+html.ink-dragon [class*="text-[#57f287]"] { color: var(--forest) !important; }
+html.ink-dragon [class*="text-[#fee75c]"] { color: var(--gold) !important; }
+html.ink-dragon [class*="text-[#ed4245]"] { color: var(--crimson) !important; }
+html.ink-dragon [class*="text-[#ff8fa3]"],
+html.ink-dragon [class*="text-[#f0b96a]"] { color: var(--gold-glow) !important; }
+
+html.ink-dragon [class*="border-[#3b3f48]"],
+html.ink-dragon [class*="border-[#32353b]"],
+html.ink-dragon [class*="border-[#383a40]"],
+html.ink-dragon [class*="border-[#2b2d31]"] { border-color: var(--border) !important; }
+html.ink-dragon [class*="border-[#5865f2]"] { border-color: var(--accent) !important; }
+
+html.ink-dragon [class*="hover\\:bg-[#2b2d31]"]:hover,
+html.ink-dragon [class*="hover\\:bg-[#313338]"]:hover { background-color: var(--surface-hover) !important; }
+html.ink-dragon [class*="hover\\:bg-[#454852]"]:hover { background-color: color-mix(in srgb, var(--surface-hover) 60%, var(--accent)) !important; }
+html.ink-dragon [class*="hover\\:text-[#f2f3f5]"]:hover { color: var(--text-primary) !important; }
+html.ink-dragon [class*="hover\\:text-[#8ea1ff]"]:hover { color: var(--accent) !important; }
+
+/* =====================================================================
+ * THEME — FROST SECT (寒霜宗)
+ * Glacier-blue cultivators of an ice-bound mountain sect. Cool deep
+ * slate canvas, frost-pale parchment text, glacier blue / ice cyan /
+ * silver-rose accents. Forest-shaped palette: muted, balanced.
+ * ===================================================================== */
+html.frost-sect {
+  --void-black: #1f2933;
+  --ink-deep: #29333f;
+  --ink-dark: #313d4b;
+  --ink-mid: #3a4757;
+  --ink-light: #475566;
+
+  --mist-dark: #8290a0;
+  --mist-mid: #a0aec0;
+  --mist-light: #c8d2e0;
+  --mist-pale: #dde6f0;
+  --cloud-white: #e6edf6;
+  --pure-white: #f4f8fc;
+
+  /* Accent #1 — Glacier blue (primary) */
+  --jade-deep: #2b4a6a;
+  --jade: #5e8db4;
+  --jade-glow: #7eb0d6;
+  --jade-light: #a8cce8;
+
+  /* Accent #2 — Ice cyan (water) */
+  --mountain-blue: #3e7a86;
+  --mountain-blue-glow: #82c0c8;
+
+  /* Accent #3 — Pale silver gold (rare warm trim) */
+  --gold-dim: #8a8a78;
+  --gold: #c8c4a8;
+  --gold-glow: #dcd9c2;
+
+  /* Accent #4 — Frost rose (danger) */
+  --crimson-deep: #4a3038;
+  --crimson: #d68aa0;
+  --crimson-glow: #e6a8bc;
+  --crimson-light: #f0c4d0;
+
+  /* Accent #5 — Lavender mist */
+  --forest-deep: #2e3650;
+  --forest: #b0a4d8;
+
+  --difficulty-green: #82c0c8;
+  --difficulty-green-glow: #5ea0a8;
+  --difficulty-amber: #c8c4a8;
+  --difficulty-amber-glow: #a8a488;
+  --difficulty-red: #d68aa0;
+  --difficulty-red-glow: #b86a82;
+  --difficulty-violet: #b0a4d8;
+  --difficulty-violet-glow: #9084b8;
+  --difficulty-pink: #d6a4c8;
+  --difficulty-pink-glow: #b884a8;
+  --difficulty-light-pink: #e8c0d6;
+  --difficulty-light-pink-glow: #c0a0b8;
+  --difficulty-cyan: #82c0c8;
+  --difficulty-cyan-glow: #5ea0a8;
+
+  --glow-difficulty-green: 0 0 14px rgba(130, 192, 200, 0.32), 0 0 28px rgba(130, 192, 200, 0.14);
+  --glow-difficulty-amber: 0 0 14px rgba(200, 196, 168, 0.28), 0 0 28px rgba(200, 196, 168, 0.12);
+  --glow-difficulty-red: 0 0 14px rgba(214, 138, 160, 0.30), 0 0 28px rgba(214, 138, 160, 0.14);
+  --glow-difficulty-violet: 0 0 14px rgba(176, 164, 216, 0.30), 0 0 28px rgba(176, 164, 216, 0.14);
+  --glow-difficulty-pink: 0 0 14px rgba(214, 164, 200, 0.30), 0 0 28px rgba(214, 164, 200, 0.14);
+  --glow-difficulty-light-pink: 0 0 14px rgba(232, 192, 214, 0.30), 0 0 28px rgba(232, 192, 214, 0.14);
+  --glow-difficulty-cyan: 0 0 14px rgba(130, 192, 200, 0.32), 0 0 28px rgba(130, 192, 200, 0.14);
+
+  --background: var(--void-black);
+  --foreground: var(--cloud-white);
+  --surface: var(--ink-deep);
+  --surface-hover: var(--ink-mid);
+  --border: var(--ink-light);
+  --border-glow: var(--jade-glow);
+  --text-primary: var(--cloud-white);
+  --text-secondary: var(--mist-light);
+  --text-muted: var(--mist-dark);
+  --accent: var(--jade-glow);
+  --accent-hover: var(--jade-light);
+  --danger: var(--crimson);
+  --danger-hover: var(--crimson-glow);
+
+  --glow-jade: 0 0 16px rgba(126, 176, 214, 0.32), 0 0 32px rgba(126, 176, 214, 0.14);
+  --glow-crimson: 0 0 16px rgba(214, 138, 160, 0.28), 0 0 32px rgba(214, 138, 160, 0.12);
+  --glow-gold: 0 0 16px rgba(200, 196, 168, 0.28), 0 0 32px rgba(200, 196, 168, 0.12);
+  --glow-blue: 0 0 16px rgba(130, 192, 200, 0.32), 0 0 32px rgba(130, 192, 200, 0.14);
+  --glow-subtle: 0 0 10px rgba(126, 176, 214, 0.18);
+  --glow-modal: 0 0 36px rgba(126, 176, 214, 0.30), 0 0 72px rgba(130, 192, 200, 0.14), inset 0 0 28px rgba(214, 138, 160, 0.06);
+
+  --col-weight: var(--mountain-blue-glow);
+  --col-weight-bg: color-mix(in srgb, var(--mountain-blue-glow) 12%, transparent);
+  --col-reps: var(--gold);
+  --col-reps-bg: color-mix(in srgb, var(--gold) 12%, transparent);
+
+  --chart-primary: #7eb0d6;
+  --chart-primary-rgb: 126 176 214;
+  --chart-secondary: #c8c4a8;
+  --chart-grid: rgba(230, 237, 246, 0.10);
+  --chart-bg: rgba(31, 41, 51, 0.55);
+  --timed-color: #82c0c8;
+  --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 84%, var(--border));
+  --nyaa-table-row-hover: color-mix(in srgb, var(--surface) 84%, var(--jade-glow));
+  --system-bar-fallback: #1f2933;
+}
+
+html.frost-sect * { scrollbar-color: var(--ink-light) var(--void-black); }
+
+html.frost-sect [class*="bg-[#1e1f22]"] { background-color: var(--void-black) !important; }
+html.frost-sect [class*="bg-[#2b2d31]"],
+html.frost-sect [class*="bg-[#23252b]"],
+html.frost-sect [class*="bg-[#232428]"] { background-color: var(--ink-deep) !important; }
+html.frost-sect [class*="bg-[#313338]"] { background-color: var(--ink-dark) !important; }
+html.frost-sect [class*="bg-[#383a40]"],
+html.frost-sect [class*="bg-[#454852]"] { background-color: var(--ink-mid) !important; }
+html.frost-sect [class*="bg-[#32353b]"] { background-color: var(--ink-light) !important; }
+html.frost-sect [class*="bg-[#5865f2]"] { background-color: var(--accent) !important; }
+html.frost-sect [class*="bg-[#7289da]"] { background-color: var(--jade) !important; }
+html.frost-sect [class*="bg-[#57f287]"] { background-color: var(--forest) !important; }
+html.frost-sect [class*="bg-[#fee75c]"] { background-color: var(--gold) !important; }
+html.frost-sect [class*="bg-[#ed4245]"] { background-color: var(--crimson) !important; }
+html.frost-sect [class*="text-[#f2f3f5]"],
+html.frost-sect [class*="text-[#dbe3ff]"] { color: var(--text-primary) !important; }
+html.frost-sect [class*="text-[#dbdee1]"],
+html.frost-sect [class*="text-[#e3e5e8]"] { color: var(--mist-light) !important; }
+html.frost-sect [class*="text-[#b5bac1]"] { color: var(--text-secondary) !important; }
+html.frost-sect [class*="text-[#949ba4]"] { color: var(--text-muted) !important; }
+html.frost-sect [class*="text-[#8ea1ff]"],
+html.frost-sect [class*="text-[#8ea1e1]"],
+html.frost-sect [class*="text-[#c9d2ff]"],
+html.frost-sect [class*="text-[#5865f2]"] { color: var(--accent) !important; }
+html.frost-sect [class*="text-[#7289da]"] { color: var(--jade-light) !important; }
+html.frost-sect [class*="text-[#57f287]"] { color: var(--forest) !important; }
+html.frost-sect [class*="text-[#fee75c]"] { color: var(--gold) !important; }
+html.frost-sect [class*="text-[#ed4245]"] { color: var(--crimson) !important; }
+html.frost-sect [class*="text-[#ff8fa3]"],
+html.frost-sect [class*="text-[#f0b96a]"] { color: var(--gold-glow) !important; }
+html.frost-sect [class*="border-[#3b3f48]"],
+html.frost-sect [class*="border-[#32353b]"],
+html.frost-sect [class*="border-[#383a40]"],
+html.frost-sect [class*="border-[#2b2d31]"] { border-color: var(--border) !important; }
+html.frost-sect [class*="border-[#5865f2]"] { border-color: var(--accent) !important; }
+html.frost-sect [class*="hover\\:bg-[#2b2d31]"]:hover,
+html.frost-sect [class*="hover\\:bg-[#313338]"]:hover { background-color: var(--surface-hover) !important; }
+html.frost-sect [class*="hover\\:bg-[#454852]"]:hover { background-color: color-mix(in srgb, var(--surface-hover) 60%, var(--accent)) !important; }
+html.frost-sect [class*="hover\\:text-[#f2f3f5]"]:hover { color: var(--text-primary) !important; }
+html.frost-sect [class*="hover\\:text-[#8ea1ff]"]:hover { color: var(--accent) !important; }
+
+/* =====================================================================
+ * THEME — HEAVENLY SWORD (天剑)
+ * Cloud-white sword sect on a high mountain. Cool deep dawn-navy
+ * canvas, cloud-white parchment text, sky-blue / sun-gold / dawn-rose /
+ * jade accents. Forest-shaped: muted, ceremonial.
+ * ===================================================================== */
+html.heavenly-sword {
+  --void-black: #1c2738;
+  --ink-deep: #25324a;
+  --ink-dark: #2d3c58;
+  --ink-mid: #354768;
+  --ink-light: #41547a;
+
+  --mist-dark: #8a9ab8;
+  --mist-mid: #a8b8d0;
+  --mist-light: #cdd8ea;
+  --mist-pale: #e0e8f4;
+  --cloud-white: #ecf2fa;
+  --pure-white: #f8fbfe;
+
+  /* Accent #1 — Sky blue (primary) */
+  --jade-deep: #2c4a7a;
+  --jade: #5a85bc;
+  --jade-glow: #7ea8d8;
+  --jade-light: #aac6e8;
+
+  /* Accent #2 — Dawn jade (cool counterpoint) */
+  --mountain-blue: #3a7878;
+  --mountain-blue-glow: #82bcb0;
+
+  /* Accent #3 — Sun gold (warmth) */
+  --gold-dim: #98782e;
+  --gold: #d8b860;
+  --gold-glow: #ead082;
+
+  /* Accent #4 — Dawn rose (danger) */
+  --crimson-deep: #4a2e34;
+  --crimson: #d88a8a;
+  --crimson-glow: #e8a4a4;
+  --crimson-light: #f0c0c0;
+
+  /* Accent #5 — Lavender cloud */
+  --forest-deep: #2e3a5a;
+  --forest: #a8a4d0;
+
+  --difficulty-green: #82bcb0;
+  --difficulty-green-glow: #5e9890;
+  --difficulty-amber: #d8b860;
+  --difficulty-amber-glow: #ad9248;
+  --difficulty-red: #d88a8a;
+  --difficulty-red-glow: #b46c6c;
+  --difficulty-violet: #a8a4d0;
+  --difficulty-violet-glow: #8884b0;
+  --difficulty-pink: #d8a4be;
+  --difficulty-pink-glow: #b48498;
+  --difficulty-light-pink: #e8c4d4;
+  --difficulty-light-pink-glow: #b8a0ac;
+  --difficulty-cyan: #82bcb0;
+  --difficulty-cyan-glow: #5e9890;
+
+  --glow-difficulty-green: 0 0 14px rgba(130, 188, 176, 0.30), 0 0 28px rgba(130, 188, 176, 0.14);
+  --glow-difficulty-amber: 0 0 14px rgba(216, 184, 96, 0.32), 0 0 28px rgba(216, 184, 96, 0.14);
+  --glow-difficulty-red: 0 0 14px rgba(216, 138, 138, 0.28), 0 0 28px rgba(216, 138, 138, 0.12);
+  --glow-difficulty-violet: 0 0 14px rgba(168, 164, 208, 0.28), 0 0 28px rgba(168, 164, 208, 0.12);
+  --glow-difficulty-pink: 0 0 14px rgba(216, 164, 190, 0.28), 0 0 28px rgba(216, 164, 190, 0.12);
+  --glow-difficulty-light-pink: 0 0 14px rgba(232, 196, 212, 0.28), 0 0 28px rgba(232, 196, 212, 0.12);
+  --glow-difficulty-cyan: 0 0 14px rgba(130, 188, 176, 0.30), 0 0 28px rgba(130, 188, 176, 0.14);
+
+  --background: var(--void-black);
+  --foreground: var(--cloud-white);
+  --surface: var(--ink-deep);
+  --surface-hover: var(--ink-mid);
+  --border: var(--ink-light);
+  --border-glow: var(--jade-glow);
+  --text-primary: var(--cloud-white);
+  --text-secondary: var(--mist-light);
+  --text-muted: var(--mist-dark);
+  --accent: var(--jade-glow);
+  --accent-hover: var(--jade-light);
+  --danger: var(--crimson);
+  --danger-hover: var(--crimson-glow);
+
+  --glow-jade: 0 0 16px rgba(126, 168, 216, 0.32), 0 0 32px rgba(126, 168, 216, 0.14);
+  --glow-crimson: 0 0 16px rgba(216, 138, 138, 0.26), 0 0 32px rgba(216, 138, 138, 0.10);
+  --glow-gold: 0 0 16px rgba(216, 184, 96, 0.30), 0 0 32px rgba(216, 184, 96, 0.14);
+  --glow-blue: 0 0 16px rgba(130, 188, 176, 0.30), 0 0 32px rgba(130, 188, 176, 0.14);
+  --glow-subtle: 0 0 10px rgba(126, 168, 216, 0.18);
+  --glow-modal: 0 0 36px rgba(126, 168, 216, 0.30), 0 0 72px rgba(216, 184, 96, 0.14), inset 0 0 28px rgba(130, 188, 176, 0.06);
+
+  --col-weight: var(--mountain-blue-glow);
+  --col-weight-bg: color-mix(in srgb, var(--mountain-blue-glow) 12%, transparent);
+  --col-reps: var(--gold);
+  --col-reps-bg: color-mix(in srgb, var(--gold) 12%, transparent);
+
+  --chart-primary: #7ea8d8;
+  --chart-primary-rgb: 126 168 216;
+  --chart-secondary: #d8b860;
+  --chart-grid: rgba(236, 242, 250, 0.10);
+  --chart-bg: rgba(28, 39, 56, 0.55);
+  --timed-color: #82bcb0;
+  --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 84%, var(--border));
+  --nyaa-table-row-hover: color-mix(in srgb, var(--surface) 84%, var(--jade-glow));
+  --system-bar-fallback: #1c2738;
+}
+
+html.heavenly-sword * { scrollbar-color: var(--ink-light) var(--void-black); }
+
+html.heavenly-sword [class*="bg-[#1e1f22]"] { background-color: var(--void-black) !important; }
+html.heavenly-sword [class*="bg-[#2b2d31]"],
+html.heavenly-sword [class*="bg-[#23252b]"],
+html.heavenly-sword [class*="bg-[#232428]"] { background-color: var(--ink-deep) !important; }
+html.heavenly-sword [class*="bg-[#313338]"] { background-color: var(--ink-dark) !important; }
+html.heavenly-sword [class*="bg-[#383a40]"],
+html.heavenly-sword [class*="bg-[#454852]"] { background-color: var(--ink-mid) !important; }
+html.heavenly-sword [class*="bg-[#32353b]"] { background-color: var(--ink-light) !important; }
+html.heavenly-sword [class*="bg-[#5865f2]"] { background-color: var(--accent) !important; }
+html.heavenly-sword [class*="bg-[#7289da]"] { background-color: var(--jade) !important; }
+html.heavenly-sword [class*="bg-[#57f287]"] { background-color: var(--forest) !important; }
+html.heavenly-sword [class*="bg-[#fee75c]"] { background-color: var(--gold) !important; }
+html.heavenly-sword [class*="bg-[#ed4245]"] { background-color: var(--crimson) !important; }
+html.heavenly-sword [class*="text-[#f2f3f5]"],
+html.heavenly-sword [class*="text-[#dbe3ff]"] { color: var(--text-primary) !important; }
+html.heavenly-sword [class*="text-[#dbdee1]"],
+html.heavenly-sword [class*="text-[#e3e5e8]"] { color: var(--mist-light) !important; }
+html.heavenly-sword [class*="text-[#b5bac1]"] { color: var(--text-secondary) !important; }
+html.heavenly-sword [class*="text-[#949ba4]"] { color: var(--text-muted) !important; }
+html.heavenly-sword [class*="text-[#8ea1ff]"],
+html.heavenly-sword [class*="text-[#8ea1e1]"],
+html.heavenly-sword [class*="text-[#c9d2ff]"],
+html.heavenly-sword [class*="text-[#5865f2]"] { color: var(--accent) !important; }
+html.heavenly-sword [class*="text-[#7289da]"] { color: var(--jade-light) !important; }
+html.heavenly-sword [class*="text-[#57f287]"] { color: var(--forest) !important; }
+html.heavenly-sword [class*="text-[#fee75c]"] { color: var(--gold) !important; }
+html.heavenly-sword [class*="text-[#ed4245]"] { color: var(--crimson) !important; }
+html.heavenly-sword [class*="text-[#ff8fa3]"],
+html.heavenly-sword [class*="text-[#f0b96a]"] { color: var(--gold-glow) !important; }
+html.heavenly-sword [class*="border-[#3b3f48]"],
+html.heavenly-sword [class*="border-[#32353b]"],
+html.heavenly-sword [class*="border-[#383a40]"],
+html.heavenly-sword [class*="border-[#2b2d31]"] { border-color: var(--border) !important; }
+html.heavenly-sword [class*="border-[#5865f2]"] { border-color: var(--accent) !important; }
+html.heavenly-sword [class*="hover\\:bg-[#2b2d31]"]:hover,
+html.heavenly-sword [class*="hover\\:bg-[#313338]"]:hover { background-color: var(--surface-hover) !important; }
+html.heavenly-sword [class*="hover\\:bg-[#454852]"]:hover { background-color: color-mix(in srgb, var(--surface-hover) 60%, var(--accent)) !important; }
+html.heavenly-sword [class*="hover\\:text-[#f2f3f5]"]:hover { color: var(--text-primary) !important; }
+html.heavenly-sword [class*="hover\\:text-[#8ea1ff]"]:hover { color: var(--accent) !important; }.sakura {
   --void-black: #1a1018;
   --ink-deep: #201820;
   --ink-dark: #2a2028;
@@ -1308,7 +1926,47 @@ html.discord {
   --header-border: var(--nyaa-table-grid);
 }
 
-html.document {
+html.forest {
+  --category-cali: #a7c080;
+  --category-gym: #dbbc7f;
+  --category-yoga: #7fbbb3;
+  --category-cardio: #e67e80;
+  --label-progression: #d699b6;
+  --label-variant: #83c092;
+  --header-bg: color-mix(in srgb, var(--surface) 84%, var(--border));
+  --header-border: var(--nyaa-table-grid);
+}html.ink-dragon {
+  --category-cali: #9a6ee0;
+  --category-gym: #9aa4b8;
+  --category-yoga: #5a98c0;
+  --category-cardio: #b8343a;
+  --label-progression: #c884b0;
+  --label-variant: #6ab088;
+  --header-bg: color-mix(in srgb, var(--surface) 84%, var(--border));
+  --header-border: var(--nyaa-table-grid);
+}
+
+html.frost-sect {
+  --category-cali: #7eb0d6;
+  --category-gym: #c8c4a8;
+  --category-yoga: #82c0c8;
+  --category-cardio: #d68aa0;
+  --label-progression: #b0a4d8;
+  --label-variant: #82c0c8;
+  --header-bg: color-mix(in srgb, var(--surface) 84%, var(--border));
+  --header-border: var(--nyaa-table-grid);
+}
+
+html.heavenly-sword {
+  --category-cali: #7ea8d8;
+  --category-gym: #d8b860;
+  --category-yoga: #82bcb0;
+  --category-cardio: #d88a8a;
+  --label-progression: #a8a4d0;
+  --label-variant: #82bcb0;
+  --header-bg: color-mix(in srgb, var(--surface) 84%, var(--border));
+  --header-border: var(--nyaa-table-grid);
+}html.document {
   --category-cali: #3a58a0;
   --category-gym: #b7791f;
   --category-yoga: #2f7d32;
@@ -1328,4 +1986,164 @@ html.nyaa {
   --label-variant: #0891b2;
   --header-bg: color-mix(in srgb, var(--surface) 90%, var(--border));
   --header-border: var(--nyaa-table-grid);
+}
+
+/* =====================================================================
+ * LIGHT VARIANTS for non-discord themes
+ * Each block overrides only canvas/text/glow vars; accent vars cascade
+ * from the parent dark block but are nudged here for contrast on light bg.
+ * Activated by combining e.g. <html class="forest light">.
+ * ===================================================================== */
+
+html.forest.light {
+  --void-black: #f3efe3;       /* warm parchment */
+  --ink-deep: #ebe6d4;          /* card surface */
+  --ink-dark: #ddd5be;          /* hover surface */
+  --ink-mid: #c5bda3;           /* border */
+  --ink-light: #a8a088;         /* strong border */
+  --mist-dark: #6f7a66;
+  --mist-mid: #5a6452;
+  --mist-light: #404a3a;
+  --mist-pale: #2e3628;
+  --cloud-white: #1f2a1c;       /* deep moss text */
+  --pure-white: #14201a;
+  /* Slightly darken accents for legibility on cream */
+  --jade-glow: #65824a;
+  --jade: #4f6c38;
+  --gold-glow: #8a7228;
+  --gold: #6a5618;
+  --crimson-glow: #b04a4c;
+  --crimson: #8a2e30;
+  --accent: var(--jade-glow);
+  --accent-hover: #4f6c38;
+  --danger: var(--crimson);
+  --chart-grid: rgba(31, 42, 28, 0.10);
+  --chart-bg: rgba(243, 239, 227, 0.55);
+  --glow-jade: 0 0 12px rgba(101, 130, 74, 0.24), 0 0 24px rgba(101, 130, 74, 0.10);
+  --glow-crimson: 0 0 12px rgba(176, 74, 76, 0.24), 0 0 24px rgba(176, 74, 76, 0.10);
+  --glow-gold: 0 0 12px rgba(138, 114, 40, 0.22), 0 0 24px rgba(138, 114, 40, 0.10);
+  --glow-modal: 0 0 28px rgba(101, 130, 74, 0.22), 0 0 56px rgba(176, 74, 76, 0.10), inset 0 0 20px rgba(31, 42, 28, 0.04);
+  --system-bar-fallback: #f3efe3;
+}html.ink-dragon.light {
+  --void-black: #f4f0e6;        /* rice paper */
+  --ink-deep: #ebe5d3;
+  --ink-dark: #d8cfb8;
+  --ink-mid: #b8af9a;
+  --ink-light: #968e7c;
+  --mist-dark: #6c6a62;
+  --mist-mid: #54524a;
+  --mist-light: #3a3a44;
+  --mist-pale: #24242c;
+  --cloud-white: #14141c;       /* sumi ink black */
+  --pure-white: #08080c;
+  --jade-glow: #5a328a;          /* deeper violet thunder */
+  --jade: #44226a;
+  --gold-glow: #5e6678;
+  --gold: #44495a;
+  --crimson-glow: #962228;
+  --crimson: #6e161c;
+  --accent: var(--jade-glow);
+  --accent-hover: #44226a;
+  --danger: var(--crimson);
+  --chart-grid: rgba(20, 20, 28, 0.10);
+  --chart-bg: rgba(244, 240, 230, 0.55);
+  --glow-jade: 0 0 12px rgba(90, 50, 138, 0.26), 0 0 24px rgba(90, 50, 138, 0.10);
+  --glow-crimson: 0 0 12px rgba(150, 34, 40, 0.24), 0 0 24px rgba(150, 34, 40, 0.10);
+  --glow-gold: 0 0 12px rgba(94, 102, 120, 0.22), 0 0 24px rgba(94, 102, 120, 0.10);
+  --glow-modal: 0 0 28px rgba(90, 50, 138, 0.22), 0 0 56px rgba(150, 34, 40, 0.10), inset 0 0 20px rgba(20, 20, 28, 0.04);
+  --system-bar-fallback: #f4f0e6;
+}
+
+/* Light-mode specific category-token tweaks (richer/darker so labels read on light bg) */
+html.forest.light {
+  --category-cali: #4f6c38;
+  --category-gym: #8a7228;
+  --category-yoga: #2c6c8a;
+  --category-cardio: #8a2e30;
+  --label-progression: #6e4a8a;
+  --label-variant: #2f8068;
+}html.ink-dragon.light {
+  --category-cali: #5a328a;
+  --category-gym: #54627c;
+  --category-yoga: #2c6890;
+  --category-cardio: #6e161c;
+  --label-progression: #8a4882;
+  --label-variant: #2f7060;
+}
+
+/* ----- Light variants for Frost Sect / Heavenly Sword / Underworld Yama / Sakura Court ----- */
+
+html.frost-sect.light {
+  --void-black: #eef3f8;
+  --ink-deep: #e1e8f0;
+  --ink-dark: #ced9e4;
+  --ink-mid: #b0bdcd;
+  --ink-light: #8c9aae;
+  --mist-dark: #6a7890;
+  --mist-mid: #54627a;
+  --mist-light: #3a4660;
+  --mist-pale: #243048;
+  --cloud-white: #18243a;
+  --pure-white: #0c1828;
+  --jade-glow: #2e6aa0;
+  --jade: #1f4e80;
+  --gold-glow: #6e7050;
+  --gold: #565838;
+  --crimson-glow: #b04a64;
+  --crimson: #8a3048;
+  --accent: var(--jade-glow);
+  --accent-hover: #1f4e80;
+  --danger: var(--crimson);
+  --chart-grid: rgba(24, 36, 58, 0.10);
+  --chart-bg: rgba(238, 243, 248, 0.55);
+  --glow-jade: 0 0 12px rgba(46, 106, 160, 0.24), 0 0 24px rgba(46, 106, 160, 0.10);
+  --glow-crimson: 0 0 12px rgba(176, 74, 100, 0.22), 0 0 24px rgba(176, 74, 100, 0.10);
+  --glow-gold: 0 0 12px rgba(110, 112, 80, 0.22), 0 0 24px rgba(110, 112, 80, 0.10);
+  --glow-modal: 0 0 28px rgba(46, 106, 160, 0.22), 0 0 56px rgba(176, 74, 100, 0.10), inset 0 0 20px rgba(24, 36, 58, 0.04);
+  --system-bar-fallback: #eef3f8;
+}
+
+html.heavenly-sword.light {
+  --void-black: #f0f4fa;
+  --ink-deep: #e3e9f2;
+  --ink-dark: #d0dae6;
+  --ink-mid: #b0bdcf;
+  --ink-light: #8c9ab2;
+  --mist-dark: #6a7894;
+  --mist-mid: #54627e;
+  --mist-light: #3a4664;
+  --mist-pale: #24304c;
+  --cloud-white: #18243c;
+  --pure-white: #0a1628;
+  --jade-glow: #2e6cb0;
+  --jade: #1f508a;
+  --gold-glow: #927448;
+  --gold: #6e5630;
+  --crimson-glow: #b04a4a;
+  --crimson: #8a3030;
+  --accent: var(--jade-glow);
+  --accent-hover: #1f508a;
+  --danger: var(--crimson);
+  --chart-grid: rgba(24, 36, 60, 0.10);
+  --chart-bg: rgba(240, 244, 250, 0.55);
+  --glow-jade: 0 0 12px rgba(46, 108, 176, 0.24), 0 0 24px rgba(46, 108, 176, 0.10);
+  --glow-crimson: 0 0 12px rgba(176, 74, 74, 0.22), 0 0 24px rgba(176, 74, 74, 0.10);
+  --glow-gold: 0 0 12px rgba(146, 116, 72, 0.24), 0 0 24px rgba(146, 116, 72, 0.10);
+  --glow-modal: 0 0 28px rgba(46, 108, 176, 0.22), 0 0 56px rgba(146, 116, 72, 0.10), inset 0 0 20px rgba(24, 36, 60, 0.04);
+  --system-bar-fallback: #f0f4fa;
+}html.frost-sect.light {
+  --category-cali: #2e6aa0;
+  --category-gym: #6e7050;
+  --category-yoga: #2c7a82;
+  --category-cardio: #b04a64;
+  --label-progression: #6c4ab0;
+  --label-variant: #2c7a82;
+}
+html.heavenly-sword.light {
+  --category-cali: #2e6cb0;
+  --category-gym: #927448;
+  --category-yoga: #2c7068;
+  --category-cardio: #b04a4a;
+  --label-progression: #6c4ab0;
+  --label-variant: #2c7068;
 }

@@ -1,6 +1,7 @@
 import { apiSuccess, ApiErrors } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
+import { isDeletedExerciseDescription } from "@/lib/pending-exercises";
 
 interface LogUpdate {
   id: string;
@@ -23,7 +24,7 @@ interface LogUpdate {
 export const POST = withAuth(async (request, { auth }) => {
   try {
     const { updates } = await request.json() as { updates: LogUpdate[] };
-    const userId = auth.userId;
+    const callerUserId = auth.userId;
 
     if (!updates || !Array.isArray(updates) || updates.length === 0) {
       return ApiErrors.badRequest("Updates array is required and must not be empty");
@@ -32,10 +33,6 @@ export const POST = withAuth(async (request, { auth }) => {
     for (const update of updates) {
       if (!update.id) {
         return ApiErrors.badRequest("Log ID is required for all updates");
-      }
-
-      if (update.exerciseId != null && typeof update.exerciseId !== "string") {
-        return ApiErrors.badRequest("exerciseId must be a string when provided");
       }
 
       // Validate weight ranges
@@ -69,25 +66,7 @@ export const POST = withAuth(async (request, { auth }) => {
       }
     }
 
-    const requestedExerciseIds = Array.from(
-      new Set(
-        updates
-          .map((update) => update.exerciseId)
-          .filter((value): value is string => typeof value === "string" && value.trim().length > 0),
-      ),
-    );
-
-    if (requestedExerciseIds.length > 0) {
-      const foundExercises = await prisma.progressionExercise.findMany({
-        where: { id: { in: requestedExerciseIds } },
-        select: { id: true },
-      });
-      if (foundExercises.length !== requestedExerciseIds.length) {
-        return ApiErrors.badRequest("One or more selected exercises were not found");
-      }
-    }
-
-    // Verify ownership: all logs must belong to the user
+    // Verify ownership: users can only edit their own logs
     const logIds = updates.map(u => u.id);
     const logs = await prisma.progressionLog.findMany({
       where: { id: { in: logIds } },
@@ -99,35 +78,54 @@ export const POST = withAuth(async (request, { auth }) => {
     }
 
     for (const log of logs) {
-      if (log.userProgression.userId !== userId) {
+      if (log.userProgression.userId !== callerUserId) {
         return ApiErrors.forbidden("Unauthorized");
       }
     }
 
-    // Batch update
-    const updatePromises = updates.map(async (update) => {
-      let nextUserProgressionId: string | undefined;
+    const logById = new Map(logs.map((log) => [log.id, log]));
 
-      if (update.exerciseId && update.exerciseId.trim().length > 0) {
-        const userProgression = await prisma.userProgressionLevel.upsert({
-          where: {
-            userId_exerciseId: {
-              userId,
-              exerciseId: update.exerciseId,
-            },
-          },
-          update: {},
-          create: {
-            userId,
-            exerciseId: update.exerciseId,
-            currentLevel: 1,
-          },
-          select: { id: true },
-        });
-        nextUserProgressionId = userProgression.id;
+    for (const update of updates) {
+      const existingLog = logById.get(update.id);
+      if (!existingLog) {
+        return ApiErrors.notFound("One or more log records not found");
       }
 
-      return prisma.progressionLog.update({
+      let nextUserProgressionId: string | undefined;
+      const requestedExerciseId = typeof update.exerciseId === "string" ? update.exerciseId.trim() : "";
+      if (requestedExerciseId) {
+        const requestedExercise = await prisma.progressionExercise.findUnique({
+          where: { id: requestedExerciseId },
+          select: { id: true, story: true },
+        });
+
+        if (!requestedExercise || isDeletedExerciseDescription(requestedExercise.story)) {
+          return ApiErrors.notFound("Exercise not found");
+        }
+
+        const currentExerciseId = existingLog.userProgression.exerciseId;
+        if (currentExerciseId !== requestedExerciseId) {
+          const linkedProgression = await prisma.userProgressionLevel.upsert({
+            where: {
+              userId_exerciseId: {
+                userId: callerUserId,
+                exerciseId: requestedExerciseId,
+              },
+            },
+            update: {},
+            create: {
+              userId: callerUserId,
+              exerciseId: requestedExerciseId,
+              currentLevel: update.level != null ? Math.max(1, Math.floor(update.level)) : existingLog.level,
+            },
+            select: { id: true },
+          });
+
+          nextUserProgressionId = linkedProgression.id;
+        }
+      }
+
+      await prisma.progressionLog.update({
         where: { id: update.id },
         data: {
           userProgressionId: nextUserProgressionId,
@@ -146,9 +144,7 @@ export const POST = withAuth(async (request, { auth }) => {
           notes: update.notes ? String(update.notes).trim().slice(0, 1000) : null,
         },
       });
-    });
-
-    await Promise.all(updatePromises);
+    }
 
     return apiSuccess({ success: true, message: "Progression logs updated successfully" });
   } catch (error) {

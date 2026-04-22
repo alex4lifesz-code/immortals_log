@@ -7,9 +7,52 @@ import { CONFIG, THEME_CLASS_NAMES, type Theme } from "@/lib/config";
 import { api } from "@/lib/api-client";
 
 type ThemeMode = "dark" | "light";
+type ThemeModePreference = "dark" | "light" | "auto";
 type ThemeStyle = Theme;
 type NavigationMode = "top" | "side";
 type TrainingMode = "simplified" | "detailed";
+
+// Helper functions for user-specific localStorage keys
+function getNavStateStorageKey(userId: string | null | undefined): string {
+  if (!userId) {
+    return "cultivation-nav-state";
+  }
+  return `cultivation-nav-state-${userId}`;
+}
+
+function getThemeStorageKey(userId: string | null | undefined): string {
+  if (!userId) {
+    return "cultivation-theme";
+  }
+  return `cultivation-theme-${userId}`;
+}
+
+function getThemeStyleStorageKey(userId: string | null | undefined): string {
+  if (!userId) {
+    return "cultivation-theme-style";
+  }
+  return `cultivation-theme-style-${userId}`;
+}
+
+function getThemeModeStorageKey(userId: string | null | undefined): string {
+  if (!userId) {
+    return "cultivation-theme-mode";
+  }
+  return `cultivation-theme-mode-${userId}`;
+}
+
+function resolveAppearance(mode: ThemeModePreference, style: ThemeStyle): ThemeMode {
+  // Discord palette has no light variant — always dark.
+  if (style === "discord") return "dark";
+  if (mode === "auto") {
+    if (typeof window !== "undefined" && window.matchMedia) {
+      return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+    }
+    return "dark";
+  }
+  return mode;
+}
+
 
 interface AppState {
   navItems: NavItem[];
@@ -19,6 +62,7 @@ interface AppState {
   collapsed: boolean;
   isMobile: boolean;
   theme: ThemeMode;
+  themeMode: ThemeModePreference;
   themeStyle: ThemeStyle;
   navigationMode: NavigationMode;
   topPanelExpanded: boolean;
@@ -36,6 +80,7 @@ interface AppContextType extends AppState {
   getSortedNavItems: () => NavItem[];
   setTheme: (theme: ThemeMode) => void;
   toggleTheme: () => void;
+  setThemeMode: (mode: ThemeModePreference) => void;
   setThemeStyle: (style: ThemeStyle) => void;
   setNavigationMode: (mode: NavigationMode) => void;
   setTopPanelExpanded: (expanded: boolean) => void;
@@ -59,6 +104,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [theme, setThemeState] = useState<ThemeMode>("dark");
+  const [themeMode, setThemeModeState] = useState<ThemeModePreference>("dark");
   const [themeStyle, setThemeStyleState] = useState<ThemeStyle>("discord");
   const [navigationMode, setNavigationModeState] = useState<NavigationMode>("side");
   const [topPanelExpanded, setTopPanelExpandedState] = useState(true);
@@ -72,11 +118,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setActiveDrawerClose(() => closeFn);
   }, []);
 
-  // Load saved state from localStorage
-  /* eslint-disable react-hooks/set-state-in-effect -- hydration from localStorage on mount */
+  // Load saved state from localStorage when user changes
+  /* eslint-disable react-hooks/set-state-in-effect -- hydration from localStorage on mount and user change */
   useEffect(() => {
     try {
-      const saved = localStorage.getItem("cultivation-nav-state");
+      const navStateKey = getNavStateStorageKey(user?.id);
+      const saved = localStorage.getItem(navStateKey);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.navItems && Array.isArray(parsed.navItems)) {
@@ -111,11 +158,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // ignore parse errors
     }
-  }, []);
+  }, [user?.id]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // Persist state to localStorage
+  // Persist nav/layout state to localStorage. Only writes when a user is
+  // signed in AND the hydration effect has loaded *this* user's settings
+  // (tracked via syncedUserIdRef). Without this guard, switching accounts
+  // would write the previous user's state into the new user's storage key.
   const persistState = useCallback(() => {
+    if (!user?.id) return;
+    if (syncedUserIdRef.current !== user.id) return;
+
     const state = {
       navItems,
       dualPageView,
@@ -123,21 +176,44 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       collapsed,
       trainingMode,
     };
-    localStorage.setItem("cultivation-nav-state", JSON.stringify(state));
-  }, [navItems, dualPageView, navigationMode, collapsed, trainingMode]);
+    localStorage.setItem(getNavStateStorageKey(user.id), JSON.stringify(state));
+  }, [navItems, dualPageView, navigationMode, collapsed, trainingMode, user?.id]);
 
   const setTheme = useCallback((t: ThemeMode) => {
     setThemeState(t);
     if (typeof window !== "undefined") {
       document.documentElement.classList.remove("dark", "light");
       document.documentElement.classList.add(t);
+      // Mirror to shared key (used by the layout inline script on first paint)
       localStorage.setItem("cultivation-theme", t);
+      if (user?.id) {
+        localStorage.setItem(getThemeStorageKey(user.id), t);
+      }
     }
-  }, []);
+  }, [user?.id]);
+
+  const setThemeMode = useCallback((mode: ThemeModePreference) => {
+    const normalized: ThemeModePreference =
+      mode === "light" || mode === "dark" || mode === "auto" ? mode : "dark";
+    setThemeModeState(normalized);
+    if (typeof window !== "undefined") {
+      const resolved = resolveAppearance(normalized, themeStyle);
+      setThemeState(resolved);
+      const root = document.documentElement;
+      root.classList.remove("dark", "light");
+      root.classList.add(resolved);
+      localStorage.setItem("cultivation-theme-mode", normalized);
+      localStorage.setItem("cultivation-theme", resolved);
+      if (user?.id) {
+        localStorage.setItem(getThemeModeStorageKey(user.id), normalized);
+        localStorage.setItem(getThemeStorageKey(user.id), resolved);
+      }
+    }
+  }, [themeStyle, user?.id]);
 
   const toggleTheme = useCallback(() => {
-    setTheme(theme === "dark" ? "light" : "dark");
-  }, [theme, setTheme]);
+    setThemeMode(theme === "dark" ? "light" : "dark");
+  }, [theme, setThemeMode]);
 
   const setThemeStyle = useCallback((style: ThemeStyle) => {
     const normalizedStyle: ThemeStyle = (THEME_CLASS_NAMES as readonly string[]).includes(style)
@@ -145,20 +221,39 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       : "discord";
     setThemeStyleState(normalizedStyle);
     if (typeof window !== "undefined") {
-      document.documentElement.classList.remove(...THEME_CLASS_NAMES);
-      document.documentElement.classList.add(normalizedStyle);
+      const root = document.documentElement;
+      root.classList.remove(...THEME_CLASS_NAMES);
+      root.classList.add(normalizedStyle);
+      root.setAttribute("data-theme", normalizedStyle);
+      // Resolve appearance for the new style (discord always dark; otherwise use mode pref).
+      const resolved = resolveAppearance(themeMode, normalizedStyle);
+      setThemeState(resolved);
+      root.classList.remove("dark", "light");
+      root.classList.add(resolved);
       localStorage.setItem("cultivation-theme-style", normalizedStyle);
+      localStorage.setItem("cultivation-theme", resolved);
+      if (user?.id) {
+        localStorage.setItem(getThemeStyleStorageKey(user.id), normalizedStyle);
+        localStorage.setItem(getThemeStorageKey(user.id), resolved);
+      }
     }
-  }, []);
+  }, [themeMode, user?.id]);
 
-  // Load saved theme on mount
-  /* eslint-disable react-hooks/set-state-in-effect -- hydration from localStorage on mount */
+  // Load saved theme on mount and when user changes
+  /* eslint-disable react-hooks/set-state-in-effect -- hydration from localStorage on mount and user change */
   useEffect(() => {
-    const saved = localStorage.getItem("cultivation-theme") as ThemeMode | null;
+    const themeKey = getThemeStorageKey(user?.id);
+    const saved = localStorage.getItem(themeKey) as ThemeMode | null;
     if (saved && (saved === "dark" || saved === "light")) {
       setTheme(saved);
     }
-    const savedStyle = localStorage.getItem("cultivation-theme-style") as ThemeStyle | null;
+    const themeModeKey = getThemeModeStorageKey(user?.id);
+    const savedMode = localStorage.getItem(themeModeKey) as ThemeModePreference | null;
+    if (savedMode && (savedMode === "dark" || savedMode === "light" || savedMode === "auto")) {
+      setThemeMode(savedMode);
+    }
+    const themeStyleKey = getThemeStyleStorageKey(user?.id);
+    const savedStyle = localStorage.getItem(themeStyleKey) as ThemeStyle | null;
     if (savedStyle && (THEME_CLASS_NAMES as readonly string[]).includes(savedStyle)) {
       setThemeStyle(savedStyle);
     } else {
@@ -166,8 +261,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
     // Layout selection removed: always use Layout 1 shell.
     localStorage.removeItem("cultivation-layout-style");
-  }, [setTheme, setThemeStyle]);
+  }, [user?.id, setTheme, setThemeMode, setThemeStyle]);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Re-resolve appearance when system color-scheme flips (only matters when mode === "auto")
+  useEffect(() => {
+    if (themeMode !== "auto") return;
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mql = window.matchMedia("(prefers-color-scheme: light)");
+    const handler = () => {
+      const resolved = resolveAppearance("auto", themeStyle);
+      setThemeState(resolved);
+      const root = document.documentElement;
+      root.classList.remove("dark", "light");
+      root.classList.add(resolved);
+      localStorage.setItem("cultivation-theme", resolved);
+      if (user?.id) {
+        localStorage.setItem(getThemeStorageKey(user.id), resolved);
+      }
+    };
+    mql.addEventListener?.("change", handler);
+    return () => mql.removeEventListener?.("change", handler);
+  }, [themeMode, themeStyle, user?.id]);
 
   // Hydrate shared theme preferences per user (desktop/web)
   useEffect(() => {
@@ -193,7 +308,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           setThemeState(remoteTheme);
           document.documentElement.classList.remove("dark", "light");
           document.documentElement.classList.add(remoteTheme);
+          // Mirror to shared key for first-paint script
           localStorage.setItem("cultivation-theme", remoteTheme);
+          if (user?.id) {
+            localStorage.setItem(getThemeStorageKey(user.id), remoteTheme);
+          }
         }
 
         if (typeof remoteThemeStyle === "string") {
@@ -201,9 +320,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             ? (remoteThemeStyle as ThemeStyle)
             : "discord";
           setThemeStyleState(normalizedStyle);
-          document.documentElement.classList.remove(...THEME_CLASS_NAMES);
-          document.documentElement.classList.add(normalizedStyle);
+          const root = document.documentElement;
+          root.classList.remove(...THEME_CLASS_NAMES);
+          root.classList.add(normalizedStyle);
+          root.setAttribute("data-theme", normalizedStyle);
+          // Mirror to shared key for login page & first-paint script
           localStorage.setItem("cultivation-theme-style", normalizedStyle);
+          if (user?.id) {
+            localStorage.setItem(getThemeStyleStorageKey(user.id), normalizedStyle);
+          }
         }
       } catch {
         // Ignore remote sync errors; local settings remain usable.
@@ -313,6 +438,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         collapsed,
         isMobile,
         theme,
+        themeMode,
         themeStyle,
         navigationMode,
         topPanelExpanded,
@@ -326,6 +452,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         getSortedNavItems,
         setTheme,
         toggleTheme,
+        setThemeMode,
         setThemeStyle,
         setNavigationMode,
         setTopPanelExpanded,
@@ -352,10 +479,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setMobileSidebarOpen,
         setNavigationMode,
         setTheme,
+        setThemeMode,
         setThemeStyle,
         setTopPanelExpanded,
         setTrainingMode,
         theme,
+        themeMode,
         themeStyle,
         toggleDualPage,
         toggleNavPin,

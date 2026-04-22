@@ -1,20 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import PageLayout from "@/components/layout/PageLayout";
 import { useAuth } from "@/context/AuthContext";
-import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { api } from "@/lib/api-client";
-import { formatDateWithPreference } from "@/lib/constants";
 import { DASHBOARD_ROUTES } from "@/lib/navigation";
 import {
-  DEFAULT_USER_PHYSIQUE,
   extractLatestWeightPayload,
   loadUserPhysique,
   saveUserPhysique,
-  syncWeightFromLatestCheckin,
-  type UserGender,
 } from "@/lib/user-physique";
 
 type ProfileCheckin = {
@@ -27,30 +22,14 @@ type ProfileCheckin = {
 export default function ProfilePage() {
   const router = useRouter();
   const { user, logout } = useAuth();
-  const { settings } = useDisplaySettings();
-  const [gender, setGender] = useState<UserGender>(DEFAULT_USER_PHYSIQUE.gender);
-  const [bodyWeightKg, setBodyWeightKg] = useState("");
-  const [syncEnabled, setSyncEnabled] = useState(false);
   const [latestCheckinWeight, setLatestCheckinWeight] = useState<{ weight: number; date: string | null } | null>(null);
-  const [checkinWeightLoading, setCheckinWeightLoading] = useState(false);
-  const [saveMessage, setSaveMessage] = useState<string>("");
   const [weightTrendLabel, setWeightTrendLabel] = useState<string | null>(null);
   const [checkInTotalCount, setCheckInTotalCount] = useState<number | null>(null);
-  const [isPhysiqueExpanded, setIsPhysiqueExpanded] = useState(false);
-
-  useEffect(() => {
-    if (!user?.id) return;
-    const current = loadUserPhysique(user.id);
-    setGender(current.gender);
-    setBodyWeightKg(current.bodyWeightKg != null ? String(current.bodyWeightKg) : "");
-    setSyncEnabled(current.syncWeightFromCheckins === true);
-  }, [user?.id]);
 
   useEffect(() => {
     if (!user?.id) return;
 
     let cancelled = false;
-    setCheckinWeightLoading(true);
 
     fetch("/api/checkins/latest-weight", { credentials: "include" })
       .then((res) => res.json())
@@ -60,6 +39,16 @@ export default function ProfilePage() {
         const latest = extractLatestWeightPayload(data);
         if (latest.weight != null) {
           setLatestCheckinWeight({ weight: latest.weight, date: latest.date });
+          // Always sync the user's body weight to the most recent check-in weight
+          // so other parts of the app (training calculators, etc.) see the latest value.
+          const current = loadUserPhysique(user.id);
+          if (current.bodyWeightKg !== latest.weight || current.syncWeightFromCheckins !== true) {
+            saveUserPhysique(user.id, {
+              ...current,
+              bodyWeightKg: latest.weight,
+              syncWeightFromCheckins: true,
+            });
+          }
         } else {
           setLatestCheckinWeight(null);
         }
@@ -67,11 +56,6 @@ export default function ProfilePage() {
       .catch(() => {
         if (!cancelled) {
           setLatestCheckinWeight(null);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setCheckinWeightLoading(false);
         }
       });
 
@@ -135,37 +119,10 @@ export default function ProfilePage() {
     };
   }, [user?.id]);
 
-  const handleToggleSync = (enabled: boolean) => {
-    setSyncEnabled(enabled);
-    if (enabled && latestCheckinWeight) {
-      setBodyWeightKg(String(latestCheckinWeight.weight));
-    }
-  };
-
-  const handleSave = async () => {
-    if (!user?.id) return;
-
-    const nextWeight = bodyWeightKg.trim() ? Number(bodyWeightKg) : null;
-    saveUserPhysique(user.id, {
-      gender,
-      bodyWeightKg: Number.isFinite(nextWeight as number) ? nextWeight : null,
-      syncWeightFromCheckins: syncEnabled,
-    });
-
-    if (syncEnabled) {
-      const syncedWeight = await syncWeightFromLatestCheckin(user.id);
-      if (syncedWeight != null) {
-        setBodyWeightKg(String(syncedWeight));
-      }
-    }
-
-    setSaveMessage("Profile updated");
-    window.setTimeout(() => setSaveMessage(""), 1800);
-  };
-
-  const formattedLatestCheckinDate = latestCheckinWeight?.date
-    ? formatDateWithPreference(latestCheckinWeight.date, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone)
-    : "-";
+  const displayWeight = useMemo(() => {
+    if (latestCheckinWeight?.weight != null) return String(latestCheckinWeight.weight);
+    return "";
+  }, [latestCheckinWeight]);
 
   const pageItems = [
     { id: "profile", label: "Profile", path: DASHBOARD_ROUTES.profile, icon: "👤" },
@@ -242,7 +199,7 @@ export default function ProfilePage() {
               <div className="grid grid-cols-3 gap-2">
                 <div className="rounded-md border px-2.5 py-2" style={flatTileStyle}>
                   <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Weight</p>
-                  <p className="mt-1 text-[12px] font-semibold text-[#f2f3f5]">{bodyWeightKg || "--"}{bodyWeightKg ? " kg" : ""}</p>
+                  <p className="mt-1 text-[12px] font-semibold text-[#f2f3f5]">{displayWeight || "--"}{displayWeight ? " kg" : ""}</p>
                 </div>
                 <div className="rounded-md border px-2.5 py-2" style={flatTileStyle}>
                   <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Trend</p>
@@ -264,116 +221,6 @@ export default function ProfilePage() {
                   <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Check-ins</p>
                   <p className="mt-1 text-[12px] font-semibold text-[#f2f3f5]">{checkInTotalCount ?? 0}</p>
                 </div>
-              </div>
-
-              <div className="border-t pt-2.5" style={{ borderTopColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)" }}>
-                <button
-                  type="button"
-                  onClick={() => setIsPhysiqueExpanded((current) => !current)}
-                  className="flex w-full items-center justify-between gap-3 text-left"
-                  aria-expanded={isPhysiqueExpanded}
-                >
-                  <div className="min-w-0">
-                    <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Physique</p>
-                    <p className="mt-1 truncate text-[11px] text-[#dbdee1]">
-                      {gender === "male" ? "Male" : "Female"} • {bodyWeightKg ? `${bodyWeightKg} kg` : "No weight set"} • {syncEnabled ? "Synced" : "Manual"}
-                    </p>
-                  </div>
-                  <span className="rounded-md px-2 py-1 text-[11px] font-semibold text-[#c9d2ff]" style={{ backgroundColor: "color-mix(in srgb, var(--accent) 18%, transparent)" }}>
-                    {isPhysiqueExpanded ? "Collapse" : "Adjust"}
-                  </span>
-                </button>
-
-                {isPhysiqueExpanded ? (
-                  <div className="mt-2 space-y-2.5 border-t pt-2.5" style={{ borderTopColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)" }}>
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setGender("male")}
-                        className={`rounded-md border px-2.5 py-1.5 text-[11px] transition-colors ${
-                          gender === "male"
-                            ? "border-[#5865f2]/50 bg-[#5865f2]/15 text-[#ffffff]"
-                            : "border-[#3b3f48] bg-transparent text-[#dbdee1]"
-                        }`}
-                      >
-                        Male
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setGender("female")}
-                        className={`rounded-md border px-2.5 py-1.5 text-[11px] transition-colors ${
-                          gender === "female"
-                            ? "border-[#5865f2]/50 bg-[#5865f2]/15 text-[#ffffff]"
-                            : "border-[#3b3f48] bg-transparent text-[#dbdee1]"
-                        }`}
-                      >
-                        Female
-                      </button>
-
-                      <label className="ml-auto flex items-center gap-2 text-[11px] text-[#dbdee1]">
-                        <span>Sync</span>
-                        <button
-                          type="button"
-                          role="switch"
-                          aria-checked={syncEnabled}
-                          onClick={() => handleToggleSync(!syncEnabled)}
-                          className={`relative inline-flex h-5 w-9 rounded-full border-2 border-transparent transition-colors ${
-                            syncEnabled ? "bg-[#5865f2]" : "bg-[#4f545c]"
-                          }`}
-                        >
-                          <span
-                            className={`inline-block h-4 w-4 rounded-full bg-white shadow-lg transition-transform ${
-                              syncEnabled ? "translate-x-4" : "translate-x-0"
-                            }`}
-                          />
-                        </button>
-                      </label>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      <input
-                        type="number"
-                        min="1"
-                        step="0.1"
-                        value={bodyWeightKg}
-                        onChange={(event) => {
-                          if (!syncEnabled) setBodyWeightKg(event.target.value);
-                        }}
-                        readOnly={syncEnabled}
-                        placeholder="Weight in kg"
-                        className={`min-w-0 flex-1 rounded-md border border-[#3b3f48] bg-transparent px-3 py-2 text-[12px] text-[#f2f3f5] outline-none ${
-                          syncEnabled ? "cursor-not-allowed opacity-70" : ""
-                        }`}
-                      />
-                      {!syncEnabled && latestCheckinWeight ? (
-                        <button
-                          type="button"
-                          onClick={() => setBodyWeightKg(String(latestCheckinWeight.weight))}
-                          className="rounded-md border border-[#3b3f48] bg-transparent px-2.5 py-2 text-[11px] font-semibold text-[#dbdee1]"
-                        >
-                          Use latest
-                        </button>
-                      ) : null}
-                      <button
-                        type="button"
-                        onClick={handleSave}
-                        className="rounded-md border border-[#5865f2]/50 bg-[#5865f2]/15 px-2.5 py-2 text-[11px] font-semibold text-[#ffffff]"
-                      >
-                        Save
-                      </button>
-                    </div>
-
-                    <p className="text-[11px] text-[#949ba4]">
-                      {checkinWeightLoading
-                        ? "Loading latest check-in…"
-                        : latestCheckinWeight
-                          ? `Latest check-in: ${latestCheckinWeight.weight} kg on ${formattedLatestCheckinDate}`
-                          : "No check-in weight recorded yet"}
-                    </p>
-
-                    {saveMessage ? <p className="text-[11px] text-[#8ea1ff]">{saveMessage}</p> : null}
-                  </div>
-                ) : null}
               </div>
             </div>
           )}

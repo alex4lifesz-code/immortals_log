@@ -15,6 +15,10 @@ import type { Theme } from "@/lib/config";
 
 const THEME_OPTIONS: Array<{ value: Theme; label: string; desc: string }> = [
   { value: "discord", label: "Discord theme", desc: "Clean default canvas" },
+  { value: "forest", label: "Forest", desc: "Everforest-inspired pine, sage & leaf — soft & balanced" },
+  { value: "ink-dragon", label: "Ink Dragon", desc: "墨龙 — ink-wash charcoal, violet thunder & vermilion seal" },
+  { value: "frost-sect", label: "Frost Sect", desc: "寒霜宗 — glacier slate, frost-pale silk & ice-cyan glow" },
+  { value: "heavenly-sword", label: "Heavenly Sword", desc: "天剑 — dawn navy, cloud-white robes & sun-gold trim" },
 ];
 
 const DATE_OPTIONS: Array<{ value: DateFormatOption; label: string; sample: string }> = [
@@ -76,9 +80,9 @@ function SectionCard({
       <div className="border-b px-3.5 py-3 sm:px-4" style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)" }}>
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8ea1ff]">{eyebrow}</p>
-            <h2 className="mt-1 text-[15px] font-semibold text-[#f2f3f5]">{title}</h2>
-            {description ? <p className="mt-1 text-[11px] text-[#b5bac1]">{description}</p> : null}
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--accent)" }}>{eyebrow}</p>
+            <h2 className="mt-1 text-[15px] font-semibold" style={{ color: "var(--text-primary)" }}>{title}</h2>
+            {description ? <p className="mt-1 text-[11px]" style={{ color: "var(--text-secondary)" }}>{description}</p> : null}
           </div>
           {badge ? (
             <span
@@ -86,7 +90,7 @@ function SectionCard({
               style={{
                 borderColor: "color-mix(in srgb, var(--accent) 28%, transparent)",
                 backgroundColor: "color-mix(in srgb, var(--accent) 14%, transparent)",
-                color: "#dbe3ff",
+                color: "var(--cloud-white)",
               }}
             >
               {badge}
@@ -110,9 +114,9 @@ function SettingsSummaryTile({
 }) {
   return (
     <div className="rounded-lg border px-3 py-2.5" style={summaryTileStyle}>
-      <p className="text-[10px] uppercase tracking-[0.16em] text-[#949ba4]">{label}</p>
-      <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{value}</p>
-      {hint ? <p className="mt-1 line-clamp-2 text-[11px] text-[#b5bac1]">{hint}</p> : null}
+      <p className="text-[10px] uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>{label}</p>
+      <p className="mt-1 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{value}</p>
+      {hint ? <p className="mt-1 line-clamp-2 text-[11px]" style={{ color: "var(--text-secondary)" }}>{hint}</p> : null}
     </div>
   );
 }
@@ -134,14 +138,15 @@ function SettingsSelectField({
     <div className="rounded-xl border p-3" style={fieldShellStyle}>
       <div className="mb-2 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">{label}</p>
-          {selected?.desc ? <p className="mt-1 text-[11px] text-[#b5bac1]">{selected.desc}</p> : null}
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>{label}</p>
+          {selected?.desc ? <p className="mt-1 text-[11px]" style={{ color: "var(--text-secondary)" }}>{selected.desc}</p> : null}
         </div>
         <span
-          className="rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#c9d2ff]"
+          className="rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]"
           style={{
             borderColor: "color-mix(in srgb, var(--accent) 24%, transparent)",
             backgroundColor: "color-mix(in srgb, var(--accent) 12%, transparent)",
+            color: "var(--accent)",
           }}
         >
           Active
@@ -156,7 +161,7 @@ function SettingsSelectField({
           style={{
             borderColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)",
             backgroundColor: "color-mix(in srgb, var(--void-black) 38%, var(--ink-dark))",
-            color: "#f2f3f5",
+            color: "var(--text-primary)",
           }}
         >
           {options.map((option) => (
@@ -166,7 +171,8 @@ function SettingsSelectField({
           ))}
         </select>
         <svg
-          className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#949ba4]"
+          className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2"
+          style={{ color: "var(--text-muted)" }}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -182,7 +188,7 @@ function SettingsSelectField({
 
 export default function SettingsPage() {
   const { logout, user } = useAuth();
-  const { themeStyle, setThemeStyle } = useAppContext();
+  const { themeStyle, setThemeStyle, themeMode, setThemeMode } = useAppContext();
   const { settings, updateSettings } = useDisplaySettings();
   const selectedTheme = THEME_OPTIONS.find((theme) => theme.value === themeStyle);
   const selectedDateFormat = DATE_OPTIONS.find((option) => option.value === settings.dateFormat);
@@ -235,15 +241,52 @@ export default function SettingsPage() {
               options={THEME_OPTIONS.map((theme) => ({ value: theme.value, label: theme.label, desc: theme.desc }))}
             />
             <div className="rounded-xl border p-3" style={fieldShellStyle}>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">Current look</p>
-              <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">{selectedTheme?.label ?? themeStyle}</p>
-              <p className="mt-1 text-[11px] text-[#b5bac1]">{selectedTheme?.desc ?? "Palette synced across the entire app shell."}</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>Current look</p>
+              <p className="mt-1 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{selectedTheme?.label ?? themeStyle}</p>
+              <p className="mt-1 text-[11px]" style={{ color: "var(--text-secondary)" }}>{selectedTheme?.desc ?? "Palette synced across the entire app shell."}</p>
               <div className="mt-3 flex items-center gap-2">
                 <span className="h-3 w-3 rounded-full" style={{ backgroundColor: "var(--accent)" }} />
                 <span className="h-3 w-3 rounded-full" style={{ backgroundColor: "var(--ink-mid)" }} />
                 <span className="h-3 w-3 rounded-full" style={{ backgroundColor: "var(--ink-light)" }} />
               </div>
             </div>
+          </div>
+          <div className="mt-3 rounded-xl border p-3" style={fieldShellStyle}>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>Appearance</p>
+            <p className="mt-1 mb-2 text-[11px]" style={{ color: "var(--text-secondary)" }}>
+              Light variants are available for every theme except Discord. Auto follows your device&apos;s system color scheme.
+            </p>
+            <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Theme appearance">
+              {(["light", "dark", "auto"] as const).map((mode) => {
+                const active = themeMode === mode;
+                const label = mode === "light" ? "Light" : mode === "dark" ? "Dark" : "Auto";
+                const hint = mode === "light" ? "Daytime" : mode === "dark" ? "Nighttime" : "Follow system";
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() => setThemeMode(mode)}
+                    className="rounded-lg border px-3 py-2 text-center transition"
+                    style={{
+                      borderColor: active ? "var(--accent)" : "var(--border)",
+                      backgroundColor: active ? "color-mix(in srgb, var(--accent) 16%, var(--surface))" : "var(--surface)",
+                      color: active ? "var(--text-primary)" : "var(--text-secondary)",
+                      boxShadow: active ? "var(--glow-subtle)" : "none",
+                    }}
+                  >
+                    <div className="text-sm font-semibold">{label}</div>
+                    <div className="text-[10px] opacity-80">{hint}</div>
+                  </button>
+                );
+              })}
+            </div>
+            {themeStyle === "discord" && (
+              <p className="mt-2 text-[10px]" style={{ color: "var(--text-muted)" }}>
+                Note: Discord theme has no light variant — appearance applies the moment you switch to another theme.
+              </p>
+            )}
           </div>
         </SectionCard>
 
@@ -282,12 +325,12 @@ export default function SettingsPage() {
               ]}
             />
             <div className="rounded-xl border p-3" style={fieldShellStyle}>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#949ba4]">Preview</p>
-              <p className="mt-1 text-sm font-semibold text-[#f2f3f5]">Bench Press • 20 {settings.defaultWeightUnit.toUpperCase()}</p>
-              <p className="mt-1 text-[11px] text-[#b5bac1]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>Preview</p>
+              <p className="mt-1 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Bench Press • 20 {settings.defaultWeightUnit.toUpperCase()}</p>
+              <p className="mt-1 text-[11px]" style={{ color: "var(--text-secondary)" }}>
                 History pages, summaries, and input flows will follow this default unit.
               </p>
-              <p className="mt-3 text-[11px] text-[#949ba4]">Week start: {selectedWeekStart?.label ?? settings.calendarWeekStart}</p>
+              <p className="mt-3 text-[11px]" style={{ color: "var(--text-muted)" }}>Week start: {selectedWeekStart?.label ?? settings.calendarWeekStart}</p>
             </div>
           </div>
         </SectionCard>
@@ -300,8 +343,8 @@ export default function SettingsPage() {
         >
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-[12px] text-[#dbdee1]">Everything important stays tidy and easier to scan now.</p>
-              <p className="mt-1 text-[11px] text-[#949ba4]">Signed in as {user?.name ?? "Cultivator"}.</p>
+              <p className="text-[12px]" style={{ color: "var(--text-secondary)" }}>Everything important stays tidy and easier to scan now.</p>
+              <p className="mt-1 text-[11px]" style={{ color: "var(--text-muted)" }}>Signed in as {user?.name ?? "Cultivator"}.</p>
             </div>
             <GlowButton variant="crimson" onClick={logout} className="w-full sm:w-auto">
               Logout

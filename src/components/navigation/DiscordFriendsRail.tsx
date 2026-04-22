@@ -834,17 +834,15 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                 animate={{ x: "0%" }}
                 exit={{ x: "100%" }}
                 transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-                className="fixed inset-y-0 right-0 z-[72] border-l overflow-hidden safe-area-top safe-area-bottom safe-area-right"
+                className="fixed inset-y-0 right-0 z-[72] overflow-hidden safe-area-top safe-area-bottom safe-area-right"
                 style={{
                   left: `${railWidthPx}px`,
-                  borderLeftColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
                   backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))",
                 }}
               >
                 <div
-                  className="h-full border overflow-hidden"
+                  className="h-full overflow-hidden"
                   style={{
-                    borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
                     backgroundColor: "color-mix(in srgb, var(--ink-mid) 20%, var(--ink-deep))",
                   }}
                 >
@@ -878,7 +876,8 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                               <button
                                 type="button"
                                 onClick={() => setFriendHistorySearchOpen((prev) => !prev)}
-                                className="inline-flex h-8 items-center justify-center text-[#b5bac1] transition-colors hover:text-[#f2f3f5]"
+                                className="inline-flex h-8 items-center justify-center transition-colors"
+                                style={{ color: "var(--text-secondary)" }}
                                 aria-label={friendHistorySearchOpen ? "Close exercise search" : "Open exercise search"}
                                 aria-expanded={friendHistorySearchOpen}
                               >
@@ -889,14 +888,15 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                               <button
                                 type="button"
                                 onClick={() => setFriendHistoryFilterOpen(true)}
-                                className="relative inline-flex h-8 items-center justify-center text-[#b5bac1] transition-colors hover:text-[#f2f3f5]"
+                                className="relative inline-flex h-8 items-center justify-center transition-colors"
+                                style={{ color: "var(--text-secondary)" }}
                                 aria-label="Open exercise filters"
                               >
                                 <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 5h18M6 12h12m-9 7h6" />
                                 </svg>
                                 {(friendHistorySort !== "recent" || friendHistoryRecency !== "all") ? (
-                                  <span className="absolute right-0.5 top-1 h-2 w-2 rounded-full bg-[#5865f2]" />
+                                  <span className="absolute right-0.5 top-1 h-2 w-2 rounded-full" style={{ backgroundColor: "var(--accent)" }} />
                                 ) : null}
                               </button>
                             </div>
@@ -930,7 +930,6 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                           ) : null}
                         </AnimatePresence>
                       </div>
-                      <div className="h-px" style={{ backgroundColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)" }} />
                     </div>
 
                     {friendViewMode === "history" ? (
@@ -953,10 +952,7 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                               key={`friend-history-row-${row.exerciseId}`}
                               type="button"
                               onClick={() => setDrawerQueryState(activeFriend.id, { view: "history", exerciseId: row.exerciseId, mode: "push" })}
-                              className="mx-1 my-0.5 block w-[calc(100%-0.5rem)] rounded-md px-3 py-2.5 text-left"
-                              style={{
-                                borderTop: "1px solid color-mix(in srgb, var(--ink-light) 72%, transparent)",
-                              }}
+                              className="mx-1 my-0.5 block w-[calc(100%-0.5rem)] rounded-md border-0 bg-transparent px-3 py-2.5 text-left"
                             >
                               <div className="flex items-start justify-between gap-2">
                                 <p className="text-sm font-semibold leading-tight" style={{ color: getRecentExerciseTextColor(row.date) }}>
@@ -980,11 +976,17 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                       )
                     ) : (
                       <div className="px-3 py-5">
-                        <div className="rounded-2xl border border-[#3b3f48] bg-[#232428] p-4">
-                          <p className="text-sm font-semibold text-[#f2f3f5]">
+                        <div
+                          className="rounded-2xl border p-4"
+                          style={{
+                            borderColor: "var(--border)",
+                            backgroundColor: "var(--surface)",
+                          }}
+                        >
+                          <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
                             {friendViewMode === "chart" ? "Chart" : friendViewMode === "chat" ? "Chat" : "Check-in"} coming soon
                           </p>
-                          <p className="mt-1 text-xs text-[#949ba4]">
+                          <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
                             This now opens as a dedicated drawer instead of switching the page.
                           </p>
                         </div>
@@ -1107,17 +1109,15 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                 animate={{ x: "0%" }}
                 exit={{ x: "100%" }}
                 transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-                className="fixed inset-y-0 right-0 z-[73] border-l overflow-hidden safe-area-top safe-area-bottom safe-area-right"
+                className="fixed inset-y-0 right-0 z-[73] overflow-hidden safe-area-top safe-area-bottom safe-area-right"
                 style={{
                   left: `${railWidthPx}px`,
-                  borderLeftColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
                   backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))",
                 }}
               >
                 <div
-                  className="h-full border overflow-hidden"
+                  className="h-full overflow-hidden"
                   style={{
-                    borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
                     backgroundColor: "color-mix(in srgb, var(--ink-mid) 20%, var(--ink-deep))",
                   }}
                 >
@@ -1127,9 +1127,8 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                     style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorY: "auto", touchAction: "pan-y" }}
                   >
                     <div
-                      className="sticky top-0 z-10 border-b px-3 py-2.5"
+                      className="sticky top-0 z-10 px-3 py-2.5"
                       style={{
-                        borderBottomColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
                         backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))",
                       }}
                     >

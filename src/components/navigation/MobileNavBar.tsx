@@ -428,9 +428,13 @@ function MobileNavBar({
         {/* ── Main Bottom Navigation Bar ── */}
         <nav
           data-mobile-bottom-nav="true"
-          className="relative flex items-end justify-around gap-0.5 border-t border-[#32353b] bg-[#23252b]/95 px-1 pt-1 pb-1.5 shadow-[0_-10px_28px_rgba(0,0,0,0.4)] backdrop-blur-md safe-area-bottom"
+          className="relative flex items-end justify-around gap-0.5 border-t px-1 pt-1 pb-1.5 shadow-[0_-10px_28px_rgba(0,0,0,0.4)] backdrop-blur-md safe-area-bottom"
+          style={{
+            borderTopColor: "var(--border)",
+            backgroundColor: "color-mix(in srgb, var(--ink-deep) 95%, transparent)",
+          }}
         >
-          <div className="absolute inset-x-0 top-0 h-px bg-[#32353b]" />
+          <div className="absolute inset-x-0 top-0 h-px" style={{ backgroundColor: "var(--border)" }} />
 
           {/* Fixed primary nav items */}
           {primaryItems.map((item) => {
@@ -441,15 +445,16 @@ function MobileNavBar({
                 whileTap={{ scale: 0.9 }}
                 aria-current={isActive ? "page" : undefined}
                 onClick={() => handleNavigate(item.path)}
-                className={`relative flex min-h-[60px] min-w-[68px] flex-col items-center justify-center gap-0.5 rounded-md pt-2 pb-1.5 transition-colors ${
-                  isActive ? "text-[#f2f3f5]" : "text-[#949ba4] active:text-[#dbdee1]"
-                }`}
-                style={{ WebkitTapHighlightColor: 'transparent' }}
+                className={`relative flex min-h-[60px] min-w-[68px] flex-col items-center justify-center gap-0.5 rounded-md pt-2 pb-1.5 transition-colors`}
+                style={{
+                  WebkitTapHighlightColor: 'transparent',
+                  color: isActive ? "var(--text-primary)" : "var(--text-muted)",
+                }}
               >
                 <div className={`transition-transform duration-200 ${isActive ? "scale-110" : ""}`}>
                   {NAV_ICON_MAP[item.path] || <span className="text-lg">{item.icon}</span>}
                 </div>
-                <span className={`text-[11px] font-medium tracking-wide ${isActive ? "text-[#f2f3f5]" : ""}`}>
+                <span className={`text-[11px] font-medium tracking-wide`} style={{ color: isActive ? "var(--text-primary)" : undefined }}>
                   {t(item.label, terminologyMode).split(" ")[0]}
                 </span>
                 {item.id === "friends" && incomingFriendRequestCount > 0 && (
@@ -461,7 +466,7 @@ function MobileNavBar({
                   <motion.div
                     layoutId="bottomBarActiveTab"
                     className="absolute -bottom-0.5 h-[3px] w-6 rounded-full"
-                    style={{ backgroundColor: "#5865f2" }}
+                    style={{ backgroundColor: "var(--accent)" }}
                     transition={{ type: "spring", stiffness: 400, damping: 30 }}
                   />
                 )}
@@ -474,10 +479,11 @@ function MobileNavBar({
             whileTap={{ scale: 0.9 }}
             onClick={() => handleNavigate(DASHBOARD_ROUTES.profile)}
             aria-label="Open profile"
-            className={`relative flex min-h-[60px] min-w-[68px] flex-col items-center justify-center gap-0.5 rounded-md pt-2 pb-1.5 transition-colors ${
-              isMeSectionActive ? "text-[#f2f3f5]" : "text-[#949ba4] active:text-[#dbdee1]"
-            }`}
-            style={{ WebkitTapHighlightColor: 'transparent' }}
+            className={`relative flex min-h-[60px] min-w-[68px] flex-col items-center justify-center gap-0.5 rounded-md pt-2 pb-1.5 transition-colors`}
+            style={{
+              WebkitTapHighlightColor: 'transparent',
+              color: isMeSectionActive ? "var(--text-primary)" : "var(--text-muted)",
+            }}
           >
             <motion.div
               animate={{ scale: isMeSectionActive ? 1.05 : 1 }}
@@ -488,14 +494,14 @@ function MobileNavBar({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 20a8 8 0 0116 0" />
               </svg>
             </motion.div>
-            <span className={`text-[11px] font-medium tracking-wide ${isMeSectionActive ? "text-[#f2f3f5]" : ""}`}>
+            <span className={`text-[11px] font-medium tracking-wide`} style={{ color: isMeSectionActive ? "var(--text-primary)" : undefined }}>
               {t("Me", "normal")}
             </span>
             {isMeSectionActive && (
               <motion.div
                 layoutId="bottomBarActiveTab"
                 className="absolute -bottom-0.5 h-[3px] w-6 rounded-full"
-                style={{ backgroundColor: "#5865f2" }}
+                style={{ backgroundColor: "var(--accent)" }}
                 transition={{ type: "spring", stiffness: 400, damping: 30 }}
               />
             )}

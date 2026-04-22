@@ -20,6 +20,46 @@ const themePreviews: { id: ThemeStyle; title: string; colors: string[]; favorite
     ],
     favorite: true,
   },
+  {
+    id: "forest",
+    title: "Forest",
+    colors: [
+      "var(--theme-preview-forest-1)",
+      "var(--theme-preview-forest-2)",
+      "var(--theme-preview-forest-3)",
+      "var(--theme-preview-forest-4)",
+    ],
+  },
+  {
+    id: "ink-dragon",
+    title: "Ink Dragon",
+    colors: [
+      "var(--theme-preview-ink-dragon-1)",
+      "var(--theme-preview-ink-dragon-2)",
+      "var(--theme-preview-ink-dragon-3)",
+      "var(--theme-preview-ink-dragon-4)",
+    ],
+  },
+  {
+    id: "frost-sect",
+    title: "Frost Sect",
+    colors: [
+      "var(--theme-preview-frost-sect-1)",
+      "var(--theme-preview-frost-sect-2)",
+      "var(--theme-preview-frost-sect-3)",
+      "var(--theme-preview-frost-sect-4)",
+    ],
+  },
+  {
+    id: "heavenly-sword",
+    title: "Heavenly Sword",
+    colors: [
+      "var(--theme-preview-heavenly-sword-1)",
+      "var(--theme-preview-heavenly-sword-2)",
+      "var(--theme-preview-heavenly-sword-3)",
+      "var(--theme-preview-heavenly-sword-4)",
+    ],
+  },
 ];
 
 export default function MobileThemeSelector() {

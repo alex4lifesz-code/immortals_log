@@ -2,6 +2,10 @@
 
 export const THEME_CLASS_NAMES = [
   "discord",
+  "forest",
+  "ink-dragon",
+  "frost-sect",
+  "heavenly-sword",
 ] as const;
 
 export const CONFIG = {

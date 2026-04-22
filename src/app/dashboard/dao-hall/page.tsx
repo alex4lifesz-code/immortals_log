@@ -114,6 +114,10 @@ export default function DaoHallPage() {
     entries: Record<string, { present: boolean; weight: string; comment: string }>;
   } | null>(null);
 
+  // History row action choice + view-only modal state
+  const [historyDayChoice, setHistoryDayChoice] = useState<string | null>(null);
+  const [viewDayDate, setViewDayDate] = useState<string | null>(null);
+
   // Weight prompt modal state
   const [showWeightPrompt, setShowWeightPrompt] = useState(false);
   const [weightPromptValue, setWeightPromptValue] = useState("");
@@ -147,8 +151,6 @@ export default function DaoHallPage() {
       return "detailed";
     }
   });
-  const [isHistoryViewMenuOpen, setIsHistoryViewMenuOpen] = useState(false);
-  const historyViewMenuRef = useRef<HTMLDivElement | null>(null);
   const [isSectEditMode, setIsSectEditMode] = useState(false);
   const [sectEditData, setSectEditData] = useState<Record<string, Record<string, { weight: string; comment: string }>>>({});
   const [deletingRowDate, setDeletingRowDate] = useState<string | null>(null);
@@ -168,19 +170,6 @@ export default function DaoHallPage() {
     const timeout = window.setTimeout(() => setCheckInTogglePulse(false), 420);
     return () => window.clearTimeout(timeout);
   }, [checkInTogglePulse]);
-
-  useEffect(() => {
-    if (!isHistoryViewMenuOpen) return;
-
-    const handlePointerDown = (event: MouseEvent) => {
-      if (historyViewMenuRef.current && !historyViewMenuRef.current.contains(event.target as Node)) {
-        setIsHistoryViewMenuOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handlePointerDown);
-    return () => document.removeEventListener("mousedown", handlePointerDown);
-  }, [isHistoryViewMenuOpen]);
 
   const handleColorChange = useCallback(async (userId: string, color: string) => {
     if (!user) return;
@@ -990,63 +979,32 @@ export default function DaoHallPage() {
           {/* Check-In Feed — clean scrolling timeline */}
           <GlowCard glow="none" hoverable={false} className={`dao-modern-cultivation-view ${historySurfaceClass}`}>
             <div ref={sectRegisterRef} className="space-y-4">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                <div>
-                  <h3 className="text-sm uppercase tracking-wider text-[color:var(--text-primary)]">{t("Check-In History", "normal")}</h3>
-                  <p className="mt-1 text-xs text-[color:var(--text-secondary)]">
-                    {t("All recorded check-ins, displayed in the same cleaner history style as the train log.", "normal")}
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap items-center justify-end gap-2 lg:ml-auto">
-                  <span className="rounded-md border border-[color:var(--border)] bg-[color:var(--surface-hover)] px-3 py-1.5 text-[11px] font-semibold text-[color:var(--text-secondary)]">
-                    {renderedCheckInRows.length} {t("entries", "normal")}
+              <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                <h3 className="text-sm uppercase tracking-wider text-[color:var(--text-primary)]">
+                  {t("Check-In History", "normal")}
+                  <span className="ml-2 text-[10px] font-normal text-[color:var(--text-muted)]">
+                    {renderedCheckInRows.length}
                   </span>
-                  <div className="relative" ref={historyViewMenuRef}>
-                    <button
-                      type="button"
-                      aria-haspopup="menu"
-                      aria-expanded={isHistoryViewMenuOpen}
-                      onClick={() => setIsHistoryViewMenuOpen((prev) => !prev)}
-                      className={`${historyViewMode === "compact" ? activeControlButton : inactiveControlButton} inline-flex items-center gap-1.5`}
-                    >
-                      <svg viewBox="0 0 20 20" aria-hidden="true" className="h-3.5 w-3.5 fill-none stroke-current stroke-[1.7]">
-                        <path d="M1.75 10s3-5.25 8.25-5.25S18.25 10 18.25 10s-3 5.25-8.25 5.25S1.75 10 1.75 10Z" />
-                        <circle cx="10" cy="10" r="2.5" />
-                      </svg>
-                      <span>{t("View", "normal")}</span>
-                    </button>
+                </h3>
 
-                    {isHistoryViewMenuOpen && (
-                      <div
-                        role="menu"
-                        className="absolute right-0 top-full z-20 mt-2 min-w-[170px] rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] p-1.5 shadow-[0_10px_24px_rgba(0,0,0,0.35)]"
+                <div className="flex flex-wrap items-center justify-end gap-1.5 lg:ml-auto">
+                  {([
+                    { id: "detailed", label: "Detailed" },
+                    { id: "compact", label: "Compact" },
+                  ] as const).map((option) => {
+                    const active = historyViewMode === option.id;
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => setHistoryViewMode(option.id)}
+                        className={active ? activeControlButton : inactiveControlButton}
                       >
-                        {([
-                          { id: "detailed", label: "Detailed" },
-                          { id: "compact", label: "Compact" },
-                        ] as const).map((option) => {
-                          const active = historyViewMode === option.id;
-                          return (
-                            <button
-                              key={option.id}
-                              type="button"
-                              role="menuitemradio"
-                              aria-checked={active}
-                              onClick={() => {
-                                setHistoryViewMode(option.id);
-                                setIsHistoryViewMenuOpen(false);
-                              }}
-                              className={`flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left text-[11px] transition-colors ${active ? "bg-[color:var(--ring-accent)] text-[color:var(--text-primary)]" : "text-[color:var(--text-secondary)] hover:bg-[color:var(--surface-hover)] hover:text-[color:var(--text-primary)]"}`}
-                            >
-                              <span>{t(option.label, "normal")}</span>
-                              {active ? <span className="text-[color:var(--accent)]">✓</span> : null}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
+                        {t(option.label, "normal")}
+                      </button>
+                    );
+                  })}
+                  <span className="mx-1 h-4 w-px bg-[color:var(--border)]" aria-hidden="true" />
                   {(["all", "mine", "friends"] as const).map((scope) => {
                     const active = calendarScope === scope;
                     return (
@@ -1080,11 +1038,11 @@ export default function DaoHallPage() {
                           className="cursor-pointer rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] px-3 py-2.5 shadow-[0_6px_14px_rgba(0,0,0,0.12)] transition-colors hover:bg-[color:var(--surface-hover)]"
                           role="button"
                           tabIndex={0}
-                          onClick={() => handleDayClick(date)}
+                          onClick={() => setHistoryDayChoice(date)}
                           onKeyDown={(event) => {
                             if (event.key === "Enter" || event.key === " ") {
                               event.preventDefault();
-                              handleDayClick(date);
+                              setHistoryDayChoice(date);
                             }
                           }}
                         >
@@ -1112,21 +1070,38 @@ export default function DaoHallPage() {
                                   <span className="shrink-0 text-[11px] font-semibold" style={{ color: hasCheckin ? "var(--jade-light)" : "var(--cloud-white)" }}>
                                     {formatDateWithPreference(date, dateFormat)}
                                   </span>
-                                  <span className="truncate">
-                                    {getDetailLabelVisibility(historyViewMode, "Name:") ? (
-                                      <span style={{ color: "var(--text-muted)" }}>{t("Name:", "normal")}</span>
-                                    ) : null}{" "}
-                                    <span style={{ color: "var(--cloud-white)" }}>{t("You", "normal")}</span>
+                                  <span className="truncate" style={{ color: "var(--cloud-white)" }}>{t("You", "normal")}</span>
+                                  <span
+                                    className="inline-flex items-center"
+                                    aria-label={mine.present ? t("Checked in", "normal") : t("Rest day", "normal")}
+                                    title={mine.present ? t("Checked in", "normal") : t("Rest day", "normal")}
+                                    style={{ color: mine.present ? "var(--forest)" : "var(--gold-glow)" }}
+                                  >
+                                    {mine.present ? (
+                                      <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3 w-3">
+                                        <path fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M3 8.5l3.2 3.2L13 5" />
+                                      </svg>
+                                    ) : (
+                                      <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3 w-3">
+                                        <path fill="currentColor" d="M3 5h4L3 10v1h6V9H5l4-5V3H3v2zm6 4h4l-4 4v1h6v-2h-3l3-3V8H9v1z" />
+                                      </svg>
+                                    )}
                                   </span>
-                                  <span className="truncate" style={{ color: mine.present ? "var(--forest)" : "var(--gold-glow)" }}>
-                                    {mine.present ? t("In", "normal") : t("Rest", "normal")}
+                                  <span
+                                    className="shrink-0 truncate min-w-[4.5rem]"
+                                    aria-hidden={!(mineWeight && mineWeight !== "-")}
+                                    style={{
+                                      color: "var(--mountain-blue-glow)",
+                                      visibility: mineWeight && mineWeight !== "-" ? "visible" : "hidden",
+                                    }}
+                                  >
+                                    {mineWeight && mineWeight !== "-" ? mineWeight : "000.0 kg"}
                                   </span>
-                                  <span className="truncate" style={{ color: mineWeight === "-" ? "var(--gold-glow)" : "var(--mountain-blue-glow)" }}>
-                                    {mineWeight === "-" ? "-" : mineWeight}
-                                  </span>
-                                  <span className="min-w-0 flex-1 truncate" style={{ color: mine.comment?.trim() ? "var(--text-secondary)" : "var(--text-muted)" }}>
-                                    {mine.comment?.trim() || "-"}
-                                  </span>
+                                  {mine.comment?.trim() ? (
+                                    <span className="min-w-0 flex-1 truncate" style={{ color: "var(--text-secondary)" }}>
+                                      {mine.comment.trim()}
+                                    </span>
+                                  ) : null}
                                 </div>
                               ) : (
                                 <>
@@ -1168,26 +1143,46 @@ export default function DaoHallPage() {
                                     >
                                       {historyViewMode === "compact" ? (
                                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                                          {detailIndex === 0 ? (
-                                            <span className="shrink-0 text-[11px] font-semibold" style={{ color: hasCheckin ? "var(--jade-light)" : "var(--cloud-white)" }}>
-                                              {formatDateWithPreference(date, dateFormat)}
-                                            </span>
+                                          <span
+                                            className="shrink-0 text-[11px] font-semibold"
+                                            aria-hidden={detailIndex !== 0}
+                                            style={{
+                                              color: hasCheckin ? "var(--jade-light)" : "var(--cloud-white)",
+                                              visibility: detailIndex === 0 ? "visible" : "hidden",
+                                            }}
+                                          >
+                                            {formatDateWithPreference(date, dateFormat)}
+                                          </span>
+                                          <span className="min-w-0 truncate" style={{ color: c }}>{detail.name}</span>
+                                          <span
+                                            className="inline-flex items-center"
+                                            aria-label={detail.present ? t("Checked in", "normal") : t("Rest day", "normal")}
+                                            title={detail.present ? t("Checked in", "normal") : t("Rest day", "normal")}
+                                            style={{ color: detail.present ? "var(--forest)" : "var(--gold-glow)" }}
+                                          >
+                                            {detail.present ? (
+                                              <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3 w-3">
+                                                <path fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M3 8.5l3.2 3.2L13 5" />
+                                              </svg>
+                                            ) : (
+                                              <svg viewBox="0 0 16 16" aria-hidden="true" className="h-3 w-3">
+                                                <path fill="currentColor" d="M3 5h4L3 10v1h6V9H5l4-5V3H3v2zm6 4h4l-4 4v1h6v-2h-3l3-3V8H9v1z" />
+                                              </svg>
+                                            )}
+                                          </span>
+                                          <span
+                                            className="shrink-0 truncate min-w-[4.5rem]"
+                                            aria-hidden={!detail.weight}
+                                            style={{
+                                              color: "var(--mountain-blue-glow)",
+                                              visibility: detail.weight ? "visible" : "hidden",
+                                            }}
+                                          >
+                                            {detail.weight ? `${detail.weight} kg` : "000.0 kg"}
+                                          </span>
+                                          {detail.comment ? (
+                                            <span className="min-w-0 flex-1 truncate" style={{ color: "var(--text-secondary)" }}>{detail.comment}</span>
                                           ) : null}
-                                          <span className="min-w-0 truncate">
-                                            {getDetailLabelVisibility(historyViewMode, "Name:") ? (
-                                              <span style={{ color: "var(--text-muted)" }}>{t("Name:", "normal")}</span>
-                                            ) : null}{" "}
-                                            <span style={{ color: c }}>{detail.name}</span>
-                                          </span>
-                                          <span className="truncate" style={{ color: detail.weight ? "var(--mountain-blue-glow)" : "var(--gold-glow)" }}>
-                                            {detail.weight ? `${detail.weight} kg` : "-"}
-                                          </span>
-                                          <span className="truncate" style={{ color: detail.present ? "var(--forest)" : "var(--text-secondary)" }}>
-                                            {detail.present ? t("In", "normal") : t("Rest", "normal")}
-                                          </span>
-                                          <span className="min-w-0 flex-1 truncate" style={{ color: detail.comment ? "var(--text-secondary)" : "var(--text-muted)" }}>
-                                            {detail.comment || "-"}
-                                          </span>
                                         </div>
                                       ) : (
                                         <>
@@ -1272,8 +1267,8 @@ export default function DaoHallPage() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--accent)]">Training Canvas</p>
-                    <h2 className="mt-1 truncate text-[16px] font-semibold text-[color:var(--text-primary)]">Day Check-In</h2>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--accent)]">Editing Day</p>
+                    <h2 className="mt-1 truncate text-[16px] font-semibold text-[color:var(--text-primary)]">Edit Check-In</h2>
                     <p className="mt-1 text-[12px] text-[color:var(--text-secondary)]">
                       {formatDateWithPreference(checkInModal.date, dateFormat)}
                     </p>
@@ -1648,6 +1643,136 @@ export default function DaoHallPage() {
             Don&apos;t remind me today
           </button>
         </div>
+      </GlowModal>
+
+      {/* History row choice: Edit vs View */}
+      <GlowModal
+        isOpen={!!historyDayChoice}
+        onClose={() => setHistoryDayChoice(null)}
+        title={historyDayChoice ? formatDateWithPreference(historyDayChoice, dateFormat) : ""}
+        panelClassName="!max-w-[22rem]"
+      >
+        {historyDayChoice && (
+          <div className="space-y-3">
+            <p className="text-xs text-[color:var(--text-secondary)]">
+              {t("How would you like to open this day?", "normal")}
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <GlowButton
+                variant="ghost"
+                onClick={() => {
+                  const date = historyDayChoice;
+                  setHistoryDayChoice(null);
+                  setViewDayDate(date);
+                }}
+              >
+                {t("View", "normal")}
+              </GlowButton>
+              <GlowButton
+                variant="jade"
+                onClick={() => {
+                  const date = historyDayChoice;
+                  setHistoryDayChoice(null);
+                  handleDayClick(date);
+                }}
+              >
+                {t("Edit", "normal")}
+              </GlowButton>
+            </div>
+          </div>
+        )}
+      </GlowModal>
+
+      {/* View-only day record */}
+      <GlowModal
+        isOpen={!!viewDayDate}
+        onClose={() => setViewDayDate(null)}
+        title={viewDayDate ? formatDateWithPreference(viewDayDate, dateFormat) : ""}
+        panelClassName="!max-w-[32rem] !max-h-[88vh] !overflow-hidden"
+      >
+        {viewDayDate && (() => {
+          const row = checkInRows.find((r) => r.date === viewDayDate);
+          const entries = row?.entries || {};
+          const records = Object.entries(entries)
+            .map(([userId, entry]) => ({
+              userId,
+              name: userNameById.get(userId) || "Unknown",
+              color: getUserCultivatorColor(userId, userColors),
+              ...entry,
+            }))
+            .filter((r) => r.present || r.weight?.trim() || r.comment?.trim())
+            .sort((a, b) => a.name.localeCompare(b.name));
+
+          return (
+            <div className="max-h-[70vh] overflow-y-auto pr-1">
+              {records.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-[color:var(--border)] bg-[color:var(--surface)] px-3 py-6 text-center text-xs text-[color:var(--text-muted)]">
+                  {t("No recorded check-in for this day.", "normal")}
+                </div>
+              ) : (
+                <div
+                  className="space-y-3 rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] p-4 text-[13px] leading-relaxed"
+                  style={{
+                    backgroundImage:
+                      "repeating-linear-gradient(to bottom, transparent 0, transparent 1.55rem, color-mix(in srgb, var(--border) 60%, transparent) 1.55rem, color-mix(in srgb, var(--border) 60%, transparent) calc(1.55rem + 1px))",
+                    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+                  }}
+                >
+                  {records.map((rec) => (
+                    <article key={rec.userId} className="space-y-1">
+                      <header className="flex flex-wrap items-center gap-2">
+                        <span className="text-[12px] font-semibold" style={{ color: rec.color }}>
+                          {rec.name}
+                        </span>
+                        <span
+                          className="inline-flex items-center gap-1 rounded-full border px-2 py-[1px] text-[10px] uppercase tracking-wide"
+                          style={{
+                            borderColor: rec.present ? "color-mix(in srgb, var(--forest) 50%, transparent)" : "color-mix(in srgb, var(--gold-glow) 50%, transparent)",
+                            color: rec.present ? "var(--forest)" : "var(--gold-glow)",
+                            backgroundColor: rec.present
+                              ? "color-mix(in srgb, var(--forest) 12%, transparent)"
+                              : "color-mix(in srgb, var(--gold-glow) 12%, transparent)",
+                          }}
+                        >
+                          {rec.present ? t("Checked in", "normal") : t("Rest", "normal")}
+                        </span>
+                        {rec.weight?.trim() ? (
+                          <span className="text-[11px]" style={{ color: "var(--mountain-blue-glow)" }}>
+                            {rec.weight} kg
+                          </span>
+                        ) : null}
+                      </header>
+                      {rec.comment?.trim() ? (
+                        <p className="whitespace-pre-wrap text-[12px]" style={{ color: "var(--text-primary)" }}>
+                          {rec.comment.trim()}
+                        </p>
+                      ) : (
+                        <p className="text-[11px] italic" style={{ color: "var(--text-muted)" }}>
+                          {t("No note recorded.", "normal")}
+                        </p>
+                      )}
+                    </article>
+                  ))}
+                </div>
+              )}
+              <div className="mt-3 flex justify-end gap-2">
+                <GlowButton variant="ghost" onClick={() => setViewDayDate(null)}>
+                  {t("Close", "normal")}
+                </GlowButton>
+                <GlowButton
+                  variant="jade"
+                  onClick={() => {
+                    const date = viewDayDate;
+                    setViewDayDate(null);
+                    handleDayClick(date);
+                  }}
+                >
+                  {t("Edit", "normal")}
+                </GlowButton>
+              </div>
+            </div>
+          );
+        })()}
       </GlowModal>
 
     </PageLayout>

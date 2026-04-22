@@ -25,6 +25,7 @@ interface AdminUser {
   id: string;
   username: string;
   name: string;
+  role?: string;
   createdAt: string;
   sessionCount?: number;
   progressionLogCount?: number;
@@ -104,6 +105,10 @@ export default function AdminPanelPage() {
   const [showUserDetailModal, setShowUserDetailModal] = useState(false);
   const [editingName, setEditingName] = useState("");
   const [isSavingName, setIsSavingName] = useState(false);
+  const [resetPassword, setResetPassword] = useState("");
+  const [resetPasswordConfirm, setResetPasswordConfirm] = useState("");
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [isUpdatingRole, setIsUpdatingRole] = useState(false);
   const [loading, setLoading] = useState(true);
   const [pendingFriendRequests, setPendingFriendRequests] = useState<AdminFriendRequest[]>([]);
   const [moderatingRequestId, setModeratingRequestId] = useState<string | null>(null);
@@ -221,6 +226,56 @@ export default function AdminPanelPage() {
       setActionNotice({ type: "error", message: err instanceof Error ? err.message : "Failed to update display name." });
     } finally {
       setIsSavingName(false);
+    }
+  };
+
+  const resetUserPassword = async (userId: string) => {
+    if (resetPassword.length === 0) return;
+    if (resetPassword !== resetPasswordConfirm) {
+      setActionNotice({ type: "error", message: "Password and confirmation do not match." });
+      return;
+    }
+
+    setIsResettingPassword(true);
+    try {
+      await api.patch(`/api/users/${userId}`, { password: resetPassword });
+      setActionNotice({
+        type: "success",
+        message: userId === user?.id
+          ? "Your password was updated. Use the new password on your next sign-in."
+          : "Password updated. Share the new credentials securely.",
+      });
+      setResetPassword("");
+      setResetPasswordConfirm("");
+    } catch (err) {
+      console.error("Failed to reset user password:", err);
+      setActionNotice({ type: "error", message: err instanceof Error ? err.message : "Failed to update password." });
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
+
+  const updateUserRole = async (userId: string, newRole: "admin" | "user") => {
+    if (userId === user?.id && newRole !== "admin") {
+      setActionNotice({ type: "error", message: "You cannot remove your own admin privileges." });
+      return;
+    }
+    setIsUpdatingRole(true);
+    try {
+      const data = await api.patch<{ user: { role: string } }>(`/api/users/${userId}`, { role: newRole });
+      if (user && userId === user.id) {
+        login({ ...user, role: data.user.role });
+      }
+      setActionNotice({ type: "success", message: `Account type updated to ${data.user.role}.` });
+      if (selectedUser && selectedUser.id === userId) {
+        setSelectedUser({ ...selectedUser, role: data.user.role });
+      }
+      await fetchData();
+    } catch (err) {
+      console.error("Failed to update user role:", err);
+      setActionNotice({ type: "error", message: err instanceof Error ? err.message : "Failed to update account type." });
+    } finally {
+      setIsUpdatingRole(false);
     }
   };
 
@@ -394,6 +449,7 @@ export default function AdminPanelPage() {
                       Username
                     </th>
                     <th className="px-3 py-2 text-left text-xs text-jade-glow uppercase">Name</th>
+                    <th className="px-3 py-2 text-center text-xs text-jade-glow uppercase">Account Type</th>
                     <th className="px-3 py-2 text-center text-xs text-jade-glow uppercase">
                       Created
                     </th>
@@ -410,6 +466,19 @@ export default function AdminPanelPage() {
                     >
                       <td className="px-3 py-2 text-cloud-white">{user.username}</td>
                       <td className="px-3 py-2 text-mist-light">{user.name}</td>
+                      <td className="px-3 py-2 text-center">
+                        <span
+                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                            user.role === "admin"
+                              ? "border-gold/40 bg-gold/10 text-gold"
+                              : user.role === "system"
+                                ? "border-mountain-blue-glow/40 bg-mountain-blue-glow/10 text-mountain-blue-glow"
+                                : "border-ink-light/40 bg-ink-mid/30 text-mist-light"
+                          }`}
+                        >
+                          {user.role === "admin" ? "Admin" : user.role === "system" ? "System" : "User"}
+                        </span>
+                      </td>
                       <td className="px-3 py-2 text-center text-mist-dark text-xs">
                         {formatDateWithPreference(user.createdAt, dateFormat, timeZone)}
                       </td>
@@ -574,6 +643,8 @@ export default function AdminPanelPage() {
           setShowUserDetailModal(false);
           setSelectedUser(null);
           setEditingName("");
+          setResetPassword("");
+          setResetPasswordConfirm("");
         }}
         title={selectedUser?.name || "User Details"}
       >
@@ -617,6 +688,79 @@ export default function AdminPanelPage() {
                 >
                   {isSavingName ? "..." : "Save"}
                 </GlowButton>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-ink-light">
+              <p className="text-xs text-mist-dark uppercase mb-2">Account Type</p>
+              {selectedUser.role === "system" ? (
+                <div className="flex items-center justify-between gap-2">
+                  <span className="inline-flex items-center rounded-full border border-mountain-blue-glow/40 bg-mountain-blue-glow/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-mountain-blue-glow">
+                    System
+                  </span>
+                  <p className="text-[11px] text-mist-dark text-right max-w-[70%]">
+                    System accounts (e.g. the Application Exercise Library owner) cannot be reassigned.
+                  </p>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex gap-2">
+                    <GlowButton
+                      variant={selectedUser.role === "user" ? "jade" : "ghost"}
+                      size="sm"
+                      disabled={isUpdatingRole || selectedUser.role === "user" || selectedUser.id === user?.id}
+                      onClick={() => updateUserRole(selectedUser.id, "user")}
+                    >
+                      User
+                    </GlowButton>
+                    <GlowButton
+                      variant={selectedUser.role === "admin" ? "jade" : "ghost"}
+                      size="sm"
+                      disabled={isUpdatingRole || selectedUser.role === "admin"}
+                      onClick={() => updateUserRole(selectedUser.id, "admin")}
+                    >
+                      Admin
+                    </GlowButton>
+                  </div>
+                  <p className="text-[11px] text-mist-dark text-right max-w-[60%]">
+                    {selectedUser.id === user?.id
+                      ? "You cannot remove your own admin privileges. Have another admin demote you if needed."
+                      : "Admins have full access to user management and system data."}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-2 border-t border-ink-light">
+              <p className="text-xs text-mist-dark uppercase mb-2">Reset Password</p>
+              <div className="space-y-2">
+                <GlowInput
+                  type="password"
+                  placeholder="New password..."
+                  value={resetPassword}
+                  onChange={(e) => setResetPassword(e.target.value)}
+                />
+                <GlowInput
+                  type="password"
+                  placeholder="Confirm new password..."
+                  value={resetPasswordConfirm}
+                  onChange={(e) => setResetPasswordConfirm(e.target.value)}
+                />
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[11px] text-mist-dark">
+                    {selectedUser.id === user?.id
+                      ? "You are resetting your own password. Sign-in sessions stay active until you log out."
+                      : "Share the new credentials with the user securely; existing sessions will continue until they sign out."}
+                  </p>
+                  <GlowButton
+                    variant="jade"
+                    size="sm"
+                    disabled={isResettingPassword || resetPassword.length === 0 || resetPassword !== resetPasswordConfirm}
+                    onClick={() => resetUserPassword(selectedUser.id)}
+                  >
+                    {isResettingPassword ? "..." : "Update"}
+                  </GlowButton>
+                </div>
               </div>
             </div>
 

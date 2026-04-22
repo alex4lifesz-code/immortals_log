@@ -35,6 +35,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   const matchesRouteOrChild = (route: string) => pathname === route || pathname?.startsWith(`${route}/`);
   const hideFriendsRail =
     pathname === DASHBOARD_ROUTES.overview
+    || matchesRouteOrChild(DASHBOARD_ROUTES.admin)
     || matchesRouteOrChild(DASHBOARD_ROUTES.community)
     || matchesRouteOrChild(DASHBOARD_ROUTES.rankUp)
     || matchesRouteOrChild(DASHBOARD_ROUTES.exercises)

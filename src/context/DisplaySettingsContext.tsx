@@ -100,6 +100,13 @@ const DEFAULT_SETTINGS: DisplaySettings = {
 
 export const DISPLAY_SETTINGS_STORAGE_KEY = "cultivateos-display-settings";
 
+function getDisplaySettingsStorageKey(userId: string | null | undefined): string {
+  if (!userId) {
+    return DISPLAY_SETTINGS_STORAGE_KEY;
+  }
+  return `${DISPLAY_SETTINGS_STORAGE_KEY}-${userId}`;
+}
+
 // Non-user-configurable display defaults — single source of truth for all
 // layout and presentation values that are fixed (not exposed in the settings UI).
 export const DISPLAY_DEFAULTS = {
@@ -141,10 +148,11 @@ interface DisplaySettingsContextType {
 
 const DisplaySettingsContext = createContext<DisplaySettingsContextType | null>(null);
 
-function loadSettings(): DisplaySettings {
+function loadSettings(userId: string | null | undefined): DisplaySettings {
   if (typeof window === "undefined") return DEFAULT_SETTINGS;
   try {
-    const stored = localStorage.getItem(DISPLAY_SETTINGS_STORAGE_KEY);
+    const storageKey = getDisplaySettingsStorageKey(userId);
+    const stored = localStorage.getItem(storageKey);
     if (stored) {
       const parsed = JSON.parse(stored);
       return { ...DEFAULT_SETTINGS, ...parsed };
@@ -155,52 +163,87 @@ function loadSettings(): DisplaySettings {
   return DEFAULT_SETTINGS;
 }
 
-function saveSettings(settings: DisplaySettings) {
+function saveSettings(settings: DisplaySettings, userId: string | null | undefined) {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(DISPLAY_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+    const serialized = JSON.stringify(settings);
+    // Always mirror to the shared key so legacy utilities (e.g. terminology,
+    // timezone helpers) read the *current* user's effective preferences.
+    localStorage.setItem(DISPLAY_SETTINGS_STORAGE_KEY, serialized);
+    // Also persist under the user-scoped key so each user's settings are
+    // restored correctly when they log back in.
+    if (userId) {
+      localStorage.setItem(getDisplaySettingsStorageKey(userId), serialized);
+    }
   } catch {
     // Ignore storage errors
   }
 }
 
+
 export function DisplaySettingsProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const [settings, setSettings] = useState<DisplaySettings>(() => loadSettings());
+  // Initial state reads the legacy shared key so SSR-mismatch is avoided and the
+  // very first paint matches whatever the layout script applied. The hydration
+  // effect below replaces this with the active user's settings.
+  const [settings, setSettings] = useState<DisplaySettings>(() => loadSettings(null));
   const [hydrated] = useState(() => typeof window !== "undefined");
   const [remotePrefsReady, setRemotePrefsReady] = useState(false);
   const syncedUserIdRef = useRef<string | null>(null);
 
-  // Persist whenever settings change (after hydration)
+  // Persist whenever settings change. CRITICAL: only persist after the
+  // hydration effect has loaded *this* user's settings (tracked via
+  // syncedUserIdRef). Otherwise, when switching accounts, the previous user's
+  // settings would be written into the new user's storage key on the first
+  // render after `user.id` changes (the persist effect fires before the
+  // hydration effect updates state).
   useEffect(() => {
-    if (hydrated) {
-      saveSettings(settings);
+    if (!hydrated) return;
+    if (user?.id) {
+      // Signed in: only persist once hydration for this user has completed.
+      if (syncedUserIdRef.current !== user.id) return;
+      saveSettings(settings, user.id);
+    } else {
+      // Signed out: only mirror to shared key, never to a user-scoped key.
+      // Hydration sets syncedUserIdRef to null when there is no user.
+      if (syncedUserIdRef.current !== null) return;
+      saveSettings(settings, null);
     }
-  }, [settings, hydrated]);
+  }, [settings, hydrated, user?.id]);
 
-  // Hydrate display settings from per-user shared preferences.
+  // Hydrate display settings from per-user shared preferences when user changes
   useEffect(() => {
     let cancelled = false;
 
     const hydrateRemoteDisplaySettings = async () => {
       if (!user?.id) {
+        // Logged out: keep whatever was in shared key as-is so the login screen
+        // can still apply it. Do not overwrite from a stale per-user key.
         syncedUserIdRef.current = null;
         setRemotePrefsReady(true);
         return;
       }
 
       setRemotePrefsReady(false);
+
+      // Immediately swap to this user's locally cached settings so we stop
+      // showing the previous user's values while the API call is in flight.
+      const localSettings = loadSettings(user.id);
+      setSettings(localSettings);
+
       try {
         const res = await fetch("/api/users/preferences", { cache: "no-store", credentials: "include" });
-        if (!res.ok) return;
+        if (!res.ok) throw new Error("Failed to fetch preferences");
 
         const payload = await res.json();
         const remoteSettings = payload?.displaySettings;
+
         if (!cancelled && remoteSettings && typeof remoteSettings === "object" && !Array.isArray(remoteSettings)) {
+          // Remote takes precedence — it is the authoritative cross-device copy.
           setSettings({ ...DEFAULT_SETTINGS, ...(remoteSettings as Partial<DisplaySettings>) });
         }
       } catch {
-        // Ignore remote sync errors and keep local settings.
+        // Ignore remote sync errors; local user-scoped settings already applied.
       } finally {
         if (!cancelled) {
           syncedUserIdRef.current = user.id;
