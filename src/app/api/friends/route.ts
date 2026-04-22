@@ -155,6 +155,7 @@ export const GET = withAuth(async (_request, { auth }) => {
       lastCheckInAt?: Date | null;
       lastActivityAt?: string | null;
       lastActivityLabel?: string | null;
+      themeStyle?: string | null;
     }> = [];
     if (friendIds.length) {
       try {
@@ -236,6 +237,7 @@ export const GET = withAuth(async (_request, { auth }) => {
             lastCheckInAt: friend.checkIns[0]?.date ?? null,
             lastActivityAt: typeof appPrefs?.lastActivityAt === "string" ? appPrefs.lastActivityAt : null,
             lastActivityLabel: typeof appPrefs?.lastActivityLabel === "string" ? appPrefs.lastActivityLabel : null,
+            themeStyle: typeof appPrefs?.themeStyle === "string" ? appPrefs.themeStyle : null,
           };
         });
       } catch (error) {

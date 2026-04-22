@@ -23,7 +23,20 @@ interface BasicUser {
   lastCheckInAt?: string | null;
   lastActivityAt?: string | null;
   lastActivityLabel?: string | null;
+  themeStyle?: string | null;
 }
+
+const FRIEND_THEME_LABELS: Record<string, string> = {
+  discord: "Discord",
+  forest: "Forest",
+  "ink-dragon": "Ink Dragon",
+  "phoenix-bloom": "Phoenix Bloom",
+  "storm-chains": "Storm Chains",
+  "obsidian-ember": "Obsidian Ember",
+  "mist-cultivator": "Mist Cultivator",
+  "frost-sect": "Frost Sect",
+  "heavenly-sword": "Heavenly Sword",
+};
 
 interface FriendRequestRow {
   id: string;
@@ -384,16 +397,6 @@ export default function FriendsPage() {
                       <span className="text-[#949ba4]">›</span>
                     </div>
                   </Link>
-
-                  <div className="flex items-center justify-between gap-3 rounded-lg px-3 py-3" style={{ border: "1px solid color-mix(in srgb, var(--ink-light) 40%, transparent)", backgroundColor: "color-mix(in srgb, var(--ink-mid) 48%, var(--ink-deep))" }}>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-[#f2f3f5]">Connected Cultivators</p>
-                      <p className="mt-0.5 text-[11px] text-[#b5bac1]">Your current circle and recent social activity at a glance.</p>
-                    </div>
-                    <span className="flex h-7 min-w-7 items-center justify-center rounded-full px-2 text-[11px] font-semibold text-[#dbdee1]" style={{ backgroundColor: "color-mix(in srgb, var(--ink-light) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--ink-light) 34%, transparent)" }}>
-                      {data.friends.length}
-                    </span>
-                  </div>
                 </div>
               </section>
 
@@ -430,6 +433,37 @@ export default function FriendsPage() {
                               {stats.lastSeenAt ? `${stats.lastSeenLabel}: ${formatRelativeRecentDate(stats.lastSeenAt, dateFormat, timeZone)}` : "No recent activity"}
                             </span>
                           </div>
+
+                          {(() => {
+                            const themeId = (friend.themeStyle ?? "discord") as string;
+                            const themeLabel = FRIEND_THEME_LABELS[themeId] ?? themeId;
+                            return (
+                              <div
+                                className="mt-2.5 flex items-center justify-between gap-2 rounded-md px-2 py-1.5"
+                                style={{
+                                  backgroundColor: "color-mix(in srgb, var(--ink-light) 8%, transparent)",
+                                  border: "1px solid color-mix(in srgb, var(--ink-light) 24%, transparent)",
+                                }}
+                              >
+                                <div className="min-w-0">
+                                  <p className="text-[10px] uppercase tracking-[0.08em] text-[#949ba4]">Theme</p>
+                                  <p className="mt-0.5 truncate text-[12px] font-semibold text-[#f2f3f5]">{themeLabel}</p>
+                                </div>
+                                <div className="flex items-center gap-1" aria-hidden="true">
+                                  {[1, 2, 3, 4].map((slot) => (
+                                    <span
+                                      key={slot}
+                                      className="h-4 w-4 rounded-full"
+                                      style={{
+                                        backgroundColor: `var(--theme-preview-${themeId}-${slot})`,
+                                        border: "1px solid color-mix(in srgb, var(--ink-light) 36%, transparent)",
+                                      }}
+                                    />
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })()}
 
                           <div className="mt-2.5 grid grid-cols-2 gap-2 text-[11px]">
                             <div className="rounded-md px-2 py-1.5" style={{ backgroundColor: "color-mix(in srgb, var(--ink-light) 8%, transparent)", border: "1px solid color-mix(in srgb, var(--ink-light) 24%, transparent)" }}>

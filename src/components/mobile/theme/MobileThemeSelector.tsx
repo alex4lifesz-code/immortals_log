@@ -41,6 +41,46 @@ const themePreviews: { id: ThemeStyle; title: string; colors: string[]; favorite
     ],
   },
   {
+    id: "phoenix-bloom",
+    title: "Phoenix Bloom",
+    colors: [
+      "var(--theme-preview-phoenix-bloom-1)",
+      "var(--theme-preview-phoenix-bloom-2)",
+      "var(--theme-preview-phoenix-bloom-3)",
+      "var(--theme-preview-phoenix-bloom-4)",
+    ],
+  },
+  {
+    id: "storm-chains",
+    title: "Storm Chains",
+    colors: [
+      "var(--theme-preview-storm-chains-1)",
+      "var(--theme-preview-storm-chains-2)",
+      "var(--theme-preview-storm-chains-3)",
+      "var(--theme-preview-storm-chains-4)",
+    ],
+  },
+  {
+    id: "obsidian-ember",
+    title: "Obsidian Ember",
+    colors: [
+      "var(--theme-preview-obsidian-ember-1)",
+      "var(--theme-preview-obsidian-ember-2)",
+      "var(--theme-preview-obsidian-ember-3)",
+      "var(--theme-preview-obsidian-ember-4)",
+    ],
+  },
+  {
+    id: "mist-cultivator",
+    title: "Mist Cultivator",
+    colors: [
+      "var(--theme-preview-mist-cultivator-1)",
+      "var(--theme-preview-mist-cultivator-2)",
+      "var(--theme-preview-mist-cultivator-3)",
+      "var(--theme-preview-mist-cultivator-4)",
+    ],
+  },
+  {
     id: "frost-sect",
     title: "Frost Sect",
     colors: [

@@ -491,6 +491,636 @@ html.ink-dragon [class*="hover\\:text-[#f2f3f5]"]:hover { color: var(--text-prim
 html.ink-dragon [class*="hover\\:text-[#8ea1ff]"]:hover { color: var(--accent) !important; }
 
 /* =====================================================================
+ * THEME — PHOENIX BLOOM (凤凰花)
+ * Sibling to Ink Dragon: same charcoal sumi-e canvas and rice-paper
+ * silver text, but the violet thunder is swapped for amethyst purple
+ * and the vermilion seal becomes a phoenix-pink blossom highlight.
+ * ===================================================================== */
+html.phoenix-bloom {
+  /* Canvas — wet ink wash on iron (matches ink-dragon) */
+  --void-black: #0c0c12;
+  --ink-deep: #16161e;
+  --ink-dark: #1f1f2a;
+  --ink-mid: #2c2c38;
+  --ink-light: #3a3a4a;
+
+  /* Text — rice-paper silver (matches ink-dragon) */
+  --mist-dark: #8e8c86;
+  --mist-mid: #aaa8a2;
+  --mist-light: #c8c6c0;
+  --mist-pale: #d8d6d0;
+  --cloud-white: #ece9e0;
+  --pure-white: #ffffff;
+
+  /* Accent #1 — Phoenix pink (primary) */
+  --jade-deep: #4a1238;
+  --jade: #b03878;
+  --jade-glow: #e060a0;
+  --jade-light: #f088b8;
+
+  /* Accent #2 — Steel chain silver */
+  --gold-dim: #5a6070;
+  --gold: #9aa4b8;
+  --gold-glow: #c0c8d8;
+
+  /* Accent #3 — Plum violet (danger / warmth) */
+  --crimson-deep: #2a1248;
+  --crimson: #9858d8;
+  --crimson-glow: #b88ce8;
+  --crimson-light: #d4b0f0;
+
+  /* Accent #4 — Dragon-eye azure */
+  --mountain-blue: #2a5878;
+  --mountain-blue-glow: #5a98c0;
+
+  /* Accent #5 — Pink under-tone */
+  --forest-deep: #401430;
+  --forest: #e060a0;
+
+  /* Difficulty */
+  --difficulty-green: #6ab088;
+  --difficulty-green-glow: #4a8868;
+  --difficulty-amber: #d6b070;
+  --difficulty-amber-glow: #a8884a;
+  --difficulty-red: #e060a0;
+  --difficulty-red-glow: #a84278;
+  --difficulty-violet: #9858d8;
+  --difficulty-violet-glow: #6a3aa8;
+  --difficulty-pink: #e060a0;
+  --difficulty-pink-glow: #a84278;
+  --difficulty-light-pink: #f088b8;
+  --difficulty-light-pink-glow: #b06088;
+  --difficulty-cyan: #5a98c0;
+  --difficulty-cyan-glow: #3a7098;
+
+  --glow-difficulty-green: 0 0 14px rgba(106, 176, 136, 0.30), 0 0 28px rgba(106, 176, 136, 0.14);
+  --glow-difficulty-amber: 0 0 14px rgba(214, 176, 112, 0.28), 0 0 28px rgba(214, 176, 112, 0.12);
+  --glow-difficulty-red: 0 0 14px rgba(224, 96, 160, 0.34), 0 0 28px rgba(224, 96, 160, 0.16);
+  --glow-difficulty-violet: 0 0 14px rgba(152, 88, 216, 0.34), 0 0 28px rgba(152, 88, 216, 0.16);
+  --glow-difficulty-pink: 0 0 14px rgba(224, 96, 160, 0.30), 0 0 28px rgba(224, 96, 160, 0.14);
+  --glow-difficulty-light-pink: 0 0 14px rgba(240, 136, 184, 0.30), 0 0 28px rgba(240, 136, 184, 0.14);
+  --glow-difficulty-cyan: 0 0 14px rgba(90, 152, 192, 0.30), 0 0 28px rgba(90, 152, 192, 0.14);
+
+  /* Semantic */
+  --background: var(--void-black);
+  --foreground: var(--cloud-white);
+  --surface: var(--ink-deep);
+  --surface-hover: var(--ink-mid);
+  --border: var(--ink-light);
+  --border-glow: var(--jade-glow);
+  --text-primary: var(--cloud-white);
+  --text-secondary: var(--mist-light);
+  --text-muted: var(--mist-dark);
+  --accent: var(--jade-glow);
+  --accent-hover: var(--jade-light);
+  --danger: var(--crimson);
+  --danger-hover: var(--crimson-glow);
+
+  --glow-jade: 0 0 16px rgba(224, 96, 160, 0.36), 0 0 32px rgba(224, 96, 160, 0.18);
+  --glow-crimson: 0 0 16px rgba(152, 88, 216, 0.32), 0 0 32px rgba(152, 88, 216, 0.16);
+  --glow-gold: 0 0 16px rgba(154, 164, 184, 0.30), 0 0 32px rgba(154, 164, 184, 0.14);
+  --glow-blue: 0 0 16px rgba(90, 152, 192, 0.32), 0 0 32px rgba(90, 152, 192, 0.16);
+  --glow-subtle: 0 0 10px rgba(224, 96, 160, 0.18);
+  --glow-modal: 0 0 36px rgba(224, 96, 160, 0.28), 0 0 72px rgba(152, 88, 216, 0.12), inset 0 0 28px rgba(154, 164, 184, 0.06);
+
+  --col-weight: var(--mountain-blue-glow);
+  --col-weight-bg: color-mix(in srgb, var(--mountain-blue-glow) 12%, transparent);
+  --col-reps: var(--gold);
+  --col-reps-bg: color-mix(in srgb, var(--gold) 12%, transparent);
+
+  --chart-primary: #e060a0;
+  --chart-primary-rgb: 224 96 160;
+  --chart-secondary: #9858d8;
+  --chart-grid: rgba(236, 233, 224, 0.08);
+  --chart-bg: rgba(12, 12, 18, 0.55);
+  --timed-color: #5a98c0;
+  --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 84%, var(--border));
+  --nyaa-table-row-hover: color-mix(in srgb, var(--surface) 84%, var(--jade-glow));
+  --system-bar-fallback: #0c0c12;
+}
+
+html.phoenix-bloom * {
+  scrollbar-color: var(--ink-light) var(--void-black);
+}
+
+/* ----- Phoenix Bloom overlay (mirrors shared overlay for hardcoded Discord hex) ----- */
+html.phoenix-bloom [class*="bg-[#1e1f22]"] { background-color: var(--void-black) !important; }
+html.phoenix-bloom [class*="bg-[#2b2d31]"],
+html.phoenix-bloom [class*="bg-[#23252b]"],
+html.phoenix-bloom [class*="bg-[#232428]"] { background-color: var(--ink-deep) !important; }
+html.phoenix-bloom [class*="bg-[#313338]"] { background-color: var(--ink-dark) !important; }
+html.phoenix-bloom [class*="bg-[#383a40]"],
+html.phoenix-bloom [class*="bg-[#454852]"] { background-color: var(--ink-mid) !important; }
+html.phoenix-bloom [class*="bg-[#32353b]"] { background-color: var(--ink-light) !important; }
+html.phoenix-bloom [class*="bg-[#5865f2]"] { background-color: var(--accent) !important; }
+html.phoenix-bloom [class*="bg-[#7289da]"] { background-color: var(--jade) !important; }
+html.phoenix-bloom [class*="bg-[#57f287]"] { background-color: var(--forest) !important; }
+html.phoenix-bloom [class*="bg-[#fee75c]"] { background-color: var(--gold) !important; }
+html.phoenix-bloom [class*="bg-[#ed4245]"] { background-color: var(--crimson) !important; }
+
+html.phoenix-bloom [class*="text-[#f2f3f5]"],
+html.phoenix-bloom [class*="text-[#dbe3ff]"] { color: var(--text-primary) !important; }
+html.phoenix-bloom [class*="text-[#dbdee1]"],
+html.phoenix-bloom [class*="text-[#e3e5e8]"] { color: var(--mist-light) !important; }
+html.phoenix-bloom [class*="text-[#b5bac1]"] { color: var(--text-secondary) !important; }
+html.phoenix-bloom [class*="text-[#949ba4]"] { color: var(--text-muted) !important; }
+html.phoenix-bloom [class*="text-[#8ea1ff]"],
+html.phoenix-bloom [class*="text-[#8ea1e1]"],
+html.phoenix-bloom [class*="text-[#c9d2ff]"],
+html.phoenix-bloom [class*="text-[#5865f2]"] { color: var(--accent) !important; }
+html.phoenix-bloom [class*="text-[#7289da]"] { color: var(--jade-light) !important; }
+html.phoenix-bloom [class*="text-[#57f287]"] { color: var(--forest) !important; }
+html.phoenix-bloom [class*="text-[#fee75c]"] { color: var(--gold) !important; }
+html.phoenix-bloom [class*="text-[#ed4245]"] { color: var(--crimson) !important; }
+html.phoenix-bloom [class*="text-[#ff8fa3]"],
+html.phoenix-bloom [class*="text-[#f0b96a]"] { color: var(--gold-glow) !important; }
+
+html.phoenix-bloom [class*="border-[#3b3f48]"],
+html.phoenix-bloom [class*="border-[#32353b]"],
+html.phoenix-bloom [class*="border-[#383a40]"],
+html.phoenix-bloom [class*="border-[#2b2d31]"] { border-color: var(--border) !important; }
+html.phoenix-bloom [class*="border-[#5865f2]"] { border-color: var(--accent) !important; }
+
+html.phoenix-bloom [class*="hover\\:bg-[#2b2d31]"]:hover,
+html.phoenix-bloom [class*="hover\\:bg-[#313338]"]:hover { background-color: var(--surface-hover) !important; }
+html.phoenix-bloom [class*="hover\\:bg-[#454852]"]:hover { background-color: color-mix(in srgb, var(--surface-hover) 60%, var(--accent)) !important; }
+html.phoenix-bloom [class*="hover\\:text-[#f2f3f5]"]:hover { color: var(--text-primary) !important; }
+html.phoenix-bloom [class*="hover\\:text-[#8ea1ff]"]:hover { color: var(--accent) !important; }
+
+/* =====================================================================
+ * THEME — STORM CHAINS (锁云)
+ * Inspired by a chained-storm xianxia poster: slate-blue tempest sky,
+ * lightning-azure dragon eyes, silver-steel chains across the void,
+ * snow-pale parchment text, and a single vermilion calligraphic seal.
+ * Sibling to Ink Dragon — same architecture, cooler key.
+ * ===================================================================== */
+html.storm-chains {
+  /* Canvas — storm-iron sky */
+  --void-black: #0d1118;
+  --ink-deep: #161c26;
+  --ink-dark: #1e2632;
+  --ink-mid: #2a3340;
+  --ink-light: #38424f;
+
+  /* Text — snow-pale parchment */
+  --mist-dark: #8a94a0;
+  --mist-mid: #a6b0bc;
+  --mist-light: #c4ccd6;
+  --mist-pale: #d6dde4;
+  --cloud-white: #e8edf2;
+  --pure-white: #ffffff;
+
+  /* Accent #1 — Lightning azure (primary) */
+  --jade-deep: #0e2a48;
+  --jade: #2a6aa8;
+  --jade-glow: #5aa8e8;
+  --jade-light: #8cc6f2;
+
+  /* Accent #2 — Steel chain silver */
+  --gold-dim: #5a6472;
+  --gold: #9ca6b4;
+  --gold-glow: #c2ccd8;
+
+  /* Accent #3 — Vermilion seal (danger / warmth) */
+  --crimson-deep: #401418;
+  --crimson: #b8343a;
+  --crimson-glow: #d65a60;
+  --crimson-light: #e8888c;
+
+  /* Accent #4 — Dragon-eye cyan */
+  --mountain-blue: #246a82;
+  --mountain-blue-glow: #58b0c8;
+
+  /* Accent #5 — Storm violet (under-tone) */
+  --forest-deep: #1a1c30;
+  --forest: #5aa8e8;
+
+  /* Difficulty */
+  --difficulty-green: #6ab088;
+  --difficulty-green-glow: #4a8868;
+  --difficulty-amber: #d6b070;
+  --difficulty-amber-glow: #a8884a;
+  --difficulty-red: #b8343a;
+  --difficulty-red-glow: #8a2228;
+  --difficulty-violet: #8c8ce0;
+  --difficulty-violet-glow: #5e5eb0;
+  --difficulty-pink: #c884b0;
+  --difficulty-pink-glow: #9a608a;
+  --difficulty-light-pink: #e0a8c4;
+  --difficulty-light-pink-glow: #b07a98;
+  --difficulty-cyan: #5aa8e8;
+  --difficulty-cyan-glow: #3a7ab0;
+
+  --glow-difficulty-green: 0 0 14px rgba(106, 176, 136, 0.30), 0 0 28px rgba(106, 176, 136, 0.14);
+  --glow-difficulty-amber: 0 0 14px rgba(214, 176, 112, 0.28), 0 0 28px rgba(214, 176, 112, 0.12);
+  --glow-difficulty-red: 0 0 14px rgba(184, 52, 58, 0.34), 0 0 28px rgba(184, 52, 58, 0.16);
+  --glow-difficulty-violet: 0 0 14px rgba(140, 140, 224, 0.34), 0 0 28px rgba(140, 140, 224, 0.16);
+  --glow-difficulty-pink: 0 0 14px rgba(200, 132, 176, 0.30), 0 0 28px rgba(200, 132, 176, 0.14);
+  --glow-difficulty-light-pink: 0 0 14px rgba(224, 168, 196, 0.30), 0 0 28px rgba(224, 168, 196, 0.14);
+  --glow-difficulty-cyan: 0 0 14px rgba(90, 168, 232, 0.34), 0 0 28px rgba(90, 168, 232, 0.16);
+
+  /* Semantic */
+  --background: var(--void-black);
+  --foreground: var(--cloud-white);
+  --surface: var(--ink-deep);
+  --surface-hover: var(--ink-mid);
+  --border: var(--ink-light);
+  --border-glow: var(--jade-glow);
+  --text-primary: var(--cloud-white);
+  --text-secondary: var(--mist-light);
+  --text-muted: var(--mist-dark);
+  --accent: var(--jade-glow);
+  --accent-hover: var(--jade-light);
+  --danger: var(--crimson);
+  --danger-hover: var(--crimson-glow);
+
+  --glow-jade: 0 0 16px rgba(90, 168, 232, 0.36), 0 0 32px rgba(90, 168, 232, 0.18);
+  --glow-crimson: 0 0 16px rgba(184, 52, 58, 0.32), 0 0 32px rgba(184, 52, 58, 0.16);
+  --glow-gold: 0 0 16px rgba(156, 166, 180, 0.30), 0 0 32px rgba(156, 166, 180, 0.14);
+  --glow-blue: 0 0 16px rgba(88, 176, 200, 0.32), 0 0 32px rgba(88, 176, 200, 0.16);
+  --glow-subtle: 0 0 10px rgba(90, 168, 232, 0.18);
+  --glow-modal: 0 0 36px rgba(90, 168, 232, 0.28), 0 0 72px rgba(184, 52, 58, 0.12), inset 0 0 28px rgba(156, 166, 180, 0.06);
+
+  --col-weight: var(--mountain-blue-glow);
+  --col-weight-bg: color-mix(in srgb, var(--mountain-blue-glow) 12%, transparent);
+  --col-reps: var(--gold);
+  --col-reps-bg: color-mix(in srgb, var(--gold) 12%, transparent);
+
+  --chart-primary: #5aa8e8;
+  --chart-primary-rgb: 90 168 232;
+  --chart-secondary: #b8343a;
+  --chart-grid: rgba(232, 237, 242, 0.08);
+  --chart-bg: rgba(13, 17, 24, 0.55);
+  --timed-color: #58b0c8;
+  --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 84%, var(--border));
+  --nyaa-table-row-hover: color-mix(in srgb, var(--surface) 84%, var(--jade-glow));
+  --system-bar-fallback: #0d1118;
+}
+
+html.storm-chains * {
+  scrollbar-color: var(--ink-light) var(--void-black);
+}
+
+/* ----- Storm Chains overlay (mirrors shared overlay for hardcoded Discord hex) ----- */
+html.storm-chains [class*="bg-[#1e1f22]"] { background-color: var(--void-black) !important; }
+html.storm-chains [class*="bg-[#2b2d31]"],
+html.storm-chains [class*="bg-[#23252b]"],
+html.storm-chains [class*="bg-[#232428]"] { background-color: var(--ink-deep) !important; }
+html.storm-chains [class*="bg-[#313338]"] { background-color: var(--ink-dark) !important; }
+html.storm-chains [class*="bg-[#383a40]"],
+html.storm-chains [class*="bg-[#454852]"] { background-color: var(--ink-mid) !important; }
+html.storm-chains [class*="bg-[#32353b]"] { background-color: var(--ink-light) !important; }
+html.storm-chains [class*="bg-[#5865f2]"] { background-color: var(--accent) !important; }
+html.storm-chains [class*="bg-[#7289da]"] { background-color: var(--jade) !important; }
+html.storm-chains [class*="bg-[#57f287]"] { background-color: var(--forest) !important; }
+html.storm-chains [class*="bg-[#fee75c]"] { background-color: var(--gold) !important; }
+html.storm-chains [class*="bg-[#ed4245]"] { background-color: var(--crimson) !important; }
+
+html.storm-chains [class*="text-[#f2f3f5]"],
+html.storm-chains [class*="text-[#dbe3ff]"] { color: var(--text-primary) !important; }
+html.storm-chains [class*="text-[#dbdee1]"],
+html.storm-chains [class*="text-[#e3e5e8]"] { color: var(--mist-light) !important; }
+html.storm-chains [class*="text-[#b5bac1]"] { color: var(--text-secondary) !important; }
+html.storm-chains [class*="text-[#949ba4]"] { color: var(--text-muted) !important; }
+html.storm-chains [class*="text-[#8ea1ff]"],
+html.storm-chains [class*="text-[#8ea1e1]"],
+html.storm-chains [class*="text-[#c9d2ff]"],
+html.storm-chains [class*="text-[#5865f2]"] { color: var(--accent) !important; }
+html.storm-chains [class*="text-[#7289da]"] { color: var(--jade-light) !important; }
+html.storm-chains [class*="text-[#57f287]"] { color: var(--forest) !important; }
+html.storm-chains [class*="text-[#fee75c]"] { color: var(--gold) !important; }
+html.storm-chains [class*="text-[#ed4245]"] { color: var(--crimson) !important; }
+html.storm-chains [class*="text-[#ff8fa3]"],
+html.storm-chains [class*="text-[#f0b96a]"] { color: var(--gold-glow) !important; }
+
+html.storm-chains [class*="border-[#3b3f48]"],
+html.storm-chains [class*="border-[#32353b]"],
+html.storm-chains [class*="border-[#383a40]"],
+html.storm-chains [class*="border-[#2b2d31]"] { border-color: var(--border) !important; }
+html.storm-chains [class*="border-[#5865f2]"] { border-color: var(--accent) !important; }
+
+html.storm-chains [class*="hover\\:bg-[#2b2d31]"]:hover,
+html.storm-chains [class*="hover\\:bg-[#313338]"]:hover { background-color: var(--surface-hover) !important; }
+html.storm-chains [class*="hover\\:bg-[#454852]"]:hover { background-color: color-mix(in srgb, var(--surface-hover) 60%, var(--accent)) !important; }
+html.storm-chains [class*="hover\\:text-[#f2f3f5]"]:hover { color: var(--text-primary) !important; }
+html.storm-chains [class*="hover\\:text-[#8ea1ff]"]:hover { color: var(--accent) !important; }
+
+/* =====================================================================
+ * THEME — OBSIDIAN EMBER (黑曜)
+ * Pure black-and-grey monolith with a single ember of crimson. Sibling
+ * to Ink Dragon — same architecture, stripped of color. The accent is
+ * minimal vermilion, used like a calligraphic seal: small but vivid.
+ * ===================================================================== */
+html.obsidian-ember {
+  /* Canvas — warm charcoal slabs (desaturated graphite, not pure black) */
+  --void-black: #1a1a1c;
+  --ink-deep: #232326;
+  --ink-dark: #2c2c30;
+  --ink-mid: #36363a;
+  --ink-light: #424246;
+
+  /* Text — neutral grey to bone-white */
+  --mist-dark: #7a7a7e;
+  --mist-mid: #94949a;
+  --mist-light: #b6b6bc;
+  --mist-pale: #cccccf;
+  --cloud-white: #e2e2e4;
+  --pure-white: #ffffff;
+
+  /* Accent #1 — Ember crimson (primary, used sparingly) */
+  --jade-deep: #2a0608;
+  --jade: #8a1418;
+  --jade-glow: #c8242a;
+  --jade-light: #e04a50;
+
+  /* Accent #2 — Iron silver */
+  --gold-dim: #4a4a4a;
+  --gold: #8a8a8a;
+  --gold-glow: #b8b8b8;
+
+  /* Accent #3 — Deep ember (danger / warmth) */
+  --crimson-deep: #2a0608;
+  --crimson: #c8242a;
+  --crimson-glow: #e04a50;
+  --crimson-light: #f07a80;
+
+  /* Accent #4 — Cool steel (info) */
+  --mountain-blue: #3a3a42;
+  --mountain-blue-glow: #707078;
+
+  /* Accent #5 — Charcoal under-tone */
+  --forest-deep: #141414;
+  --forest: #8a8a8a;
+
+  /* Difficulty — desaturated to keep the monochrome mood */
+  --difficulty-green: #6a8a72;
+  --difficulty-green-glow: #4a6a52;
+  --difficulty-amber: #b09060;
+  --difficulty-amber-glow: #806840;
+  --difficulty-red: #c8242a;
+  --difficulty-red-glow: #8a1418;
+  --difficulty-violet: #806a90;
+  --difficulty-violet-glow: #5a4868;
+  --difficulty-pink: #a07088;
+  --difficulty-pink-glow: #704c60;
+  --difficulty-light-pink: #b89098;
+  --difficulty-light-pink-glow: #806068;
+  --difficulty-cyan: #608090;
+  --difficulty-cyan-glow: #405868;
+
+  --glow-difficulty-green: 0 0 14px rgba(106, 138, 114, 0.26), 0 0 28px rgba(106, 138, 114, 0.12);
+  --glow-difficulty-amber: 0 0 14px rgba(176, 144, 96, 0.26), 0 0 28px rgba(176, 144, 96, 0.12);
+  --glow-difficulty-red: 0 0 14px rgba(200, 36, 42, 0.34), 0 0 28px rgba(200, 36, 42, 0.16);
+  --glow-difficulty-violet: 0 0 14px rgba(128, 106, 144, 0.26), 0 0 28px rgba(128, 106, 144, 0.12);
+  --glow-difficulty-pink: 0 0 14px rgba(160, 112, 136, 0.26), 0 0 28px rgba(160, 112, 136, 0.12);
+  --glow-difficulty-light-pink: 0 0 14px rgba(184, 144, 152, 0.26), 0 0 28px rgba(184, 144, 152, 0.12);
+  --glow-difficulty-cyan: 0 0 14px rgba(96, 128, 144, 0.26), 0 0 28px rgba(96, 128, 144, 0.12);
+
+  /* Semantic */
+  --background: var(--void-black);
+  --foreground: var(--cloud-white);
+  --surface: var(--ink-deep);
+  --surface-hover: var(--ink-mid);
+  --border: var(--ink-light);
+  --border-glow: var(--jade-glow);
+  --text-primary: var(--cloud-white);
+  --text-secondary: var(--mist-light);
+  --text-muted: var(--mist-dark);
+  --accent: var(--jade-glow);
+  --accent-hover: var(--jade-light);
+  --danger: var(--crimson);
+  --danger-hover: var(--crimson-glow);
+
+  --glow-jade: 0 0 16px rgba(200, 36, 42, 0.36), 0 0 32px rgba(200, 36, 42, 0.18);
+  --glow-crimson: 0 0 16px rgba(200, 36, 42, 0.32), 0 0 32px rgba(200, 36, 42, 0.16);
+  --glow-gold: 0 0 16px rgba(138, 138, 138, 0.24), 0 0 32px rgba(138, 138, 138, 0.10);
+  --glow-blue: 0 0 16px rgba(112, 112, 120, 0.24), 0 0 32px rgba(112, 112, 120, 0.10);
+  --glow-subtle: 0 0 10px rgba(200, 36, 42, 0.16);
+  --glow-modal: 0 0 36px rgba(200, 36, 42, 0.22), 0 0 72px rgba(0, 0, 0, 0.6), inset 0 0 28px rgba(138, 138, 138, 0.05);
+
+  --col-weight: var(--mountain-blue-glow);
+  --col-weight-bg: color-mix(in srgb, var(--mountain-blue-glow) 12%, transparent);
+  --col-reps: var(--gold);
+  --col-reps-bg: color-mix(in srgb, var(--gold) 12%, transparent);
+
+  --chart-primary: #c8242a;
+  --chart-primary-rgb: 200 36 42;
+  --chart-secondary: #8a8a8a;
+  --chart-grid: rgba(226, 226, 228, 0.06);
+  --chart-bg: rgba(26, 26, 28, 0.6);
+  --timed-color: #707078;
+  --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 84%, var(--border));
+  --nyaa-table-row-hover: color-mix(in srgb, var(--surface) 84%, var(--jade-glow));
+  --system-bar-fallback: #1a1a1c;
+}
+
+html.obsidian-ember * {
+  scrollbar-color: var(--ink-light) var(--void-black);
+}
+
+/* ----- Obsidian Ember overlay (mirrors shared overlay for hardcoded Discord hex) ----- */
+html.obsidian-ember [class*="bg-[#1e1f22]"] { background-color: var(--void-black) !important; }
+html.obsidian-ember [class*="bg-[#2b2d31]"],
+html.obsidian-ember [class*="bg-[#23252b]"],
+html.obsidian-ember [class*="bg-[#232428]"] { background-color: var(--ink-deep) !important; }
+html.obsidian-ember [class*="bg-[#313338]"] { background-color: var(--ink-dark) !important; }
+html.obsidian-ember [class*="bg-[#383a40]"],
+html.obsidian-ember [class*="bg-[#454852]"] { background-color: var(--ink-mid) !important; }
+html.obsidian-ember [class*="bg-[#32353b]"] { background-color: var(--ink-light) !important; }
+html.obsidian-ember [class*="bg-[#5865f2]"] { background-color: var(--accent) !important; }
+html.obsidian-ember [class*="bg-[#7289da]"] { background-color: var(--jade) !important; }
+html.obsidian-ember [class*="bg-[#57f287]"] { background-color: var(--forest) !important; }
+html.obsidian-ember [class*="bg-[#fee75c]"] { background-color: var(--gold) !important; }
+html.obsidian-ember [class*="bg-[#ed4245]"] { background-color: var(--crimson) !important; }
+
+html.obsidian-ember [class*="text-[#f2f3f5]"],
+html.obsidian-ember [class*="text-[#dbe3ff]"] { color: var(--text-primary) !important; }
+html.obsidian-ember [class*="text-[#dbdee1]"],
+html.obsidian-ember [class*="text-[#e3e5e8]"] { color: var(--mist-light) !important; }
+html.obsidian-ember [class*="text-[#b5bac1]"] { color: var(--text-secondary) !important; }
+html.obsidian-ember [class*="text-[#949ba4]"] { color: var(--text-muted) !important; }
+html.obsidian-ember [class*="text-[#8ea1ff]"],
+html.obsidian-ember [class*="text-[#8ea1e1]"],
+html.obsidian-ember [class*="text-[#c9d2ff]"],
+html.obsidian-ember [class*="text-[#5865f2]"] { color: var(--accent) !important; }
+html.obsidian-ember [class*="text-[#7289da]"] { color: var(--jade-light) !important; }
+html.obsidian-ember [class*="text-[#57f287]"] { color: var(--forest) !important; }
+html.obsidian-ember [class*="text-[#fee75c]"] { color: var(--gold) !important; }
+html.obsidian-ember [class*="text-[#ed4245]"] { color: var(--crimson) !important; }
+html.obsidian-ember [class*="text-[#ff8fa3]"],
+html.obsidian-ember [class*="text-[#f0b96a]"] { color: var(--gold-glow) !important; }
+
+html.obsidian-ember [class*="border-[#3b3f48]"],
+html.obsidian-ember [class*="border-[#32353b]"],
+html.obsidian-ember [class*="border-[#383a40]"],
+html.obsidian-ember [class*="border-[#2b2d31]"] { border-color: var(--border) !important; }
+html.obsidian-ember [class*="border-[#5865f2]"] { border-color: var(--accent) !important; }
+
+html.obsidian-ember [class*="hover\\:bg-[#2b2d31]"]:hover,
+html.obsidian-ember [class*="hover\\:bg-[#313338]"]:hover { background-color: var(--surface-hover) !important; }
+html.obsidian-ember [class*="hover\\:bg-[#454852]"]:hover { background-color: color-mix(in srgb, var(--surface-hover) 60%, var(--accent)) !important; }
+html.obsidian-ember [class*="hover\\:text-[#f2f3f5]"]:hover { color: var(--text-primary) !important; }
+html.obsidian-ember [class*="hover\\:text-[#8ea1ff]"]:hover { color: var(--accent) !important; }
+
+/* =====================================================================
+ * THEME — MIST CULTIVATOR (雾仙)
+ * Inspired by an ink-mist xianxia portrait: silver-white hair against
+ * smoky charcoal robes, with a single violet third-eye sigil. Cool
+ * grayscale canvas, parchment-silver text, restrained lavender accents.
+ * Sibling to Ink Dragon — same architecture, monochrome key.
+ * ===================================================================== */
+html.mist-cultivator {
+  /* Canvas — soft ink-mist greys */
+  --void-black: #181a1d;
+  --ink-deep: #22252a;
+  --ink-dark: #2c3036;
+  --ink-mid: #383d44;
+  --ink-light: #464c54;
+
+  /* Text — silver-white hair / parchment mist */
+  --mist-dark: #8a9098;
+  --mist-mid: #a4abb4;
+  --mist-light: #c4cad2;
+  --mist-pale: #d8dde2;
+  --cloud-white: #ecf0f4;
+  --pure-white: #ffffff;
+
+  /* Accent #1 — Violet sigil (primary, restrained) */
+  --jade-deep: #2a1e44;
+  --jade: #5a4880;
+  --jade-glow: #8c7ab8;
+  --jade-light: #b6a6d8;
+
+  /* Accent #2 — Brushed silver */
+  --gold-dim: #5e6470;
+  --gold: #9ca4b0;
+  --gold-glow: #c2c8d2;
+
+  /* Accent #3 — Mist-rose seal (danger / warmth) */
+  --crimson-deep: #3a1e26;
+  --crimson: #a8546a;
+  --crimson-glow: #c8788c;
+  --crimson-light: #d89aa8;
+
+  /* Accent #4 — Cold steel azure */
+  --mountain-blue: #3a5066;
+  --mountain-blue-glow: #6e8aa4;
+
+  /* Accent #5 — Pale violet under-tone */
+  --forest-deep: #1e1a2c;
+  --forest: #8c7ab8;
+
+  /* Difficulty — desaturated, cool grayscale palette */
+  --difficulty-green: #7a9a86;
+  --difficulty-green-glow: #587464;
+  --difficulty-amber: #b09a78;
+  --difficulty-amber-glow: #806e54;
+  --difficulty-red: #a8546a;
+  --difficulty-red-glow: #783c4c;
+  --difficulty-violet: #8c7ab8;
+  --difficulty-violet-glow: #5e5088;
+  --difficulty-pink: #b08aa0;
+  --difficulty-pink-glow: #7a6070;
+  --difficulty-light-pink: #c4a4b6;
+  --difficulty-light-pink-glow: #886e7c;
+  --difficulty-cyan: #6e8aa4;
+  --difficulty-cyan-glow: #4a607a;
+
+  --glow-difficulty-green: 0 0 14px rgba(122, 154, 134, 0.26), 0 0 28px rgba(122, 154, 134, 0.12);
+  --glow-difficulty-amber: 0 0 14px rgba(176, 154, 120, 0.26), 0 0 28px rgba(176, 154, 120, 0.12);
+  --glow-difficulty-red: 0 0 14px rgba(168, 84, 106, 0.30), 0 0 28px rgba(168, 84, 106, 0.14);
+  --glow-difficulty-violet: 0 0 14px rgba(140, 122, 184, 0.32), 0 0 28px rgba(140, 122, 184, 0.16);
+  --glow-difficulty-pink: 0 0 14px rgba(176, 138, 160, 0.26), 0 0 28px rgba(176, 138, 160, 0.12);
+  --glow-difficulty-light-pink: 0 0 14px rgba(196, 164, 182, 0.26), 0 0 28px rgba(196, 164, 182, 0.12);
+  --glow-difficulty-cyan: 0 0 14px rgba(110, 138, 164, 0.26), 0 0 28px rgba(110, 138, 164, 0.12);
+
+  /* Semantic */
+  --background: var(--void-black);
+  --foreground: var(--cloud-white);
+  --surface: var(--ink-deep);
+  --surface-hover: var(--ink-mid);
+  --border: var(--ink-light);
+  --border-glow: var(--jade-glow);
+  --text-primary: var(--cloud-white);
+  --text-secondary: var(--mist-light);
+  --text-muted: var(--mist-dark);
+  --accent: var(--jade-glow);
+  --accent-hover: var(--jade-light);
+  --danger: var(--crimson);
+  --danger-hover: var(--crimson-glow);
+
+  --glow-jade: 0 0 16px rgba(140, 122, 184, 0.32), 0 0 32px rgba(140, 122, 184, 0.16);
+  --glow-crimson: 0 0 16px rgba(168, 84, 106, 0.28), 0 0 32px rgba(168, 84, 106, 0.14);
+  --glow-gold: 0 0 16px rgba(156, 164, 176, 0.26), 0 0 32px rgba(156, 164, 176, 0.12);
+  --glow-blue: 0 0 16px rgba(110, 138, 164, 0.26), 0 0 32px rgba(110, 138, 164, 0.12);
+  --glow-subtle: 0 0 10px rgba(140, 122, 184, 0.16);
+  --glow-modal: 0 0 36px rgba(140, 122, 184, 0.24), 0 0 72px rgba(0, 0, 0, 0.45), inset 0 0 28px rgba(156, 164, 176, 0.06);
+
+  --col-weight: var(--mountain-blue-glow);
+  --col-weight-bg: color-mix(in srgb, var(--mountain-blue-glow) 12%, transparent);
+  --col-reps: var(--gold);
+  --col-reps-bg: color-mix(in srgb, var(--gold) 12%, transparent);
+
+  --chart-primary: #8c7ab8;
+  --chart-primary-rgb: 140 122 184;
+  --chart-secondary: #9ca4b0;
+  --chart-grid: rgba(236, 240, 244, 0.07);
+  --chart-bg: rgba(24, 26, 29, 0.6);
+  --timed-color: #6e8aa4;
+  --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 84%, var(--border));
+  --nyaa-table-row-hover: color-mix(in srgb, var(--surface) 84%, var(--jade-glow));
+  --system-bar-fallback: #181a1d;
+}
+
+html.mist-cultivator * {
+  scrollbar-color: var(--ink-light) var(--void-black);
+}
+
+/* ----- Mist Cultivator overlay (mirrors shared overlay for hardcoded Discord hex) ----- */
+html.mist-cultivator [class*="bg-[#1e1f22]"] { background-color: var(--void-black) !important; }
+html.mist-cultivator [class*="bg-[#2b2d31]"],
+html.mist-cultivator [class*="bg-[#23252b]"],
+html.mist-cultivator [class*="bg-[#232428]"] { background-color: var(--ink-deep) !important; }
+html.mist-cultivator [class*="bg-[#313338]"] { background-color: var(--ink-dark) !important; }
+html.mist-cultivator [class*="bg-[#383a40]"],
+html.mist-cultivator [class*="bg-[#454852]"] { background-color: var(--ink-mid) !important; }
+html.mist-cultivator [class*="bg-[#32353b]"] { background-color: var(--ink-light) !important; }
+html.mist-cultivator [class*="bg-[#5865f2]"] { background-color: var(--accent) !important; }
+html.mist-cultivator [class*="bg-[#7289da]"] { background-color: var(--jade) !important; }
+html.mist-cultivator [class*="bg-[#57f287]"] { background-color: var(--forest) !important; }
+html.mist-cultivator [class*="bg-[#fee75c]"] { background-color: var(--gold) !important; }
+html.mist-cultivator [class*="bg-[#ed4245]"] { background-color: var(--crimson) !important; }
+
+html.mist-cultivator [class*="text-[#f2f3f5]"],
+html.mist-cultivator [class*="text-[#dbe3ff]"] { color: var(--text-primary) !important; }
+html.mist-cultivator [class*="text-[#dbdee1]"],
+html.mist-cultivator [class*="text-[#e3e5e8]"] { color: var(--mist-light) !important; }
+html.mist-cultivator [class*="text-[#b5bac1]"] { color: var(--text-secondary) !important; }
+html.mist-cultivator [class*="text-[#949ba4]"] { color: var(--text-muted) !important; }
+html.mist-cultivator [class*="text-[#8ea1ff]"],
+html.mist-cultivator [class*="text-[#8ea1e1]"],
+html.mist-cultivator [class*="text-[#c9d2ff]"],
+html.mist-cultivator [class*="text-[#5865f2]"] { color: var(--accent) !important; }
+html.mist-cultivator [class*="text-[#7289da]"] { color: var(--jade-light) !important; }
+html.mist-cultivator [class*="text-[#57f287]"] { color: var(--forest) !important; }
+html.mist-cultivator [class*="text-[#fee75c]"] { color: var(--gold) !important; }
+html.mist-cultivator [class*="text-[#ed4245]"] { color: var(--crimson) !important; }
+html.mist-cultivator [class*="text-[#ff8fa3]"],
+html.mist-cultivator [class*="text-[#f0b96a]"] { color: var(--gold-glow) !important; }
+
+html.mist-cultivator [class*="border-[#3b3f48]"],
+html.mist-cultivator [class*="border-[#32353b]"],
+html.mist-cultivator [class*="border-[#383a40]"],
+html.mist-cultivator [class*="border-[#2b2d31]"] { border-color: var(--border) !important; }
+html.mist-cultivator [class*="border-[#5865f2]"] { border-color: var(--accent) !important; }
+
+html.mist-cultivator [class*="hover\\:bg-[#2b2d31]"]:hover,
+html.mist-cultivator [class*="hover\\:bg-[#313338]"]:hover { background-color: var(--surface-hover) !important; }
+html.mist-cultivator [class*="hover\\:bg-[#454852]"]:hover { background-color: color-mix(in srgb, var(--surface-hover) 60%, var(--accent)) !important; }
+html.mist-cultivator [class*="hover\\:text-[#f2f3f5]"]:hover { color: var(--text-primary) !important; }
+html.mist-cultivator [class*="hover\\:text-[#8ea1ff]"]:hover { color: var(--accent) !important; }
+
+/* =====================================================================
  * THEME — FROST SECT (寒霜宗)
  * Glacier-blue cultivators of an ice-bound mountain sect. Cool deep
  * slate canvas, frost-pale parchment text, glacier blue / ice cyan /

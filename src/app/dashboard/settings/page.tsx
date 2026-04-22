@@ -17,6 +17,10 @@ const THEME_OPTIONS: Array<{ value: Theme; label: string; desc: string }> = [
   { value: "discord", label: "Discord theme", desc: "Clean default canvas" },
   { value: "forest", label: "Forest", desc: "Everforest-inspired pine, sage & leaf — soft & balanced" },
   { value: "ink-dragon", label: "Ink Dragon", desc: "墨龙 — ink-wash charcoal, violet thunder & vermilion seal" },
+  { value: "phoenix-bloom", label: "Phoenix Bloom", desc: "凤凰花 — ink-wash charcoal, amethyst purple & phoenix-pink blossom" },
+  { value: "storm-chains", label: "Storm Chains", desc: "锁云 — storm-iron sky, lightning azure, silver chains & vermilion seal" },
+  { value: "obsidian-ember", label: "Obsidian Ember", desc: "黑曜 — pure black & graphite grey with a single ember of crimson" },
+  { value: "mist-cultivator", label: "Mist Cultivator", desc: "雾仙 — ink-mist greys, parchment-silver text & restrained violet sigil" },
   { value: "frost-sect", label: "Frost Sect", desc: "寒霜宗 — glacier slate, frost-pale silk & ice-cyan glow" },
   { value: "heavenly-sword", label: "Heavenly Sword", desc: "天剑 — dawn navy, cloud-white robes & sun-gold trim" },
 ];

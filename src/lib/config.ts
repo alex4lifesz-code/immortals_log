@@ -4,6 +4,10 @@ export const THEME_CLASS_NAMES = [
   "discord",
   "forest",
   "ink-dragon",
+  "phoenix-bloom",
+  "storm-chains",
+  "obsidian-ember",
+  "mist-cultivator",
   "frost-sect",
   "heavenly-sword",
 ] as const;

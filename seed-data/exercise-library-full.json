@@ -9,8 +9,23 @@
       "weighted": true,
       "rings": true,
       "primaryMuscles": "Back, Chest, Shoulders, Triceps, Core",
-      "progression": ["Transition Drill", "Band Assisted", "Negative", "Strict", "Slow"],
-      "variations": ["Bar", "Ring", "L-sit", "Weighted", "Behind the neck", "Impossible", "Typewriter", "Clapping"]
+      "progression": [
+        "Transition Drill",
+        "Band Assisted",
+        "Negative",
+        "Strict",
+        "Slow"
+      ],
+      "variations": [
+        "Bar",
+        "Ring",
+        "L-sit",
+        "Weighted",
+        "Behind the neck",
+        "Impossible",
+        "Typewriter",
+        "Clapping"
+      ]
     },
     {
       "name": "Pull up",
@@ -20,8 +35,37 @@
       "weighted": true,
       "rings": true,
       "primaryMuscles": "Back, Biceps, Forearms, Core",
-      "progression": ["Scapular", "Assisted", "Standard", "Strict", "Weighted", "One Arm Assisted", "One Arm Negatives", "One Arm"],
-      "variations": ["Wide grip", "Close grip", "Chin up", "Neutral grip", "Archer", "Typewriter", "L-sit", "Commando", "Chest-to-bar", "High", "Ring", "Explosive", "Kipping", "Behind the neck", "Clapping", "Rope"]
+      "progression": [
+        "Scapular",
+        "Assisted",
+        "Standard",
+        "Strict",
+        "Weighted",
+        "One Arm Assisted",
+        "One Arm Negatives",
+        "One Arm"
+      ],
+      "variations": [
+        "Wide grip",
+        "Close grip",
+        "Chin up",
+        "Neutral grip",
+        "Archer",
+        "Typewriter",
+        "L-sit",
+        "Commando",
+        "Chest-to-bar",
+        "High",
+        "Ring",
+        "Explosive",
+        "Kipping",
+        "Behind the neck",
+        "Clapping",
+        "Rope",
+        "Wide",
+        "Close",
+        "Neutral"
+      ]
     },
     {
       "name": "Dip",
@@ -31,8 +75,24 @@
       "weighted": true,
       "rings": true,
       "primaryMuscles": "Chest, Shoulders, Triceps",
-      "progression": ["Bench", "Negative", "Assisted", "Standard", "Weighted"],
-      "variations": ["Parallel bar", "Ring", "Straight bar", "Korean", "L-sit", "Russian", "Archer", "Bulgarian", "Impossible"]
+      "progression": [
+        "Bench",
+        "Negative",
+        "Assisted",
+        "Standard",
+        "Weighted"
+      ],
+      "variations": [
+        "Parallel bar",
+        "Ring",
+        "Straight bar",
+        "Korean",
+        "L-sit",
+        "Russian",
+        "Archer",
+        "Bulgarian",
+        "Impossible"
+      ]
     },
     {
       "name": "Push up",
@@ -42,8 +102,34 @@
       "weighted": true,
       "rings": true,
       "primaryMuscles": "Chest, Shoulders, Triceps, Core",
-      "progression": ["Incline", "Standard", "Decline", "Weighted"],
-      "variations": ["Wide", "Diamond", "Archer", "One arm", "Clapping", "Planche", "Pike", "Pseudo planche", "Explosive", "Typewriter", "Staggered", "Spiderman", "Hindu", "Aztec", "Superman", "Dive bomber", "Lalanne", "Knuckle", "Fingertip", "Ring"]
+      "progression": [
+        "Incline",
+        "Standard",
+        "Decline",
+        "Weighted"
+      ],
+      "variations": [
+        "Wide",
+        "Diamond",
+        "Archer",
+        "One arm",
+        "Clapping",
+        "Planche",
+        "Pike",
+        "Pseudo planche",
+        "Explosive",
+        "Typewriter",
+        "Staggered",
+        "Spiderman",
+        "Hindu",
+        "Aztec",
+        "Superman",
+        "Dive bomber",
+        "Lalanne",
+        "Knuckle",
+        "Fingertip",
+        "Ring"
+      ]
     },
     {
       "name": "Handstand",
@@ -53,8 +139,20 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Shoulders, Core, Triceps",
-      "progression": ["Wall Hold", "Freestanding", "One arm"],
-      "variations": ["Tuck", "Straddle", "Press to handstand", "Walking", "Fingertip", "Pirouette", "Tiger bend"]
+      "progression": [
+        "Wall Hold",
+        "Freestanding",
+        "One arm"
+      ],
+      "variations": [
+        "Tuck",
+        "Straddle",
+        "Press to handstand",
+        "Walking",
+        "Fingertip",
+        "Pirouette",
+        "Tiger bend"
+      ]
     },
     {
       "name": "Handstand push up",
@@ -64,8 +162,19 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Shoulders, Triceps, Core",
-      "progression": ["Pike", "Elevated Pike", "Wall", "Deficit Wall", "Freestanding"],
-      "variations": ["90 degree", "Weighted", "Clapping", "Tiger bend"]
+      "progression": [
+        "Pike",
+        "Elevated Pike",
+        "Wall",
+        "Deficit Wall",
+        "Freestanding"
+      ],
+      "variations": [
+        "90 degree",
+        "Weighted",
+        "Clapping",
+        "Tiger bend"
+      ]
     },
     {
       "name": "Front lever",
@@ -75,8 +184,21 @@
       "weighted": false,
       "rings": true,
       "primaryMuscles": "Back, Core, Shoulders",
-      "progression": ["Tuck Hold", "Tucked Negative", "Advanced Tuck Hold", "One Leg Hold", "Straddle Hold", "Full Hold"],
-      "variations": ["Pulls", "Raises", "Ice Cream Maker", "Touch", "Rows"]
+      "progression": [
+        "Tuck Hold",
+        "Tucked Negative",
+        "Advanced Tuck Hold",
+        "One Leg Hold",
+        "Straddle Hold",
+        "Full Hold"
+      ],
+      "variations": [
+        "Pulls",
+        "Raises",
+        "Ice Cream Maker",
+        "Touch",
+        "Rows"
+      ]
     },
     {
       "name": "Back lever",
@@ -86,8 +208,19 @@
       "weighted": false,
       "rings": true,
       "primaryMuscles": "Shoulders, Back, Core, Biceps",
-      "progression": ["Tuck", "Advanced tuck", "Straddle", "Half lay", "Full"],
-      "variations": ["One leg", "Pulls", "Raises", "To German hang"]
+      "progression": [
+        "Tuck",
+        "Advanced tuck",
+        "Straddle",
+        "Half lay",
+        "Full"
+      ],
+      "variations": [
+        "One leg",
+        "Pulls",
+        "Raises",
+        "To German hang"
+      ]
     },
     {
       "name": "Planche",
@@ -97,8 +230,20 @@
       "weighted": false,
       "rings": true,
       "primaryMuscles": "Shoulders, Chest, Core, Triceps",
-      "progression": ["Lean", "Tuck", "Tucked Press", "Advanced tuck", "Straddle", "Full"],
-      "variations": ["Push up", "Press", "One arm", "Rings"]
+      "progression": [
+        "Lean",
+        "Tuck",
+        "Tucked Press",
+        "Advanced tuck",
+        "Straddle",
+        "Full"
+      ],
+      "variations": [
+        "Push up",
+        "Press",
+        "One arm",
+        "Rings"
+      ]
     },
     {
       "name": "Dragon flag",
@@ -108,8 +253,17 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Core, Hip Flexors",
-      "progression": ["Tuck", "Advanced tuck", "Straddle", "Full"],
-      "variations": ["Negatives", "Raises", "Side"]
+      "progression": [
+        "Tuck",
+        "Advanced tuck",
+        "Straddle",
+        "Full"
+      ],
+      "variations": [
+        "Negatives",
+        "Raises",
+        "Side"
+      ]
     },
     {
       "name": "L-sit",
@@ -119,8 +273,20 @@
       "weighted": false,
       "rings": true,
       "primaryMuscles": "Core, Hip Flexors, Triceps",
-      "progression": ["Tuck", "One leg", "Full", "Straddle", "V-sit", "Manna"],
-      "variations": ["Floor", "Parallettes", "Rings", "Bar"]
+      "progression": [
+        "Tuck",
+        "One leg",
+        "Full",
+        "Straddle",
+        "V-sit",
+        "Manna"
+      ],
+      "variations": [
+        "Floor",
+        "Parallettes",
+        "Rings",
+        "Bar"
+      ]
     },
     {
       "name": "Human flag",
@@ -130,8 +296,18 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Core, Shoulders, Lats",
-      "progression": ["Tuck", "Straddle", "Half", "Full"],
-      "variations": ["Vertical", "Pulls", "Raises", "Press"]
+      "progression": [
+        "Tuck",
+        "Straddle",
+        "Half",
+        "Full"
+      ],
+      "variations": [
+        "Vertical",
+        "Pulls",
+        "Raises",
+        "Press"
+      ]
     },
     {
       "name": "Hang",
@@ -141,8 +317,16 @@
       "weighted": true,
       "rings": true,
       "primaryMuscles": "Forearms, Shoulders, Back",
-      "progression": ["Dead", "Active"],
-      "variations": ["One arm", "Weighted", "Scapular", "False grip"]
+      "progression": [
+        "Dead",
+        "Active"
+      ],
+      "variations": [
+        "One arm",
+        "Weighted",
+        "Scapular",
+        "False grip"
+      ]
     },
     {
       "name": "Support hold",
@@ -152,8 +336,16 @@
       "weighted": false,
       "rings": true,
       "primaryMuscles": "Chest, Shoulders, Triceps, Core",
-      "progression": ["Parallel bar", "Ring"],
-      "variations": ["Tuck", "L-sit", "Turned out", "Wide"]
+      "progression": [
+        "Parallel bar",
+        "Ring"
+      ],
+      "variations": [
+        "Tuck",
+        "L-sit",
+        "Turned out",
+        "Wide"
+      ]
     },
     {
       "name": "Leg raise",
@@ -163,8 +355,20 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Core, Hip Flexors",
-      "progression": ["Lying", "Hanging"],
-      "variations": ["Tuck", "Straight", "Windshield wiper", "Side to side", "Toes to bar"]
+      "progression": [
+        "Lying",
+        "Hanging"
+      ],
+      "variations": [
+        "Tuck",
+        "Straight",
+        "Windshield wiper",
+        "Side to side",
+        "Toes to bar",
+        "Hanging",
+        "Lying",
+        "Captain's chair"
+      ]
     },
     {
       "name": "Pistol squat",
@@ -174,8 +378,17 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Quads, Glutes, Core",
-      "progression": ["Assisted", "Standard", "Weighted"],
-      "variations": ["Jumping", "Elevated", "Airborne", "Dragon"]
+      "progression": [
+        "Assisted",
+        "Standard",
+        "Weighted"
+      ],
+      "variations": [
+        "Jumping",
+        "Elevated",
+        "Airborne",
+        "Dragon"
+      ]
     },
     {
       "name": "Squat",
@@ -185,8 +398,20 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Quads, Glutes, Hamstrings",
-      "progression": ["Bodyweight", "Weighted"],
-      "variations": ["Sumo", "Cossack", "Shrimp", "Sissy", "Hindu", "Jump", "Bulgarian split", "Single leg box"]
+      "progression": [
+        "Bodyweight",
+        "Weighted"
+      ],
+      "variations": [
+        "Sumo",
+        "Cossack",
+        "Shrimp",
+        "Sissy",
+        "Hindu",
+        "Jump",
+        "Bulgarian split",
+        "Single leg box"
+      ]
     },
     {
       "name": "Lunge",
@@ -196,8 +421,21 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Quads, Glutes, Hamstrings",
-      "progression": ["Standard", "Weighted"],
-      "variations": ["Forward", "Reverse", "Walking", "Jumping", "Lateral", "Curtsy", "Clock"]
+      "progression": [
+        "Standard",
+        "Weighted"
+      ],
+      "variations": [
+        "Forward",
+        "Reverse",
+        "Walking",
+        "Jumping",
+        "Lateral",
+        "Curtsy",
+        "Clock",
+        "Barbell",
+        "Dumbbell"
+      ]
     },
     {
       "name": "Step up",
@@ -207,8 +445,19 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Quads, Glutes",
-      "progression": ["Standard", "Weighted"],
-      "variations": ["Lateral", "Crossover", "Explosive", "Box jump"]
+      "progression": [
+        "Standard",
+        "Weighted"
+      ],
+      "variations": [
+        "Lateral",
+        "Crossover",
+        "Explosive",
+        "Box jump",
+        "Bodyweight",
+        "Dumbbell",
+        "Barbell"
+      ]
     },
     {
       "name": "Glute bridge",
@@ -218,8 +467,16 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Glutes, Hamstrings",
-      "progression": ["Standard", "Single leg", "Weighted"],
-      "variations": ["Elevated", "Marching", "Frog"]
+      "progression": [
+        "Standard",
+        "Single leg",
+        "Weighted"
+      ],
+      "variations": [
+        "Elevated",
+        "Marching",
+        "Frog"
+      ]
     },
     {
       "name": "Hip thrust",
@@ -229,8 +486,19 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Glutes, Hamstrings",
-      "progression": ["Standard", "Single leg", "Weighted"],
-      "variations": ["Elevated", "Banded", "Frog"]
+      "progression": [
+        "Standard",
+        "Single leg",
+        "Weighted"
+      ],
+      "variations": [
+        "Elevated",
+        "Banded",
+        "Frog",
+        "Bodyweight",
+        "Barbell",
+        "Single leg"
+      ]
     },
     {
       "name": "Nordic curl",
@@ -240,8 +508,16 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Hamstrings",
-      "progression": ["Assisted", "Eccentric", "Full"],
-      "variations": ["Banded", "Weighted", "Single leg"]
+      "progression": [
+        "Assisted",
+        "Eccentric",
+        "Full"
+      ],
+      "variations": [
+        "Banded",
+        "Weighted",
+        "Single leg"
+      ]
     },
     {
       "name": "Reverse nordic",
@@ -251,8 +527,15 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Quads",
-      "progression": ["Assisted", "Standard", "Full"],
-      "variations": ["Weighted", "Banded"]
+      "progression": [
+        "Assisted",
+        "Standard",
+        "Full"
+      ],
+      "variations": [
+        "Weighted",
+        "Banded"
+      ]
     },
     {
       "name": "Calf raise",
@@ -262,8 +545,19 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Calves",
-      "progression": ["Standard", "Single leg", "Weighted"],
-      "variations": ["Elevated", "Seated", "Jumping"]
+      "progression": [
+        "Standard",
+        "Single leg",
+        "Weighted"
+      ],
+      "variations": [
+        "Elevated",
+        "Seated",
+        "Jumping",
+        "Standing",
+        "Donkey",
+        "Single leg"
+      ]
     },
     {
       "name": "Inverted row",
@@ -273,8 +567,18 @@
       "weighted": false,
       "rings": true,
       "primaryMuscles": "Back, Biceps",
-      "progression": ["Incline", "Standard", "Elevated feet"],
-      "variations": ["Wide", "Close", "Archer", "One arm", "Underhand"]
+      "progression": [
+        "Incline",
+        "Standard",
+        "Elevated feet"
+      ],
+      "variations": [
+        "Wide",
+        "Close",
+        "Archer",
+        "One arm",
+        "Underhand"
+      ]
     },
     {
       "name": "Australian pull up",
@@ -284,8 +588,17 @@
       "weighted": false,
       "rings": true,
       "primaryMuscles": "Back, Biceps",
-      "progression": ["Incline", "Standard", "Elevated feet"],
-      "variations": ["Wide", "Close", "Underhand", "Ring"]
+      "progression": [
+        "Incline",
+        "Standard",
+        "Elevated feet"
+      ],
+      "variations": [
+        "Wide",
+        "Close",
+        "Underhand",
+        "Ring"
+      ]
     },
     {
       "name": "Skin the cat",
@@ -295,8 +608,16 @@
       "weighted": false,
       "rings": true,
       "primaryMuscles": "Shoulders, Back, Core",
-      "progression": ["Assisted", "Standard", "Full"],
-      "variations": ["German hang", "Reverse", "Shouldered"]
+      "progression": [
+        "Assisted",
+        "Standard",
+        "Full"
+      ],
+      "variations": [
+        "German hang",
+        "Reverse",
+        "Shouldered"
+      ]
     },
     {
       "name": "Toes to bar",
@@ -306,8 +627,16 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Core, Hip Flexors",
-      "progression": ["Knees to chest", "Knees to bar", "Full"],
-      "variations": ["Strict", "Kipping", "L-hang"]
+      "progression": [
+        "Knees to chest",
+        "Knees to bar",
+        "Full"
+      ],
+      "variations": [
+        "Strict",
+        "Kipping",
+        "L-hang"
+      ]
     },
     {
       "name": "Hollow body",
@@ -317,8 +646,16 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Core",
-      "progression": ["Tuck", "Straddle", "Full"],
-      "variations": ["Rocks", "Hold", "Flutter kicks"]
+      "progression": [
+        "Tuck",
+        "Straddle",
+        "Full"
+      ],
+      "variations": [
+        "Rocks",
+        "Hold",
+        "Flutter kicks"
+      ]
     },
     {
       "name": "Arch body",
@@ -328,8 +665,16 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Back, Glutes",
-      "progression": ["Tuck", "Full"],
-      "variations": ["Rocks", "Hold", "Superman", "Swimmers"]
+      "progression": [
+        "Tuck",
+        "Full"
+      ],
+      "variations": [
+        "Rocks",
+        "Hold",
+        "Superman",
+        "Swimmers"
+      ]
     },
     {
       "name": "Plank",
@@ -339,8 +684,20 @@
       "weighted": true,
       "rings": true,
       "primaryMuscles": "Core, Shoulders",
-      "progression": ["Knee", "Standard", "Weighted"],
-      "variations": ["Forearm", "High", "Side", "Reverse", "Copenhagen", "Star", "Ring"]
+      "progression": [
+        "Knee",
+        "Standard",
+        "Weighted"
+      ],
+      "variations": [
+        "Forearm",
+        "High",
+        "Side",
+        "Reverse",
+        "Copenhagen",
+        "Star",
+        "Ring"
+      ]
     },
     {
       "name": "Ab wheel rollout",
@@ -350,8 +707,16 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Core, Shoulders",
-      "progression": ["Kneeling", "Standing"],
-      "variations": ["Wide", "Narrow", "One arm", "Oblique"]
+      "progression": [
+        "Kneeling",
+        "Standing"
+      ],
+      "variations": [
+        "Wide",
+        "Narrow",
+        "One arm",
+        "Oblique"
+      ]
     },
     {
       "name": "Windmill",
@@ -361,8 +726,14 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Core, Shoulders, Hips",
-      "progression": ["Standard", "Weighted"],
-      "variations": ["Standing", "Kneeling"]
+      "progression": [
+        "Standard",
+        "Weighted"
+      ],
+      "variations": [
+        "Standing",
+        "Kneeling"
+      ]
     },
     {
       "name": "Crow pose",
@@ -372,8 +743,16 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Shoulders, Core, Wrists",
-      "progression": ["Frogger", "Toes down", "Full"],
-      "variations": ["Side crow", "One leg", "Crane"]
+      "progression": [
+        "Frogger",
+        "Toes down",
+        "Full"
+      ],
+      "variations": [
+        "Side crow",
+        "One leg",
+        "Crane"
+      ]
     },
     {
       "name": "Elbow lever",
@@ -383,8 +762,14 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Core, Shoulders, Wrists",
-      "progression": ["Straddle", "Full"],
-      "variations": ["One arm", "Press"]
+      "progression": [
+        "Straddle",
+        "Full"
+      ],
+      "variations": [
+        "One arm",
+        "Press"
+      ]
     },
     {
       "name": "360 pull",
@@ -394,8 +779,14 @@
       "weighted": false,
       "rings": true,
       "primaryMuscles": "Back, Shoulders, Core",
-      "progression": ["Assisted", "Standard"],
-      "variations": ["Bar", "Ring"]
+      "progression": [
+        "Assisted",
+        "Standard"
+      ],
+      "variations": [
+        "Bar",
+        "Ring"
+      ]
     },
     {
       "name": "Impossible dip",
@@ -405,8 +796,14 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Chest, Shoulders, Triceps",
-      "progression": ["Negative", "Assisted", "Full"],
-      "variations": ["Weighted"]
+      "progression": [
+        "Negative",
+        "Assisted",
+        "Full"
+      ],
+      "variations": [
+        "Weighted"
+      ]
     },
     {
       "name": "Victorian cross",
@@ -416,8 +813,15 @@
       "weighted": false,
       "rings": true,
       "primaryMuscles": "Chest, Shoulders, Biceps",
-      "progression": ["Tuck", "Advanced tuck", "Straddle", "Full"],
-      "variations": ["Rings"]
+      "progression": [
+        "Tuck",
+        "Advanced tuck",
+        "Straddle",
+        "Full"
+      ],
+      "variations": [
+        "Rings"
+      ]
     },
     {
       "name": "Iron cross",
@@ -427,8 +831,16 @@
       "weighted": false,
       "rings": true,
       "primaryMuscles": "Chest, Shoulders, Biceps",
-      "progression": ["Band assisted", "Negative", "Full"],
-      "variations": ["Rings", "Wide", "Inverted"]
+      "progression": [
+        "Band assisted",
+        "Negative",
+        "Full"
+      ],
+      "variations": [
+        "Rings",
+        "Wide",
+        "Inverted"
+      ]
     },
     {
       "name": "Maltese",
@@ -438,8 +850,17 @@
       "weighted": false,
       "rings": true,
       "primaryMuscles": "Chest, Shoulders, Core",
-      "progression": ["Tuck", "Advanced tuck", "Straddle", "Full"],
-      "variations": ["Rings", "Floor", "Press"]
+      "progression": [
+        "Tuck",
+        "Advanced tuck",
+        "Straddle",
+        "Full"
+      ],
+      "variations": [
+        "Rings",
+        "Floor",
+        "Press"
+      ]
     },
     {
       "name": "Reverse planche",
@@ -449,8 +870,15 @@
       "weighted": false,
       "rings": true,
       "primaryMuscles": "Shoulders, Core, Back",
-      "progression": ["Tuck", "Advanced tuck", "Straddle", "Full"],
-      "variations": ["Rings"]
+      "progression": [
+        "Tuck",
+        "Advanced tuck",
+        "Straddle",
+        "Full"
+      ],
+      "variations": [
+        "Rings"
+      ]
     },
     {
       "name": "Press to handstand",
@@ -460,8 +888,18 @@
       "weighted": false,
       "rings": true,
       "primaryMuscles": "Shoulders, Core, Hip Flexors",
-      "progression": ["Tuck", "Straddle", "Pike", "Full"],
-      "variations": ["Floor", "Parallettes", "Rings", "Jump"]
+      "progression": [
+        "Tuck",
+        "Straddle",
+        "Pike",
+        "Full"
+      ],
+      "variations": [
+        "Floor",
+        "Parallettes",
+        "Rings",
+        "Jump"
+      ]
     },
     {
       "name": "Hefesto",
@@ -471,8 +909,15 @@
       "weighted": false,
       "rings": true,
       "primaryMuscles": "Biceps, Shoulders, Back",
-      "progression": ["Assisted", "Negative", "Full"],
-      "variations": ["Bar", "Rings"]
+      "progression": [
+        "Assisted",
+        "Negative",
+        "Full"
+      ],
+      "variations": [
+        "Bar",
+        "Rings"
+      ]
     },
     {
       "name": "Pelican curl",
@@ -482,8 +927,14 @@
       "weighted": false,
       "rings": true,
       "primaryMuscles": "Biceps, Forearms, Shoulders, Chest",
-      "progression": ["Band assisted", "Negative", "Full"],
-      "variations": ["Rings"]
+      "progression": [
+        "Band assisted",
+        "Negative",
+        "Full"
+      ],
+      "variations": [
+        "Rings"
+      ]
     },
     {
       "name": "Azarian",
@@ -493,8 +944,14 @@
       "weighted": false,
       "rings": true,
       "primaryMuscles": "Back, Shoulders, Biceps, Core",
-      "progression": ["Assisted", "Negative", "Full"],
-      "variations": ["Rings"]
+      "progression": [
+        "Assisted",
+        "Negative",
+        "Full"
+      ],
+      "variations": [
+        "Rings"
+      ]
     },
     {
       "name": "Zanetti",
@@ -504,8 +961,14 @@
       "weighted": false,
       "rings": true,
       "primaryMuscles": "Shoulders, Chest, Core",
-      "progression": ["Assisted", "Negative", "Full"],
-      "variations": ["Rings"]
+      "progression": [
+        "Assisted",
+        "Negative",
+        "Full"
+      ],
+      "variations": [
+        "Rings"
+      ]
     },
     {
       "name": "Nakayama",
@@ -515,8 +978,14 @@
       "weighted": false,
       "rings": true,
       "primaryMuscles": "Shoulders, Core, Back",
-      "progression": ["Assisted", "Negative", "Full"],
-      "variations": ["Rings"]
+      "progression": [
+        "Assisted",
+        "Negative",
+        "Full"
+      ],
+      "variations": [
+        "Rings"
+      ]
     },
     {
       "name": "Stalder press",
@@ -526,8 +995,16 @@
       "weighted": false,
       "rings": true,
       "primaryMuscles": "Shoulders, Core, Hip Flexors",
-      "progression": ["Tuck", "Straddle", "Full"],
-      "variations": ["Floor", "Parallettes", "Rings"]
+      "progression": [
+        "Tuck",
+        "Straddle",
+        "Full"
+      ],
+      "variations": [
+        "Floor",
+        "Parallettes",
+        "Rings"
+      ]
     },
     {
       "name": "Felge",
@@ -537,8 +1014,16 @@
       "weighted": false,
       "rings": true,
       "primaryMuscles": "Shoulders, Core, Back",
-      "progression": ["Assisted", "Full"],
-      "variations": ["Bar", "Rings", "Forward", "Backward"]
+      "progression": [
+        "Assisted",
+        "Full"
+      ],
+      "variations": [
+        "Bar",
+        "Rings",
+        "Forward",
+        "Backward"
+      ]
     },
     {
       "name": "Giant swing",
@@ -548,8 +1033,15 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Full Body",
-      "progression": ["Assisted", "Full"],
-      "variations": ["Bar", "Forward", "Backward"]
+      "progression": [
+        "Assisted",
+        "Full"
+      ],
+      "variations": [
+        "Bar",
+        "Forward",
+        "Backward"
+      ]
     },
     {
       "name": "Kip up",
@@ -559,8 +1051,14 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Core, Hip Flexors, Shoulders",
-      "progression": ["Assisted", "Standard"],
-      "variations": ["Nip up", "No hands"]
+      "progression": [
+        "Assisted",
+        "Standard"
+      ],
+      "variations": [
+        "Nip up",
+        "No hands"
+      ]
     },
     {
       "name": "Backflip",
@@ -570,8 +1068,18 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Legs, Core",
-      "progression": ["Wall assisted", "Trampoline", "Full"],
-      "variations": ["Standing", "Running", "Gainer", "Layout", "Twist"]
+      "progression": [
+        "Wall assisted",
+        "Trampoline",
+        "Full"
+      ],
+      "variations": [
+        "Standing",
+        "Running",
+        "Gainer",
+        "Layout",
+        "Twist"
+      ]
     },
     {
       "name": "Frontflip",
@@ -581,8 +1089,17 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Legs, Core",
-      "progression": ["Wall assisted", "Trampoline", "Full"],
-      "variations": ["Standing", "Running", "Layout", "Twist"]
+      "progression": [
+        "Wall assisted",
+        "Trampoline",
+        "Full"
+      ],
+      "variations": [
+        "Standing",
+        "Running",
+        "Layout",
+        "Twist"
+      ]
     },
     {
       "name": "Side flip",
@@ -592,8 +1109,15 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Legs, Core",
-      "progression": ["Trampoline", "Full"],
-      "variations": ["Standing", "Running", "Aerial"]
+      "progression": [
+        "Trampoline",
+        "Full"
+      ],
+      "variations": [
+        "Standing",
+        "Running",
+        "Aerial"
+      ]
     },
     {
       "name": "Wall flip",
@@ -603,8 +1127,14 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Legs, Core, Shoulders",
-      "progression": ["Standard"],
-      "variations": ["Backflip", "Frontflip", "Side"]
+      "progression": [
+        "Standard"
+      ],
+      "variations": [
+        "Backflip",
+        "Frontflip",
+        "Side"
+      ]
     },
     {
       "name": "Bar spin",
@@ -614,8 +1144,15 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Shoulders, Core, Back",
-      "progression": ["Assisted", "Full"],
-      "variations": ["180", "360", "Flying"]
+      "progression": [
+        "Assisted",
+        "Full"
+      ],
+      "variations": [
+        "180",
+        "360",
+        "Flying"
+      ]
     },
     {
       "name": "Straight arm press",
@@ -625,8 +1162,16 @@
       "weighted": false,
       "rings": true,
       "primaryMuscles": "Shoulders, Core",
-      "progression": ["Tuck", "Straddle", "Full"],
-      "variations": ["Floor", "Parallettes", "Rings"]
+      "progression": [
+        "Tuck",
+        "Straddle",
+        "Full"
+      ],
+      "variations": [
+        "Floor",
+        "Parallettes",
+        "Rings"
+      ]
     },
     {
       "name": "Lever to lever",
@@ -636,8 +1181,14 @@
       "weighted": false,
       "rings": true,
       "primaryMuscles": "Full Body",
-      "progression": ["Assisted", "Full"],
-      "variations": ["Front to back", "Back to front"]
+      "progression": [
+        "Assisted",
+        "Full"
+      ],
+      "variations": [
+        "Front to back",
+        "Back to front"
+      ]
     },
     {
       "name": "Typewriter push up",
@@ -647,8 +1198,14 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Chest, Shoulders, Triceps",
-      "progression": ["Standard", "Weighted"],
-      "variations": ["Wide", "Decline"]
+      "progression": [
+        "Standard",
+        "Weighted"
+      ],
+      "variations": [
+        "Wide",
+        "Decline"
+      ]
     },
     {
       "name": "Clapping push up",
@@ -658,8 +1215,15 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Chest, Shoulders, Triceps",
-      "progression": ["Single clap", "Double clap", "Triple clap"],
-      "variations": ["Behind back", "Superman clap"]
+      "progression": [
+        "Single clap",
+        "Double clap",
+        "Triple clap"
+      ],
+      "variations": [
+        "Behind back",
+        "Superman clap"
+      ]
     },
     {
       "name": "Burpee",
@@ -669,8 +1233,16 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Full Body",
-      "progression": ["Standard", "Weighted"],
-      "variations": ["Box jump", "Pull up", "Muscle up", "One arm"]
+      "progression": [
+        "Standard",
+        "Weighted"
+      ],
+      "variations": [
+        "Box jump",
+        "Pull up",
+        "Muscle up",
+        "One arm"
+      ]
     },
     {
       "name": "Mountain climber",
@@ -680,8 +1252,14 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Core, Hip Flexors, Shoulders",
-      "progression": ["Standard", "Fast"],
-      "variations": ["Cross body", "Slider"]
+      "progression": [
+        "Standard",
+        "Fast"
+      ],
+      "variations": [
+        "Cross body",
+        "Slider"
+      ]
     },
     {
       "name": "Bear crawl",
@@ -691,8 +1269,14 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Shoulders, Core, Quads",
-      "progression": ["Forward", "Backward"],
-      "variations": ["Weighted", "Elevated"]
+      "progression": [
+        "Forward",
+        "Backward"
+      ],
+      "variations": [
+        "Weighted",
+        "Elevated"
+      ]
     },
     {
       "name": "Crab walk",
@@ -702,8 +1286,14 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Triceps, Shoulders, Glutes, Core",
-      "progression": ["Forward", "Backward", "Sideways"],
-      "variations": ["Elevated"]
+      "progression": [
+        "Forward",
+        "Backward",
+        "Sideways"
+      ],
+      "variations": [
+        "Elevated"
+      ]
     },
     {
       "name": "Frog stand",
@@ -713,8 +1303,13 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Shoulders, Core, Wrists",
-      "progression": ["Standard", "Elevated"],
-      "variations": ["One arm"]
+      "progression": [
+        "Standard",
+        "Elevated"
+      ],
+      "variations": [
+        "One arm"
+      ]
     },
     {
       "name": "Pseudo planche push up",
@@ -724,8 +1319,15 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Chest, Shoulders, Triceps",
-      "progression": ["Standard", "Weighted"],
-      "variations": ["Wide", "Narrow", "Decline"]
+      "progression": [
+        "Standard",
+        "Weighted"
+      ],
+      "variations": [
+        "Wide",
+        "Narrow",
+        "Decline"
+      ]
     },
     {
       "name": "Pike hold",
@@ -735,8 +1337,13 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Shoulders, Core",
-      "progression": ["Standard"],
-      "variations": ["Elevated", "Straddle"]
+      "progression": [
+        "Standard"
+      ],
+      "variations": [
+        "Elevated",
+        "Straddle"
+      ]
     },
     {
       "name": "Wall walk",
@@ -746,8 +1353,13 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Shoulders, Core",
-      "progression": ["Standard"],
-      "variations": ["Weighted", "One arm"]
+      "progression": [
+        "Standard"
+      ],
+      "variations": [
+        "Weighted",
+        "One arm"
+      ]
     },
     {
       "name": "Rope climb",
@@ -757,8 +1369,15 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Back, Biceps, Forearms, Core",
-      "progression": ["L-sit", "Standard"],
-      "variations": ["Legless", "One arm", "Weighted"]
+      "progression": [
+        "L-sit",
+        "Standard"
+      ],
+      "variations": [
+        "Legless",
+        "One arm",
+        "Weighted"
+      ]
     },
     {
       "name": "Pegboard",
@@ -768,10 +1387,15 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Back, Biceps, Forearms",
-      "progression": ["Standard"],
-      "variations": ["Legless", "L-sit", "Weighted"]
+      "progression": [
+        "Standard"
+      ],
+      "variations": [
+        "Legless",
+        "L-sit",
+        "Weighted"
+      ]
     },
-
     {
       "name": "Downward Dog",
       "category": "Yoga",
@@ -780,8 +1404,16 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Hamstrings, Calves, Shoulders",
-      "progression": ["Puppy Pose", "Dolphin Pose", "Full"],
-      "variations": ["One Leg", "Bent Knee", "Three Legged"]
+      "progression": [
+        "Puppy Pose",
+        "Dolphin Pose",
+        "Full"
+      ],
+      "variations": [
+        "One Leg",
+        "Bent Knee",
+        "Three Legged"
+      ]
     },
     {
       "name": "Upward Dog",
@@ -791,8 +1423,14 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Chest, Shoulders, Back",
-      "progression": ["Cobra", "Baby Cobra", "Full"],
-      "variations": ["One Leg"]
+      "progression": [
+        "Cobra",
+        "Baby Cobra",
+        "Full"
+      ],
+      "variations": [
+        "One Leg"
+      ]
     },
     {
       "name": "Warrior I",
@@ -802,8 +1440,16 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Quads, Glutes, Shoulders",
-      "progression": ["Low Lunge", "Crescent Lunge", "Full"],
-      "variations": ["Arms Overhead", "Hands at Heart", "Humble"]
+      "progression": [
+        "Low Lunge",
+        "Crescent Lunge",
+        "Full"
+      ],
+      "variations": [
+        "Arms Overhead",
+        "Hands at Heart",
+        "Humble"
+      ]
     },
     {
       "name": "Warrior II",
@@ -813,8 +1459,15 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Quads, Glutes, Shoulders",
-      "progression": ["Wide Stance", "Full"],
-      "variations": ["Extended", "Reverse", "Peaceful"]
+      "progression": [
+        "Wide Stance",
+        "Full"
+      ],
+      "variations": [
+        "Extended",
+        "Reverse",
+        "Peaceful"
+      ]
     },
     {
       "name": "Warrior III",
@@ -824,8 +1477,16 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Glutes, Hamstrings, Core",
-      "progression": ["Kickstand", "Full"],
-      "variations": ["Arms Forward", "Arms Back", "Arms Wide", "Half Moon transition"]
+      "progression": [
+        "Kickstand",
+        "Full"
+      ],
+      "variations": [
+        "Arms Forward",
+        "Arms Back",
+        "Arms Wide",
+        "Half Moon transition"
+      ]
     },
     {
       "name": "Triangle Pose",
@@ -835,8 +1496,16 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Hamstrings, Hips, Core",
-      "progression": ["Half", "Full", "Extended"],
-      "variations": ["Revolved", "Bound", "Twisted"]
+      "progression": [
+        "Half",
+        "Full",
+        "Extended"
+      ],
+      "variations": [
+        "Revolved",
+        "Bound",
+        "Twisted"
+      ]
     },
     {
       "name": "Chair Pose",
@@ -846,8 +1515,15 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Quads, Glutes, Core",
-      "progression": ["Half", "Full"],
-      "variations": ["Twisted", "One Leg", "Prayer twist"]
+      "progression": [
+        "Half",
+        "Full"
+      ],
+      "variations": [
+        "Twisted",
+        "One Leg",
+        "Prayer twist"
+      ]
     },
     {
       "name": "Tree Pose",
@@ -857,8 +1533,18 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Glutes, Core, Calves",
-      "progression": ["Kickstand", "Ankle", "Calf", "Thigh"],
-      "variations": ["Arms at Heart", "Arms Overhead", "Arms Wide", "Swaying"]
+      "progression": [
+        "Kickstand",
+        "Ankle",
+        "Calf",
+        "Thigh"
+      ],
+      "variations": [
+        "Arms at Heart",
+        "Arms Overhead",
+        "Arms Wide",
+        "Swaying"
+      ]
     },
     {
       "name": "Eagle Pose",
@@ -868,8 +1554,15 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Glutes, Shoulders, Core",
-      "progression": ["Half Wrap", "Full"],
-      "variations": ["Standing", "Seated", "Reclined"]
+      "progression": [
+        "Half Wrap",
+        "Full"
+      ],
+      "variations": [
+        "Standing",
+        "Seated",
+        "Reclined"
+      ]
     },
     {
       "name": "Crow Pose",
@@ -879,8 +1572,16 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Shoulders, Core, Wrists",
-      "progression": ["Frogger", "Toes Down", "Full"],
-      "variations": ["Side Crow", "One Leg", "Flying crow"]
+      "progression": [
+        "Frogger",
+        "Toes Down",
+        "Full"
+      ],
+      "variations": [
+        "Side Crow",
+        "One Leg",
+        "Flying crow"
+      ]
     },
     {
       "name": "Headstand",
@@ -890,8 +1591,19 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Shoulders, Core, Back",
-      "progression": ["Tripod", "Supported", "Full"],
-      "variations": ["Tuck", "Straddle", "Pike", "Lotus", "Scorpion", "One Leg"]
+      "progression": [
+        "Tripod",
+        "Supported",
+        "Full"
+      ],
+      "variations": [
+        "Tuck",
+        "Straddle",
+        "Pike",
+        "Lotus",
+        "Scorpion",
+        "One Leg"
+      ]
     },
     {
       "name": "Forearm Stand",
@@ -901,8 +1613,17 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Shoulders, Core",
-      "progression": ["Wall", "Scorpion Prep", "Full"],
-      "variations": ["Tuck", "Straddle", "Scorpion", "Hollowback"]
+      "progression": [
+        "Wall",
+        "Scorpion Prep",
+        "Full"
+      ],
+      "variations": [
+        "Tuck",
+        "Straddle",
+        "Scorpion",
+        "Hollowback"
+      ]
     },
     {
       "name": "Shoulder Stand",
@@ -912,8 +1633,15 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Core, Shoulders",
-      "progression": ["Supported", "Full"],
-      "variations": ["Plow", "Lotus", "Legs wide"]
+      "progression": [
+        "Supported",
+        "Full"
+      ],
+      "variations": [
+        "Plow",
+        "Lotus",
+        "Legs wide"
+      ]
     },
     {
       "name": "Bridge Pose",
@@ -923,8 +1651,15 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Glutes, Back, Core",
-      "progression": ["Supported", "Full"],
-      "variations": ["One Leg", "Wheel Prep", "Dynamic"]
+      "progression": [
+        "Supported",
+        "Full"
+      ],
+      "variations": [
+        "One Leg",
+        "Wheel Prep",
+        "Dynamic"
+      ]
     },
     {
       "name": "Wheel Pose",
@@ -934,8 +1669,18 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Back, Shoulders, Glutes, Core",
-      "progression": ["Bridge", "Half Wheel", "Full"],
-      "variations": ["One Leg", "One Arm", "Scorpion", "Walking", "Drop back"]
+      "progression": [
+        "Bridge",
+        "Half Wheel",
+        "Full"
+      ],
+      "variations": [
+        "One Leg",
+        "One Arm",
+        "Scorpion",
+        "Walking",
+        "Drop back"
+      ]
     },
     {
       "name": "Cobra Pose",
@@ -945,8 +1690,14 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Back, Chest",
-      "progression": ["Baby Cobra", "Full"],
-      "variations": ["Upward Dog", "Sphinx"]
+      "progression": [
+        "Baby Cobra",
+        "Full"
+      ],
+      "variations": [
+        "Upward Dog",
+        "Sphinx"
+      ]
     },
     {
       "name": "Locust Pose",
@@ -956,8 +1707,16 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Back, Glutes",
-      "progression": ["Arms Back", "Arms Forward", "Full"],
-      "variations": ["One Leg", "Superman", "Half"]
+      "progression": [
+        "Arms Back",
+        "Arms Forward",
+        "Full"
+      ],
+      "variations": [
+        "One Leg",
+        "Superman",
+        "Half"
+      ]
     },
     {
       "name": "Bow Pose",
@@ -967,8 +1726,15 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Back, Shoulders, Quads",
-      "progression": ["Half", "Full"],
-      "variations": ["One Leg", "Side", "Rocking"]
+      "progression": [
+        "Half",
+        "Full"
+      ],
+      "variations": [
+        "One Leg",
+        "Side",
+        "Rocking"
+      ]
     },
     {
       "name": "Pigeon Pose",
@@ -978,8 +1744,16 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Hips, Glutes",
-      "progression": ["Supported", "Sleeping", "Full"],
-      "variations": ["King Pigeon", "One Legged King", "Mermaid"]
+      "progression": [
+        "Supported",
+        "Sleeping",
+        "Full"
+      ],
+      "variations": [
+        "King Pigeon",
+        "One Legged King",
+        "Mermaid"
+      ]
     },
     {
       "name": "Lotus Pose",
@@ -989,8 +1763,16 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Hips, Knees",
-      "progression": ["Easy Seat", "Half Lotus", "Full"],
-      "variations": ["Bound", "Elevated", "Floating"]
+      "progression": [
+        "Easy Seat",
+        "Half Lotus",
+        "Full"
+      ],
+      "variations": [
+        "Bound",
+        "Elevated",
+        "Floating"
+      ]
     },
     {
       "name": "Seated Forward Fold",
@@ -1000,8 +1782,15 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Hamstrings, Back",
-      "progression": ["Half", "Full"],
-      "variations": ["Wide Leg", "One Leg", "Head to knee"]
+      "progression": [
+        "Half",
+        "Full"
+      ],
+      "variations": [
+        "Wide Leg",
+        "One Leg",
+        "Head to knee"
+      ]
     },
     {
       "name": "Standing Forward Fold",
@@ -1011,8 +1800,15 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Hamstrings, Back",
-      "progression": ["Half", "Full"],
-      "variations": ["Wide Leg", "Ragdoll", "Gorilla"]
+      "progression": [
+        "Half",
+        "Full"
+      ],
+      "variations": [
+        "Wide Leg",
+        "Ragdoll",
+        "Gorilla"
+      ]
     },
     {
       "name": "Camel Pose",
@@ -1022,8 +1818,15 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Back, Chest, Hip Flexors",
-      "progression": ["Hands on Hips", "Blocks", "Full"],
-      "variations": ["One Arm", "Kapotasana"]
+      "progression": [
+        "Hands on Hips",
+        "Blocks",
+        "Full"
+      ],
+      "variations": [
+        "One Arm",
+        "Kapotasana"
+      ]
     },
     {
       "name": "Fish Pose",
@@ -1033,8 +1836,14 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Chest, Back, Neck",
-      "progression": ["Supported", "Full"],
-      "variations": ["Lotus", "Bound"]
+      "progression": [
+        "Supported",
+        "Full"
+      ],
+      "variations": [
+        "Lotus",
+        "Bound"
+      ]
     },
     {
       "name": "Boat Pose",
@@ -1044,8 +1853,16 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Core, Hip Flexors",
-      "progression": ["Bent Knee", "Half", "Full"],
-      "variations": ["Low Boat", "Twisted", "Floating"]
+      "progression": [
+        "Bent Knee",
+        "Half",
+        "Full"
+      ],
+      "variations": [
+        "Low Boat",
+        "Twisted",
+        "Floating"
+      ]
     },
     {
       "name": "Side Plank",
@@ -1055,8 +1872,17 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Core, Shoulders",
-      "progression": ["Knee Down", "Half", "Full"],
-      "variations": ["Tree", "Top Leg Raised", "Wild Thing", "Forearm"]
+      "progression": [
+        "Knee Down",
+        "Half",
+        "Full"
+      ],
+      "variations": [
+        "Tree",
+        "Top Leg Raised",
+        "Wild Thing",
+        "Forearm"
+      ]
     },
     {
       "name": "Yoga Plank",
@@ -1066,8 +1892,16 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Core, Shoulders",
-      "progression": ["Knee", "Forearm", "High"],
-      "variations": ["Side", "Reverse", "Dolphin"]
+      "progression": [
+        "Knee",
+        "Forearm",
+        "High"
+      ],
+      "variations": [
+        "Side",
+        "Reverse",
+        "Dolphin"
+      ]
     },
     {
       "name": "Chaturanga",
@@ -1077,8 +1911,15 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Chest, Triceps, Core",
-      "progression": ["Knee Down", "Full"],
-      "variations": ["Hover", "Slow Lower", "One Leg"]
+      "progression": [
+        "Knee Down",
+        "Full"
+      ],
+      "variations": [
+        "Hover",
+        "Slow Lower",
+        "One Leg"
+      ]
     },
     {
       "name": "Cat Cow",
@@ -1088,8 +1929,15 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Back, Core",
-      "progression": ["Seated", "Tabletop"],
-      "variations": ["Flow", "Isolated", "Extended"]
+      "progression": [
+        "Seated",
+        "Tabletop"
+      ],
+      "variations": [
+        "Flow",
+        "Isolated",
+        "Extended"
+      ]
     },
     {
       "name": "Child's Pose",
@@ -1099,8 +1947,15 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Back, Hips",
-      "progression": ["Narrow", "Wide"],
-      "variations": ["Extended Arms", "Side Stretch", "Thread the needle"]
+      "progression": [
+        "Narrow",
+        "Wide"
+      ],
+      "variations": [
+        "Extended Arms",
+        "Side Stretch",
+        "Thread the needle"
+      ]
     },
     {
       "name": "Corpse Pose",
@@ -1110,8 +1965,14 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Full Body",
-      "progression": ["Supported", "Full"],
-      "variations": ["Legs Up Wall", "Side lying"]
+      "progression": [
+        "Supported",
+        "Full"
+      ],
+      "variations": [
+        "Legs Up Wall",
+        "Side lying"
+      ]
     },
     {
       "name": "Half Moon Pose",
@@ -1121,8 +1982,15 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Glutes, Core, Hamstrings",
-      "progression": ["Block", "Full"],
-      "variations": ["Revolved", "Sugarcane", "Chapasana"]
+      "progression": [
+        "Block",
+        "Full"
+      ],
+      "variations": [
+        "Revolved",
+        "Sugarcane",
+        "Chapasana"
+      ]
     },
     {
       "name": "Dancer Pose",
@@ -1132,8 +2000,15 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Quads, Back, Shoulders",
-      "progression": ["Kickstand", "Half", "Full"],
-      "variations": ["King Dancer", "Natarajasana"]
+      "progression": [
+        "Kickstand",
+        "Half",
+        "Full"
+      ],
+      "variations": [
+        "King Dancer",
+        "Natarajasana"
+      ]
     },
     {
       "name": "Standing Split",
@@ -1143,8 +2018,14 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Hamstrings, Hips",
-      "progression": ["Half", "Full"],
-      "variations": ["Wall Supported", "Handstand transition"]
+      "progression": [
+        "Half",
+        "Full"
+      ],
+      "variations": [
+        "Wall Supported",
+        "Handstand transition"
+      ]
     },
     {
       "name": "Compass Pose",
@@ -1154,8 +2035,15 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Hamstrings, Shoulders, Core",
-      "progression": ["Seated Side Stretch", "Half", "Full"],
-      "variations": ["Bound", "Flying"]
+      "progression": [
+        "Seated Side Stretch",
+        "Half",
+        "Full"
+      ],
+      "variations": [
+        "Bound",
+        "Flying"
+      ]
     },
     {
       "name": "Firefly Pose",
@@ -1165,8 +2053,15 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Core, Shoulders, Wrists",
-      "progression": ["Tuck", "Half", "Full"],
-      "variations": ["Floating", "Straight legs"]
+      "progression": [
+        "Tuck",
+        "Half",
+        "Full"
+      ],
+      "variations": [
+        "Floating",
+        "Straight legs"
+      ]
     },
     {
       "name": "Eight Angle Pose",
@@ -1176,8 +2071,14 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Core, Shoulders, Wrists",
-      "progression": ["Prep", "Full"],
-      "variations": ["Flying", "Transitional"]
+      "progression": [
+        "Prep",
+        "Full"
+      ],
+      "variations": [
+        "Flying",
+        "Transitional"
+      ]
     },
     {
       "name": "Peacock Pose",
@@ -1187,8 +2088,15 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Wrists, Core, Back",
-      "progression": ["Wrist Prep", "Lotus Peacock", "Full"],
-      "variations": ["One Leg", "Forearm"]
+      "progression": [
+        "Wrist Prep",
+        "Lotus Peacock",
+        "Full"
+      ],
+      "variations": [
+        "One Leg",
+        "Forearm"
+      ]
     },
     {
       "name": "Yoga Handstand",
@@ -1198,8 +2106,17 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Shoulders, Core",
-      "progression": ["Wall", "L-Shape", "Full"],
-      "variations": ["Scorpion", "Lotus", "Straddle", "Press"]
+      "progression": [
+        "Wall",
+        "L-Shape",
+        "Full"
+      ],
+      "variations": [
+        "Scorpion",
+        "Lotus",
+        "Straddle",
+        "Press"
+      ]
     },
     {
       "name": "Splits",
@@ -1209,8 +2126,16 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Hamstrings, Hip Flexors",
-      "progression": ["Half", "Wall Supported", "Full"],
-      "variations": ["Oversplit", "Standing", "Middle"]
+      "progression": [
+        "Half",
+        "Wall Supported",
+        "Full"
+      ],
+      "variations": [
+        "Oversplit",
+        "Standing",
+        "Middle"
+      ]
     },
     {
       "name": "Frog Pose",
@@ -1220,8 +2145,14 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Hips, Groin",
-      "progression": ["Half", "Full"],
-      "variations": ["Deep Frog", "Mandukasana"]
+      "progression": [
+        "Half",
+        "Full"
+      ],
+      "variations": [
+        "Deep Frog",
+        "Mandukasana"
+      ]
     },
     {
       "name": "Lizard Pose",
@@ -1231,8 +2162,16 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Hips, Hamstrings, Quads",
-      "progression": ["High", "Low", "Full"],
-      "variations": ["Twisted", "Bound", "Flying"]
+      "progression": [
+        "High",
+        "Low",
+        "Full"
+      ],
+      "variations": [
+        "Twisted",
+        "Bound",
+        "Flying"
+      ]
     },
     {
       "name": "Malasana",
@@ -1242,8 +2181,15 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Hips, Glutes",
-      "progression": ["Supported", "Full"],
-      "variations": ["Twisted", "Arms Bound", "Prayer"]
+      "progression": [
+        "Supported",
+        "Full"
+      ],
+      "variations": [
+        "Twisted",
+        "Arms Bound",
+        "Prayer"
+      ]
     },
     {
       "name": "Crescent Lunge",
@@ -1253,8 +2199,15 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Quads, Glutes, Hip Flexors",
-      "progression": ["Low", "High"],
-      "variations": ["Twisted", "Arms Overhead", "Hands to floor"]
+      "progression": [
+        "Low",
+        "High"
+      ],
+      "variations": [
+        "Twisted",
+        "Arms Overhead",
+        "Hands to floor"
+      ]
     },
     {
       "name": "Gate Pose",
@@ -1264,8 +2217,14 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Core, Hips",
-      "progression": ["Half", "Full"],
-      "variations": ["Extended", "Side bend"]
+      "progression": [
+        "Half",
+        "Full"
+      ],
+      "variations": [
+        "Extended",
+        "Side bend"
+      ]
     },
     {
       "name": "Reclined Twist",
@@ -1275,8 +2234,15 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Back, Core, Hips",
-      "progression": ["Bent Knee", "Full"],
-      "variations": ["Eagle Legs", "Straight Leg", "Revolved"]
+      "progression": [
+        "Bent Knee",
+        "Full"
+      ],
+      "variations": [
+        "Eagle Legs",
+        "Straight Leg",
+        "Revolved"
+      ]
     },
     {
       "name": "Happy Baby",
@@ -1286,8 +2252,14 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Hips, Groin",
-      "progression": ["One Leg", "Full"],
-      "variations": ["Extended", "Rocking"]
+      "progression": [
+        "One Leg",
+        "Full"
+      ],
+      "variations": [
+        "Extended",
+        "Rocking"
+      ]
     },
     {
       "name": "Thread the Needle",
@@ -1297,8 +2269,14 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Shoulders, Back",
-      "progression": ["Half", "Full"],
-      "variations": ["Extended", "Dynamic"]
+      "progression": [
+        "Half",
+        "Full"
+      ],
+      "variations": [
+        "Extended",
+        "Dynamic"
+      ]
     },
     {
       "name": "Puppy Pose",
@@ -1308,8 +2286,15 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Shoulders, Back",
-      "progression": ["Half", "Full"],
-      "variations": ["Extended", "Twisted", "Melting heart"]
+      "progression": [
+        "Half",
+        "Full"
+      ],
+      "variations": [
+        "Extended",
+        "Twisted",
+        "Melting heart"
+      ]
     },
     {
       "name": "Sphinx Pose",
@@ -1319,8 +2304,14 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Back, Core",
-      "progression": ["Half", "Full"],
-      "variations": ["Seal", "One arm"]
+      "progression": [
+        "Half",
+        "Full"
+      ],
+      "variations": [
+        "Seal",
+        "One arm"
+      ]
     },
     {
       "name": "Side Angle Pose",
@@ -1330,8 +2321,16 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Quads, Hips, Core",
-      "progression": ["Forearm on Thigh", "Full"],
-      "variations": ["Extended", "Bound", "Revolved", "Bird of paradise"]
+      "progression": [
+        "Forearm on Thigh",
+        "Full"
+      ],
+      "variations": [
+        "Extended",
+        "Bound",
+        "Revolved",
+        "Bird of paradise"
+      ]
     },
     {
       "name": "Revolved Chair",
@@ -1341,8 +2340,14 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Quads, Core",
-      "progression": ["Half Twist", "Full"],
-      "variations": ["Bound", "Prayer twist"]
+      "progression": [
+        "Half Twist",
+        "Full"
+      ],
+      "variations": [
+        "Bound",
+        "Prayer twist"
+      ]
     },
     {
       "name": "Garland Pose",
@@ -1352,8 +2357,15 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Hips, Glutes",
-      "progression": ["Elevated Heels", "Full"],
-      "variations": ["Twisted", "Arms Bound", "Tiptoe"]
+      "progression": [
+        "Elevated Heels",
+        "Full"
+      ],
+      "variations": [
+        "Twisted",
+        "Arms Bound",
+        "Tiptoe"
+      ]
     },
     {
       "name": "Mountain Pose",
@@ -1363,8 +2375,14 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Full Body",
-      "progression": ["Standard"],
-      "variations": ["Arms Overhead", "Prayer", "Side bend"]
+      "progression": [
+        "Standard"
+      ],
+      "variations": [
+        "Arms Overhead",
+        "Prayer",
+        "Side bend"
+      ]
     },
     {
       "name": "Standing Backbend",
@@ -1374,8 +2392,14 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Back, Core",
-      "progression": ["Supported", "Full"],
-      "variations": ["Arms overhead", "Hands at heart"]
+      "progression": [
+        "Supported",
+        "Full"
+      ],
+      "variations": [
+        "Arms overhead",
+        "Hands at heart"
+      ]
     },
     {
       "name": "Sun Salutation A",
@@ -1385,8 +2409,13 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Full Body",
-      "progression": ["Modified", "Full"],
-      "variations": ["With variations"]
+      "progression": [
+        "Modified",
+        "Full"
+      ],
+      "variations": [
+        "With variations"
+      ]
     },
     {
       "name": "Sun Salutation B",
@@ -1396,8 +2425,13 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Full Body",
-      "progression": ["Modified", "Full"],
-      "variations": ["With variations"]
+      "progression": [
+        "Modified",
+        "Full"
+      ],
+      "variations": [
+        "With variations"
+      ]
     },
     {
       "name": "Moon Salutation",
@@ -1407,8 +2441,13 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Full Body",
-      "progression": ["Modified", "Full"],
-      "variations": ["With variations"]
+      "progression": [
+        "Modified",
+        "Full"
+      ],
+      "variations": [
+        "With variations"
+      ]
     },
     {
       "name": "Cow Face Pose",
@@ -1418,8 +2457,15 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Shoulders, Hips",
-      "progression": ["Arms only", "Legs only", "Full"],
-      "variations": ["Forward fold", "Twist"]
+      "progression": [
+        "Arms only",
+        "Legs only",
+        "Full"
+      ],
+      "variations": [
+        "Forward fold",
+        "Twist"
+      ]
     },
     {
       "name": "Hero Pose",
@@ -1429,8 +2475,14 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Quads, Knees",
-      "progression": ["Supported", "Full"],
-      "variations": ["Reclined", "Arms overhead"]
+      "progression": [
+        "Supported",
+        "Full"
+      ],
+      "variations": [
+        "Reclined",
+        "Arms overhead"
+      ]
     },
     {
       "name": "Thunderbolt Pose",
@@ -1440,8 +2492,13 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Quads, Ankles",
-      "progression": ["Standard"],
-      "variations": ["Toe stretch", "Ankle stretch"]
+      "progression": [
+        "Standard"
+      ],
+      "variations": [
+        "Toe stretch",
+        "Ankle stretch"
+      ]
     },
     {
       "name": "Staff Pose",
@@ -1451,8 +2508,13 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Core, Hip Flexors",
-      "progression": ["Standard"],
-      "variations": ["Arms overhead", "Twist"]
+      "progression": [
+        "Standard"
+      ],
+      "variations": [
+        "Arms overhead",
+        "Twist"
+      ]
     },
     {
       "name": "Bound Angle Pose",
@@ -1462,8 +2524,14 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Hips, Groin",
-      "progression": ["Supported", "Full"],
-      "variations": ["Reclined", "Forward fold"]
+      "progression": [
+        "Supported",
+        "Full"
+      ],
+      "variations": [
+        "Reclined",
+        "Forward fold"
+      ]
     },
     {
       "name": "Wide Legged Forward Fold",
@@ -1473,8 +2541,15 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Hamstrings, Hips",
-      "progression": ["Half", "Full"],
-      "variations": ["Hands clasped", "Twist", "Head to floor"]
+      "progression": [
+        "Half",
+        "Full"
+      ],
+      "variations": [
+        "Hands clasped",
+        "Twist",
+        "Head to floor"
+      ]
     },
     {
       "name": "Pyramid Pose",
@@ -1484,8 +2559,14 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Hamstrings, Core",
-      "progression": ["Blocks", "Full"],
-      "variations": ["Revolved", "Hands clasped"]
+      "progression": [
+        "Blocks",
+        "Full"
+      ],
+      "variations": [
+        "Revolved",
+        "Hands clasped"
+      ]
     },
     {
       "name": "Revolved Triangle",
@@ -1495,8 +2576,13 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Hamstrings, Core, Hips",
-      "progression": ["Block", "Full"],
-      "variations": ["Bound"]
+      "progression": [
+        "Block",
+        "Full"
+      ],
+      "variations": [
+        "Bound"
+      ]
     },
     {
       "name": "Extended Hand to Big Toe",
@@ -1506,8 +2592,16 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Hamstrings, Core, Hips",
-      "progression": ["Kickstand", "Bent knee", "Full"],
-      "variations": ["Front", "Side", "Revolved"]
+      "progression": [
+        "Kickstand",
+        "Bent knee",
+        "Full"
+      ],
+      "variations": [
+        "Front",
+        "Side",
+        "Revolved"
+      ]
     },
     {
       "name": "Toe Stand",
@@ -1517,8 +2611,14 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Calves, Core",
-      "progression": ["Supported", "Full"],
-      "variations": ["Arms overhead", "Prayer"]
+      "progression": [
+        "Supported",
+        "Full"
+      ],
+      "variations": [
+        "Arms overhead",
+        "Prayer"
+      ]
     },
     {
       "name": "Monkey Pose",
@@ -1528,8 +2628,14 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Hamstrings, Hip Flexors",
-      "progression": ["Half", "Full"],
-      "variations": ["Arms overhead", "Twisted"]
+      "progression": [
+        "Half",
+        "Full"
+      ],
+      "variations": [
+        "Arms overhead",
+        "Twisted"
+      ]
     },
     {
       "name": "Flying Pigeon",
@@ -1539,8 +2645,13 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Core, Shoulders, Hips",
-      "progression": ["Prep", "Full"],
-      "variations": ["Extended"]
+      "progression": [
+        "Prep",
+        "Full"
+      ],
+      "variations": [
+        "Extended"
+      ]
     },
     {
       "name": "Grasshopper Pose",
@@ -1550,8 +2661,13 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Core, Shoulders, Wrists",
-      "progression": ["Prep", "Full"],
-      "variations": ["Extended"]
+      "progression": [
+        "Prep",
+        "Full"
+      ],
+      "variations": [
+        "Extended"
+      ]
     },
     {
       "name": "Dragonfly Pose",
@@ -1561,8 +2677,13 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Core, Shoulders, Wrists",
-      "progression": ["Prep", "Full"],
-      "variations": ["Extended"]
+      "progression": [
+        "Prep",
+        "Full"
+      ],
+      "variations": [
+        "Extended"
+      ]
     },
     {
       "name": "Eka Pada Koundinyasana I",
@@ -1572,8 +2693,13 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Core, Shoulders, Wrists",
-      "progression": ["Prep", "Full"],
-      "variations": ["Transitional"]
+      "progression": [
+        "Prep",
+        "Full"
+      ],
+      "variations": [
+        "Transitional"
+      ]
     },
     {
       "name": "Eka Pada Koundinyasana II",
@@ -1583,8 +2709,13 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Core, Shoulders, Wrists",
-      "progression": ["Prep", "Full"],
-      "variations": ["Transitional"]
+      "progression": [
+        "Prep",
+        "Full"
+      ],
+      "variations": [
+        "Transitional"
+      ]
     },
     {
       "name": "Astavakrasana",
@@ -1594,8 +2725,13 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Core, Shoulders, Wrists",
-      "progression": ["Prep", "Full"],
-      "variations": ["Extended"]
+      "progression": [
+        "Prep",
+        "Full"
+      ],
+      "variations": [
+        "Extended"
+      ]
     },
     {
       "name": "Scale Pose",
@@ -1605,8 +2741,13 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Core, Shoulders, Wrists",
-      "progression": ["Tuck", "Full"],
-      "variations": ["Lotus"]
+      "progression": [
+        "Tuck",
+        "Full"
+      ],
+      "variations": [
+        "Lotus"
+      ]
     },
     {
       "name": "Pendant Pose",
@@ -1616,8 +2757,13 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Core, Shoulders",
-      "progression": ["Tuck", "Full"],
-      "variations": ["Straight legs"]
+      "progression": [
+        "Tuck",
+        "Full"
+      ],
+      "variations": [
+        "Straight legs"
+      ]
     },
     {
       "name": "Shoulder Pressing Pose",
@@ -1627,8 +2773,13 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Shoulders, Core, Hips",
-      "progression": ["Prep", "Full"],
-      "variations": ["Extended"]
+      "progression": [
+        "Prep",
+        "Full"
+      ],
+      "variations": [
+        "Extended"
+      ]
     },
     {
       "name": "Tortoise Pose",
@@ -1638,8 +2789,13 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Hamstrings, Hips, Shoulders",
-      "progression": ["Half", "Full"],
-      "variations": ["Sleeping tortoise"]
+      "progression": [
+        "Half",
+        "Full"
+      ],
+      "variations": [
+        "Sleeping tortoise"
+      ]
     },
     {
       "name": "Yoga Nidrasana",
@@ -1649,8 +2805,13 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Hips, Hamstrings",
-      "progression": ["Prep", "Full"],
-      "variations": ["One leg"]
+      "progression": [
+        "Prep",
+        "Full"
+      ],
+      "variations": [
+        "One leg"
+      ]
     },
     {
       "name": "Embryo Pose",
@@ -1660,8 +2821,13 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Core, Back",
-      "progression": ["Supported", "Full"],
-      "variations": ["Rolling"]
+      "progression": [
+        "Supported",
+        "Full"
+      ],
+      "variations": [
+        "Rolling"
+      ]
     },
     {
       "name": "Plow Pose",
@@ -1671,8 +2837,14 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Back, Core, Hamstrings",
-      "progression": ["Supported", "Full"],
-      "variations": ["Knees to ears", "Legs wide"]
+      "progression": [
+        "Supported",
+        "Full"
+      ],
+      "variations": [
+        "Knees to ears",
+        "Legs wide"
+      ]
     },
     {
       "name": "Ear Pressure Pose",
@@ -1682,8 +2854,13 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Back, Core",
-      "progression": ["Supported", "Full"],
-      "variations": ["Knees bent"]
+      "progression": [
+        "Supported",
+        "Full"
+      ],
+      "variations": [
+        "Knees bent"
+      ]
     },
     {
       "name": "Legs Up the Wall",
@@ -1693,8 +2870,14 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Hamstrings, Back",
-      "progression": ["Supported", "Full"],
-      "variations": ["Wide legs", "Bound angle"]
+      "progression": [
+        "Supported",
+        "Full"
+      ],
+      "variations": [
+        "Wide legs",
+        "Bound angle"
+      ]
     },
     {
       "name": "Supported Headstand",
@@ -1704,8 +2887,14 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Shoulders, Core",
-      "progression": ["Wall", "Full"],
-      "variations": ["Tripod", "Bound"]
+      "progression": [
+        "Wall",
+        "Full"
+      ],
+      "variations": [
+        "Tripod",
+        "Bound"
+      ]
     },
     {
       "name": "Feathered Peacock",
@@ -1715,8 +2904,13 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Shoulders, Core",
-      "progression": ["Wall", "Full"],
-      "variations": ["Scorpion"]
+      "progression": [
+        "Wall",
+        "Full"
+      ],
+      "variations": [
+        "Scorpion"
+      ]
     },
     {
       "name": "King Pigeon",
@@ -1726,8 +2920,13 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Hips, Back, Shoulders",
-      "progression": ["Prep", "Full"],
-      "variations": ["One arm overhead"]
+      "progression": [
+        "Prep",
+        "Full"
+      ],
+      "variations": [
+        "One arm overhead"
+      ]
     },
     {
       "name": "Mermaid Pose",
@@ -1737,8 +2936,13 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Hips, Back, Shoulders",
-      "progression": ["Prep", "Full"],
-      "variations": ["One arm overhead"]
+      "progression": [
+        "Prep",
+        "Full"
+      ],
+      "variations": [
+        "One arm overhead"
+      ]
     },
     {
       "name": "Wild Thing",
@@ -1748,8 +2952,13 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Shoulders, Chest, Core",
-      "progression": ["Side plank", "Full"],
-      "variations": ["Flipped dog"]
+      "progression": [
+        "Side plank",
+        "Full"
+      ],
+      "variations": [
+        "Flipped dog"
+      ]
     },
     {
       "name": "Fallen Angel",
@@ -1759,8 +2968,13 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Core, Shoulders",
-      "progression": ["Side crow", "Full"],
-      "variations": ["Extended"]
+      "progression": [
+        "Side crow",
+        "Full"
+      ],
+      "variations": [
+        "Extended"
+      ]
     },
     {
       "name": "Flying Crow",
@@ -1770,8 +2984,13 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Core, Shoulders, Wrists",
-      "progression": ["Crow", "Full"],
-      "variations": ["Transitional"]
+      "progression": [
+        "Crow",
+        "Full"
+      ],
+      "variations": [
+        "Transitional"
+      ]
     },
     {
       "name": "Baby Grasshopper",
@@ -1781,10 +3000,14 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Core, Shoulders, Wrists",
-      "progression": ["Prep", "Full"],
-      "variations": ["Transitional"]
+      "progression": [
+        "Prep",
+        "Full"
+      ],
+      "variations": [
+        "Transitional"
+      ]
     },
-
     {
       "name": "Bench press",
       "category": "Gym",
@@ -1793,8 +3016,21 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Chest, Triceps, Shoulders",
-      "progression": ["Dumbbell", "Barbell", "Machine"],
-      "variations": ["Flat", "Incline", "Decline", "Close grip", "Wide grip", "Floor press", "Board press", "Spoto press"]
+      "progression": [
+        "Dumbbell",
+        "Barbell",
+        "Machine"
+      ],
+      "variations": [
+        "Flat",
+        "Incline",
+        "Decline",
+        "Close grip",
+        "Wide grip",
+        "Floor press",
+        "Board press",
+        "Spoto press"
+      ]
     },
     {
       "name": "Chest fly",
@@ -1804,8 +3040,18 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Chest",
-      "progression": ["Dumbbell", "Cable", "Machine"],
-      "variations": ["Flat", "Incline", "Decline", "High cable", "Low cable"]
+      "progression": [
+        "Dumbbell",
+        "Cable",
+        "Machine"
+      ],
+      "variations": [
+        "Flat",
+        "Incline",
+        "Decline",
+        "High cable",
+        "Low cable"
+      ]
     },
     {
       "name": "Chest press",
@@ -1815,8 +3061,17 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Chest, Triceps",
-      "progression": ["Machine", "Dumbbell", "Barbell"],
-      "variations": ["Flat", "Incline", "Decline", "Hammer strength"]
+      "progression": [
+        "Machine",
+        "Dumbbell",
+        "Barbell"
+      ],
+      "variations": [
+        "Flat",
+        "Incline",
+        "Decline",
+        "Hammer strength"
+      ]
     },
     {
       "name": "Lat pulldown",
@@ -1826,8 +3081,19 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Back, Biceps",
-      "progression": ["Standard", "Weighted"],
-      "variations": ["Wide", "Close", "Neutral", "Overhead", "Reverse grip", "Single arm", "Behind the neck"]
+      "progression": [
+        "Standard",
+        "Weighted"
+      ],
+      "variations": [
+        "Wide",
+        "Close",
+        "Neutral",
+        "Overhead",
+        "Reverse grip",
+        "Single arm",
+        "Behind the neck"
+      ]
     },
     {
       "name": "Row",
@@ -1837,19 +3103,25 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Back, Biceps",
-      "progression": ["Dumbbell", "Barbell", "Cable", "Machine"],
-      "variations": ["Bent over", "Seated", "T-bar", "Single arm", "Pendlay", "Meadows", "Kroc", "Helms", "Seal"]
-    },
-    {
-      "name": "Gym Pull up",
-      "category": "Gym",
-      "equipmentType": "Bar",
-      "bodyweight": true,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Back, Biceps",
-      "progression": ["Assisted", "Standard", "Weighted"],
-      "variations": ["Wide", "Close", "Neutral", "Chin up", "Behind the neck"]
+      "progression": [
+        "Dumbbell",
+        "Barbell",
+        "Cable",
+        "Machine"
+      ],
+      "variations": [
+        "Bent over",
+        "Seated",
+        "T-bar",
+        "Single arm",
+        "Pendlay",
+        "Meadows",
+        "Kroc",
+        "Helms",
+        "Seal",
+        "Landmine",
+        "Cable"
+      ]
     },
     {
       "name": "Deadlift",
@@ -1859,8 +3131,30 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Back, Glutes, Hamstrings",
-      "progression": ["Conventional", "Sumo", "Romanian", "Stiff leg"],
-      "variations": ["Barbell", "Dumbbell", "Trap bar", "Single leg", "Deficit", "Block", "Snatch grip", "Jefferson"]
+      "progression": [
+        "Conventional",
+        "Sumo",
+        "Romanian",
+        "Stiff leg"
+      ],
+      "variations": [
+        "Barbell",
+        "Dumbbell",
+        "Trap bar",
+        "Single leg",
+        "Deficit",
+        "Block",
+        "Snatch grip",
+        "Jefferson",
+        "Conventional",
+        "Sumo",
+        "Romanian",
+        "Stiff leg",
+        "Axle bar",
+        "Rack pull",
+        "Reeves",
+        "Sumo high pull"
+      ]
     },
     {
       "name": "Gym Squat",
@@ -1870,8 +3164,28 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Quads, Glutes, Hamstrings",
-      "progression": ["Bodyweight", "Barbell", "Dumbbell"],
-      "variations": ["Back", "Front", "Goblet", "Hack", "Zercher", "Pendulum", "Safety bar", "Belt"]
+      "progression": [
+        "Bodyweight",
+        "Barbell",
+        "Dumbbell"
+      ],
+      "variations": [
+        "Back",
+        "Front",
+        "Goblet",
+        "Hack",
+        "Zercher",
+        "Pendulum",
+        "Safety bar",
+        "Belt",
+        "Overhead",
+        "Landmine",
+        "Anderson",
+        "Box",
+        "Pause",
+        "Pin",
+        "Tempo"
+      ]
     },
     {
       "name": "Leg press",
@@ -1881,8 +3195,18 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Quads, Glutes",
-      "progression": ["Standard", "Single leg"],
-      "variations": ["Wide stance", "Narrow stance", "High feet", "Low feet", "45 degree", "Horizontal"]
+      "progression": [
+        "Standard",
+        "Single leg"
+      ],
+      "variations": [
+        "Wide stance",
+        "Narrow stance",
+        "High feet",
+        "Low feet",
+        "45 degree",
+        "Horizontal"
+      ]
     },
     {
       "name": "Leg extension",
@@ -1892,8 +3216,14 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Quads",
-      "progression": ["Seated"],
-      "variations": ["Single leg", "Both legs", "Paused"]
+      "progression": [
+        "Seated"
+      ],
+      "variations": [
+        "Single leg",
+        "Both legs",
+        "Paused"
+      ]
     },
     {
       "name": "Leg curl",
@@ -1903,8 +3233,16 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Hamstrings",
-      "progression": ["Seated", "Lying", "Standing"],
-      "variations": ["Single leg", "Both legs", "Nordic attachment"]
+      "progression": [
+        "Seated",
+        "Lying",
+        "Standing"
+      ],
+      "variations": [
+        "Single leg",
+        "Both legs",
+        "Nordic attachment"
+      ]
     },
     {
       "name": "Hip abduction",
@@ -1914,8 +3252,17 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Glutes, Hips",
-      "progression": ["Machine", "Cable"],
-      "variations": ["Seated", "Standing", "Leaning back", "Leaning forward", "Pulses"]
+      "progression": [
+        "Machine",
+        "Cable"
+      ],
+      "variations": [
+        "Seated",
+        "Standing",
+        "Leaning back",
+        "Leaning forward",
+        "Pulses"
+      ]
     },
     {
       "name": "Hip adduction",
@@ -1925,8 +3272,14 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Adductors",
-      "progression": ["Machine", "Cable"],
-      "variations": ["Seated", "Standing"]
+      "progression": [
+        "Machine",
+        "Cable"
+      ],
+      "variations": [
+        "Seated",
+        "Standing"
+      ]
     },
     {
       "name": "Glute kickback",
@@ -1936,30 +3289,14 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Glutes",
-      "progression": ["Cable", "Machine"],
-      "variations": ["Single leg", "Donkey kick"]
-    },
-    {
-      "name": "Gym Hip thrust",
-      "category": "Gym",
-      "equipmentType": "Barbell, Dumbbell, Machine",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Glutes, Hamstrings",
-      "progression": ["Barbell", "Dumbbell", "Machine"],
-      "variations": ["Single leg", "Banded", "B stance", "Feet elevated"]
-    },
-    {
-      "name": "Gym Calf raise",
-      "category": "Gym",
-      "equipmentType": "Machine",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Calves",
-      "progression": ["Standing", "Seated"],
-      "variations": ["Machine", "Smith machine", "Single leg", "Donkey", "Leg press"]
+      "progression": [
+        "Cable",
+        "Machine"
+      ],
+      "variations": [
+        "Single leg",
+        "Donkey kick"
+      ]
     },
     {
       "name": "Shoulder press",
@@ -1969,8 +3306,23 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Shoulders, Triceps",
-      "progression": ["Dumbbell", "Barbell", "Machine"],
-      "variations": ["Seated", "Standing", "Arnold", "Push press", "Behind the neck", "Landmine"]
+      "progression": [
+        "Dumbbell",
+        "Barbell",
+        "Machine"
+      ],
+      "variations": [
+        "Seated",
+        "Standing",
+        "Arnold",
+        "Push press",
+        "Behind the neck",
+        "Landmine",
+        "Strict",
+        "Push jerk",
+        "Split jerk",
+        "Log"
+      ]
     },
     {
       "name": "Lateral raise",
@@ -1980,8 +3332,18 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Shoulders",
-      "progression": ["Dumbbell", "Cable", "Machine"],
-      "variations": ["Standing", "Seated", "Leaning", "Lu raise", "Lying"]
+      "progression": [
+        "Dumbbell",
+        "Cable",
+        "Machine"
+      ],
+      "variations": [
+        "Standing",
+        "Seated",
+        "Leaning",
+        "Lu raise",
+        "Lying"
+      ]
     },
     {
       "name": "Front raise",
@@ -1991,8 +3353,17 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Shoulders",
-      "progression": ["Dumbbell", "Cable", "Plate"],
-      "variations": ["Standing", "Seated", "Alternating", "Barbell"]
+      "progression": [
+        "Dumbbell",
+        "Cable",
+        "Plate"
+      ],
+      "variations": [
+        "Standing",
+        "Seated",
+        "Alternating",
+        "Barbell"
+      ]
     },
     {
       "name": "Rear delt fly",
@@ -2002,8 +3373,17 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Shoulders, Back",
-      "progression": ["Dumbbell", "Cable", "Machine"],
-      "variations": ["Bent over", "Seated", "Standing", "Face down on bench"]
+      "progression": [
+        "Dumbbell",
+        "Cable",
+        "Machine"
+      ],
+      "variations": [
+        "Bent over",
+        "Seated",
+        "Standing",
+        "Face down on bench"
+      ]
     },
     {
       "name": "Face pull",
@@ -2013,8 +3393,18 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Shoulders, Back",
-      "progression": ["Cable", "Band"],
-      "variations": ["Standing", "Seated", "High", "Low", "Rope", "Wide grip"]
+      "progression": [
+        "Cable",
+        "Band"
+      ],
+      "variations": [
+        "Standing",
+        "Seated",
+        "High",
+        "Low",
+        "Rope",
+        "Wide grip"
+      ]
     },
     {
       "name": "Upright row",
@@ -2024,8 +3414,17 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Shoulders, Traps",
-      "progression": ["Dumbbell", "Barbell", "EZ bar", "Cable"],
-      "variations": ["Wide grip", "Close grip", "Single arm"]
+      "progression": [
+        "Dumbbell",
+        "Barbell",
+        "EZ bar",
+        "Cable"
+      ],
+      "variations": [
+        "Wide grip",
+        "Close grip",
+        "Single arm"
+      ]
     },
     {
       "name": "Shrug",
@@ -2035,8 +3434,17 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Traps",
-      "progression": ["Dumbbell", "Barbell", "Trap bar"],
-      "variations": ["Standing", "Seated", "Behind the back", "Overhead"]
+      "progression": [
+        "Dumbbell",
+        "Barbell",
+        "Trap bar"
+      ],
+      "variations": [
+        "Standing",
+        "Seated",
+        "Behind the back",
+        "Overhead"
+      ]
     },
     {
       "name": "Bicep curl",
@@ -2046,19 +3454,24 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Biceps",
-      "progression": ["Dumbbell", "Barbell", "EZ bar", "Cable"],
-      "variations": ["Standard", "Hammer", "Preacher", "Concentration", "Incline", "Spider", "Drag", "Zottman", "Bayesian", "Cross body"]
-    },
-    {
-      "name": "Tricep pushdown",
-      "category": "Gym",
-      "equipmentType": "Cable, Band",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Triceps",
-      "progression": ["Cable", "Band"],
-      "variations": ["Rope", "Bar", "V-bar", "Single arm", "Reverse grip"]
+      "progression": [
+        "Dumbbell",
+        "Barbell",
+        "EZ bar",
+        "Cable"
+      ],
+      "variations": [
+        "Standard",
+        "Hammer",
+        "Preacher",
+        "Concentration",
+        "Incline",
+        "Spider",
+        "Drag",
+        "Zottman",
+        "Bayesian",
+        "Cross body"
+      ]
     },
     {
       "name": "Tricep extension",
@@ -2068,8 +3481,22 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Triceps",
-      "progression": ["Dumbbell", "Barbell", "Cable"],
-      "variations": ["Overhead", "Lying", "Skull crusher", "French press", "JM press", "Tate press"]
+      "progression": [
+        "Dumbbell",
+        "Barbell",
+        "Cable"
+      ],
+      "variations": [
+        "Overhead",
+        "Lying",
+        "Skull crusher",
+        "French press",
+        "JM press",
+        "Tate press",
+        "Skullcrusher",
+        "Pushdown",
+        "Kickback"
+      ]
     },
     {
       "name": "Tricep dip",
@@ -2079,19 +3506,15 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Triceps, Chest",
-      "progression": ["Assisted", "Standard", "Weighted"],
-      "variations": ["Machine", "Bench"]
-    },
-    {
-      "name": "Tricep kickback",
-      "category": "Gym",
-      "equipmentType": "Dumbbell, Cable",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Triceps",
-      "progression": ["Dumbbell", "Cable"],
-      "variations": ["Single arm", "Both arms"]
+      "progression": [
+        "Assisted",
+        "Standard",
+        "Weighted"
+      ],
+      "variations": [
+        "Machine",
+        "Bench"
+      ]
     },
     {
       "name": "Forearm curl",
@@ -2101,8 +3524,16 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Forearms",
-      "progression": ["Dumbbell", "Barbell"],
-      "variations": ["Wrist flexion", "Wrist extension", "Reverse", "Behind the back"]
+      "progression": [
+        "Dumbbell",
+        "Barbell"
+      ],
+      "variations": [
+        "Wrist flexion",
+        "Wrist extension",
+        "Reverse",
+        "Behind the back"
+      ]
     },
     {
       "name": "Grip training",
@@ -2112,8 +3543,16 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Forearms",
-      "progression": ["Gripper", "Plate pinch"],
-      "variations": ["Hold", "Crush", "Pinch", "Wrist roller"]
+      "progression": [
+        "Gripper",
+        "Plate pinch"
+      ],
+      "variations": [
+        "Hold",
+        "Crush",
+        "Pinch",
+        "Wrist roller"
+      ]
     },
     {
       "name": "Crunch",
@@ -2123,8 +3562,17 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Core",
-      "progression": ["Standard", "Weighted"],
-      "variations": ["Cable", "Machine", "Decline", "Bicycle", "Reverse"]
+      "progression": [
+        "Standard",
+        "Weighted"
+      ],
+      "variations": [
+        "Cable",
+        "Machine",
+        "Decline",
+        "Bicycle",
+        "Reverse"
+      ]
     },
     {
       "name": "Sit up",
@@ -2134,19 +3582,15 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Core",
-      "progression": ["Standard", "Weighted"],
-      "variations": ["Decline", "Butterfly", "Anchored"]
-    },
-    {
-      "name": "Gym Leg raise",
-      "category": "Gym",
-      "equipmentType": "Floor, Bar, Captain's chair",
-      "bodyweight": true,
-      "weighted": false,
-      "rings": false,
-      "primaryMuscles": "Core, Hip Flexors",
-      "progression": ["Lying", "Hanging", "Captain's chair"],
-      "variations": ["Straight", "Bent knee", "Side"]
+      "progression": [
+        "Standard",
+        "Weighted"
+      ],
+      "variations": [
+        "Decline",
+        "Butterfly",
+        "Anchored"
+      ]
     },
     {
       "name": "Russian twist",
@@ -2156,8 +3600,15 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Core, Obliques",
-      "progression": ["Bodyweight", "Weighted"],
-      "variations": ["Feet down", "Feet elevated", "Medicine ball"]
+      "progression": [
+        "Bodyweight",
+        "Weighted"
+      ],
+      "variations": [
+        "Feet down",
+        "Feet elevated",
+        "Medicine ball"
+      ]
     },
     {
       "name": "Wood chop",
@@ -2167,8 +3618,16 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Core, Obliques",
-      "progression": ["Cable", "Dumbbell", "Medicine ball"],
-      "variations": ["High to low", "Low to high", "Horizontal"]
+      "progression": [
+        "Cable",
+        "Dumbbell",
+        "Medicine ball"
+      ],
+      "variations": [
+        "High to low",
+        "Low to high",
+        "Horizontal"
+      ]
     },
     {
       "name": "Pallof press",
@@ -2178,8 +3637,16 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Core",
-      "progression": ["Cable", "Band"],
-      "variations": ["Standing", "Kneeling", "Split stance", "Rotating"]
+      "progression": [
+        "Cable",
+        "Band"
+      ],
+      "variations": [
+        "Standing",
+        "Kneeling",
+        "Split stance",
+        "Rotating"
+      ]
     },
     {
       "name": "Back extension",
@@ -2189,8 +3656,16 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Back, Glutes",
-      "progression": ["Bodyweight", "Weighted"],
-      "variations": ["45 degree", "Flat", "Reverse", "GHD"]
+      "progression": [
+        "Bodyweight",
+        "Weighted"
+      ],
+      "variations": [
+        "45 degree",
+        "Flat",
+        "Reverse",
+        "GHD"
+      ]
     },
     {
       "name": "Good morning",
@@ -2200,8 +3675,15 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Hamstrings, Back",
-      "progression": ["Barbell", "Dumbbell"],
-      "variations": ["Standing", "Seated", "Zercher"]
+      "progression": [
+        "Barbell",
+        "Dumbbell"
+      ],
+      "variations": [
+        "Standing",
+        "Seated",
+        "Zercher"
+      ]
     },
     {
       "name": "Cable crossover",
@@ -2211,8 +3693,16 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Chest",
-      "progression": ["High", "Mid", "Low"],
-      "variations": ["Single arm", "Both arms", "Pec fly"]
+      "progression": [
+        "High",
+        "Mid",
+        "Low"
+      ],
+      "variations": [
+        "Single arm",
+        "Both arms",
+        "Pec fly"
+      ]
     },
     {
       "name": "Pec deck",
@@ -2222,8 +3712,13 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Chest",
-      "progression": ["Machine"],
-      "variations": ["Standard", "Reverse"]
+      "progression": [
+        "Machine"
+      ],
+      "variations": [
+        "Standard",
+        "Reverse"
+      ]
     },
     {
       "name": "Pullover",
@@ -2233,8 +3728,17 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Back, Chest",
-      "progression": ["Dumbbell", "Barbell", "Cable"],
-      "variations": ["Flat", "Decline", "Bent arm", "Straight arm"]
+      "progression": [
+        "Dumbbell",
+        "Barbell",
+        "Cable"
+      ],
+      "variations": [
+        "Flat",
+        "Decline",
+        "Bent arm",
+        "Straight arm"
+      ]
     },
     {
       "name": "Smith machine squat",
@@ -2244,8 +3748,15 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Quads, Glutes",
-      "progression": ["Standard"],
-      "variations": ["Front", "Back", "Split", "Hack"]
+      "progression": [
+        "Standard"
+      ],
+      "variations": [
+        "Front",
+        "Back",
+        "Split",
+        "Hack"
+      ]
     },
     {
       "name": "Hack squat",
@@ -2255,8 +3766,14 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Quads, Glutes",
-      "progression": ["Machine"],
-      "variations": ["Narrow", "Wide", "Reverse"]
+      "progression": [
+        "Machine"
+      ],
+      "variations": [
+        "Narrow",
+        "Wide",
+        "Reverse"
+      ]
     },
     {
       "name": "Bulgarian split squat",
@@ -2266,30 +3783,15 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Quads, Glutes",
-      "progression": ["Dumbbell", "Barbell"],
-      "variations": ["Standard", "Deficit", "Smith machine"]
-    },
-    {
-      "name": "Walking lunge",
-      "category": "Gym",
-      "equipmentType": "Dumbbell, Barbell",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Quads, Glutes",
-      "progression": ["Dumbbell", "Barbell"],
-      "variations": ["Forward", "Reverse", "Weighted"]
-    },
-    {
-      "name": "Gym Step up",
-      "category": "Gym",
-      "equipmentType": "Box, Dumbbell, Barbell",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Quads, Glutes",
-      "progression": ["Dumbbell", "Barbell"],
-      "variations": ["Standard", "Lateral", "Crossover", "Box"]
+      "progression": [
+        "Dumbbell",
+        "Barbell"
+      ],
+      "variations": [
+        "Standard",
+        "Deficit",
+        "Smith machine"
+      ]
     },
     {
       "name": "Box jump",
@@ -2299,8 +3801,15 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Quads, Glutes, Calves",
-      "progression": ["Standard"],
-      "variations": ["Single leg", "Depth jump", "Seated", "Rebound"]
+      "progression": [
+        "Standard"
+      ],
+      "variations": [
+        "Single leg",
+        "Depth jump",
+        "Seated",
+        "Rebound"
+      ]
     },
     {
       "name": "Sled push",
@@ -2310,8 +3819,16 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Quads, Glutes, Calves",
-      "progression": ["Light", "Heavy"],
-      "variations": ["Sprint", "Slow", "High handles", "Low handles"]
+      "progression": [
+        "Light",
+        "Heavy"
+      ],
+      "variations": [
+        "Sprint",
+        "Slow",
+        "High handles",
+        "Low handles"
+      ]
     },
     {
       "name": "Sled pull",
@@ -2321,8 +3838,16 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Back, Hamstrings, Glutes",
-      "progression": ["Light", "Heavy"],
-      "variations": ["Forward", "Backward", "Rope", "Belt"]
+      "progression": [
+        "Light",
+        "Heavy"
+      ],
+      "variations": [
+        "Forward",
+        "Backward",
+        "Rope",
+        "Belt"
+      ]
     },
     {
       "name": "Battle ropes",
@@ -2332,8 +3857,17 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Shoulders, Core, Arms",
-      "progression": ["Standard"],
-      "variations": ["Alternating", "Slams", "Waves", "Circles", "Snakes", "Lateral"]
+      "progression": [
+        "Standard"
+      ],
+      "variations": [
+        "Alternating",
+        "Slams",
+        "Waves",
+        "Circles",
+        "Snakes",
+        "Lateral"
+      ]
     },
     {
       "name": "Farmer's walk",
@@ -2343,8 +3877,16 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Forearms, Traps, Core",
-      "progression": ["Dumbbell", "Trap bar", "Farmer's handles"],
-      "variations": ["Standard", "Single arm", "Overhead"]
+      "progression": [
+        "Dumbbell",
+        "Trap bar",
+        "Farmer's handles"
+      ],
+      "variations": [
+        "Standard",
+        "Single arm",
+        "Overhead"
+      ]
     },
     {
       "name": "Kettlebell swing",
@@ -2354,30 +3896,15 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Glutes, Hamstrings, Core",
-      "progression": ["Two hand", "Single hand"],
-      "variations": ["Russian", "American", "Alternating"]
-    },
-    {
-      "name": "Kettlebell clean",
-      "category": "Gym",
-      "equipmentType": "Kettlebell",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Full Body",
-      "progression": ["Standard"],
-      "variations": ["Single arm", "Double"]
-    },
-    {
-      "name": "Kettlebell snatch",
-      "category": "Gym",
-      "equipmentType": "Kettlebell",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Full Body",
-      "progression": ["Standard"],
-      "variations": ["Single arm", "Double"]
+      "progression": [
+        "Two hand",
+        "Single hand"
+      ],
+      "variations": [
+        "Russian",
+        "American",
+        "Alternating"
+      ]
     },
     {
       "name": "Kettlebell goblet squat",
@@ -2387,8 +3914,14 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Quads, Glutes",
-      "progression": ["Standard"],
-      "variations": ["Pulse", "Pause", "Tempo"]
+      "progression": [
+        "Standard"
+      ],
+      "variations": [
+        "Pulse",
+        "Pause",
+        "Tempo"
+      ]
     },
     {
       "name": "Turkish get up",
@@ -2398,8 +3931,13 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Full Body",
-      "progression": ["Standard"],
-      "variations": ["Half", "Windmill"]
+      "progression": [
+        "Standard"
+      ],
+      "variations": [
+        "Half",
+        "Windmill"
+      ]
     },
     {
       "name": "Rowing machine",
@@ -2409,8 +3947,16 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Back, Legs, Core",
-      "progression": ["Light", "Moderate", "Heavy"],
-      "variations": ["Intervals", "Steady state", "Sprint"]
+      "progression": [
+        "Light",
+        "Moderate",
+        "Heavy"
+      ],
+      "variations": [
+        "Intervals",
+        "Steady state",
+        "Sprint"
+      ]
     },
     {
       "name": "Stairmaster",
@@ -2420,8 +3966,16 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Quads, Glutes, Calves",
-      "progression": ["Low", "Medium", "High"],
-      "variations": ["Intervals", "Steady state", "Skip step"]
+      "progression": [
+        "Low",
+        "Medium",
+        "High"
+      ],
+      "variations": [
+        "Intervals",
+        "Steady state",
+        "Skip step"
+      ]
     },
     {
       "name": "Treadmill",
@@ -2431,8 +3985,17 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Quads, Hamstrings, Calves",
-      "progression": ["Walk", "Jog", "Run"],
-      "variations": ["Incline", "Intervals", "Steady state", "Sprint"]
+      "progression": [
+        "Walk",
+        "Jog",
+        "Run"
+      ],
+      "variations": [
+        "Incline",
+        "Intervals",
+        "Steady state",
+        "Sprint"
+      ]
     },
     {
       "name": "Stationary bike",
@@ -2442,8 +4005,16 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Quads, Hamstrings, Calves",
-      "progression": ["Low", "Medium", "High"],
-      "variations": ["Intervals", "Steady state", "Sprint"]
+      "progression": [
+        "Low",
+        "Medium",
+        "High"
+      ],
+      "variations": [
+        "Intervals",
+        "Steady state",
+        "Sprint"
+      ]
     },
     {
       "name": "Elliptical",
@@ -2453,8 +4024,16 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Full Body",
-      "progression": ["Low", "Medium", "High"],
-      "variations": ["Intervals", "Steady state", "Reverse"]
+      "progression": [
+        "Low",
+        "Medium",
+        "High"
+      ],
+      "variations": [
+        "Intervals",
+        "Steady state",
+        "Reverse"
+      ]
     },
     {
       "name": "Assault bike",
@@ -2464,8 +4043,16 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Full Body",
-      "progression": ["Low", "Medium", "High"],
-      "variations": ["Intervals", "Steady state", "Sprint"]
+      "progression": [
+        "Low",
+        "Medium",
+        "High"
+      ],
+      "variations": [
+        "Intervals",
+        "Steady state",
+        "Sprint"
+      ]
     },
     {
       "name": "Ski erg",
@@ -2475,8 +4062,16 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Back, Shoulders, Core",
-      "progression": ["Low", "Medium", "High"],
-      "variations": ["Intervals", "Steady state", "Single arm"]
+      "progression": [
+        "Low",
+        "Medium",
+        "High"
+      ],
+      "variations": [
+        "Intervals",
+        "Steady state",
+        "Single arm"
+      ]
     },
     {
       "name": "Clean",
@@ -2486,8 +4081,22 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Full Body",
-      "progression": ["Hang", "Power", "Full"],
-      "variations": ["Barbell", "Dumbbell", "Kettlebell", "Single arm"]
+      "progression": [
+        "Hang",
+        "Power",
+        "Full"
+      ],
+      "variations": [
+        "Barbell",
+        "Dumbbell",
+        "Kettlebell",
+        "Single arm",
+        "Power",
+        "Hang",
+        "Squat",
+        "Muscle",
+        "Clean and jerk"
+      ]
     },
     {
       "name": "Snatch",
@@ -2497,30 +4106,20 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Full Body",
-      "progression": ["Hang", "Power", "Full"],
-      "variations": ["Barbell", "Dumbbell", "Kettlebell", "Single arm"]
-    },
-    {
-      "name": "Clean and jerk",
-      "category": "Gym",
-      "equipmentType": "Barbell, Dumbbell",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Full Body",
-      "progression": ["Hang", "Power", "Full"],
-      "variations": ["Barbell", "Dumbbell", "Split jerk", "Push jerk"]
-    },
-    {
-      "name": "Push press",
-      "category": "Gym",
-      "equipmentType": "Barbell, Dumbbell",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Shoulders, Triceps, Legs",
-      "progression": ["Standard"],
-      "variations": ["Barbell", "Dumbbell", "Single arm"]
+      "progression": [
+        "Hang",
+        "Power",
+        "Full"
+      ],
+      "variations": [
+        "Barbell",
+        "Dumbbell",
+        "Kettlebell",
+        "Single arm",
+        "Power",
+        "Muscle",
+        "Squat"
+      ]
     },
     {
       "name": "Thruster",
@@ -2530,41 +4129,14 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Full Body",
-      "progression": ["Standard"],
-      "variations": ["Barbell", "Dumbbell", "Kettlebell"]
-    },
-    {
-      "name": "Sumo deadlift high pull",
-      "category": "Gym",
-      "equipmentType": "Barbell, Kettlebell",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Full Body",
-      "progression": ["Standard"],
-      "variations": ["Barbell", "Kettlebell"]
-    },
-    {
-      "name": "Muscle snatch",
-      "category": "Gym",
-      "equipmentType": "Barbell, Dumbbell",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Shoulders, Back",
-      "progression": ["Standard"],
-      "variations": ["Barbell", "Dumbbell"]
-    },
-    {
-      "name": "Hang clean",
-      "category": "Gym",
-      "equipmentType": "Barbell, Dumbbell",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Full Body",
-      "progression": ["Above knee", "Below knee", "Full"],
-      "variations": ["Barbell", "Dumbbell"]
+      "progression": [
+        "Standard"
+      ],
+      "variations": [
+        "Barbell",
+        "Dumbbell",
+        "Kettlebell"
+      ]
     },
     {
       "name": "Front squat",
@@ -2574,8 +4146,15 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Quads, Core",
-      "progression": ["Standard", "Paused"],
-      "variations": ["Barbell", "Cross arm", "Clean grip"]
+      "progression": [
+        "Standard",
+        "Paused"
+      ],
+      "variations": [
+        "Barbell",
+        "Cross arm",
+        "Clean grip"
+      ]
     },
     {
       "name": "Overhead squat",
@@ -2585,85 +4164,13 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Full Body",
-      "progression": ["Standard"],
-      "variations": ["Barbell", "Snatch grip"]
-    },
-    {
-      "name": "Split jerk",
-      "category": "Gym",
-      "equipmentType": "Barbell",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Shoulders, Legs",
-      "progression": ["Standard"],
-      "variations": ["Behind the neck"]
-    },
-    {
-      "name": "Push jerk",
-      "category": "Gym",
-      "equipmentType": "Barbell",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Shoulders, Legs",
-      "progression": ["Standard"],
-      "variations": ["Behind the neck"]
-    },
-    {
-      "name": "Power clean",
-      "category": "Gym",
-      "equipmentType": "Barbell",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Full Body",
-      "progression": ["Standard"],
-      "variations": ["From floor", "From blocks"]
-    },
-    {
-      "name": "Power snatch",
-      "category": "Gym",
-      "equipmentType": "Barbell",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Full Body",
-      "progression": ["Standard"],
-      "variations": ["From floor", "From blocks"]
-    },
-    {
-      "name": "Barbell lunge",
-      "category": "Gym",
-      "equipmentType": "Barbell",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Quads, Glutes",
-      "progression": ["Forward", "Reverse"],
-      "variations": ["Front rack", "Back rack"]
-    },
-    {
-      "name": "Landmine press",
-      "category": "Gym",
-      "equipmentType": "Barbell, Landmine",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Shoulders, Chest",
-      "progression": ["Standard"],
-      "variations": ["Single arm", "Both hands"]
-    },
-    {
-      "name": "Landmine row",
-      "category": "Gym",
-      "equipmentType": "Barbell, Landmine",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Back, Biceps",
-      "progression": ["Standard"],
-      "variations": ["Single arm", "Both hands"]
+      "progression": [
+        "Standard"
+      ],
+      "variations": [
+        "Barbell",
+        "Snatch grip"
+      ]
     },
     {
       "name": "Landmine squat",
@@ -2673,8 +4180,13 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Quads, Glutes",
-      "progression": ["Standard"],
-      "variations": ["Goblet style", "Sumo"]
+      "progression": [
+        "Standard"
+      ],
+      "variations": [
+        "Goblet style",
+        "Sumo"
+      ]
     },
     {
       "name": "Landmine rotation",
@@ -2684,8 +4196,13 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Core, Obliques",
-      "progression": ["Standard"],
-      "variations": ["Anti-rotation", "Chop"]
+      "progression": [
+        "Standard"
+      ],
+      "variations": [
+        "Anti-rotation",
+        "Chop"
+      ]
     },
     {
       "name": "Hip flexor raise",
@@ -2695,8 +4212,14 @@
       "weighted": false,
       "rings": false,
       "primaryMuscles": "Hip Flexors, Core",
-      "progression": ["Hanging", "Captain's chair"],
-      "variations": ["Straight leg", "Bent knee"]
+      "progression": [
+        "Hanging",
+        "Captain's chair"
+      ],
+      "variations": [
+        "Straight leg",
+        "Bent knee"
+      ]
     },
     {
       "name": "Cable crunch",
@@ -2706,8 +4229,14 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Core",
-      "progression": ["Kneeling", "Standing"],
-      "variations": ["Rope", "Bar"]
+      "progression": [
+        "Kneeling",
+        "Standing"
+      ],
+      "variations": [
+        "Rope",
+        "Bar"
+      ]
     },
     {
       "name": "Dead bug",
@@ -2717,8 +4246,13 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Core",
-      "progression": ["Standard"],
-      "variations": ["Weighted", "Banded"]
+      "progression": [
+        "Standard"
+      ],
+      "variations": [
+        "Weighted",
+        "Banded"
+      ]
     },
     {
       "name": "Bird dog",
@@ -2728,8 +4262,13 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Core, Back",
-      "progression": ["Standard"],
-      "variations": ["Weighted", "Banded"]
+      "progression": [
+        "Standard"
+      ],
+      "variations": [
+        "Weighted",
+        "Banded"
+      ]
     },
     {
       "name": "Bear hold",
@@ -2739,8 +4278,13 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Core, Shoulders",
-      "progression": ["Standard"],
-      "variations": ["Weighted", "Shoulder tap"]
+      "progression": [
+        "Standard"
+      ],
+      "variations": [
+        "Weighted",
+        "Shoulder tap"
+      ]
     },
     {
       "name": "Hollow hold",
@@ -2750,8 +4294,14 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Core",
-      "progression": ["Tuck", "Full"],
-      "variations": ["Weighted", "Rocking"]
+      "progression": [
+        "Tuck",
+        "Full"
+      ],
+      "variations": [
+        "Weighted",
+        "Rocking"
+      ]
     },
     {
       "name": "Medicine ball slam",
@@ -2761,8 +4311,14 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Core, Shoulders",
-      "progression": ["Standard"],
-      "variations": ["Overhead", "Side", "Rotational"]
+      "progression": [
+        "Standard"
+      ],
+      "variations": [
+        "Overhead",
+        "Side",
+        "Rotational"
+      ]
     },
     {
       "name": "Medicine ball throw",
@@ -2772,8 +4328,15 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Core, Chest, Shoulders",
-      "progression": ["Chest pass", "Overhead"],
-      "variations": ["Against wall", "Partner", "Rotational"]
+      "progression": [
+        "Chest pass",
+        "Overhead"
+      ],
+      "variations": [
+        "Against wall",
+        "Partner",
+        "Rotational"
+      ]
     },
     {
       "name": "Box squat",
@@ -2783,8 +4346,15 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Quads, Glutes",
-      "progression": ["Bodyweight", "Barbell"],
-      "variations": ["Low box", "High box", "Paused"]
+      "progression": [
+        "Bodyweight",
+        "Barbell"
+      ],
+      "variations": [
+        "Low box",
+        "High box",
+        "Paused"
+      ]
     },
     {
       "name": "Pin squat",
@@ -2794,8 +4364,12 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Quads, Glutes",
-      "progression": ["Standard"],
-      "variations": ["Various heights"]
+      "progression": [
+        "Standard"
+      ],
+      "variations": [
+        "Various heights"
+      ]
     },
     {
       "name": "Pause squat",
@@ -2805,8 +4379,13 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Quads, Glutes",
-      "progression": ["Standard"],
-      "variations": ["Bottom pause", "Half pause"]
+      "progression": [
+        "Standard"
+      ],
+      "variations": [
+        "Bottom pause",
+        "Half pause"
+      ]
     },
     {
       "name": "Tempo squat",
@@ -2816,8 +4395,14 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Quads, Glutes",
-      "progression": ["Standard"],
-      "variations": ["3-1-3", "4-0-4", "Various tempos"]
+      "progression": [
+        "Standard"
+      ],
+      "variations": [
+        "3-1-3",
+        "4-0-4",
+        "Various tempos"
+      ]
     },
     {
       "name": "Anderson squat",
@@ -2827,8 +4412,13 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Quads, Glutes",
-      "progression": ["Standard"],
-      "variations": ["From pins", "Various heights"]
+      "progression": [
+        "Standard"
+      ],
+      "variations": [
+        "From pins",
+        "Various heights"
+      ]
     },
     {
       "name": "Zercher carry",
@@ -2838,8 +4428,13 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Core, Back, Biceps",
-      "progression": ["Standard"],
-      "variations": ["Walking", "Static hold"]
+      "progression": [
+        "Standard"
+      ],
+      "variations": [
+        "Walking",
+        "Static hold"
+      ]
     },
     {
       "name": "Yoke walk",
@@ -2849,8 +4444,14 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Full Body",
-      "progression": ["Standard"],
-      "variations": ["Heavy", "Light", "Speed"]
+      "progression": [
+        "Standard"
+      ],
+      "variations": [
+        "Heavy",
+        "Light",
+        "Speed"
+      ]
     },
     {
       "name": "Atlas stones",
@@ -2860,30 +4461,13 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Full Body",
-      "progression": ["Standard"],
-      "variations": ["Over bar", "To platform"]
-    },
-    {
-      "name": "Log press",
-      "category": "Gym",
-      "equipmentType": "Log",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Shoulders, Triceps",
-      "progression": ["Standard"],
-      "variations": ["Clean and press", "From rack"]
-    },
-    {
-      "name": "Axle bar deadlift",
-      "category": "Gym",
-      "equipmentType": "Axle bar",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Back, Glutes, Forearms",
-      "progression": ["Standard"],
-      "variations": ["Conventional", "Sumo"]
+      "progression": [
+        "Standard"
+      ],
+      "variations": [
+        "Over bar",
+        "To platform"
+      ]
     },
     {
       "name": "Trap bar carry",
@@ -2893,8 +4477,13 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Full Body",
-      "progression": ["Standard"],
-      "variations": ["Walking", "Static hold"]
+      "progression": [
+        "Standard"
+      ],
+      "variations": [
+        "Walking",
+        "Static hold"
+      ]
     },
     {
       "name": "Sandbag carry",
@@ -2904,8 +4493,14 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Full Body",
-      "progression": ["Shoulder", "Bear hug"],
-      "variations": ["Walking", "Throws"]
+      "progression": [
+        "Shoulder",
+        "Bear hug"
+      ],
+      "variations": [
+        "Walking",
+        "Throws"
+      ]
     },
     {
       "name": "Tire flip",
@@ -2915,8 +4510,12 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Full Body",
-      "progression": ["Standard"],
-      "variations": ["Weighted"]
+      "progression": [
+        "Standard"
+      ],
+      "variations": [
+        "Weighted"
+      ]
     },
     {
       "name": "Prowler push",
@@ -2926,8 +4525,15 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Quads, Glutes, Calves",
-      "progression": ["Low handles", "High handles"],
-      "variations": ["Sprint", "Heavy", "Light"]
+      "progression": [
+        "Low handles",
+        "High handles"
+      ],
+      "variations": [
+        "Sprint",
+        "Heavy",
+        "Light"
+      ]
     },
     {
       "name": "Reverse hyper",
@@ -2937,8 +4543,13 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Glutes, Hamstrings, Back",
-      "progression": ["Machine"],
-      "variations": ["Bodyweight", "Weighted"]
+      "progression": [
+        "Machine"
+      ],
+      "variations": [
+        "Bodyweight",
+        "Weighted"
+      ]
     },
     {
       "name": "GHD sit up",
@@ -2948,8 +4559,13 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Core, Hip Flexors",
-      "progression": ["Standard"],
-      "variations": ["Weighted", "Roman chair"]
+      "progression": [
+        "Standard"
+      ],
+      "variations": [
+        "Weighted",
+        "Roman chair"
+      ]
     },
     {
       "name": "GHD hip extension",
@@ -2959,8 +4575,12 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Glutes, Hamstrings",
-      "progression": ["Standard"],
-      "variations": ["Weighted"]
+      "progression": [
+        "Standard"
+      ],
+      "variations": [
+        "Weighted"
+      ]
     },
     {
       "name": "GHD raise",
@@ -2970,8 +4590,13 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Hamstrings, Glutes",
-      "progression": ["Standard"],
-      "variations": ["Weighted", "Nordic style"]
+      "progression": [
+        "Standard"
+      ],
+      "variations": [
+        "Weighted",
+        "Nordic style"
+      ]
     },
     {
       "name": "Sissy squat",
@@ -2981,8 +4606,14 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Quads",
-      "progression": ["Standard", "Machine"],
-      "variations": ["Bodyweight", "Weighted"]
+      "progression": [
+        "Standard",
+        "Machine"
+      ],
+      "variations": [
+        "Bodyweight",
+        "Weighted"
+      ]
     },
     {
       "name": "Hack squat machine",
@@ -2992,8 +4623,14 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Quads, Glutes",
-      "progression": ["Standard"],
-      "variations": ["Single leg", "Narrow", "Wide"]
+      "progression": [
+        "Standard"
+      ],
+      "variations": [
+        "Single leg",
+        "Narrow",
+        "Wide"
+      ]
     },
     {
       "name": "Pendulum squat",
@@ -3003,8 +4640,12 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Quads, Glutes",
-      "progression": ["Standard"],
-      "variations": ["Single leg"]
+      "progression": [
+        "Standard"
+      ],
+      "variations": [
+        "Single leg"
+      ]
     },
     {
       "name": "Belt squat",
@@ -3014,52 +4655,13 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Quads, Glutes",
-      "progression": ["Machine"],
-      "variations": ["Standard", "Marching"]
-    },
-    {
-      "name": "Reverse lunge",
-      "category": "Gym",
-      "equipmentType": "Dumbbell, Barbell",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Quads, Glutes",
-      "progression": ["Dumbbell", "Barbell"],
-      "variations": ["Deficit", "Knee over toes"]
-    },
-    {
-      "name": "Curtsy lunge",
-      "category": "Gym",
-      "equipmentType": "Dumbbell, Barbell",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Glutes, Quads",
-      "progression": ["Dumbbell", "Barbell"],
-      "variations": ["Standard"]
-    },
-    {
-      "name": "Lateral lunge",
-      "category": "Gym",
-      "equipmentType": "Dumbbell, Barbell",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Quads, Glutes, Adductors",
-      "progression": ["Dumbbell", "Barbell"],
-      "variations": ["Standard", "Sliding"]
-    },
-    {
-      "name": "Single leg deadlift",
-      "category": "Gym",
-      "equipmentType": "Dumbbell, Barbell, Kettlebell",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Hamstrings, Glutes",
-      "progression": ["Dumbbell", "Barbell", "Kettlebell"],
-      "variations": ["Standard", "B stance", "Kickstand"]
+      "progression": [
+        "Machine"
+      ],
+      "variations": [
+        "Standard",
+        "Marching"
+      ]
     },
     {
       "name": "Glute ham raise",
@@ -3069,8 +4671,13 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Hamstrings, Glutes",
-      "progression": ["Assisted", "Standard"],
-      "variations": ["Weighted"]
+      "progression": [
+        "Assisted",
+        "Standard"
+      ],
+      "variations": [
+        "Weighted"
+      ]
     },
     {
       "name": "Pull through",
@@ -3080,118 +4687,13 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Glutes, Hamstrings",
-      "progression": ["Cable", "Band"],
-      "variations": ["Standard"]
-    },
-    {
-      "name": "Romanian deadlift",
-      "category": "Gym",
-      "equipmentType": "Barbell, Dumbbell",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Hamstrings, Glutes, Back",
-      "progression": ["Barbell", "Dumbbell"],
-      "variations": ["Single leg", "B stance", "Deficit"]
-    },
-    {
-      "name": "Stiff leg deadlift",
-      "category": "Gym",
-      "equipmentType": "Barbell, Dumbbell",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Hamstrings, Back",
-      "progression": ["Barbell", "Dumbbell"],
-      "variations": ["Standard", "Deficit"]
-    },
-    {
-      "name": "Sumo deadlift",
-      "category": "Gym",
-      "equipmentType": "Barbell",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Quads, Glutes, Back",
-      "progression": ["Standard"],
-      "variations": ["Conventional stance", "Wide stance"]
-    },
-    {
-      "name": "Block pull",
-      "category": "Gym",
-      "equipmentType": "Barbell, Blocks",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Back, Glutes",
-      "progression": ["Standard"],
-      "variations": ["Below knee", "Above knee"]
-    },
-    {
-      "name": "Deficit deadlift",
-      "category": "Gym",
-      "equipmentType": "Barbell, Platform",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Back, Glutes, Hamstrings",
-      "progression": ["Standard"],
-      "variations": ["1 inch", "2 inch", "3 inch"]
-    },
-    {
-      "name": "Rack pull",
-      "category": "Gym",
-      "equipmentType": "Barbell, Power rack",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Back, Glutes",
-      "progression": ["Standard"],
-      "variations": ["Below knee", "Above knee"]
-    },
-    {
-      "name": "Trap bar deadlift",
-      "category": "Gym",
-      "equipmentType": "Trap bar",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Back, Glutes, Quads",
-      "progression": ["Standard"],
-      "variations": ["High handles", "Low handles"]
-    },
-    {
-      "name": "Jefferson deadlift",
-      "category": "Gym",
-      "equipmentType": "Barbell",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Quads, Glutes, Back",
-      "progression": ["Standard"],
-      "variations": ["Alternating stance"]
-    },
-    {
-      "name": "Reeves deadlift",
-      "category": "Gym",
-      "equipmentType": "Barbell",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Back, Forearms",
-      "progression": ["Standard"],
-      "variations": ["Grip on plates"]
-    },
-    {
-      "name": "Snatch grip deadlift",
-      "category": "Gym",
-      "equipmentType": "Barbell",
-      "bodyweight": false,
-      "weighted": true,
-      "rings": false,
-      "primaryMuscles": "Back, Glutes, Hamstrings",
-      "progression": ["Standard"],
-      "variations": ["Deficit", "Block"]
+      "progression": [
+        "Cable",
+        "Band"
+      ],
+      "variations": [
+        "Standard"
+      ]
     },
     {
       "name": "Duck walk",
@@ -3201,8 +4703,14 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Quads, Glutes",
-      "progression": ["Bodyweight", "Weighted"],
-      "variations": ["Forward", "Backward"]
+      "progression": [
+        "Bodyweight",
+        "Weighted"
+      ],
+      "variations": [
+        "Forward",
+        "Backward"
+      ]
     },
     {
       "name": "Suitcase carry",
@@ -3212,8 +4720,14 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Core, Forearms",
-      "progression": ["Dumbbell", "Kettlebell"],
-      "variations": ["Single arm", "Walking"]
+      "progression": [
+        "Dumbbell",
+        "Kettlebell"
+      ],
+      "variations": [
+        "Single arm",
+        "Walking"
+      ]
     },
     {
       "name": "Overhead carry",
@@ -3223,8 +4737,15 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Shoulders, Core",
-      "progression": ["Dumbbell", "Barbell", "Kettlebell"],
-      "variations": ["Single arm", "Both arms"]
+      "progression": [
+        "Dumbbell",
+        "Barbell",
+        "Kettlebell"
+      ],
+      "variations": [
+        "Single arm",
+        "Both arms"
+      ]
     },
     {
       "name": "Rack carry",
@@ -3234,8 +4755,13 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Core, Shoulders",
-      "progression": ["Kettlebell"],
-      "variations": ["Single arm", "Both arms"]
+      "progression": [
+        "Kettlebell"
+      ],
+      "variations": [
+        "Single arm",
+        "Both arms"
+      ]
     },
     {
       "name": "Waiter carry",
@@ -3245,8 +4771,13 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Shoulders, Core",
-      "progression": ["Kettlebell", "Dumbbell"],
-      "variations": ["Single arm"]
+      "progression": [
+        "Kettlebell",
+        "Dumbbell"
+      ],
+      "variations": [
+        "Single arm"
+      ]
     },
     {
       "name": "Cross carry",
@@ -3256,8 +4787,13 @@
       "weighted": true,
       "rings": false,
       "primaryMuscles": "Core, Shoulders",
-      "progression": ["Kettlebell"],
-      "variations": ["Rack and suitcase", "Overhead and suitcase"]
+      "progression": [
+        "Kettlebell"
+      ],
+      "variations": [
+        "Rack and suitcase",
+        "Overhead and suitcase"
+      ]
     }
   ]
 }
