@@ -53,6 +53,21 @@ function resolveAppearance(mode: ThemeModePreference, style: ThemeStyle): ThemeM
   return mode;
 }
 
+// Themes that have a paired light/dark counterpart. The user's selected style
+// stays in state, but the style class actually applied to <html> swaps when
+// the resolved appearance changes (so light mode on a "dark" style flips to
+// its light sibling and vice versa).
+const THEME_STYLE_PAIRS: Partial<Record<ThemeStyle, { dark: ThemeStyle; light: ThemeStyle }>> = {
+  "ying-yang": { dark: "ying-yang", light: "ying-yang-light" },
+  "ying-yang-light": { dark: "ying-yang", light: "ying-yang-light" },
+};
+
+function resolveThemeStyleForMode(style: ThemeStyle, appearance: ThemeMode): ThemeStyle {
+  const pair = THEME_STYLE_PAIRS[style];
+  if (!pair) return style;
+  return appearance === "light" ? pair.light : pair.dark;
+}
+
 
 interface AppState {
   navItems: NavItem[];
@@ -202,6 +217,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const root = document.documentElement;
       root.classList.remove("dark", "light");
       root.classList.add(resolved);
+      const resolvedStyle = resolveThemeStyleForMode(themeStyle, resolved);
+      root.classList.remove(...THEME_CLASS_NAMES);
+      root.classList.add(resolvedStyle);
+      root.setAttribute("data-theme", resolvedStyle);
       localStorage.setItem("cultivation-theme-mode", normalized);
       localStorage.setItem("cultivation-theme", resolved);
       if (user?.id) {
@@ -222,11 +241,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setThemeStyleState(normalizedStyle);
     if (typeof window !== "undefined") {
       const root = document.documentElement;
-      root.classList.remove(...THEME_CLASS_NAMES);
-      root.classList.add(normalizedStyle);
-      root.setAttribute("data-theme", normalizedStyle);
       // Resolve appearance for the new style (discord always dark; otherwise use mode pref).
       const resolved = resolveAppearance(themeMode, normalizedStyle);
+      const resolvedStyle = resolveThemeStyleForMode(normalizedStyle, resolved);
+      root.classList.remove(...THEME_CLASS_NAMES);
+      root.classList.add(resolvedStyle);
+      root.setAttribute("data-theme", resolvedStyle);
       setThemeState(resolved);
       root.classList.remove("dark", "light");
       root.classList.add(resolved);
@@ -275,6 +295,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const root = document.documentElement;
       root.classList.remove("dark", "light");
       root.classList.add(resolved);
+      const resolvedStyle = resolveThemeStyleForMode(themeStyle, resolved);
+      root.classList.remove(...THEME_CLASS_NAMES);
+      root.classList.add(resolvedStyle);
+      root.setAttribute("data-theme", resolvedStyle);
       localStorage.setItem("cultivation-theme", resolved);
       if (user?.id) {
         localStorage.setItem(getThemeStorageKey(user.id), resolved);

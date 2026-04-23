@@ -75,11 +75,7 @@ function getRecentExerciseTextColor(dateLike: string | null | undefined): string
   const dayMs = 24 * 60 * 60 * 1000;
 
   if (diffMs <= 7 * dayMs) {
-    return "color-mix(in srgb, var(--cultivator-amber) 68%, white 32%)";
-  }
-
-  if (diffMs <= 14 * dayMs) {
-    return "color-mix(in srgb, var(--cultivator-amber) 58%, var(--mist-light) 42%)";
+    return "color-mix(in srgb, var(--accent) 72%, var(--cloud-white) 28%)";
   }
 
   return "var(--cloud-white)";

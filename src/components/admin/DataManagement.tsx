@@ -347,7 +347,16 @@ export default function DataManagement() {
               ))}
             </select>
           ) : (
-            <div className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+            <div
+              className="rounded-lg px-3 py-2 text-xs"
+              style={{
+                borderWidth: 1,
+                borderStyle: "solid",
+                borderColor: "color-mix(in srgb, var(--difficulty-amber) 35%, transparent)",
+                background: "color-mix(in srgb, var(--difficulty-amber) 12%, transparent)",
+                color: "color-mix(in srgb, var(--difficulty-amber) 80%, var(--cloud-white) 20%)",
+              }}
+            >
               No user list loaded yet. Refresh the admin page or confirm admin access.
             </div>
           )}

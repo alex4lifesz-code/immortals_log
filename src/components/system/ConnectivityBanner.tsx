@@ -47,7 +47,14 @@ export default function ConnectivityBanner() {
   if (!showWarning) return null;
 
   return (
-    <div className="px-4 py-2 bg-amber-500/15 border-b border-amber-400/30 text-amber-100 text-xs sm:text-sm">
+    <div
+      className="px-4 py-2 text-xs sm:text-sm"
+      style={{
+        background: "color-mix(in srgb, var(--difficulty-amber) 16%, transparent)",
+        borderBottom: "1px solid color-mix(in srgb, var(--difficulty-amber) 35%, transparent)",
+        color: "color-mix(in srgb, var(--difficulty-amber) 82%, var(--cloud-white) 18%)",
+      }}
+    >
       Unable to connect to the app database right now. Verify the server is reachable and your network connection is stable.
     </div>
   );

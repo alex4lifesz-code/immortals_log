@@ -1783,7 +1783,7 @@ export default function TrainInputCanvasPage() {
 
                           <div className="mt-3 border-t pt-2" style={{ borderColor: "color-mix(in srgb, var(--border) 56%, transparent)" }}>
                             <p className="text-[9px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Working sets</p>
-                            <ul className="mt-1 divide-y" style={{ borderColor: "color-mix(in srgb, var(--border) 50%, transparent)" }}>
+                            <ul className="mt-1">
                               {reviewSetPreview.length ? reviewSetPreview.map((set) => (
                                 <li key={set.label} className="flex items-baseline justify-between gap-2 py-1 text-[11px]">
                                   <span className="font-semibold" style={{ color: "var(--accent)" }}>{set.label}</span>

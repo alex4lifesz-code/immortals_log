@@ -80,14 +80,8 @@ function getRecentExerciseTextColor(dateLike: string | null | undefined, isSelec
 
   if (diffMs <= 7 * dayMs) {
     return isSelected
-      ? "color-mix(in srgb, var(--cultivator-amber) 58%, white 42%)"
-      : "color-mix(in srgb, var(--cultivator-amber) 68%, white 32%)";
-  }
-
-  if (diffMs <= 14 * dayMs) {
-    return isSelected
-      ? "color-mix(in srgb, var(--cultivator-amber) 68%, var(--mist-light) 32%)"
-      : "color-mix(in srgb, var(--cultivator-amber) 58%, var(--mist-dark) 42%)";
+      ? "color-mix(in srgb, var(--accent) 60%, var(--cloud-white) 40%)"
+      : "color-mix(in srgb, var(--accent) 72%, var(--cloud-white) 28%)";
   }
 
   return defaultColor;

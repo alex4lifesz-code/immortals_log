@@ -125,7 +125,6 @@ export default function ProfilePage() {
   }, [latestCheckinWeight]);
 
   const pageItems = [
-    { id: "profile", label: "Profile", path: DASHBOARD_ROUTES.profile, icon: "👤" },
     { id: "checkin", label: "Check-In", path: DASHBOARD_ROUTES.checkIn, icon: "📝" },
     { id: "train", label: "Train", path: DASHBOARD_ROUTES.workoutHistory, icon: "🕘" },
     { id: "completionist", label: "Completionist", path: DASHBOARD_ROUTES.rankUp, icon: "✅" },
@@ -228,57 +227,34 @@ export default function ProfilePage() {
 
         <section className="rounded-xl border p-3.5" style={sectionShellStyle}>
           <div className="mb-2 border-b pb-2" style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)" }}>
-            <p className="text-[10px] uppercase tracking-[0.14em] text-[#8ea1ff]">Navigation</p>
-            <h3 className="mt-1 text-[15px] font-semibold text-[#f2f3f5]">Pages</h3>
+            <p className="text-[10px] uppercase tracking-[0.14em]" style={{ color: "var(--accent)" }}>Navigation</p>
+            <h3 className="mt-1 text-[15px] font-semibold" style={{ color: "var(--text-primary)" }}>Pages</h3>
           </div>
           <div className="grid grid-cols-1 gap-2">
             {pageItems.map((item) => {
-              const isCurrent = item.path === DASHBOARD_ROUTES.profile;
               return (
                 <button
                   key={item.id}
                   type="button"
-                  className="flex min-h-[50px] items-center gap-2.5 rounded-lg px-3 py-2.5 text-[#dbdee1] transition-colors active:bg-[#2b2f36]"
+                  className="flex min-h-[46px] items-center gap-2.5 rounded-lg px-3 py-2 transition-colors"
                   style={{
-                    border: isCurrent
-                      ? "1px solid color-mix(in srgb, var(--accent) 38%, transparent)"
-                      : "1px solid color-mix(in srgb, var(--ink-light) 34%, transparent)",
-                    backgroundColor: isCurrent
-                      ? "color-mix(in srgb, var(--accent) 14%, var(--ink-mid))"
-                      : "color-mix(in srgb, var(--ink-mid) 40%, transparent)",
-                    boxShadow: isCurrent
-                      ? "inset 0 0 0 1px color-mix(in srgb, var(--accent) 10%, transparent)"
-                      : "inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 2%, transparent)",
+                    border: "1px solid color-mix(in srgb, var(--ink-light) 48%, transparent)",
+                    backgroundColor: "color-mix(in srgb, var(--ink-mid) 55%, var(--ink-deep))",
+                    boxShadow: "inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 2%, transparent)",
+                    color: "var(--text-primary)",
                   }}
                   onClick={() => router.push(item.path)}
                 >
                   <span
                     className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md"
-                    style={{ backgroundColor: isCurrent ? "color-mix(in srgb, var(--accent) 18%, transparent)" : "color-mix(in srgb, var(--ink-light) 10%, transparent)" }}
+                    style={{ backgroundColor: "color-mix(in srgb, var(--ink-light) 14%, transparent)" }}
                   >
                     <span className="text-base">{item.icon}</span>
                   </span>
                   <div className="min-w-0 flex-1 text-left">
                     <span className="block truncate text-[13px] font-medium">{item.label}</span>
-                    <span className="block text-[10px] text-[#a9b0b8]">
-                      {item.id === "profile"
-                        ? "Current page"
-                        : item.id === "checkin"
-                          ? "Log your day"
-                          : item.id === "settings"
-                            ? "App preferences"
-                            : item.id === "friends"
-                              ? "Social tools"
-                              : item.id === "train"
-                                ? "Workout history and logs"
-                                : item.id === "community"
-                                  ? "See everyone’s activity"
-                                  : item.id === "completionist"
-                                    ? "Track exercise progress"
-                                    : "Browse movements"}
-                    </span>
                   </div>
-                  <span className="text-[12px] text-[#8b949e]">›</span>
+                  <span className="text-[12px] text-[var(--text-muted)]">›</span>
                 </button>
               );
             })}
@@ -287,33 +263,32 @@ export default function ProfilePage() {
           {adminItems.length > 0 && (
             <>
               <div className="mb-2 mt-4">
-                <p className="text-[10px] uppercase tracking-[0.1em] text-[#f0b96a]">Admin</p>
+                <p className="text-[10px] uppercase tracking-[0.1em]" style={{ color: "var(--text-secondary)" }}>Admin</p>
               </div>
               <div className="grid grid-cols-1 gap-2">
                 {adminItems.map((item) => (
                   <button
                     key={item.id}
                     type="button"
-                    className="flex min-h-[50px] items-center gap-2.5 rounded-lg px-3 py-2.5 text-[#f0c991] transition-colors"
+                    className="flex min-h-[46px] items-center gap-2.5 rounded-lg px-3 py-2 transition-colors"
                     style={{
-                      border: "1px solid color-mix(in srgb, var(--gold-glow) 24%, transparent)",
-                      backgroundColor: "color-mix(in srgb, var(--gold-glow) 8%, transparent)",
+                      border: "1px solid color-mix(in srgb, var(--gold-glow) 30%, transparent)",
+                      backgroundColor: "color-mix(in srgb, var(--ink-mid) 55%, var(--ink-deep))",
                       boxShadow: "inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 2%, transparent)",
+                      color: "var(--text-primary)",
                     }}
                     onClick={() => router.push(item.path)}
                   >
                     <span
                       className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md"
-                      style={{ backgroundColor: "color-mix(in srgb, var(--gold-glow) 10%, transparent)" }}
+                      style={{ backgroundColor: "color-mix(in srgb, var(--gold-glow) 12%, transparent)" }}
                     >
                       <span className="text-base">{item.icon}</span>
                     </span>
                     <div className="min-w-0 flex-1 text-left">
                       <span className="block truncate text-[13px] font-medium">{item.label}</span>
-                      <span className="block text-[10px] text-[#d6b17d]">
-                        {item.id === "admin" ? "Open admin controls" : "Manage site details"}
-                      </span>
                     </div>
+                    <span className="text-[12px]" style={{ color: "var(--text-muted)" }}>›</span>
                   </button>
                 ))}
               </div>

@@ -109,14 +109,8 @@ function getRecentExerciseTextColor(dateLike: string | null | undefined, isSelec
 
   if (diffMs <= 7 * dayMs) {
     return isSelected
-      ? "color-mix(in srgb, var(--cultivator-amber) 58%, white 42%)"
-      : "color-mix(in srgb, var(--cultivator-amber) 68%, white 32%)";
-  }
-
-  if (diffMs <= 14 * dayMs) {
-    return isSelected
-      ? "color-mix(in srgb, var(--cultivator-amber) 68%, var(--mist-light) 32%)"
-      : "color-mix(in srgb, var(--cultivator-amber) 58%, var(--mist-dark) 42%)";
+      ? "color-mix(in srgb, var(--accent) 60%, var(--cloud-white) 40%)"
+      : "color-mix(in srgb, var(--accent) 72%, var(--cloud-white) 28%)";
   }
 
   return defaultColor;
@@ -768,8 +762,7 @@ export default function HistoryPage() {
                               </div>
 
                               {!isFriendTrainOverlay ? (
-                                <div className="mt-2 -mx-0.5 overflow-x-auto scrollbar-hide">
-                                  <div className="flex min-w-max items-center gap-2">
+                                <div className="mt-2 flex flex-wrap items-center gap-2">
                                     {trainQuickNavItems.map((item) => {
                                       const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
                                       return (
@@ -780,13 +773,11 @@ export default function HistoryPage() {
                                           className="rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-[border-color,background-color,color]"
                                           style={{
                                             minWidth: "fit-content",
-                                            borderColor: isActive
-                                              ? "color-mix(in srgb, var(--accent) 20%, var(--border))"
-                                              : "var(--border)",
+                                            borderColor: isActive ? "var(--accent)" : "var(--border)",
                                             backgroundColor: isActive
-                                              ? "color-mix(in srgb, var(--surface) 72%, var(--surface-hover))"
+                                              ? "color-mix(in srgb, var(--accent) 18%, var(--surface))"
                                               : "var(--surface-hover)",
-                                            color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
+                                            color: isActive ? "var(--accent)" : "var(--text-secondary)",
                                             boxShadow: "none",
                                           }}
                                           aria-current={isActive ? "page" : undefined}
@@ -795,7 +786,6 @@ export default function HistoryPage() {
                                         </button>
                                       );
                                     })}
-                                  </div>
                                 </div>
                               ) : null}
                             </>

@@ -45,13 +45,13 @@
   --difficulty-cyan-glow: #0e7490;
 
   /* Difficulty glows — darker shadows for light backgrounds */
-  --glow-difficulty-green: 0 0 12px rgba(21, 128, 61, 0.35), 0 0 24px rgba(21, 128, 61, 0.15);
-  --glow-difficulty-amber: 0 0 12px rgba(180, 83, 9, 0.35), 0 0 24px rgba(180, 83, 9, 0.15);
-  --glow-difficulty-red: 0 0 12px rgba(220, 38, 38, 0.35), 0 0 24px rgba(220, 38, 38, 0.15);
-  --glow-difficulty-violet: 0 0 12px rgba(109, 40, 217, 0.35), 0 0 24px rgba(109, 40, 217, 0.15);
-  --glow-difficulty-pink: 0 0 12px rgba(190, 24, 93, 0.35), 0 0 24px rgba(190, 24, 93, 0.15);
-  --glow-difficulty-light-pink: 0 0 12px rgba(192, 38, 211, 0.35), 0 0 24px rgba(192, 38, 211, 0.15);
-  --glow-difficulty-cyan: 0 0 12px rgba(8, 145, 178, 0.35), 0 0 24px rgba(8, 145, 178, 0.15);
+  --glow-difficulty-green: 0 0 12px color-mix(in srgb, var(--difficulty-green) 35%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-green) 15%, transparent);
+  --glow-difficulty-amber: 0 0 12px color-mix(in srgb, var(--difficulty-amber) 35%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-amber) 15%, transparent);
+  --glow-difficulty-red: 0 0 12px color-mix(in srgb, var(--difficulty-red) 35%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-red) 15%, transparent);
+  --glow-difficulty-violet: 0 0 12px color-mix(in srgb, var(--difficulty-violet) 35%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-violet) 15%, transparent);
+  --glow-difficulty-pink: 0 0 12px color-mix(in srgb, var(--difficulty-pink) 35%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-pink) 15%, transparent);
+  --glow-difficulty-light-pink: 0 0 12px color-mix(in srgb, var(--difficulty-light-pink) 35%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-light-pink) 15%, transparent);
+  --glow-difficulty-cyan: 0 0 12px color-mix(in srgb, var(--difficulty-cyan) 35%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-cyan) 15%, transparent);
 
   --background: var(--void-black);
   --foreground: var(--cloud-white);
@@ -67,17 +67,17 @@
   --danger: var(--crimson);
   --danger-hover: var(--crimson-glow);
 
-  --glow-jade: 0 0 15px rgba(26, 96, 96, 0.25), 0 0 30px rgba(26, 96, 96, 0.1);
-  --glow-crimson: 0 0 15px rgba(138, 46, 46, 0.25), 0 0 30px rgba(138, 46, 46, 0.1);
-  --glow-gold: 0 0 15px rgba(112, 90, 32, 0.25), 0 0 30px rgba(112, 90, 32, 0.1);
-  --glow-blue: 0 0 15px rgba(42, 80, 112, 0.25), 0 0 30px rgba(42, 80, 112, 0.1);
-  --glow-subtle: 0 0 8px rgba(26, 96, 96, 0.1);
-  --glow-modal: 0 0 40px rgba(26, 96, 96, 0.35), 0 0 80px rgba(26, 96, 96, 0.15), inset 0 0 30px rgba(26, 96, 96, 0.08);
+  --glow-jade: 0 0 15px color-mix(in srgb, var(--jade-glow) 25%, transparent), 0 0 30px color-mix(in srgb, var(--jade-glow) 10%, transparent);
+  --glow-crimson: 0 0 15px color-mix(in srgb, var(--crimson-glow) 25%, transparent), 0 0 30px color-mix(in srgb, var(--crimson-glow) 10%, transparent);
+  --glow-gold: 0 0 15px color-mix(in srgb, var(--gold-glow) 25%, transparent), 0 0 30px color-mix(in srgb, var(--gold-glow) 10%, transparent);
+  --glow-blue: 0 0 15px color-mix(in srgb, var(--mountain-blue-glow) 25%, transparent), 0 0 30px color-mix(in srgb, var(--mountain-blue-glow) 10%, transparent);
+  --glow-subtle: 0 0 8px color-mix(in srgb, var(--jade-glow) 10%, transparent);
+  --glow-modal: 0 0 40px color-mix(in srgb, var(--jade-glow) 35%, transparent), 0 0 80px color-mix(in srgb, var(--jade-glow) 15%, transparent), inset 0 0 30px color-mix(in srgb, var(--jade-glow) 8%, transparent);
 
-  --col-weight: #1a6060;
-  --col-weight-bg: rgba(26, 96, 96, 0.1);
-  --col-reps: #8a7030;
-  --col-reps-bg: rgba(138, 112, 48, 0.1);
+  --col-weight: var(--jade-glow);
+  --col-weight-bg: color-mix(in srgb, var(--jade-glow) 10%, transparent);
+  --col-reps: var(--gold);
+  --col-reps-bg: color-mix(in srgb, var(--gold) 10%, transparent);
 }
 
 .mountain-mist * {
@@ -129,12 +129,12 @@
   --difficulty-light-pink-glow: #a07888;
 
   /* Difficulty glows — softer for calligraphy theme */
-  --glow-difficulty-green: 0 0 12px rgba(106, 170, 106, 0.25), 0 0 24px rgba(106, 170, 106, 0.08);
-  --glow-difficulty-amber: 0 0 12px rgba(200, 168, 72, 0.25), 0 0 24px rgba(200, 168, 72, 0.08);
-  --glow-difficulty-red: 0 0 12px rgba(200, 96, 96, 0.25), 0 0 24px rgba(200, 96, 96, 0.08);
-  --glow-difficulty-violet: 0 0 12px rgba(144, 128, 176, 0.25), 0 0 24px rgba(144, 128, 176, 0.08);
-  --glow-difficulty-pink: 0 0 12px rgba(176, 112, 144, 0.25), 0 0 24px rgba(176, 112, 144, 0.08);
-  --glow-difficulty-light-pink: 0 0 12px rgba(192, 144, 160, 0.25), 0 0 24px rgba(192, 144, 160, 0.08);
+  --glow-difficulty-green: 0 0 12px color-mix(in srgb, var(--difficulty-green) 25%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-green) 8%, transparent);
+  --glow-difficulty-amber: 0 0 12px color-mix(in srgb, var(--difficulty-amber) 25%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-amber) 8%, transparent);
+  --glow-difficulty-red: 0 0 12px color-mix(in srgb, var(--difficulty-red) 25%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-red) 8%, transparent);
+  --glow-difficulty-violet: 0 0 12px color-mix(in srgb, var(--difficulty-violet) 25%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-violet) 8%, transparent);
+  --glow-difficulty-pink: 0 0 12px color-mix(in srgb, var(--difficulty-pink) 25%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-pink) 8%, transparent);
+  --glow-difficulty-light-pink: 0 0 12px color-mix(in srgb, var(--difficulty-light-pink) 25%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-light-pink) 8%, transparent);
 
   --background: var(--void-black);
   --foreground: var(--cloud-white);
@@ -150,17 +150,17 @@
   --danger: var(--crimson);
   --danger-hover: var(--crimson-glow);
 
-  --glow-jade: 0 0 20px rgba(144, 144, 144, 0.2), 0 0 40px rgba(144, 144, 144, 0.08);
-  --glow-crimson: 0 0 20px rgba(144, 64, 64, 0.2), 0 0 40px rgba(144, 64, 64, 0.08);
-  --glow-gold: 0 0 20px rgba(176, 160, 112, 0.2), 0 0 40px rgba(176, 160, 112, 0.08);
-  --glow-blue: 0 0 20px rgba(112, 128, 144, 0.2), 0 0 40px rgba(112, 128, 144, 0.08);
-  --glow-subtle: 0 0 10px rgba(144, 144, 144, 0.08);
-  --glow-modal: 0 0 40px rgba(144, 144, 144, 0.3), 0 0 80px rgba(144, 144, 144, 0.15), inset 0 0 30px rgba(144, 144, 144, 0.08);
+  --glow-jade: 0 0 20px color-mix(in srgb, var(--jade-glow) 20%, transparent), 0 0 40px color-mix(in srgb, var(--jade-glow) 8%, transparent);
+  --glow-crimson: 0 0 20px color-mix(in srgb, var(--crimson-glow) 20%, transparent), 0 0 40px color-mix(in srgb, var(--crimson-glow) 8%, transparent);
+  --glow-gold: 0 0 20px color-mix(in srgb, var(--gold-glow) 20%, transparent), 0 0 40px color-mix(in srgb, var(--gold-glow) 8%, transparent);
+  --glow-blue: 0 0 20px color-mix(in srgb, var(--mountain-blue-glow) 20%, transparent), 0 0 40px color-mix(in srgb, var(--mountain-blue-glow) 8%, transparent);
+  --glow-subtle: 0 0 10px color-mix(in srgb, var(--jade-glow) 8%, transparent);
+  --glow-modal: 0 0 40px color-mix(in srgb, var(--jade-glow) 30%, transparent), 0 0 80px color-mix(in srgb, var(--jade-glow) 15%, transparent), inset 0 0 30px color-mix(in srgb, var(--jade-glow) 8%, transparent);
 
-  --col-weight: #909090;
-  --col-weight-bg: rgba(144, 144, 144, 0.06);
-  --col-reps: #b0a070;
-  --col-reps-bg: rgba(176, 160, 112, 0.06);
+  --col-weight: var(--jade-glow);
+  --col-weight-bg: color-mix(in srgb, var(--jade-glow) 6%, transparent);
+  --col-reps: var(--gold-glow);
+  --col-reps-bg: color-mix(in srgb, var(--gold-glow) 6%, transparent);
 }
 
 /* ===== Theme: Forest — Mossy woodland & moonlit canopy ===== */
@@ -233,13 +233,13 @@ html.forest {
   --difficulty-cyan: #92d0c8;
   --difficulty-cyan-glow: #6cb0a8;
 
-  --glow-difficulty-green: 0 0 14px rgba(184, 216, 120, 0.42), 0 0 28px rgba(184, 216, 120, 0.22);
-  --glow-difficulty-amber: 0 0 14px rgba(235, 200, 128, 0.40), 0 0 28px rgba(235, 200, 128, 0.22);
-  --glow-difficulty-red: 0 0 14px rgba(240, 134, 136, 0.38), 0 0 28px rgba(240, 134, 136, 0.22);
-  --glow-difficulty-violet: 0 0 14px rgba(232, 168, 196, 0.38), 0 0 28px rgba(232, 168, 196, 0.22);
-  --glow-difficulty-pink: 0 0 14px rgba(232, 168, 196, 0.38), 0 0 28px rgba(232, 168, 196, 0.22);
-  --glow-difficulty-light-pink: 0 0 14px rgba(244, 200, 219, 0.38), 0 0 28px rgba(244, 200, 219, 0.22);
-  --glow-difficulty-cyan: 0 0 14px rgba(146, 208, 200, 0.40), 0 0 28px rgba(146, 208, 200, 0.22);
+  --glow-difficulty-green: 0 0 14px color-mix(in srgb, var(--jade-glow) 42%, transparent), 0 0 28px color-mix(in srgb, var(--jade-glow) 22%, transparent);
+  --glow-difficulty-amber: 0 0 14px color-mix(in srgb, var(--gold) 40%, transparent), 0 0 28px color-mix(in srgb, var(--gold) 22%, transparent);
+  --glow-difficulty-red: 0 0 14px color-mix(in srgb, var(--crimson) 38%, transparent), 0 0 28px color-mix(in srgb, var(--crimson) 22%, transparent);
+  --glow-difficulty-violet: 0 0 14px color-mix(in srgb, var(--difficulty-violet) 38%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-violet) 22%, transparent);
+  --glow-difficulty-pink: 0 0 14px color-mix(in srgb, var(--difficulty-pink) 38%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-pink) 22%, transparent);
+  --glow-difficulty-light-pink: 0 0 14px color-mix(in srgb, var(--difficulty-light-pink) 38%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-light-pink) 22%, transparent);
+  --glow-difficulty-cyan: 0 0 14px color-mix(in srgb, var(--mountain-blue-glow) 40%, transparent), 0 0 28px color-mix(in srgb, var(--mountain-blue-glow) 22%, transparent);
 
   /* Semantic tokens */
   --background: var(--void-black);
@@ -257,12 +257,12 @@ html.forest {
   --danger-hover: var(--crimson-glow);
 
   /* Glows — soft canopy luminance */
-  --glow-jade: 0 0 16px rgba(184, 216, 120, 0.40), 0 0 32px rgba(184, 216, 120, 0.22);
-  --glow-crimson: 0 0 16px rgba(240, 134, 136, 0.36), 0 0 32px rgba(240, 134, 136, 0.20);
-  --glow-gold: 0 0 16px rgba(235, 200, 128, 0.38), 0 0 32px rgba(235, 200, 128, 0.22);
-  --glow-blue: 0 0 16px rgba(146, 208, 200, 0.38), 0 0 32px rgba(146, 208, 200, 0.22);
-  --glow-subtle: 0 0 10px rgba(184, 216, 120, 0.24);
-  --glow-modal: 0 0 36px rgba(184, 216, 120, 0.38), 0 0 72px rgba(184, 216, 120, 0.24), inset 0 0 28px rgba(146, 208, 200, 0.10);
+  --glow-jade: 0 0 16px color-mix(in srgb, var(--jade-glow) 40%, transparent), 0 0 32px color-mix(in srgb, var(--jade-glow) 22%, transparent);
+  --glow-crimson: 0 0 16px color-mix(in srgb, var(--crimson) 36%, transparent), 0 0 32px color-mix(in srgb, var(--crimson) 20%, transparent);
+  --glow-gold: 0 0 16px color-mix(in srgb, var(--gold) 38%, transparent), 0 0 32px color-mix(in srgb, var(--gold) 22%, transparent);
+  --glow-blue: 0 0 16px color-mix(in srgb, var(--mountain-blue-glow) 38%, transparent), 0 0 32px color-mix(in srgb, var(--mountain-blue-glow) 22%, transparent);
+  --glow-subtle: 0 0 10px color-mix(in srgb, var(--jade-glow) 24%, transparent);
+  --glow-modal: 0 0 36px color-mix(in srgb, var(--jade-glow) 38%, transparent), 0 0 72px color-mix(in srgb, var(--jade-glow) 24%, transparent), inset 0 0 28px color-mix(in srgb, var(--mountain-blue-glow) 10%, transparent);
 
   /* Column accents — aqua weight, leaf reps */
   --col-weight: var(--mountain-blue-glow);
@@ -271,15 +271,15 @@ html.forest {
   --col-reps-bg: color-mix(in srgb, var(--gold) 12%, transparent);
 
   /* Charts & misc */
-  --chart-primary: #b8d878;
+  --chart-primary: var(--jade-glow);
   --chart-primary-rgb: 184 216 120;
-  --chart-secondary: #ebc880;
-  --chart-grid: rgba(211, 198, 170, 0.14);
-  --chart-bg: rgba(35, 42, 46, 0.55);
+  --chart-secondary: var(--gold);
+  --chart-grid: color-mix(in srgb, var(--mist-pale) 14%, transparent);
+  --chart-bg: color-mix(in srgb, var(--void-black) 55%, transparent);
   --timed-color: #7fbbb3;
   --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 84%, var(--border));
   --nyaa-table-row-hover: color-mix(in srgb, var(--surface) 84%, var(--jade-glow));
-  --system-bar-fallback: #232a2e;
+  --system-bar-fallback: var(--void-black);
 }
 
 html.forest * {
@@ -361,10 +361,10 @@ html.ink-dragon {
   --jade-glow: #b080ff;
   --jade-light: #d8b8ff;
 
-  /* Accent #2 — Steel chain silver */
-  --gold-dim: #5a6070;
-  --gold: #b0bcd0;
-  --gold-glow: #d4dbe8;
+  /* Accent #2 — Imperial gold (warm leaf — brings the dragon to life) */
+  --gold-dim: #6e5824;
+  --gold: #c8a247;
+  --gold-glow: #f0cf78;
 
   /* Accent #3 — Vermilion seal (danger / warmth) */
   --crimson-deep: #401418;
@@ -396,13 +396,13 @@ html.ink-dragon {
   --difficulty-cyan: #6eb0d8;
   --difficulty-cyan-glow: #4884ac;
 
-  --glow-difficulty-green: 0 0 14px rgba(128, 204, 160, 0.38), 0 0 28px rgba(128, 204, 160, 0.22);
-  --glow-difficulty-amber: 0 0 14px rgba(232, 198, 132, 0.36), 0 0 28px rgba(232, 198, 132, 0.20);
-  --glow-difficulty-red: 0 0 14px rgba(208, 64, 72, 0.42), 0 0 28px rgba(208, 64, 72, 0.24);
-  --glow-difficulty-violet: 0 0 14px rgba(176, 128, 255, 0.42), 0 0 28px rgba(176, 128, 255, 0.24);
-  --glow-difficulty-pink: 0 0 14px rgba(222, 152, 196, 0.38), 0 0 28px rgba(222, 152, 196, 0.22);
-  --glow-difficulty-light-pink: 0 0 14px rgba(240, 188, 212, 0.38), 0 0 28px rgba(240, 188, 212, 0.22);
-  --glow-difficulty-cyan: 0 0 14px rgba(110, 176, 216, 0.38), 0 0 28px rgba(110, 176, 216, 0.22);
+  --glow-difficulty-green: 0 0 14px color-mix(in srgb, var(--difficulty-green) 38%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-green) 22%, transparent);
+  --glow-difficulty-amber: 0 0 14px color-mix(in srgb, var(--difficulty-amber) 36%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-amber) 20%, transparent);
+  --glow-difficulty-red: 0 0 14px color-mix(in srgb, var(--crimson) 42%, transparent), 0 0 28px color-mix(in srgb, var(--crimson) 24%, transparent);
+  --glow-difficulty-violet: 0 0 14px color-mix(in srgb, var(--jade-glow) 42%, transparent), 0 0 28px color-mix(in srgb, var(--jade-glow) 24%, transparent);
+  --glow-difficulty-pink: 0 0 14px color-mix(in srgb, var(--difficulty-pink) 38%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-pink) 22%, transparent);
+  --glow-difficulty-light-pink: 0 0 14px color-mix(in srgb, var(--difficulty-light-pink) 38%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-light-pink) 22%, transparent);
+  --glow-difficulty-cyan: 0 0 14px color-mix(in srgb, var(--mountain-blue-glow) 38%, transparent), 0 0 28px color-mix(in srgb, var(--mountain-blue-glow) 22%, transparent);
 
   /* Semantic */
   --background: var(--void-black);
@@ -412,34 +412,36 @@ html.ink-dragon {
   --border: var(--ink-light);
   --border-glow: var(--jade-glow);
   --text-primary: var(--cloud-white);
-  --text-secondary: var(--mist-light);
-  --text-muted: var(--mist-dark);
+  /* Secondary text picks up a warm gold-leaf tint — brings ink-dragon to life on captions, eyebrow titles */
+  --text-secondary: color-mix(in srgb, var(--gold-glow) 42%, var(--mist-light) 58%);
+  /* Muted text gets a softer gold wash so hints feel parchment-like */
+  --text-muted: color-mix(in srgb, var(--gold) 22%, var(--mist-dark) 78%);
   --accent: var(--jade-glow);
   --accent-hover: var(--jade-light);
   --danger: var(--crimson);
   --danger-hover: var(--crimson-glow);
 
-  --glow-jade: 0 0 16px rgba(176, 128, 255, 0.44), 0 0 32px rgba(176, 128, 255, 0.26);
-  --glow-crimson: 0 0 16px rgba(208, 64, 72, 0.40), 0 0 32px rgba(208, 64, 72, 0.24);
-  --glow-gold: 0 0 16px rgba(176, 188, 208, 0.38), 0 0 32px rgba(176, 188, 208, 0.22);
-  --glow-blue: 0 0 16px rgba(110, 176, 216, 0.40), 0 0 32px rgba(110, 176, 216, 0.24);
-  --glow-subtle: 0 0 10px rgba(176, 128, 255, 0.26);
-  --glow-modal: 0 0 36px rgba(176, 128, 255, 0.36), 0 0 72px rgba(208, 64, 72, 0.20), inset 0 0 28px rgba(176, 188, 208, 0.10);
+  --glow-jade: 0 0 16px color-mix(in srgb, var(--jade-glow) 44%, transparent), 0 0 32px color-mix(in srgb, var(--jade-glow) 26%, transparent);
+  --glow-crimson: 0 0 16px color-mix(in srgb, var(--crimson) 40%, transparent), 0 0 32px color-mix(in srgb, var(--crimson) 24%, transparent);
+  --glow-gold: 0 0 16px color-mix(in srgb, var(--gold-glow) 46%, transparent), 0 0 32px color-mix(in srgb, var(--gold-glow) 26%, transparent);
+  --glow-blue: 0 0 16px color-mix(in srgb, var(--mountain-blue-glow) 40%, transparent), 0 0 32px color-mix(in srgb, var(--mountain-blue-glow) 24%, transparent);
+  --glow-subtle: 0 0 10px color-mix(in srgb, var(--jade-glow) 26%, transparent);
+  --glow-modal: 0 0 36px color-mix(in srgb, var(--jade-glow) 30%, transparent), 0 0 72px color-mix(in srgb, var(--crimson) 18%, transparent), inset 0 0 28px color-mix(in srgb, var(--gold-glow) 18%, transparent);
 
   --col-weight: var(--mountain-blue-glow);
   --col-weight-bg: color-mix(in srgb, var(--mountain-blue-glow) 12%, transparent);
   --col-reps: var(--gold);
   --col-reps-bg: color-mix(in srgb, var(--gold) 12%, transparent);
 
-  --chart-primary: #b080ff;
+  --chart-primary: var(--jade-glow);
   --chart-primary-rgb: 176 128 255;
-  --chart-secondary: #d04048;
-  --chart-grid: rgba(236, 233, 224, 0.12);
-  --chart-bg: rgba(12, 12, 18, 0.55);
+  --chart-secondary: var(--crimson);
+  --chart-grid: color-mix(in srgb, var(--cloud-white) 12%, transparent);
+  --chart-bg: color-mix(in srgb, var(--void-black) 55%, transparent);
   --timed-color: #5a98c0;
   --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 84%, var(--border));
   --nyaa-table-row-hover: color-mix(in srgb, var(--surface) 84%, var(--jade-glow));
-  --system-bar-fallback: #0c0c12;
+  --system-bar-fallback: var(--void-black);
 }
 
 html.ink-dragon * {
@@ -553,13 +555,13 @@ html.phoenix-bloom {
   --difficulty-cyan: #6eb0d8;
   --difficulty-cyan-glow: #4884ac;
 
-  --glow-difficulty-green: 0 0 14px rgba(128, 204, 160, 0.38), 0 0 28px rgba(128, 204, 160, 0.22);
-  --glow-difficulty-amber: 0 0 14px rgba(232, 198, 132, 0.36), 0 0 28px rgba(232, 198, 132, 0.20);
-  --glow-difficulty-red: 0 0 14px rgba(255, 112, 184, 0.42), 0 0 28px rgba(255, 112, 184, 0.24);
-  --glow-difficulty-violet: 0 0 14px rgba(176, 106, 240, 0.42), 0 0 28px rgba(176, 106, 240, 0.24);
-  --glow-difficulty-pink: 0 0 14px rgba(255, 112, 184, 0.38), 0 0 28px rgba(255, 112, 184, 0.22);
-  --glow-difficulty-light-pink: 0 0 14px rgba(255, 160, 204, 0.38), 0 0 28px rgba(255, 160, 204, 0.22);
-  --glow-difficulty-cyan: 0 0 14px rgba(110, 176, 216, 0.38), 0 0 28px rgba(110, 176, 216, 0.22);
+  --glow-difficulty-green: 0 0 14px color-mix(in srgb, var(--difficulty-green) 38%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-green) 22%, transparent);
+  --glow-difficulty-amber: 0 0 14px color-mix(in srgb, var(--difficulty-amber) 36%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-amber) 20%, transparent);
+  --glow-difficulty-red: 0 0 14px color-mix(in srgb, var(--jade-glow) 42%, transparent), 0 0 28px color-mix(in srgb, var(--jade-glow) 24%, transparent);
+  --glow-difficulty-violet: 0 0 14px color-mix(in srgb, var(--crimson) 42%, transparent), 0 0 28px color-mix(in srgb, var(--crimson) 24%, transparent);
+  --glow-difficulty-pink: 0 0 14px color-mix(in srgb, var(--jade-glow) 38%, transparent), 0 0 28px color-mix(in srgb, var(--jade-glow) 22%, transparent);
+  --glow-difficulty-light-pink: 0 0 14px color-mix(in srgb, var(--difficulty-light-pink) 38%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-light-pink) 22%, transparent);
+  --glow-difficulty-cyan: 0 0 14px color-mix(in srgb, var(--mountain-blue-glow) 38%, transparent), 0 0 28px color-mix(in srgb, var(--mountain-blue-glow) 22%, transparent);
 
   /* Semantic */
   --background: var(--void-black);
@@ -576,27 +578,27 @@ html.phoenix-bloom {
   --danger: var(--crimson);
   --danger-hover: var(--crimson-glow);
 
-  --glow-jade: 0 0 16px rgba(255, 112, 184, 0.44), 0 0 32px rgba(255, 112, 184, 0.26);
-  --glow-crimson: 0 0 16px rgba(176, 106, 240, 0.40), 0 0 32px rgba(176, 106, 240, 0.24);
-  --glow-gold: 0 0 16px rgba(176, 188, 208, 0.38), 0 0 32px rgba(176, 188, 208, 0.22);
-  --glow-blue: 0 0 16px rgba(110, 176, 216, 0.40), 0 0 32px rgba(110, 176, 216, 0.24);
-  --glow-subtle: 0 0 10px rgba(255, 112, 184, 0.26);
-  --glow-modal: 0 0 36px rgba(255, 112, 184, 0.36), 0 0 72px rgba(176, 106, 240, 0.20), inset 0 0 28px rgba(176, 188, 208, 0.10);
+  --glow-jade: 0 0 16px color-mix(in srgb, var(--jade-glow) 44%, transparent), 0 0 32px color-mix(in srgb, var(--jade-glow) 26%, transparent);
+  --glow-crimson: 0 0 16px color-mix(in srgb, var(--crimson) 40%, transparent), 0 0 32px color-mix(in srgb, var(--crimson) 24%, transparent);
+  --glow-gold: 0 0 16px color-mix(in srgb, var(--gold) 38%, transparent), 0 0 32px color-mix(in srgb, var(--gold) 22%, transparent);
+  --glow-blue: 0 0 16px color-mix(in srgb, var(--mountain-blue-glow) 40%, transparent), 0 0 32px color-mix(in srgb, var(--mountain-blue-glow) 24%, transparent);
+  --glow-subtle: 0 0 10px color-mix(in srgb, var(--jade-glow) 26%, transparent);
+  --glow-modal: 0 0 36px color-mix(in srgb, var(--jade-glow) 36%, transparent), 0 0 72px color-mix(in srgb, var(--crimson) 20%, transparent), inset 0 0 28px color-mix(in srgb, var(--gold) 10%, transparent);
 
   --col-weight: var(--mountain-blue-glow);
   --col-weight-bg: color-mix(in srgb, var(--mountain-blue-glow) 12%, transparent);
   --col-reps: var(--gold);
   --col-reps-bg: color-mix(in srgb, var(--gold) 12%, transparent);
 
-  --chart-primary: #ff70b8;
+  --chart-primary: var(--jade-glow);
   --chart-primary-rgb: 255 112 184;
-  --chart-secondary: #b06af0;
-  --chart-grid: rgba(236, 233, 224, 0.12);
-  --chart-bg: rgba(12, 12, 18, 0.55);
+  --chart-secondary: var(--crimson);
+  --chart-grid: color-mix(in srgb, var(--cloud-white) 12%, transparent);
+  --chart-bg: color-mix(in srgb, var(--void-black) 55%, transparent);
   --timed-color: #5a98c0;
   --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 84%, var(--border));
   --nyaa-table-row-hover: color-mix(in srgb, var(--surface) 84%, var(--jade-glow));
-  --system-bar-fallback: #0c0c12;
+  --system-bar-fallback: var(--void-black);
 }
 
 html.phoenix-bloom * {
@@ -711,13 +713,13 @@ html.storm-chains {
   --difficulty-cyan: #6cc0ff;
   --difficulty-cyan-glow: #4894d0;
 
-  --glow-difficulty-green: 0 0 14px rgba(128, 204, 160, 0.38), 0 0 28px rgba(128, 204, 160, 0.22);
-  --glow-difficulty-amber: 0 0 14px rgba(232, 198, 132, 0.36), 0 0 28px rgba(232, 198, 132, 0.20);
-  --glow-difficulty-red: 0 0 14px rgba(208, 64, 72, 0.42), 0 0 28px rgba(208, 64, 72, 0.24);
-  --glow-difficulty-violet: 0 0 14px rgba(164, 164, 255, 0.42), 0 0 28px rgba(164, 164, 255, 0.24);
-  --glow-difficulty-pink: 0 0 14px rgba(222, 152, 196, 0.38), 0 0 28px rgba(222, 152, 196, 0.22);
-  --glow-difficulty-light-pink: 0 0 14px rgba(240, 188, 212, 0.38), 0 0 28px rgba(240, 188, 212, 0.22);
-  --glow-difficulty-cyan: 0 0 14px rgba(108, 192, 255, 0.42), 0 0 28px rgba(108, 192, 255, 0.24);
+  --glow-difficulty-green: 0 0 14px color-mix(in srgb, var(--difficulty-green) 38%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-green) 22%, transparent);
+  --glow-difficulty-amber: 0 0 14px color-mix(in srgb, var(--difficulty-amber) 36%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-amber) 20%, transparent);
+  --glow-difficulty-red: 0 0 14px color-mix(in srgb, var(--crimson) 42%, transparent), 0 0 28px color-mix(in srgb, var(--crimson) 24%, transparent);
+  --glow-difficulty-violet: 0 0 14px color-mix(in srgb, var(--difficulty-violet) 42%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-violet) 24%, transparent);
+  --glow-difficulty-pink: 0 0 14px color-mix(in srgb, var(--difficulty-pink) 38%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-pink) 22%, transparent);
+  --glow-difficulty-light-pink: 0 0 14px color-mix(in srgb, var(--difficulty-light-pink) 38%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-light-pink) 22%, transparent);
+  --glow-difficulty-cyan: 0 0 14px color-mix(in srgb, var(--jade-glow) 42%, transparent), 0 0 28px color-mix(in srgb, var(--jade-glow) 24%, transparent);
 
   /* Semantic */
   --background: var(--void-black);
@@ -734,27 +736,27 @@ html.storm-chains {
   --danger: var(--crimson);
   --danger-hover: var(--crimson-glow);
 
-  --glow-jade: 0 0 16px rgba(108, 192, 255, 0.44), 0 0 32px rgba(108, 192, 255, 0.26);
-  --glow-crimson: 0 0 16px rgba(208, 64, 72, 0.40), 0 0 32px rgba(208, 64, 72, 0.24);
-  --glow-gold: 0 0 16px rgba(180, 190, 204, 0.38), 0 0 32px rgba(180, 190, 204, 0.22);
-  --glow-blue: 0 0 16px rgba(108, 200, 224, 0.40), 0 0 32px rgba(108, 200, 224, 0.24);
-  --glow-subtle: 0 0 10px rgba(108, 192, 255, 0.26);
-  --glow-modal: 0 0 36px rgba(108, 192, 255, 0.36), 0 0 72px rgba(208, 64, 72, 0.20), inset 0 0 28px rgba(180, 190, 204, 0.10);
+  --glow-jade: 0 0 16px color-mix(in srgb, var(--jade-glow) 44%, transparent), 0 0 32px color-mix(in srgb, var(--jade-glow) 26%, transparent);
+  --glow-crimson: 0 0 16px color-mix(in srgb, var(--crimson) 40%, transparent), 0 0 32px color-mix(in srgb, var(--crimson) 24%, transparent);
+  --glow-gold: 0 0 16px color-mix(in srgb, var(--gold) 38%, transparent), 0 0 32px color-mix(in srgb, var(--gold) 22%, transparent);
+  --glow-blue: 0 0 16px color-mix(in srgb, var(--mountain-blue-glow) 40%, transparent), 0 0 32px color-mix(in srgb, var(--mountain-blue-glow) 24%, transparent);
+  --glow-subtle: 0 0 10px color-mix(in srgb, var(--jade-glow) 26%, transparent);
+  --glow-modal: 0 0 36px color-mix(in srgb, var(--jade-glow) 36%, transparent), 0 0 72px color-mix(in srgb, var(--crimson) 20%, transparent), inset 0 0 28px color-mix(in srgb, var(--gold) 10%, transparent);
 
   --col-weight: var(--mountain-blue-glow);
   --col-weight-bg: color-mix(in srgb, var(--mountain-blue-glow) 12%, transparent);
   --col-reps: var(--gold);
   --col-reps-bg: color-mix(in srgb, var(--gold) 12%, transparent);
 
-  --chart-primary: #6cc0ff;
+  --chart-primary: var(--jade-glow);
   --chart-primary-rgb: 108 192 255;
-  --chart-secondary: #d04048;
-  --chart-grid: rgba(232, 237, 242, 0.12);
-  --chart-bg: rgba(13, 17, 24, 0.55);
+  --chart-secondary: var(--crimson);
+  --chart-grid: color-mix(in srgb, var(--cloud-white) 12%, transparent);
+  --chart-bg: color-mix(in srgb, var(--void-black) 55%, transparent);
   --timed-color: #58b0c8;
   --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 84%, var(--border));
   --nyaa-table-row-hover: color-mix(in srgb, var(--surface) 84%, var(--jade-glow));
-  --system-bar-fallback: #0d1118;
+  --system-bar-fallback: var(--void-black);
 }
 
 html.storm-chains * {
@@ -868,13 +870,13 @@ html.obsidian-ember {
   --difficulty-cyan: #58c8e8;
   --difficulty-cyan-glow: #3088a8;
 
-  --glow-difficulty-green: 0 0 14px rgba(92, 220, 122, 0.42), 0 0 28px rgba(92, 220, 122, 0.20);
-  --glow-difficulty-amber: 0 0 14px rgba(255, 184, 48, 0.42), 0 0 28px rgba(255, 184, 48, 0.20);
-  --glow-difficulty-red: 0 0 14px rgba(255, 48, 56, 0.48), 0 0 28px rgba(255, 48, 56, 0.24);
-  --glow-difficulty-violet: 0 0 14px rgba(184, 132, 240, 0.40), 0 0 28px rgba(184, 132, 240, 0.20);
-  --glow-difficulty-pink: 0 0 14px rgba(240, 112, 176, 0.40), 0 0 28px rgba(240, 112, 176, 0.20);
-  --glow-difficulty-light-pink: 0 0 14px rgba(255, 152, 192, 0.40), 0 0 28px rgba(255, 152, 192, 0.20);
-  --glow-difficulty-cyan: 0 0 14px rgba(88, 200, 232, 0.40), 0 0 28px rgba(88, 200, 232, 0.20);
+  --glow-difficulty-green: 0 0 14px color-mix(in srgb, var(--difficulty-green) 42%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-green) 20%, transparent);
+  --glow-difficulty-amber: 0 0 14px color-mix(in srgb, var(--difficulty-amber) 42%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-amber) 20%, transparent);
+  --glow-difficulty-red: 0 0 14px color-mix(in srgb, var(--jade-glow) 48%, transparent), 0 0 28px color-mix(in srgb, var(--jade-glow) 24%, transparent);
+  --glow-difficulty-violet: 0 0 14px color-mix(in srgb, var(--difficulty-violet) 40%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-violet) 20%, transparent);
+  --glow-difficulty-pink: 0 0 14px color-mix(in srgb, var(--difficulty-pink) 40%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-pink) 20%, transparent);
+  --glow-difficulty-light-pink: 0 0 14px color-mix(in srgb, var(--difficulty-light-pink) 40%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-light-pink) 20%, transparent);
+  --glow-difficulty-cyan: 0 0 14px color-mix(in srgb, var(--difficulty-cyan) 40%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-cyan) 20%, transparent);
 
   /* Semantic */
   --background: var(--void-black);
@@ -891,27 +893,27 @@ html.obsidian-ember {
   --danger: var(--crimson);
   --danger-hover: var(--crimson-glow);
 
-  --glow-jade: 0 0 18px rgba(255, 48, 56, 0.50), 0 0 36px rgba(255, 48, 56, 0.26);
-  --glow-crimson: 0 0 18px rgba(255, 48, 56, 0.48), 0 0 36px rgba(255, 48, 56, 0.24);
-  --glow-gold: 0 0 18px rgba(255, 204, 64, 0.40), 0 0 36px rgba(255, 204, 64, 0.18);
-  --glow-blue: 0 0 18px rgba(130, 184, 255, 0.36), 0 0 36px rgba(130, 184, 255, 0.16);
-  --glow-subtle: 0 0 10px rgba(255, 48, 56, 0.28);
-  --glow-modal: 0 0 40px rgba(255, 48, 56, 0.30), 0 0 80px rgba(0, 0, 0, 0.6), inset 0 0 30px rgba(255, 204, 64, 0.08);
+  --glow-jade: 0 0 18px color-mix(in srgb, var(--jade-glow) 50%, transparent), 0 0 36px color-mix(in srgb, var(--jade-glow) 26%, transparent);
+  --glow-crimson: 0 0 18px color-mix(in srgb, var(--jade-glow) 48%, transparent), 0 0 36px color-mix(in srgb, var(--jade-glow) 24%, transparent);
+  --glow-gold: 0 0 18px color-mix(in srgb, var(--gold-glow) 40%, transparent), 0 0 36px color-mix(in srgb, var(--gold-glow) 18%, transparent);
+  --glow-blue: 0 0 18px color-mix(in srgb, var(--mountain-blue-glow) 36%, transparent), 0 0 36px color-mix(in srgb, var(--mountain-blue-glow) 16%, transparent);
+  --glow-subtle: 0 0 10px color-mix(in srgb, var(--jade-glow) 28%, transparent);
+  --glow-modal: 0 0 40px color-mix(in srgb, var(--jade-glow) 30%, transparent), 0 0 80px color-mix(in srgb, var(--void-black) 60%, transparent), inset 0 0 30px color-mix(in srgb, var(--gold-glow) 8%, transparent);
 
   --col-weight: var(--mountain-blue-glow);
   --col-weight-bg: color-mix(in srgb, var(--mountain-blue-glow) 12%, transparent);
   --col-reps: var(--gold);
   --col-reps-bg: color-mix(in srgb, var(--gold) 12%, transparent);
 
-  --chart-primary: #ff3038;
+  --chart-primary: var(--jade-glow);
   --chart-primary-rgb: 255 48 56;
-  --chart-secondary: #ffcc40;
-  --chart-grid: rgba(226, 226, 228, 0.10);
-  --chart-bg: rgba(16, 16, 18, 0.6);
-  --timed-color: #82b8ff;
+  --chart-secondary: var(--gold-glow);
+  --chart-grid: color-mix(in srgb, var(--cloud-white) 10%, transparent);
+  --chart-bg: color-mix(in srgb, var(--void-black) 60%, transparent);
+  --timed-color: var(--mountain-blue-glow);
   --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 84%, var(--border));
   --nyaa-table-row-hover: color-mix(in srgb, var(--surface) 78%, var(--jade-glow));
-  --system-bar-fallback: #101012;
+  --system-bar-fallback: var(--void-black);
 }
 
 html.obsidian-ember * {
@@ -1026,13 +1028,13 @@ html.mist-cultivator {
   --difficulty-cyan: #88a8c4;
   --difficulty-cyan-glow: #607a98;
 
-  --glow-difficulty-green: 0 0 14px rgba(148, 184, 164, 0.34), 0 0 28px rgba(148, 184, 164, 0.20);
-  --glow-difficulty-amber: 0 0 14px rgba(204, 180, 148, 0.34), 0 0 28px rgba(204, 180, 148, 0.20);
-  --glow-difficulty-red: 0 0 14px rgba(204, 96, 128, 0.38), 0 0 28px rgba(204, 96, 128, 0.22);
-  --glow-difficulty-violet: 0 0 14px rgba(176, 156, 234, 0.40), 0 0 28px rgba(176, 156, 234, 0.24);
-  --glow-difficulty-pink: 0 0 14px rgba(204, 170, 192, 0.34), 0 0 28px rgba(204, 170, 192, 0.20);
-  --glow-difficulty-light-pink: 0 0 14px rgba(220, 192, 210, 0.34), 0 0 28px rgba(220, 192, 210, 0.20);
-  --glow-difficulty-cyan: 0 0 14px rgba(136, 168, 196, 0.34), 0 0 28px rgba(136, 168, 196, 0.20);
+  --glow-difficulty-green: 0 0 14px color-mix(in srgb, var(--difficulty-green) 34%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-green) 20%, transparent);
+  --glow-difficulty-amber: 0 0 14px color-mix(in srgb, var(--difficulty-amber) 34%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-amber) 20%, transparent);
+  --glow-difficulty-red: 0 0 14px color-mix(in srgb, var(--crimson) 38%, transparent), 0 0 28px color-mix(in srgb, var(--crimson) 22%, transparent);
+  --glow-difficulty-violet: 0 0 14px color-mix(in srgb, var(--jade-glow) 40%, transparent), 0 0 28px color-mix(in srgb, var(--jade-glow) 24%, transparent);
+  --glow-difficulty-pink: 0 0 14px color-mix(in srgb, var(--difficulty-pink) 34%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-pink) 20%, transparent);
+  --glow-difficulty-light-pink: 0 0 14px color-mix(in srgb, var(--difficulty-light-pink) 34%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-light-pink) 20%, transparent);
+  --glow-difficulty-cyan: 0 0 14px color-mix(in srgb, var(--mountain-blue-glow) 34%, transparent), 0 0 28px color-mix(in srgb, var(--mountain-blue-glow) 20%, transparent);
 
   /* Semantic */
   --background: var(--void-black);
@@ -1049,27 +1051,27 @@ html.mist-cultivator {
   --danger: var(--crimson);
   --danger-hover: var(--crimson-glow);
 
-  --glow-jade: 0 0 16px rgba(176, 156, 234, 0.40), 0 0 32px rgba(176, 156, 234, 0.24);
-  --glow-crimson: 0 0 16px rgba(204, 96, 128, 0.36), 0 0 32px rgba(204, 96, 128, 0.22);
-  --glow-gold: 0 0 16px rgba(180, 188, 200, 0.34), 0 0 32px rgba(180, 188, 200, 0.20);
-  --glow-blue: 0 0 16px rgba(136, 168, 196, 0.34), 0 0 32px rgba(136, 168, 196, 0.20);
-  --glow-subtle: 0 0 10px rgba(176, 156, 234, 0.24);
-  --glow-modal: 0 0 36px rgba(176, 156, 234, 0.32), 0 0 72px rgba(0, 0, 0, 0.45), inset 0 0 28px rgba(180, 188, 200, 0.10);
+  --glow-jade: 0 0 16px color-mix(in srgb, var(--jade-glow) 40%, transparent), 0 0 32px color-mix(in srgb, var(--jade-glow) 24%, transparent);
+  --glow-crimson: 0 0 16px color-mix(in srgb, var(--crimson) 36%, transparent), 0 0 32px color-mix(in srgb, var(--crimson) 22%, transparent);
+  --glow-gold: 0 0 16px color-mix(in srgb, var(--gold) 34%, transparent), 0 0 32px color-mix(in srgb, var(--gold) 20%, transparent);
+  --glow-blue: 0 0 16px color-mix(in srgb, var(--mountain-blue-glow) 34%, transparent), 0 0 32px color-mix(in srgb, var(--mountain-blue-glow) 20%, transparent);
+  --glow-subtle: 0 0 10px color-mix(in srgb, var(--jade-glow) 24%, transparent);
+  --glow-modal: 0 0 36px color-mix(in srgb, var(--jade-glow) 32%, transparent), 0 0 72px color-mix(in srgb, var(--void-black) 45%, transparent), inset 0 0 28px color-mix(in srgb, var(--gold) 10%, transparent);
 
   --col-weight: var(--mountain-blue-glow);
   --col-weight-bg: color-mix(in srgb, var(--mountain-blue-glow) 12%, transparent);
   --col-reps: var(--gold);
   --col-reps-bg: color-mix(in srgb, var(--gold) 12%, transparent);
 
-  --chart-primary: #b09cea;
+  --chart-primary: var(--jade-glow);
   --chart-primary-rgb: 176 156 234;
-  --chart-secondary: #b4bcc8;
-  --chart-grid: rgba(236, 240, 244, 0.11);
-  --chart-bg: rgba(24, 26, 29, 0.6);
+  --chart-secondary: var(--gold);
+  --chart-grid: color-mix(in srgb, var(--cloud-white) 11%, transparent);
+  --chart-bg: color-mix(in srgb, var(--void-black) 60%, transparent);
   --timed-color: #6e8aa4;
   --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 84%, var(--border));
   --nyaa-table-row-hover: color-mix(in srgb, var(--surface) 84%, var(--jade-glow));
-  --system-bar-fallback: #181a1d;
+  --system-bar-fallback: var(--void-black);
 }
 
 html.mist-cultivator * {
@@ -1180,13 +1182,13 @@ html.frost-sect {
   --difficulty-cyan: #9cdce4;
   --difficulty-cyan-glow: #74b8c0;
 
-  --glow-difficulty-green: 0 0 14px rgba(156, 220, 228, 0.40), 0 0 28px rgba(156, 220, 228, 0.22);
-  --glow-difficulty-amber: 0 0 14px rgba(220, 216, 184, 0.36), 0 0 28px rgba(220, 216, 184, 0.20);
-  --glow-difficulty-red: 0 0 14px rgba(236, 156, 180, 0.38), 0 0 28px rgba(236, 156, 180, 0.22);
-  --glow-difficulty-violet: 0 0 14px rgba(196, 184, 232, 0.38), 0 0 28px rgba(196, 184, 232, 0.22);
-  --glow-difficulty-pink: 0 0 14px rgba(232, 180, 212, 0.38), 0 0 28px rgba(232, 180, 212, 0.22);
-  --glow-difficulty-light-pink: 0 0 14px rgba(244, 204, 224, 0.38), 0 0 28px rgba(244, 204, 224, 0.22);
-  --glow-difficulty-cyan: 0 0 14px rgba(156, 220, 228, 0.40), 0 0 28px rgba(156, 220, 228, 0.22);
+  --glow-difficulty-green: 0 0 14px color-mix(in srgb, var(--difficulty-green) 40%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-green) 22%, transparent);
+  --glow-difficulty-amber: 0 0 14px color-mix(in srgb, var(--gold) 36%, transparent), 0 0 28px color-mix(in srgb, var(--gold) 20%, transparent);
+  --glow-difficulty-red: 0 0 14px color-mix(in srgb, var(--crimson) 38%, transparent), 0 0 28px color-mix(in srgb, var(--crimson) 22%, transparent);
+  --glow-difficulty-violet: 0 0 14px color-mix(in srgb, var(--difficulty-violet) 38%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-violet) 22%, transparent);
+  --glow-difficulty-pink: 0 0 14px color-mix(in srgb, var(--difficulty-pink) 38%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-pink) 22%, transparent);
+  --glow-difficulty-light-pink: 0 0 14px color-mix(in srgb, var(--difficulty-light-pink) 38%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-light-pink) 22%, transparent);
+  --glow-difficulty-cyan: 0 0 14px color-mix(in srgb, var(--difficulty-cyan) 40%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-cyan) 22%, transparent);
 
   --background: var(--void-black);
   --foreground: var(--cloud-white);
@@ -1202,27 +1204,27 @@ html.frost-sect {
   --danger: var(--crimson);
   --danger-hover: var(--crimson-glow);
 
-  --glow-jade: 0 0 16px rgba(156, 200, 236, 0.40), 0 0 32px rgba(156, 200, 236, 0.22);
-  --glow-crimson: 0 0 16px rgba(236, 156, 180, 0.36), 0 0 32px rgba(236, 156, 180, 0.20);
-  --glow-gold: 0 0 16px rgba(220, 216, 184, 0.36), 0 0 32px rgba(220, 216, 184, 0.20);
-  --glow-blue: 0 0 16px rgba(156, 220, 228, 0.40), 0 0 32px rgba(156, 220, 228, 0.22);
-  --glow-subtle: 0 0 10px rgba(156, 200, 236, 0.26);
-  --glow-modal: 0 0 36px rgba(156, 200, 236, 0.38), 0 0 72px rgba(156, 220, 228, 0.22), inset 0 0 28px rgba(236, 156, 180, 0.10);
+  --glow-jade: 0 0 16px color-mix(in srgb, var(--jade-glow) 40%, transparent), 0 0 32px color-mix(in srgb, var(--jade-glow) 22%, transparent);
+  --glow-crimson: 0 0 16px color-mix(in srgb, var(--crimson) 36%, transparent), 0 0 32px color-mix(in srgb, var(--crimson) 20%, transparent);
+  --glow-gold: 0 0 16px color-mix(in srgb, var(--gold) 36%, transparent), 0 0 32px color-mix(in srgb, var(--gold) 20%, transparent);
+  --glow-blue: 0 0 16px color-mix(in srgb, var(--mountain-blue-glow) 40%, transparent), 0 0 32px color-mix(in srgb, var(--mountain-blue-glow) 22%, transparent);
+  --glow-subtle: 0 0 10px color-mix(in srgb, var(--jade-glow) 26%, transparent);
+  --glow-modal: 0 0 36px color-mix(in srgb, var(--jade-glow) 38%, transparent), 0 0 72px color-mix(in srgb, var(--mountain-blue-glow) 22%, transparent), inset 0 0 28px color-mix(in srgb, var(--crimson) 10%, transparent);
 
   --col-weight: var(--mountain-blue-glow);
   --col-weight-bg: color-mix(in srgb, var(--mountain-blue-glow) 12%, transparent);
   --col-reps: var(--gold);
   --col-reps-bg: color-mix(in srgb, var(--gold) 12%, transparent);
 
-  --chart-primary: #9cc8ec;
+  --chart-primary: var(--jade-glow);
   --chart-primary-rgb: 156 200 236;
-  --chart-secondary: #dcd8b8;
-  --chart-grid: rgba(230, 237, 246, 0.14);
-  --chart-bg: rgba(31, 41, 51, 0.55);
+  --chart-secondary: var(--gold);
+  --chart-grid: color-mix(in srgb, var(--cloud-white) 14%, transparent);
+  --chart-bg: color-mix(in srgb, var(--void-black) 55%, transparent);
   --timed-color: #82c0c8;
   --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 84%, var(--border));
   --nyaa-table-row-hover: color-mix(in srgb, var(--surface) 84%, var(--jade-glow));
-  --system-bar-fallback: #1f2933;
+  --system-bar-fallback: var(--void-black);
 }
 
 html.frost-sect * { scrollbar-color: var(--ink-light) var(--void-black); }
@@ -1327,13 +1329,13 @@ html.heavenly-sword {
   --difficulty-cyan: #9cd8c8;
   --difficulty-cyan-glow: #74b4a4;
 
-  --glow-difficulty-green: 0 0 14px rgba(156, 216, 200, 0.38), 0 0 28px rgba(156, 216, 200, 0.22);
-  --glow-difficulty-amber: 0 0 14px rgba(240, 204, 112, 0.40), 0 0 28px rgba(240, 204, 112, 0.22);
-  --glow-difficulty-red: 0 0 14px rgba(236, 156, 156, 0.36), 0 0 28px rgba(236, 156, 156, 0.20);
-  --glow-difficulty-violet: 0 0 14px rgba(196, 188, 232, 0.36), 0 0 28px rgba(196, 188, 232, 0.20);
-  --glow-difficulty-pink: 0 0 14px rgba(232, 180, 204, 0.36), 0 0 28px rgba(232, 180, 204, 0.20);
-  --glow-difficulty-light-pink: 0 0 14px rgba(244, 208, 224, 0.36), 0 0 28px rgba(244, 208, 224, 0.20);
-  --glow-difficulty-cyan: 0 0 14px rgba(156, 216, 200, 0.38), 0 0 28px rgba(156, 216, 200, 0.22);
+  --glow-difficulty-green: 0 0 14px color-mix(in srgb, var(--difficulty-green) 38%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-green) 22%, transparent);
+  --glow-difficulty-amber: 0 0 14px color-mix(in srgb, var(--gold) 40%, transparent), 0 0 28px color-mix(in srgb, var(--gold) 22%, transparent);
+  --glow-difficulty-red: 0 0 14px color-mix(in srgb, var(--crimson) 36%, transparent), 0 0 28px color-mix(in srgb, var(--crimson) 20%, transparent);
+  --glow-difficulty-violet: 0 0 14px color-mix(in srgb, var(--difficulty-violet) 36%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-violet) 20%, transparent);
+  --glow-difficulty-pink: 0 0 14px color-mix(in srgb, var(--difficulty-pink) 36%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-pink) 20%, transparent);
+  --glow-difficulty-light-pink: 0 0 14px color-mix(in srgb, var(--difficulty-light-pink) 36%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-light-pink) 20%, transparent);
+  --glow-difficulty-cyan: 0 0 14px color-mix(in srgb, var(--difficulty-cyan) 38%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-cyan) 22%, transparent);
 
   --background: var(--void-black);
   --foreground: var(--cloud-white);
@@ -1349,27 +1351,27 @@ html.heavenly-sword {
   --danger: var(--crimson);
   --danger-hover: var(--crimson-glow);
 
-  --glow-jade: 0 0 16px rgba(156, 196, 240, 0.40), 0 0 32px rgba(156, 196, 240, 0.22);
-  --glow-crimson: 0 0 16px rgba(236, 156, 156, 0.34), 0 0 32px rgba(236, 156, 156, 0.18);
-  --glow-gold: 0 0 16px rgba(240, 204, 112, 0.38), 0 0 32px rgba(240, 204, 112, 0.22);
-  --glow-blue: 0 0 16px rgba(156, 216, 200, 0.38), 0 0 32px rgba(156, 216, 200, 0.22);
-  --glow-subtle: 0 0 10px rgba(156, 196, 240, 0.26);
-  --glow-modal: 0 0 36px rgba(156, 196, 240, 0.38), 0 0 72px rgba(240, 204, 112, 0.22), inset 0 0 28px rgba(156, 216, 200, 0.10);
+  --glow-jade: 0 0 16px color-mix(in srgb, var(--jade-glow) 40%, transparent), 0 0 32px color-mix(in srgb, var(--jade-glow) 22%, transparent);
+  --glow-crimson: 0 0 16px color-mix(in srgb, var(--crimson) 34%, transparent), 0 0 32px color-mix(in srgb, var(--crimson) 18%, transparent);
+  --glow-gold: 0 0 16px color-mix(in srgb, var(--gold) 38%, transparent), 0 0 32px color-mix(in srgb, var(--gold) 22%, transparent);
+  --glow-blue: 0 0 16px color-mix(in srgb, var(--mountain-blue-glow) 38%, transparent), 0 0 32px color-mix(in srgb, var(--mountain-blue-glow) 22%, transparent);
+  --glow-subtle: 0 0 10px color-mix(in srgb, var(--jade-glow) 26%, transparent);
+  --glow-modal: 0 0 36px color-mix(in srgb, var(--jade-glow) 38%, transparent), 0 0 72px color-mix(in srgb, var(--gold) 22%, transparent), inset 0 0 28px color-mix(in srgb, var(--mountain-blue-glow) 10%, transparent);
 
   --col-weight: var(--mountain-blue-glow);
   --col-weight-bg: color-mix(in srgb, var(--mountain-blue-glow) 12%, transparent);
   --col-reps: var(--gold);
   --col-reps-bg: color-mix(in srgb, var(--gold) 12%, transparent);
 
-  --chart-primary: #9cc4f0;
+  --chart-primary: var(--jade-glow);
   --chart-primary-rgb: 156 196 240;
-  --chart-secondary: #f0cc70;
-  --chart-grid: rgba(236, 242, 250, 0.14);
-  --chart-bg: rgba(28, 39, 56, 0.55);
+  --chart-secondary: var(--gold);
+  --chart-grid: color-mix(in srgb, var(--cloud-white) 14%, transparent);
+  --chart-bg: color-mix(in srgb, var(--void-black) 55%, transparent);
   --timed-color: #82bcb0;
   --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 84%, var(--border));
   --nyaa-table-row-hover: color-mix(in srgb, var(--surface) 84%, var(--jade-glow));
-  --system-bar-fallback: #1c2738;
+  --system-bar-fallback: var(--void-black);
 }
 
 html.heavenly-sword * { scrollbar-color: var(--ink-light) var(--void-black); }
@@ -1456,12 +1458,12 @@ html.heavenly-sword [class*="hover\\:text-[#8ea1ff]"]:hover { color: var(--accen
   --difficulty-light-pink-glow: #fb7185;
 
   /* Difficulty glows — warm sakura-tinted glows */
-  --glow-difficulty-green: 0 0 15px rgba(52, 211, 153, 0.35), 0 0 30px rgba(52, 211, 153, 0.12);
-  --glow-difficulty-amber: 0 0 15px rgba(251, 191, 36, 0.35), 0 0 30px rgba(251, 191, 36, 0.12);
-  --glow-difficulty-red: 0 0 15px rgba(248, 113, 113, 0.35), 0 0 30px rgba(248, 113, 113, 0.12);
-  --glow-difficulty-violet: 0 0 15px rgba(196, 181, 253, 0.35), 0 0 30px rgba(196, 181, 253, 0.12);
-  --glow-difficulty-pink: 0 0 15px rgba(249, 168, 212, 0.35), 0 0 30px rgba(249, 168, 212, 0.12);
-  --glow-difficulty-light-pink: 0 0 15px rgba(253, 164, 175, 0.35), 0 0 30px rgba(253, 164, 175, 0.12);
+  --glow-difficulty-green: 0 0 15px color-mix(in srgb, var(--difficulty-green) 35%, transparent), 0 0 30px color-mix(in srgb, var(--difficulty-green) 12%, transparent);
+  --glow-difficulty-amber: 0 0 15px color-mix(in srgb, var(--difficulty-amber) 35%, transparent), 0 0 30px color-mix(in srgb, var(--difficulty-amber) 12%, transparent);
+  --glow-difficulty-red: 0 0 15px color-mix(in srgb, var(--difficulty-red) 35%, transparent), 0 0 30px color-mix(in srgb, var(--difficulty-red) 12%, transparent);
+  --glow-difficulty-violet: 0 0 15px color-mix(in srgb, var(--difficulty-violet) 35%, transparent), 0 0 30px color-mix(in srgb, var(--difficulty-violet) 12%, transparent);
+  --glow-difficulty-pink: 0 0 15px color-mix(in srgb, var(--difficulty-pink) 35%, transparent), 0 0 30px color-mix(in srgb, var(--difficulty-pink) 12%, transparent);
+  --glow-difficulty-light-pink: 0 0 15px color-mix(in srgb, var(--difficulty-light-pink) 35%, transparent), 0 0 30px color-mix(in srgb, var(--difficulty-light-pink) 12%, transparent);
 
   --background: var(--void-black);
   --foreground: var(--cloud-white);
@@ -1477,17 +1479,17 @@ html.heavenly-sword [class*="hover\\:text-[#8ea1ff]"]:hover { color: var(--accen
   --danger: var(--crimson);
   --danger-hover: var(--crimson-glow);
 
-  --glow-jade: 0 0 20px rgba(224, 120, 152, 0.35), 0 0 40px rgba(224, 120, 152, 0.15);
-  --glow-crimson: 0 0 20px rgba(208, 64, 104, 0.35), 0 0 40px rgba(208, 64, 104, 0.15);
-  --glow-gold: 0 0 20px rgba(240, 208, 128, 0.35), 0 0 40px rgba(240, 208, 128, 0.15);
-  --glow-blue: 0 0 20px rgba(128, 144, 192, 0.35), 0 0 40px rgba(128, 144, 192, 0.15);
-  --glow-subtle: 0 0 10px rgba(224, 120, 152, 0.12);
-  --glow-modal: 0 0 40px rgba(224, 120, 152, 0.35), 0 0 80px rgba(224, 120, 152, 0.18), inset 0 0 30px rgba(224, 120, 152, 0.1);
+  --glow-jade: 0 0 20px color-mix(in srgb, var(--jade-glow) 35%, transparent), 0 0 40px color-mix(in srgb, var(--jade-glow) 15%, transparent);
+  --glow-crimson: 0 0 20px color-mix(in srgb, var(--crimson-glow) 35%, transparent), 0 0 40px color-mix(in srgb, var(--crimson-glow) 15%, transparent);
+  --glow-gold: 0 0 20px color-mix(in srgb, var(--gold-glow) 35%, transparent), 0 0 40px color-mix(in srgb, var(--gold-glow) 15%, transparent);
+  --glow-blue: 0 0 20px color-mix(in srgb, var(--mountain-blue-glow) 35%, transparent), 0 0 40px color-mix(in srgb, var(--mountain-blue-glow) 15%, transparent);
+  --glow-subtle: 0 0 10px color-mix(in srgb, var(--jade-glow) 12%, transparent);
+  --glow-modal: 0 0 40px color-mix(in srgb, var(--jade-glow) 35%, transparent), 0 0 80px color-mix(in srgb, var(--jade-glow) 18%, transparent), inset 0 0 30px color-mix(in srgb, var(--jade-glow) 10%, transparent);
 
-  --col-weight: #e07898;
-  --col-weight-bg: rgba(224, 120, 152, 0.08);
-  --col-reps: #d8b870;
-  --col-reps-bg: rgba(216, 184, 112, 0.08);
+  --col-weight: var(--jade-glow);
+  --col-weight-bg: color-mix(in srgb, var(--jade-glow) 8%, transparent);
+  --col-reps: var(--gold);
+  --col-reps-bg: color-mix(in srgb, var(--gold) 8%, transparent);
 }
 
 /* Sakura Dark — non-prefixed class for inner component scoping */
@@ -1534,17 +1536,17 @@ html.heavenly-sword [class*="hover\\:text-[#8ea1ff]"]:hover { color: var(--accen
   --danger: var(--crimson);
   --danger-hover: var(--crimson-glow);
 
-  --glow-jade: 0 0 20px rgba(212, 80, 138, 0.3), 0 0 40px rgba(212, 80, 138, 0.12);
-  --glow-crimson: 0 0 20px rgba(208, 56, 112, 0.25), 0 0 40px rgba(208, 56, 112, 0.1);
-  --glow-gold: 0 0 20px rgba(232, 152, 170, 0.3), 0 0 40px rgba(232, 152, 170, 0.12);
-  --glow-blue: 0 0 20px rgba(136, 112, 168, 0.2), 0 0 40px rgba(136, 112, 168, 0.08);
-  --glow-subtle: 0 0 10px rgba(212, 80, 138, 0.15);
-  --glow-modal: 0 0 40px rgba(212, 80, 138, 0.4), 0 0 80px rgba(212, 80, 138, 0.2), inset 0 0 30px rgba(212, 80, 138, 0.1);
+  --glow-jade: 0 0 20px color-mix(in srgb, var(--jade-glow) 30%, transparent), 0 0 40px color-mix(in srgb, var(--jade-glow) 12%, transparent);
+  --glow-crimson: 0 0 20px color-mix(in srgb, var(--crimson-glow) 25%, transparent), 0 0 40px color-mix(in srgb, var(--crimson-glow) 10%, transparent);
+  --glow-gold: 0 0 20px color-mix(in srgb, var(--gold-glow) 30%, transparent), 0 0 40px color-mix(in srgb, var(--gold-glow) 12%, transparent);
+  --glow-blue: 0 0 20px color-mix(in srgb, var(--mountain-blue-glow) 20%, transparent), 0 0 40px color-mix(in srgb, var(--mountain-blue-glow) 8%, transparent);
+  --glow-subtle: 0 0 10px color-mix(in srgb, var(--jade-glow) 15%, transparent);
+  --glow-modal: 0 0 40px color-mix(in srgb, var(--jade-glow) 40%, transparent), 0 0 80px color-mix(in srgb, var(--jade-glow) 20%, transparent), inset 0 0 30px color-mix(in srgb, var(--jade-glow) 10%, transparent);
 
-  --col-weight: #9a88a0;
-  --col-weight-bg: rgba(154, 136, 160, 0.06);
-  --col-reps: #d4508a;
-  --col-reps-bg: rgba(212, 80, 138, 0.08);
+  --col-weight: var(--mist-light);
+  --col-weight-bg: color-mix(in srgb, var(--mist-light) 6%, transparent);
+  --col-reps: var(--jade-glow);
+  --col-reps-bg: color-mix(in srgb, var(--jade-glow) 8%, transparent);
 
   /* Difficulty colors — deep magenta-tinted to complement sakura-dark palette */
   --difficulty-green: #2dd4a0;
@@ -1561,12 +1563,12 @@ html.heavenly-sword [class*="hover\\:text-[#8ea1ff]"]:hover { color: var(--accen
   --difficulty-light-pink-glow: #e07898;
 
   /* Difficulty glows — deep magenta-tinted */
-  --glow-difficulty-green: 0 0 15px rgba(45, 212, 160, 0.3), 0 0 30px rgba(45, 212, 160, 0.1);
-  --glow-difficulty-amber: 0 0 15px rgba(245, 176, 32, 0.3), 0 0 30px rgba(245, 176, 32, 0.1);
-  --glow-difficulty-red: 0 0 15px rgba(240, 96, 96, 0.3), 0 0 30px rgba(240, 96, 96, 0.1);
-  --glow-difficulty-violet: 0 0 15px rgba(184, 160, 232, 0.3), 0 0 30px rgba(184, 160, 232, 0.1);
-  --glow-difficulty-pink: 0 0 15px rgba(232, 144, 192, 0.3), 0 0 30px rgba(232, 144, 192, 0.1);
-  --glow-difficulty-light-pink: 0 0 15px rgba(240, 160, 176, 0.3), 0 0 30px rgba(240, 160, 176, 0.1);
+  --glow-difficulty-green: 0 0 15px color-mix(in srgb, var(--difficulty-green) 30%, transparent), 0 0 30px color-mix(in srgb, var(--difficulty-green) 10%, transparent);
+  --glow-difficulty-amber: 0 0 15px color-mix(in srgb, var(--difficulty-amber) 30%, transparent), 0 0 30px color-mix(in srgb, var(--difficulty-amber) 10%, transparent);
+  --glow-difficulty-red: 0 0 15px color-mix(in srgb, var(--difficulty-red) 30%, transparent), 0 0 30px color-mix(in srgb, var(--difficulty-red) 10%, transparent);
+  --glow-difficulty-violet: 0 0 15px color-mix(in srgb, var(--difficulty-violet) 30%, transparent), 0 0 30px color-mix(in srgb, var(--difficulty-violet) 10%, transparent);
+  --glow-difficulty-pink: 0 0 15px color-mix(in srgb, var(--difficulty-pink) 30%, transparent), 0 0 30px color-mix(in srgb, var(--difficulty-pink) 10%, transparent);
+  --glow-difficulty-light-pink: 0 0 15px color-mix(in srgb, var(--difficulty-light-pink) 30%, transparent), 0 0 30px color-mix(in srgb, var(--difficulty-light-pink) 10%, transparent);
 }
 
 /* ===== Custom Scrollbar — Sidebar & General ===== */
@@ -1675,18 +1677,18 @@ html.mountain-mist {
   --danger-hover: var(--crimson-glow);
 
   /* Glow effects — softer, more diffused like morning mist */
-  --glow-jade: 0 0 16px rgba(29, 108, 108, 0.28), 0 0 32px rgba(29, 108, 108, 0.16);
-  --glow-crimson: 0 0 16px rgba(176, 48, 48, 0.28), 0 0 32px rgba(176, 48, 48, 0.16);
-  --glow-gold: 0 0 16px rgba(122, 106, 48, 0.28), 0 0 32px rgba(122, 106, 48, 0.16);
-  --glow-blue: 0 0 16px rgba(42, 90, 120, 0.28), 0 0 32px rgba(42, 90, 120, 0.16);
-  --glow-subtle: 0 0 8px rgba(29, 108, 108, 0.18);
-  --glow-modal: 0 0 40px rgba(29, 108, 108, 0.38), 0 0 80px rgba(29, 108, 108, 0.22), inset 0 0 30px rgba(29, 108, 108, 0.14);
+  --glow-jade: 0 0 16px color-mix(in srgb, var(--jade-glow) 28%, transparent), 0 0 32px color-mix(in srgb, var(--jade-glow) 16%, transparent);
+  --glow-crimson: 0 0 16px color-mix(in srgb, var(--crimson) 28%, transparent), 0 0 32px color-mix(in srgb, var(--crimson) 16%, transparent);
+  --glow-gold: 0 0 16px color-mix(in srgb, var(--gold) 28%, transparent), 0 0 32px color-mix(in srgb, var(--gold) 16%, transparent);
+  --glow-blue: 0 0 16px color-mix(in srgb, var(--mountain-blue-glow) 28%, transparent), 0 0 32px color-mix(in srgb, var(--mountain-blue-glow) 16%, transparent);
+  --glow-subtle: 0 0 8px color-mix(in srgb, var(--jade-glow) 18%, transparent);
+  --glow-modal: 0 0 40px color-mix(in srgb, var(--jade-glow) 38%, transparent), 0 0 80px color-mix(in srgb, var(--jade-glow) 22%, transparent), inset 0 0 30px color-mix(in srgb, var(--jade-glow) 14%, transparent);
 
   /* Column colours for W/R differentiation */
-  --col-weight: #1d6c6c;
-  --col-weight-bg: rgba(29, 108, 108, 0.12);
-  --col-reps: #7a6a30;
-  --col-reps-bg: rgba(122, 106, 48, 0.12);
+  --col-weight: var(--jade-glow);
+  --col-weight-bg: color-mix(in srgb, var(--jade-glow) 12%, transparent);
+  --col-reps: var(--gold);
+  --col-reps-bg: color-mix(in srgb, var(--gold) 12%, transparent);
 
   --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 86%, var(--border));
   --nyaa-table-head-text: var(--text-primary);
@@ -1711,12 +1713,12 @@ html.mountain-mist {
   --difficulty-light-pink-glow: #a21caf;
 
   /* Difficulty glows — darker shadow values for light backgrounds */
-  --glow-difficulty-green: 0 0 12px rgba(21, 128, 61, 0.33), 0 0 24px rgba(21, 128, 61, 0.18);
-  --glow-difficulty-amber: 0 0 12px rgba(180, 83, 9, 0.33), 0 0 24px rgba(180, 83, 9, 0.18);
-  --glow-difficulty-red: 0 0 12px rgba(220, 38, 38, 0.33), 0 0 24px rgba(220, 38, 38, 0.18);
-  --glow-difficulty-violet: 0 0 12px rgba(109, 40, 217, 0.33), 0 0 24px rgba(109, 40, 217, 0.18);
-  --glow-difficulty-pink: 0 0 12px rgba(190, 24, 93, 0.33), 0 0 24px rgba(190, 24, 93, 0.18);
-  --glow-difficulty-light-pink: 0 0 12px rgba(192, 38, 211, 0.33), 0 0 24px rgba(192, 38, 211, 0.18);
+  --glow-difficulty-green: 0 0 12px color-mix(in srgb, var(--difficulty-green) 33%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-green) 18%, transparent);
+  --glow-difficulty-amber: 0 0 12px color-mix(in srgb, var(--difficulty-amber) 33%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-amber) 18%, transparent);
+  --glow-difficulty-red: 0 0 12px color-mix(in srgb, var(--difficulty-red) 33%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-red) 18%, transparent);
+  --glow-difficulty-violet: 0 0 12px color-mix(in srgb, var(--difficulty-violet) 33%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-violet) 18%, transparent);
+  --glow-difficulty-pink: 0 0 12px color-mix(in srgb, var(--difficulty-pink) 33%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-pink) 18%, transparent);
+  --glow-difficulty-light-pink: 0 0 12px color-mix(in srgb, var(--difficulty-light-pink) 33%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-light-pink) 18%, transparent);
 }
 
 html.mountain-mist .cultivation-gradient {
@@ -1724,7 +1726,7 @@ html.mountain-mist .cultivation-gradient {
 }
 
 html.mountain-mist .mist-overlay {
-  background: linear-gradient(180deg, transparent, rgba(245, 240, 235, 0.8));
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--void-black) 80%, transparent));
 }
 
 html.mountain-mist ::selection {
@@ -1792,18 +1794,18 @@ html.calligraphy {
   --danger-hover: var(--crimson-glow);
 
   /* Glow effects — warm burnished gold only */
-  --glow-jade: 0 0 20px rgba(236, 188, 110, 0.40), 0 0 40px rgba(236, 188, 110, 0.20);
-  --glow-crimson: 0 0 20px rgba(208, 136, 88, 0.34), 0 0 40px rgba(208, 136, 88, 0.18);
-  --glow-gold: 0 0 20px rgba(255, 206, 126, 0.40), 0 0 40px rgba(255, 206, 126, 0.20);
-  --glow-blue: 0 0 20px rgba(190, 190, 190, 0.28), 0 0 40px rgba(190, 190, 190, 0.16);
-  --glow-subtle: 0 0 10px rgba(236, 188, 110, 0.24);
-  --glow-modal: 0 0 40px rgba(236, 188, 110, 0.44), 0 0 80px rgba(236, 188, 110, 0.24), inset 0 0 30px rgba(236, 188, 110, 0.18);
+  --glow-jade: 0 0 20px color-mix(in srgb, var(--jade-glow) 40%, transparent), 0 0 40px color-mix(in srgb, var(--jade-glow) 20%, transparent);
+  --glow-crimson: 0 0 20px color-mix(in srgb, var(--crimson-glow) 34%, transparent), 0 0 40px color-mix(in srgb, var(--crimson-glow) 18%, transparent);
+  --glow-gold: 0 0 20px color-mix(in srgb, var(--gold-glow) 40%, transparent), 0 0 40px color-mix(in srgb, var(--gold-glow) 20%, transparent);
+  --glow-blue: 0 0 20px color-mix(in srgb, var(--mist-pale) 28%, transparent), 0 0 40px color-mix(in srgb, var(--mist-pale) 16%, transparent);
+  --glow-subtle: 0 0 10px color-mix(in srgb, var(--jade-glow) 24%, transparent);
+  --glow-modal: 0 0 40px color-mix(in srgb, var(--jade-glow) 44%, transparent), 0 0 80px color-mix(in srgb, var(--jade-glow) 24%, transparent), inset 0 0 30px color-mix(in srgb, var(--jade-glow) 18%, transparent);
 
   /* Column colours for W/R differentiation */
-  --col-weight: #aaaaaa;
-  --col-weight-bg: rgba(170, 170, 170, 0.10);
-  --col-reps: #ecbc6e;
-  --col-reps-bg: rgba(236, 188, 110, 0.12);
+  --col-weight: var(--mist-pale);
+  --col-weight-bg: color-mix(in srgb, var(--mist-pale) 10%, transparent);
+  --col-reps: var(--jade-glow);
+  --col-reps-bg: color-mix(in srgb, var(--jade-glow) 12%, transparent);
 
   --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 84%, var(--border));
   --nyaa-table-head-text: var(--text-primary);
@@ -1828,12 +1830,12 @@ html.calligraphy {
   --difficulty-light-pink-glow: #b48898;
 
   /* Difficulty glows — softer for calligraphy theme */
-  --glow-difficulty-green: 0 0 12px rgba(132, 198, 132, 0.30), 0 0 24px rgba(132, 198, 132, 0.16);
-  --glow-difficulty-amber: 0 0 12px rgba(224, 188, 84, 0.30), 0 0 24px rgba(224, 188, 84, 0.16);
-  --glow-difficulty-red: 0 0 12px rgba(224, 116, 116, 0.30), 0 0 24px rgba(224, 116, 116, 0.16);
-  --glow-difficulty-violet: 0 0 12px rgba(168, 150, 196, 0.30), 0 0 24px rgba(168, 150, 196, 0.16);
-  --glow-difficulty-pink: 0 0 12px rgba(200, 132, 164, 0.30), 0 0 24px rgba(200, 132, 164, 0.16);
-  --glow-difficulty-light-pink: 0 0 12px rgba(216, 164, 180, 0.30), 0 0 24px rgba(216, 164, 180, 0.16);
+  --glow-difficulty-green: 0 0 12px color-mix(in srgb, var(--difficulty-green) 30%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-green) 16%, transparent);
+  --glow-difficulty-amber: 0 0 12px color-mix(in srgb, var(--difficulty-amber) 30%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-amber) 16%, transparent);
+  --glow-difficulty-red: 0 0 12px color-mix(in srgb, var(--difficulty-red) 30%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-red) 16%, transparent);
+  --glow-difficulty-violet: 0 0 12px color-mix(in srgb, var(--difficulty-violet) 30%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-violet) 16%, transparent);
+  --glow-difficulty-pink: 0 0 12px color-mix(in srgb, var(--difficulty-pink) 30%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-pink) 16%, transparent);
+  --glow-difficulty-light-pink: 0 0 12px color-mix(in srgb, var(--difficulty-light-pink) 30%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-light-pink) 16%, transparent);
 }
 
 html.calligraphy .cultivation-gradient {
@@ -1841,7 +1843,7 @@ html.calligraphy .cultivation-gradient {
 }
 
 html.calligraphy .mist-overlay {
-  background: linear-gradient(180deg, transparent, rgba(5, 5, 5, 0.95));
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--void-black) 95%, transparent));
 }
 
 html.calligraphy ::selection {
@@ -1901,18 +1903,18 @@ html.sakura {
   --danger-hover: var(--crimson-glow);
 
   /* Glow effects — vibrant pink shimmer */
-  --glow-jade: 0 0 20px rgba(240, 56, 108, 0.48), 0 0 40px rgba(240, 56, 108, 0.28);
-  --glow-crimson: 0 0 20px rgba(232, 64, 48, 0.48), 0 0 40px rgba(232, 64, 48, 0.28);
-  --glow-gold: 0 0 20px rgba(224, 168, 104, 0.48), 0 0 40px rgba(224, 168, 104, 0.28);
-  --glow-blue: 0 0 20px rgba(106, 140, 180, 0.48), 0 0 40px rgba(106, 140, 180, 0.28);
-  --glow-subtle: 0 0 10px rgba(240, 56, 108, 0.32);
-  --glow-modal: 0 0 40px rgba(240, 56, 108, 0.48), 0 0 80px rgba(240, 56, 108, 0.28), inset 0 0 30px rgba(240, 56, 108, 0.16);
+  --glow-jade: 0 0 20px color-mix(in srgb, var(--jade) 48%, transparent), 0 0 40px color-mix(in srgb, var(--jade) 28%, transparent);
+  --glow-crimson: 0 0 20px color-mix(in srgb, var(--crimson) 48%, transparent), 0 0 40px color-mix(in srgb, var(--crimson) 28%, transparent);
+  --glow-gold: 0 0 20px color-mix(in srgb, var(--gold-dim) 48%, transparent), 0 0 40px color-mix(in srgb, var(--gold-dim) 28%, transparent);
+  --glow-blue: 0 0 20px color-mix(in srgb, var(--mountain-blue) 48%, transparent), 0 0 40px color-mix(in srgb, var(--mountain-blue) 28%, transparent);
+  --glow-subtle: 0 0 10px color-mix(in srgb, var(--jade) 32%, transparent);
+  --glow-modal: 0 0 40px color-mix(in srgb, var(--jade) 48%, transparent), 0 0 80px color-mix(in srgb, var(--jade) 28%, transparent), inset 0 0 30px color-mix(in srgb, var(--jade) 16%, transparent);
 
   /* Column colours for W/R differentiation */
   --col-weight: #4870a0;
-  --col-weight-bg: rgba(72, 112, 160, 0.12);
-  --col-reps: #f0386c;
-  --col-reps-bg: rgba(240, 56, 108, 0.12);
+  --col-weight-bg: color-mix(in srgb, #4870a0 12%, transparent);
+  --col-reps: var(--jade);
+  --col-reps-bg: color-mix(in srgb, var(--jade) 12%, transparent);
 
   --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 86%, var(--border));
   --nyaa-table-head-text: var(--text-primary);
@@ -1937,12 +1939,12 @@ html.sakura {
   --difficulty-light-pink-glow: #a21caf;
 
   /* Difficulty glows — warm for sakura light */
-  --glow-difficulty-green: 0 0 12px rgba(21, 128, 61, 0.33), 0 0 24px rgba(21, 128, 61, 0.18);
-  --glow-difficulty-amber: 0 0 12px rgba(180, 83, 9, 0.33), 0 0 24px rgba(180, 83, 9, 0.18);
-  --glow-difficulty-red: 0 0 12px rgba(220, 38, 38, 0.33), 0 0 24px rgba(220, 38, 38, 0.18);
-  --glow-difficulty-violet: 0 0 12px rgba(124, 58, 237, 0.33), 0 0 24px rgba(124, 58, 237, 0.18);
-  --glow-difficulty-pink: 0 0 12px rgba(219, 39, 119, 0.33), 0 0 24px rgba(219, 39, 119, 0.18);
-  --glow-difficulty-light-pink: 0 0 12px rgba(192, 38, 211, 0.33), 0 0 24px rgba(192, 38, 211, 0.18);
+  --glow-difficulty-green: 0 0 12px color-mix(in srgb, var(--difficulty-green) 33%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-green) 18%, transparent);
+  --glow-difficulty-amber: 0 0 12px color-mix(in srgb, var(--difficulty-amber) 33%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-amber) 18%, transparent);
+  --glow-difficulty-red: 0 0 12px color-mix(in srgb, var(--difficulty-red) 33%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-red) 18%, transparent);
+  --glow-difficulty-violet: 0 0 12px color-mix(in srgb, var(--difficulty-violet) 33%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-violet) 18%, transparent);
+  --glow-difficulty-pink: 0 0 12px color-mix(in srgb, var(--difficulty-pink) 33%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-pink) 18%, transparent);
+  --glow-difficulty-light-pink: 0 0 12px color-mix(in srgb, var(--difficulty-light-pink) 33%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-light-pink) 18%, transparent);
 }
 
 html.sakura .cultivation-gradient {
@@ -1950,7 +1952,7 @@ html.sakura .cultivation-gradient {
 }
 
 html.sakura .mist-overlay {
-  background: linear-gradient(180deg, transparent, rgba(250, 247, 246, 0.95));
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--void-black) 95%, transparent));
 }
 
 html.sakura ::selection {
@@ -2013,18 +2015,18 @@ html.sakura-dark {
   --danger-hover: var(--crimson-glow);
 
   /* Glow effects — deep cherry-crimson radiance */
-  --glow-jade: 0 0 20px rgba(240, 72, 136, 0.40), 0 0 40px rgba(240, 72, 136, 0.22);
-  --glow-crimson: 0 0 20px rgba(236, 72, 124, 0.36), 0 0 40px rgba(236, 72, 124, 0.20);
-  --glow-gold: 0 0 20px rgba(240, 168, 184, 0.40), 0 0 40px rgba(240, 168, 184, 0.22);
-  --glow-blue: 0 0 20px rgba(160, 128, 192, 0.32), 0 0 40px rgba(160, 128, 192, 0.18);
-  --glow-subtle: 0 0 10px rgba(240, 72, 136, 0.26);
-  --glow-modal: 0 0 40px rgba(240, 72, 136, 0.48), 0 0 80px rgba(240, 72, 136, 0.28), inset 0 0 30px rgba(240, 72, 136, 0.18);
+  --glow-jade: 0 0 20px color-mix(in srgb, var(--jade-glow) 40%, transparent), 0 0 40px color-mix(in srgb, var(--jade-glow) 22%, transparent);
+  --glow-crimson: 0 0 20px color-mix(in srgb, var(--crimson-glow) 36%, transparent), 0 0 40px color-mix(in srgb, var(--crimson-glow) 20%, transparent);
+  --glow-gold: 0 0 20px color-mix(in srgb, var(--gold-glow) 40%, transparent), 0 0 40px color-mix(in srgb, var(--gold-glow) 22%, transparent);
+  --glow-blue: 0 0 20px color-mix(in srgb, var(--mountain-blue-glow) 32%, transparent), 0 0 40px color-mix(in srgb, var(--mountain-blue-glow) 18%, transparent);
+  --glow-subtle: 0 0 10px color-mix(in srgb, var(--jade-glow) 26%, transparent);
+  --glow-modal: 0 0 40px color-mix(in srgb, var(--jade-glow) 48%, transparent), 0 0 80px color-mix(in srgb, var(--jade-glow) 28%, transparent), inset 0 0 30px color-mix(in srgb, var(--jade-glow) 18%, transparent);
 
   /* Column colours for W/R differentiation */
   --col-weight: #b08aa0;
-  --col-weight-bg: rgba(176, 138, 160, 0.10);
-  --col-reps: #f04888;
-  --col-reps-bg: rgba(240, 72, 136, 0.12);
+  --col-weight-bg: color-mix(in srgb, #b08aa0 10%, transparent);
+  --col-reps: var(--jade-glow);
+  --col-reps-bg: color-mix(in srgb, var(--jade-glow) 12%, transparent);
 
   --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 84%, var(--border));
   --nyaa-table-head-text: var(--text-primary);
@@ -2049,12 +2051,12 @@ html.sakura-dark {
   --difficulty-light-pink-glow: #ec88a8;
 
   /* Difficulty glows — warm cherry-tinted */
-  --glow-difficulty-green: 0 0 15px rgba(80, 232, 180, 0.38), 0 0 30px rgba(80, 232, 180, 0.18);
-  --glow-difficulty-amber: 0 0 15px rgba(255, 196, 52, 0.38), 0 0 30px rgba(255, 196, 52, 0.18);
-  --glow-difficulty-red: 0 0 15px rgba(255, 116, 116, 0.38), 0 0 30px rgba(255, 116, 116, 0.18);
-  --glow-difficulty-violet: 0 0 15px rgba(204, 176, 248, 0.38), 0 0 30px rgba(204, 176, 248, 0.18);
-  --glow-difficulty-pink: 0 0 15px rgba(240, 164, 208, 0.38), 0 0 30px rgba(240, 164, 208, 0.18);
-  --glow-difficulty-light-pink: 0 0 15px rgba(252, 176, 192, 0.38), 0 0 30px rgba(252, 176, 192, 0.18);
+  --glow-difficulty-green: 0 0 15px color-mix(in srgb, var(--difficulty-green) 38%, transparent), 0 0 30px color-mix(in srgb, var(--difficulty-green) 18%, transparent);
+  --glow-difficulty-amber: 0 0 15px color-mix(in srgb, var(--difficulty-amber) 38%, transparent), 0 0 30px color-mix(in srgb, var(--difficulty-amber) 18%, transparent);
+  --glow-difficulty-red: 0 0 15px color-mix(in srgb, var(--difficulty-red) 38%, transparent), 0 0 30px color-mix(in srgb, var(--difficulty-red) 18%, transparent);
+  --glow-difficulty-violet: 0 0 15px color-mix(in srgb, var(--difficulty-violet) 38%, transparent), 0 0 30px color-mix(in srgb, var(--difficulty-violet) 18%, transparent);
+  --glow-difficulty-pink: 0 0 15px color-mix(in srgb, var(--difficulty-pink) 38%, transparent), 0 0 30px color-mix(in srgb, var(--difficulty-pink) 18%, transparent);
+  --glow-difficulty-light-pink: 0 0 15px color-mix(in srgb, var(--difficulty-light-pink) 38%, transparent), 0 0 30px color-mix(in srgb, var(--difficulty-light-pink) 18%, transparent);
 }
 
 html.sakura-dark .cultivation-gradient {
@@ -2062,7 +2064,7 @@ html.sakura-dark .cultivation-gradient {
 }
 
 html.sakura-dark .mist-overlay {
-  background: linear-gradient(180deg, transparent, rgba(13, 7, 9, 0.95));
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--void-black) 95%, transparent));
 }
 
 html.sakura-dark ::selection {
@@ -2125,18 +2127,18 @@ html.eternal {
   --danger-hover: var(--crimson-glow);
 
   /* Glow effects — subtle for light theme */
-  --glow-jade: 0 0 12px rgba(74, 136, 38, 0.32), 0 0 24px rgba(74, 136, 38, 0.18);
-  --glow-crimson: 0 0 12px rgba(220, 38, 38, 0.32), 0 0 24px rgba(220, 38, 38, 0.18);
-  --glow-gold: 0 0 12px rgba(224, 138, 6, 0.32), 0 0 24px rgba(224, 138, 6, 0.18);
-  --glow-blue: 0 0 12px rgba(59, 130, 246, 0.32), 0 0 24px rgba(59, 130, 246, 0.18);
-  --glow-subtle: 0 0 8px rgba(74, 136, 38, 0.18);
-  --glow-modal: 0 0 30px rgba(74, 136, 38, 0.36), 0 0 60px rgba(74, 136, 38, 0.20), inset 0 0 30px rgba(74, 136, 38, 0.12);
+  --glow-jade: 0 0 12px color-mix(in srgb, var(--jade-glow) 32%, transparent), 0 0 24px color-mix(in srgb, var(--jade-glow) 18%, transparent);
+  --glow-crimson: 0 0 12px color-mix(in srgb, var(--crimson-glow) 32%, transparent), 0 0 24px color-mix(in srgb, var(--crimson-glow) 18%, transparent);
+  --glow-gold: 0 0 12px color-mix(in srgb, var(--gold-glow) 32%, transparent), 0 0 24px color-mix(in srgb, var(--gold-glow) 18%, transparent);
+  --glow-blue: 0 0 12px color-mix(in srgb, var(--mountain-blue-glow) 32%, transparent), 0 0 24px color-mix(in srgb, var(--mountain-blue-glow) 18%, transparent);
+  --glow-subtle: 0 0 8px color-mix(in srgb, var(--jade-glow) 18%, transparent);
+  --glow-modal: 0 0 30px color-mix(in srgb, var(--jade-glow) 36%, transparent), 0 0 60px color-mix(in srgb, var(--jade-glow) 20%, transparent), inset 0 0 30px color-mix(in srgb, var(--jade-glow) 12%, transparent);
 
   /* Column colours for W/R differentiation */
-  --col-weight: #62b830;
-  --col-weight-bg: rgba(98, 184, 48, 0.12);
-  --col-reps: #e08a06;
-  --col-reps-bg: rgba(224, 138, 6, 0.12);
+  --col-weight: var(--jade);
+  --col-weight-bg: color-mix(in srgb, var(--jade) 12%, transparent);
+  --col-reps: var(--gold-glow);
+  --col-reps-bg: color-mix(in srgb, var(--gold-glow) 12%, transparent);
 
   --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 88%, var(--border));
   --nyaa-table-head-text: var(--text-primary);
@@ -2163,13 +2165,13 @@ html.eternal {
   --difficulty-cyan-glow: #0891b2;
 
   /* Difficulty glows — subtle for light theme */
-  --glow-difficulty-green: 0 0 12px rgba(22, 163, 74, 0.30), 0 0 24px rgba(22, 163, 74, 0.16);
-  --glow-difficulty-amber: 0 0 12px rgba(217, 119, 6, 0.30), 0 0 24px rgba(217, 119, 6, 0.16);
-  --glow-difficulty-red: 0 0 12px rgba(220, 38, 38, 0.30), 0 0 24px rgba(220, 38, 38, 0.16);
-  --glow-difficulty-violet: 0 0 12px rgba(124, 58, 237, 0.30), 0 0 24px rgba(124, 58, 237, 0.16);
-  --glow-difficulty-pink: 0 0 12px rgba(219, 39, 119, 0.30), 0 0 24px rgba(219, 39, 119, 0.16);
-  --glow-difficulty-light-pink: 0 0 12px rgba(236, 72, 153, 0.30), 0 0 24px rgba(236, 72, 153, 0.16);
-  --glow-difficulty-cyan: 0 0 12px rgba(6, 182, 212, 0.30), 0 0 24px rgba(6, 182, 212, 0.16);
+  --glow-difficulty-green: 0 0 12px color-mix(in srgb, var(--difficulty-green) 30%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-green) 16%, transparent);
+  --glow-difficulty-amber: 0 0 12px color-mix(in srgb, var(--difficulty-amber) 30%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-amber) 16%, transparent);
+  --glow-difficulty-red: 0 0 12px color-mix(in srgb, var(--difficulty-red) 30%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-red) 16%, transparent);
+  --glow-difficulty-violet: 0 0 12px color-mix(in srgb, var(--difficulty-violet) 30%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-violet) 16%, transparent);
+  --glow-difficulty-pink: 0 0 12px color-mix(in srgb, var(--difficulty-pink) 30%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-pink) 16%, transparent);
+  --glow-difficulty-light-pink: 0 0 12px color-mix(in srgb, var(--difficulty-light-pink) 30%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-light-pink) 16%, transparent);
+  --glow-difficulty-cyan: 0 0 12px color-mix(in srgb, var(--difficulty-cyan) 30%, transparent), 0 0 24px color-mix(in srgb, var(--difficulty-cyan) 16%, transparent);
 }
 
 html.eternal * {
@@ -2232,18 +2234,18 @@ html.discord {
   --danger-hover: var(--crimson-glow);
 
   /* Glow effects */
-  --glow-jade: 0 0 14px rgba(88, 101, 242, 0.36), 0 0 30px rgba(88, 101, 242, 0.18);
-  --glow-crimson: 0 0 14px rgba(237, 66, 69, 0.32), 0 0 30px rgba(237, 66, 69, 0.14);
-  --glow-gold: 0 0 14px rgba(254, 231, 92, 0.28), 0 0 30px rgba(254, 231, 92, 0.12);
-  --glow-blue: 0 0 14px rgba(0, 168, 252, 0.34), 0 0 30px rgba(0, 168, 252, 0.14);
-  --glow-subtle: 0 0 8px rgba(88, 101, 242, 0.22);
-  --glow-modal: 0 0 34px rgba(88, 101, 242, 0.4), 0 0 68px rgba(88, 101, 242, 0.22), inset 0 0 30px rgba(114, 137, 218, 0.08);
+  --glow-jade: 0 0 14px color-mix(in srgb, var(--jade) 36%, transparent), 0 0 30px color-mix(in srgb, var(--jade) 18%, transparent);
+  --glow-crimson: 0 0 14px color-mix(in srgb, var(--crimson) 32%, transparent), 0 0 30px color-mix(in srgb, var(--crimson) 14%, transparent);
+  --glow-gold: 0 0 14px color-mix(in srgb, var(--gold) 28%, transparent), 0 0 30px color-mix(in srgb, var(--gold) 12%, transparent);
+  --glow-blue: 0 0 14px color-mix(in srgb, var(--mountain-blue) 34%, transparent), 0 0 30px color-mix(in srgb, var(--mountain-blue) 14%, transparent);
+  --glow-subtle: 0 0 8px color-mix(in srgb, var(--jade) 22%, transparent);
+  --glow-modal: 0 0 34px color-mix(in srgb, var(--jade) 40%, transparent), 0 0 68px color-mix(in srgb, var(--jade) 22%, transparent), inset 0 0 30px color-mix(in srgb, var(--jade-glow) 8%, transparent);
 
   /* Column colours for W/R differentiation */
-  --col-weight: #5865f2;
-  --col-weight-bg: rgba(88, 101, 242, 0.16);
-  --col-reps: #fee75c;
-  --col-reps-bg: rgba(254, 231, 92, 0.16);
+  --col-weight: var(--jade);
+  --col-weight-bg: color-mix(in srgb, var(--jade) 16%, transparent);
+  --col-reps: var(--gold);
+  --col-reps-bg: color-mix(in srgb, var(--gold) 16%, transparent);
 
   --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 84%, var(--border));
   --nyaa-table-head-text: var(--text-primary);
@@ -2270,13 +2272,13 @@ html.discord {
   --difficulty-cyan-glow: #33b9ff;
 
   /* Difficulty glows */
-  --glow-difficulty-green: 0 0 14px rgba(87, 242, 135, 0.32), 0 0 28px rgba(87, 242, 135, 0.14);
-  --glow-difficulty-amber: 0 0 14px rgba(254, 231, 92, 0.32), 0 0 28px rgba(254, 231, 92, 0.14);
-  --glow-difficulty-red: 0 0 14px rgba(237, 66, 69, 0.32), 0 0 28px rgba(237, 66, 69, 0.14);
-  --glow-difficulty-violet: 0 0 14px rgba(88, 101, 242, 0.34), 0 0 28px rgba(88, 101, 242, 0.16);
-  --glow-difficulty-pink: 0 0 14px rgba(235, 69, 158, 0.32), 0 0 28px rgba(235, 69, 158, 0.14);
-  --glow-difficulty-light-pink: 0 0 14px rgba(240, 182, 214, 0.3), 0 0 28px rgba(240, 182, 214, 0.14);
-  --glow-difficulty-cyan: 0 0 14px rgba(0, 168, 252, 0.32), 0 0 28px rgba(0, 168, 252, 0.14);
+  --glow-difficulty-green: 0 0 14px color-mix(in srgb, var(--difficulty-green) 32%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-green) 14%, transparent);
+  --glow-difficulty-amber: 0 0 14px color-mix(in srgb, var(--difficulty-amber) 32%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-amber) 14%, transparent);
+  --glow-difficulty-red: 0 0 14px color-mix(in srgb, var(--difficulty-red) 32%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-red) 14%, transparent);
+  --glow-difficulty-violet: 0 0 14px color-mix(in srgb, var(--difficulty-violet) 34%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-violet) 16%, transparent);
+  --glow-difficulty-pink: 0 0 14px color-mix(in srgb, var(--difficulty-pink) 32%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-pink) 14%, transparent);
+  --glow-difficulty-light-pink: 0 0 14px color-mix(in srgb, var(--difficulty-light-pink) 30%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-light-pink) 14%, transparent);
+  --glow-difficulty-cyan: 0 0 14px color-mix(in srgb, var(--difficulty-cyan) 32%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-cyan) 14%, transparent);
 }
 
 html.discord * {
@@ -2335,18 +2337,18 @@ html.document {
   --danger-hover: var(--crimson-glow);
 
   /* Glow effects — professional, understated */
-  --glow-jade: 0 0 12px rgba(30, 64, 138, 0.30), 0 0 24px rgba(30, 64, 138, 0.16);
-  --glow-crimson: 0 0 12px rgba(176, 40, 40, 0.30), 0 0 24px rgba(176, 40, 40, 0.16);
-  --glow-gold: 0 0 12px rgba(152, 118, 46, 0.30), 0 0 24px rgba(152, 118, 46, 0.16);
-  --glow-blue: 0 0 12px rgba(64, 104, 168, 0.30), 0 0 24px rgba(64, 104, 168, 0.16);
-  --glow-subtle: 0 0 8px rgba(30, 64, 138, 0.18);
-  --glow-modal: 0 0 28px rgba(30, 64, 138, 0.34), 0 0 56px rgba(30, 64, 138, 0.18), inset 0 0 28px rgba(30, 64, 138, 0.12);
+  --glow-jade: 0 0 12px color-mix(in srgb, var(--jade-glow) 30%, transparent), 0 0 24px color-mix(in srgb, var(--jade-glow) 16%, transparent);
+  --glow-crimson: 0 0 12px color-mix(in srgb, var(--crimson) 30%, transparent), 0 0 24px color-mix(in srgb, var(--crimson) 16%, transparent);
+  --glow-gold: 0 0 12px color-mix(in srgb, var(--gold-glow) 30%, transparent), 0 0 24px color-mix(in srgb, var(--gold-glow) 16%, transparent);
+  --glow-blue: 0 0 12px color-mix(in srgb, var(--mountain-blue-glow) 30%, transparent), 0 0 24px color-mix(in srgb, var(--mountain-blue-glow) 16%, transparent);
+  --glow-subtle: 0 0 8px color-mix(in srgb, var(--jade-glow) 18%, transparent);
+  --glow-modal: 0 0 28px color-mix(in srgb, var(--jade-glow) 34%, transparent), 0 0 56px color-mix(in srgb, var(--jade-glow) 18%, transparent), inset 0 0 28px color-mix(in srgb, var(--jade-glow) 12%, transparent);
 
   /* Column colours for W/R differentiation */
-  --col-weight: #1e408a;
-  --col-weight-bg: rgba(30, 64, 138, 0.12);
-  --col-reps: #98762e;
-  --col-reps-bg: rgba(152, 118, 46, 0.12);
+  --col-weight: var(--jade-glow);
+  --col-weight-bg: color-mix(in srgb, var(--jade-glow) 12%, transparent);
+  --col-reps: var(--gold-glow);
+  --col-reps-bg: color-mix(in srgb, var(--gold-glow) 12%, transparent);
 
   --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 88%, var(--border));
   --nyaa-table-head-text: var(--text-primary);
@@ -2373,13 +2375,13 @@ html.document {
   --difficulty-cyan-glow: #0668a0;
 
   /* Difficulty glows — clean, accessible for document theme */
-  --glow-difficulty-green: 0 0 10px rgba(26, 122, 58, 0.30), 0 0 20px rgba(26, 122, 58, 0.16);
-  --glow-difficulty-amber: 0 0 10px rgba(168, 96, 16, 0.30), 0 0 20px rgba(168, 96, 16, 0.16);
-  --glow-difficulty-red: 0 0 10px rgba(204, 40, 40, 0.30), 0 0 20px rgba(204, 40, 40, 0.16);
-  --glow-difficulty-violet: 0 0 10px rgba(96, 48, 192, 0.30), 0 0 20px rgba(96, 48, 192, 0.16);
-  --glow-difficulty-pink: 0 0 10px rgba(176, 24, 96, 0.30), 0 0 20px rgba(176, 24, 96, 0.16);
-  --glow-difficulty-light-pink: 0 0 10px rgba(184, 32, 200, 0.30), 0 0 20px rgba(184, 32, 200, 0.16);
-  --glow-difficulty-cyan: 0 0 10px rgba(8, 120, 176, 0.30), 0 0 20px rgba(8, 120, 176, 0.16);
+  --glow-difficulty-green: 0 0 10px color-mix(in srgb, var(--difficulty-green) 30%, transparent), 0 0 20px color-mix(in srgb, var(--difficulty-green) 16%, transparent);
+  --glow-difficulty-amber: 0 0 10px color-mix(in srgb, var(--difficulty-amber) 30%, transparent), 0 0 20px color-mix(in srgb, var(--difficulty-amber) 16%, transparent);
+  --glow-difficulty-red: 0 0 10px color-mix(in srgb, var(--difficulty-red) 30%, transparent), 0 0 20px color-mix(in srgb, var(--difficulty-red) 16%, transparent);
+  --glow-difficulty-violet: 0 0 10px color-mix(in srgb, var(--difficulty-violet) 30%, transparent), 0 0 20px color-mix(in srgb, var(--difficulty-violet) 16%, transparent);
+  --glow-difficulty-pink: 0 0 10px color-mix(in srgb, var(--difficulty-pink) 30%, transparent), 0 0 20px color-mix(in srgb, var(--difficulty-pink) 16%, transparent);
+  --glow-difficulty-light-pink: 0 0 10px color-mix(in srgb, var(--difficulty-light-pink) 30%, transparent), 0 0 20px color-mix(in srgb, var(--difficulty-light-pink) 16%, transparent);
+  --glow-difficulty-cyan: 0 0 10px color-mix(in srgb, var(--difficulty-cyan) 30%, transparent), 0 0 20px color-mix(in srgb, var(--difficulty-cyan) 16%, transparent);
 }
 
 html.document * {
@@ -2432,12 +2434,12 @@ html.nyaa {
   --danger: var(--crimson);
   --danger-hover: var(--crimson-glow);
 
-  --glow-jade: 0 0 12px rgba(14, 108, 122, 0.32), 0 0 24px rgba(14, 108, 122, 0.18);
-  --glow-crimson: 0 0 12px rgba(192, 40, 44, 0.32), 0 0 24px rgba(192, 40, 44, 0.18);
-  --glow-gold: 0 0 12px rgba(152, 118, 42, 0.32), 0 0 24px rgba(152, 118, 42, 0.18);
-  --glow-blue: 0 0 12px rgba(26, 58, 150, 0.34), 0 0 24px rgba(26, 58, 150, 0.18);
-  --glow-subtle: 0 0 8px rgba(26, 58, 150, 0.20);
-  --glow-modal: 0 0 30px rgba(26, 58, 150, 0.34), 0 0 60px rgba(26, 58, 150, 0.18), inset 0 0 20px rgba(26, 58, 150, 0.12);
+  --glow-jade: 0 0 12px color-mix(in srgb, var(--jade-glow) 32%, transparent), 0 0 24px color-mix(in srgb, var(--jade-glow) 18%, transparent);
+  --glow-crimson: 0 0 12px color-mix(in srgb, var(--crimson) 32%, transparent), 0 0 24px color-mix(in srgb, var(--crimson) 18%, transparent);
+  --glow-gold: 0 0 12px color-mix(in srgb, var(--gold-glow) 32%, transparent), 0 0 24px color-mix(in srgb, var(--gold-glow) 18%, transparent);
+  --glow-blue: 0 0 12px color-mix(in srgb, var(--mountain-blue) 34%, transparent), 0 0 24px color-mix(in srgb, var(--mountain-blue) 18%, transparent);
+  --glow-subtle: 0 0 8px color-mix(in srgb, var(--mountain-blue) 20%, transparent);
+  --glow-modal: 0 0 30px color-mix(in srgb, var(--mountain-blue) 34%, transparent), 0 0 60px color-mix(in srgb, var(--mountain-blue) 18%, transparent), inset 0 0 20px color-mix(in srgb, var(--mountain-blue) 12%, transparent);
 
   --col-weight: var(--mountain-blue-glow);
   --col-weight-bg: color-mix(in srgb, var(--mountain-blue-glow) 8%, transparent);
@@ -2468,7 +2470,7 @@ html.nyaa .cultivation-gradient {
 }
 
 html.nyaa .mist-overlay {
-  background: linear-gradient(180deg, transparent, rgba(237, 242, 248, 0.9));
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--ink-mid) 90%, transparent));
 }
 
 html.nyaa ::selection {
@@ -2647,13 +2649,13 @@ html.forest.light {
   --accent: var(--jade-glow);
   --accent-hover: #4f6c38;
   --danger: var(--crimson);
-  --chart-grid: rgba(31, 42, 28, 0.10);
-  --chart-bg: rgba(243, 239, 227, 0.55);
-  --glow-jade: 0 0 12px rgba(101, 130, 74, 0.24), 0 0 24px rgba(101, 130, 74, 0.10);
-  --glow-crimson: 0 0 12px rgba(176, 74, 76, 0.24), 0 0 24px rgba(176, 74, 76, 0.10);
-  --glow-gold: 0 0 12px rgba(138, 114, 40, 0.22), 0 0 24px rgba(138, 114, 40, 0.10);
-  --glow-modal: 0 0 28px rgba(101, 130, 74, 0.22), 0 0 56px rgba(176, 74, 76, 0.10), inset 0 0 20px rgba(31, 42, 28, 0.04);
-  --system-bar-fallback: #f3efe3;
+  --chart-grid: color-mix(in srgb, var(--cloud-white) 10%, transparent);
+  --chart-bg: color-mix(in srgb, var(--void-black) 55%, transparent);
+  --glow-jade: 0 0 12px color-mix(in srgb, var(--jade-glow) 24%, transparent), 0 0 24px color-mix(in srgb, var(--jade-glow) 10%, transparent);
+  --glow-crimson: 0 0 12px color-mix(in srgb, var(--crimson-glow) 24%, transparent), 0 0 24px color-mix(in srgb, var(--crimson-glow) 10%, transparent);
+  --glow-gold: 0 0 12px color-mix(in srgb, var(--gold-glow) 22%, transparent), 0 0 24px color-mix(in srgb, var(--gold-glow) 10%, transparent);
+  --glow-modal: 0 0 28px color-mix(in srgb, var(--jade-glow) 22%, transparent), 0 0 56px color-mix(in srgb, var(--crimson-glow) 10%, transparent), inset 0 0 20px color-mix(in srgb, var(--cloud-white) 4%, transparent);
+  --system-bar-fallback: var(--void-black);
 }html.ink-dragon.light {
   --void-black: #f4f0e6;        /* rice paper */
   --ink-deep: #ebe5d3;
@@ -2675,13 +2677,13 @@ html.forest.light {
   --accent: var(--jade-glow);
   --accent-hover: #44226a;
   --danger: var(--crimson);
-  --chart-grid: rgba(20, 20, 28, 0.10);
-  --chart-bg: rgba(244, 240, 230, 0.55);
-  --glow-jade: 0 0 12px rgba(90, 50, 138, 0.26), 0 0 24px rgba(90, 50, 138, 0.10);
-  --glow-crimson: 0 0 12px rgba(150, 34, 40, 0.24), 0 0 24px rgba(150, 34, 40, 0.10);
-  --glow-gold: 0 0 12px rgba(94, 102, 120, 0.22), 0 0 24px rgba(94, 102, 120, 0.10);
-  --glow-modal: 0 0 28px rgba(90, 50, 138, 0.22), 0 0 56px rgba(150, 34, 40, 0.10), inset 0 0 20px rgba(20, 20, 28, 0.04);
-  --system-bar-fallback: #f4f0e6;
+  --chart-grid: color-mix(in srgb, var(--cloud-white) 10%, transparent);
+  --chart-bg: color-mix(in srgb, var(--void-black) 55%, transparent);
+  --glow-jade: 0 0 12px color-mix(in srgb, var(--jade-glow) 26%, transparent), 0 0 24px color-mix(in srgb, var(--jade-glow) 10%, transparent);
+  --glow-crimson: 0 0 12px color-mix(in srgb, var(--crimson-glow) 24%, transparent), 0 0 24px color-mix(in srgb, var(--crimson-glow) 10%, transparent);
+  --glow-gold: 0 0 12px color-mix(in srgb, var(--gold-glow) 22%, transparent), 0 0 24px color-mix(in srgb, var(--gold-glow) 10%, transparent);
+  --glow-modal: 0 0 28px color-mix(in srgb, var(--jade-glow) 22%, transparent), 0 0 56px color-mix(in srgb, var(--crimson-glow) 10%, transparent), inset 0 0 20px color-mix(in srgb, var(--cloud-white) 4%, transparent);
+  --system-bar-fallback: var(--void-black);
 }
 
 /* Light-mode specific category-token tweaks (richer/darker so labels read on light bg) */
@@ -2724,13 +2726,13 @@ html.frost-sect.light {
   --accent: var(--jade-glow);
   --accent-hover: #1f4e80;
   --danger: var(--crimson);
-  --chart-grid: rgba(24, 36, 58, 0.10);
-  --chart-bg: rgba(238, 243, 248, 0.55);
-  --glow-jade: 0 0 12px rgba(46, 106, 160, 0.24), 0 0 24px rgba(46, 106, 160, 0.10);
-  --glow-crimson: 0 0 12px rgba(176, 74, 100, 0.22), 0 0 24px rgba(176, 74, 100, 0.10);
-  --glow-gold: 0 0 12px rgba(110, 112, 80, 0.22), 0 0 24px rgba(110, 112, 80, 0.10);
-  --glow-modal: 0 0 28px rgba(46, 106, 160, 0.22), 0 0 56px rgba(176, 74, 100, 0.10), inset 0 0 20px rgba(24, 36, 58, 0.04);
-  --system-bar-fallback: #eef3f8;
+  --chart-grid: color-mix(in srgb, var(--cloud-white) 10%, transparent);
+  --chart-bg: color-mix(in srgb, var(--void-black) 55%, transparent);
+  --glow-jade: 0 0 12px color-mix(in srgb, var(--jade-glow) 24%, transparent), 0 0 24px color-mix(in srgb, var(--jade-glow) 10%, transparent);
+  --glow-crimson: 0 0 12px color-mix(in srgb, var(--crimson-glow) 22%, transparent), 0 0 24px color-mix(in srgb, var(--crimson-glow) 10%, transparent);
+  --glow-gold: 0 0 12px color-mix(in srgb, var(--gold-glow) 22%, transparent), 0 0 24px color-mix(in srgb, var(--gold-glow) 10%, transparent);
+  --glow-modal: 0 0 28px color-mix(in srgb, var(--jade-glow) 22%, transparent), 0 0 56px color-mix(in srgb, var(--crimson-glow) 10%, transparent), inset 0 0 20px color-mix(in srgb, var(--cloud-white) 4%, transparent);
+  --system-bar-fallback: var(--void-black);
 }
 
 html.heavenly-sword.light {
@@ -2754,13 +2756,13 @@ html.heavenly-sword.light {
   --accent: var(--jade-glow);
   --accent-hover: #1f508a;
   --danger: var(--crimson);
-  --chart-grid: rgba(24, 36, 60, 0.10);
-  --chart-bg: rgba(240, 244, 250, 0.55);
-  --glow-jade: 0 0 12px rgba(46, 108, 176, 0.24), 0 0 24px rgba(46, 108, 176, 0.10);
-  --glow-crimson: 0 0 12px rgba(176, 74, 74, 0.22), 0 0 24px rgba(176, 74, 74, 0.10);
-  --glow-gold: 0 0 12px rgba(146, 116, 72, 0.24), 0 0 24px rgba(146, 116, 72, 0.10);
-  --glow-modal: 0 0 28px rgba(46, 108, 176, 0.22), 0 0 56px rgba(146, 116, 72, 0.10), inset 0 0 20px rgba(24, 36, 60, 0.04);
-  --system-bar-fallback: #f0f4fa;
+  --chart-grid: color-mix(in srgb, var(--cloud-white) 10%, transparent);
+  --chart-bg: color-mix(in srgb, var(--void-black) 55%, transparent);
+  --glow-jade: 0 0 12px color-mix(in srgb, var(--jade-glow) 24%, transparent), 0 0 24px color-mix(in srgb, var(--jade-glow) 10%, transparent);
+  --glow-crimson: 0 0 12px color-mix(in srgb, var(--crimson-glow) 22%, transparent), 0 0 24px color-mix(in srgb, var(--crimson-glow) 10%, transparent);
+  --glow-gold: 0 0 12px color-mix(in srgb, var(--gold-glow) 24%, transparent), 0 0 24px color-mix(in srgb, var(--gold-glow) 10%, transparent);
+  --glow-modal: 0 0 28px color-mix(in srgb, var(--jade-glow) 22%, transparent), 0 0 56px color-mix(in srgb, var(--gold-glow) 10%, transparent), inset 0 0 20px color-mix(in srgb, var(--cloud-white) 4%, transparent);
+  --system-bar-fallback: var(--void-black);
 }html.frost-sect.light {
   --category-cali: #2e6aa0;
   --category-gym: #6e7050;
@@ -2841,13 +2843,13 @@ html.evolved-ink-dragon {
   --difficulty-cyan: #7c9cdc;
   --difficulty-cyan-glow: #4c70b0;
 
-  --glow-difficulty-green: 0 0 14px rgba(128, 204, 160, 0.38), 0 0 28px rgba(128, 204, 160, 0.22);
-  --glow-difficulty-amber: 0 0 14px rgba(240, 209, 136, 0.40), 0 0 28px rgba(240, 209, 136, 0.22);
-  --glow-difficulty-red: 0 0 14px rgba(208, 64, 72, 0.42), 0 0 28px rgba(208, 64, 72, 0.24);
-  --glow-difficulty-violet: 0 0 14px rgba(157, 122, 255, 0.44), 0 0 28px rgba(157, 122, 255, 0.26);
-  --glow-difficulty-pink: 0 0 14px rgba(222, 152, 196, 0.38), 0 0 28px rgba(222, 152, 196, 0.22);
-  --glow-difficulty-light-pink: 0 0 14px rgba(240, 188, 212, 0.38), 0 0 28px rgba(240, 188, 212, 0.22);
-  --glow-difficulty-cyan: 0 0 14px rgba(124, 156, 220, 0.38), 0 0 28px rgba(124, 156, 220, 0.22);
+  --glow-difficulty-green: 0 0 14px color-mix(in srgb, var(--difficulty-green) 38%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-green) 22%, transparent);
+  --glow-difficulty-amber: 0 0 14px color-mix(in srgb, var(--difficulty-amber) 40%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-amber) 22%, transparent);
+  --glow-difficulty-red: 0 0 14px color-mix(in srgb, var(--difficulty-red) 42%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-red) 24%, transparent);
+  --glow-difficulty-violet: 0 0 14px color-mix(in srgb, var(--difficulty-violet) 44%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-violet) 26%, transparent);
+  --glow-difficulty-pink: 0 0 14px color-mix(in srgb, var(--difficulty-pink) 38%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-pink) 22%, transparent);
+  --glow-difficulty-light-pink: 0 0 14px color-mix(in srgb, var(--difficulty-light-pink) 38%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-light-pink) 22%, transparent);
+  --glow-difficulty-cyan: 0 0 14px color-mix(in srgb, var(--difficulty-cyan) 38%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-cyan) 22%, transparent);
 
   /* Semantic */
   --background: var(--void-black);
@@ -2864,27 +2866,27 @@ html.evolved-ink-dragon {
   --danger: var(--crimson);
   --danger-hover: var(--crimson-glow);
 
-  --glow-jade: 0 0 16px rgba(157, 122, 255, 0.46), 0 0 32px rgba(157, 122, 255, 0.28);
-  --glow-crimson: 0 0 16px rgba(208, 64, 72, 0.40), 0 0 32px rgba(208, 64, 72, 0.24);
-  --glow-gold: 0 0 16px rgba(200, 160, 90, 0.42), 0 0 32px rgba(240, 209, 136, 0.24);
-  --glow-blue: 0 0 16px rgba(124, 156, 220, 0.40), 0 0 32px rgba(124, 156, 220, 0.24);
-  --glow-subtle: 0 0 10px rgba(157, 122, 255, 0.28);
-  --glow-modal: 0 0 36px rgba(157, 122, 255, 0.38), 0 0 72px rgba(200, 160, 90, 0.22), inset 0 0 28px rgba(240, 209, 136, 0.10);
+  --glow-jade: 0 0 16px color-mix(in srgb, var(--jade-glow) 46%, transparent), 0 0 32px color-mix(in srgb, var(--jade-glow) 28%, transparent);
+  --glow-crimson: 0 0 16px color-mix(in srgb, var(--crimson) 40%, transparent), 0 0 32px color-mix(in srgb, var(--crimson) 24%, transparent);
+  --glow-gold: 0 0 16px color-mix(in srgb, var(--gold) 42%, transparent), 0 0 32px color-mix(in srgb, var(--gold-glow) 24%, transparent);
+  --glow-blue: 0 0 16px color-mix(in srgb, var(--mountain-blue-glow) 40%, transparent), 0 0 32px color-mix(in srgb, var(--mountain-blue-glow) 24%, transparent);
+  --glow-subtle: 0 0 10px color-mix(in srgb, var(--jade-glow) 28%, transparent);
+  --glow-modal: 0 0 36px color-mix(in srgb, var(--jade-glow) 38%, transparent), 0 0 72px color-mix(in srgb, var(--gold) 22%, transparent), inset 0 0 28px color-mix(in srgb, var(--gold-glow) 10%, transparent);
 
   --col-weight: var(--mountain-blue-glow);
   --col-weight-bg: color-mix(in srgb, var(--mountain-blue-glow) 12%, transparent);
   --col-reps: var(--gold-glow);
   --col-reps-bg: color-mix(in srgb, var(--gold-glow) 12%, transparent);
 
-  --chart-primary: #9d7aff;
+  --chart-primary: var(--jade-glow);
   --chart-primary-rgb: 157 122 255;
-  --chart-secondary: #c8a05a;
-  --chart-grid: rgba(240, 232, 246, 0.12);
-  --chart-bg: rgba(7, 6, 26, 0.55);
-  --timed-color: #7c9cdc;
+  --chart-secondary: var(--gold);
+  --chart-grid: color-mix(in srgb, var(--cloud-white) 12%, transparent);
+  --chart-bg: color-mix(in srgb, var(--void-black) 55%, transparent);
+  --timed-color: var(--mountain-blue-glow);
   --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 84%, var(--border));
   --nyaa-table-row-hover: color-mix(in srgb, var(--surface) 84%, var(--jade-glow));
-  --system-bar-fallback: #07061a;
+  --system-bar-fallback: var(--void-black);
 }
 
 html.evolved-ink-dragon * {
@@ -2998,13 +3000,13 @@ html.lemon-dragon {
   --difficulty-cyan: #98aac0;
   --difficulty-cyan-glow: #687a90;
 
-  --glow-difficulty-green: 0 0 14px rgba(168, 216, 120, 0.40), 0 0 28px rgba(168, 216, 120, 0.22);
-  --glow-difficulty-amber: 0 0 14px rgba(255, 216, 74, 0.46), 0 0 28px rgba(255, 216, 74, 0.26);
-  --glow-difficulty-red: 0 0 14px rgba(200, 64, 56, 0.42), 0 0 28px rgba(200, 64, 56, 0.24);
-  --glow-difficulty-violet: 0 0 14px rgba(184, 148, 216, 0.38), 0 0 28px rgba(184, 148, 216, 0.22);
-  --glow-difficulty-pink: 0 0 14px rgba(232, 168, 196, 0.38), 0 0 28px rgba(232, 168, 196, 0.22);
-  --glow-difficulty-light-pink: 0 0 14px rgba(244, 200, 216, 0.38), 0 0 28px rgba(244, 200, 216, 0.22);
-  --glow-difficulty-cyan: 0 0 14px rgba(152, 170, 192, 0.38), 0 0 28px rgba(152, 170, 192, 0.22);
+  --glow-difficulty-green: 0 0 14px color-mix(in srgb, var(--difficulty-green) 40%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-green) 22%, transparent);
+  --glow-difficulty-amber: 0 0 14px color-mix(in srgb, var(--difficulty-amber) 46%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-amber) 26%, transparent);
+  --glow-difficulty-red: 0 0 14px color-mix(in srgb, var(--difficulty-red) 42%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-red) 24%, transparent);
+  --glow-difficulty-violet: 0 0 14px color-mix(in srgb, var(--difficulty-violet) 38%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-violet) 22%, transparent);
+  --glow-difficulty-pink: 0 0 14px color-mix(in srgb, var(--difficulty-pink) 38%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-pink) 22%, transparent);
+  --glow-difficulty-light-pink: 0 0 14px color-mix(in srgb, var(--difficulty-light-pink) 38%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-light-pink) 22%, transparent);
+  --glow-difficulty-cyan: 0 0 14px color-mix(in srgb, var(--difficulty-cyan) 38%, transparent), 0 0 28px color-mix(in srgb, var(--difficulty-cyan) 22%, transparent);
 
   /* Semantic */
   --background: var(--void-black);
@@ -3021,27 +3023,27 @@ html.lemon-dragon {
   --danger: var(--crimson);
   --danger-hover: var(--crimson-glow);
 
-  --glow-jade: 0 0 16px rgba(255, 216, 74, 0.48), 0 0 32px rgba(255, 216, 74, 0.28);
-  --glow-crimson: 0 0 16px rgba(200, 64, 56, 0.40), 0 0 32px rgba(200, 64, 56, 0.24);
-  --glow-gold: 0 0 16px rgba(216, 203, 168, 0.42), 0 0 32px rgba(240, 229, 200, 0.24);
-  --glow-blue: 0 0 16px rgba(152, 170, 192, 0.38), 0 0 32px rgba(152, 170, 192, 0.22);
-  --glow-subtle: 0 0 10px rgba(255, 216, 74, 0.28);
-  --glow-modal: 0 0 36px rgba(255, 216, 74, 0.38), 0 0 72px rgba(216, 203, 168, 0.20), inset 0 0 28px rgba(240, 229, 200, 0.10);
+  --glow-jade: 0 0 16px color-mix(in srgb, var(--jade-glow) 48%, transparent), 0 0 32px color-mix(in srgb, var(--jade-glow) 28%, transparent);
+  --glow-crimson: 0 0 16px color-mix(in srgb, var(--crimson) 40%, transparent), 0 0 32px color-mix(in srgb, var(--crimson) 24%, transparent);
+  --glow-gold: 0 0 16px color-mix(in srgb, var(--gold) 42%, transparent), 0 0 32px color-mix(in srgb, var(--gold-glow) 24%, transparent);
+  --glow-blue: 0 0 16px color-mix(in srgb, var(--mountain-blue-glow) 38%, transparent), 0 0 32px color-mix(in srgb, var(--mountain-blue-glow) 22%, transparent);
+  --glow-subtle: 0 0 10px color-mix(in srgb, var(--jade-glow) 28%, transparent);
+  --glow-modal: 0 0 36px color-mix(in srgb, var(--jade-glow) 38%, transparent), 0 0 72px color-mix(in srgb, var(--gold) 20%, transparent), inset 0 0 28px color-mix(in srgb, var(--gold-glow) 10%, transparent);
 
   --col-weight: var(--mountain-blue-glow);
   --col-weight-bg: color-mix(in srgb, var(--mountain-blue-glow) 12%, transparent);
   --col-reps: var(--gold-glow);
   --col-reps-bg: color-mix(in srgb, var(--gold-glow) 12%, transparent);
 
-  --chart-primary: #ffd84a;
+  --chart-primary: var(--jade-glow);
   --chart-primary-rgb: 255 216 74;
-  --chart-secondary: #d8cba8;
-  --chart-grid: rgba(240, 235, 220, 0.12);
-  --chart-bg: rgba(16, 14, 8, 0.55);
-  --timed-color: #98aac0;
+  --chart-secondary: var(--gold);
+  --chart-grid: color-mix(in srgb, var(--cloud-white) 12%, transparent);
+  --chart-bg: color-mix(in srgb, var(--void-black) 55%, transparent);
+  --timed-color: var(--mountain-blue-glow);
   --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 84%, var(--border));
   --nyaa-table-row-hover: color-mix(in srgb, var(--surface) 84%, var(--jade-glow));
-  --system-bar-fallback: #100e08;
+  --system-bar-fallback: var(--void-black);
 }
 
 html.lemon-dragon * {
@@ -3098,69 +3100,70 @@ html.lemon-dragon [class*="hover\\:text-[#8ea1ff]"]:hover { color: var(--accent)
  * only graphite shades carry depth. Danger reads as inverted white.
  * ===================================================================== */
 html.ying-yang {
-  /* Canvas — true black tiers */
-  --void-black: #000000;
-  --ink-deep: #0a0a0a;
-  --ink-dark: #141414;
-  --ink-mid: #1f1f1f;
-  --ink-light: #2e2e2e;
+  /* Canvas — flat charcoal tiers (lifted off pure black for less harsh edges) */
+  --void-black: #050505;
+  --ink-deep: #0d0d0d;
+  --ink-dark: #161616;
+  --ink-mid: #1e1e1e;
+  --ink-light: #2a2a2a;
 
   /* Text — graphite to bone */
-  --mist-dark: #6e6e6e;
-  --mist-mid: #8a8a8a;
-  --mist-light: #b0b0b0;
-  --mist-pale: #d0d0d0;
-  --cloud-white: #f0f0f0;
+  --mist-dark: #707070;
+  --mist-mid: #8c8c8c;
+  --mist-light: #b4b4b4;
+  --mist-pale: #d4d4d4;
+  --cloud-white: #ededed;
   --pure-white: #ffffff;
 
-  /* Accent #1 — Pure white (primary) */
-  --jade-deep: #2a2a2a;
-  --jade: #c8c8c8;
-  --jade-glow: #ffffff;
-  --jade-light: #ffffff;
+  /* Accent #1 — Soft white (primary) — pulled back from pure white for flatter look */
+  --jade-deep: #262626;
+  --jade: #b8b8b8;
+  --jade-glow: #ededed;
+  --jade-light: #f6f6f6;
 
-  /* Accent #2 — Bone grey */
-  --gold-dim: #4a4a4a;
-  --gold: #a0a0a0;
-  --gold-glow: #d8d8d8;
+  /* Accent #2 — Bone grey (used for "reps" / secondary metric) */
+  --gold-dim: #494949;
+  --gold: #9c9c9c;
+  --gold-glow: #c8c8c8;
 
-  /* Accent #3 — Inverted ink (danger uses bright white halo on dark) */
-  --crimson-deep: #1a1a1a;
-  --crimson: #b0b0b0;
-  --crimson-glow: #ffffff;
-  --crimson-light: #ffffff;
+  /* Accent #3 — Danger reads as silver halo */
+  --crimson-deep: #1c1c1c;
+  --crimson: #a8a8a8;
+  --crimson-glow: #e8e8e8;
+  --crimson-light: #f0f0f0;
 
   /* Accent #4 — Slate grey */
   --mountain-blue: #3a3a3a;
-  --mountain-blue-glow: #c0c0c0;
+  --mountain-blue-glow: #b8b8b8;
 
   /* Accent #5 — Echo white (under-tone) */
   --forest-deep: #181818;
-  --forest: #ffffff;
+  --forest: #e8e8e8;
 
-  /* Difficulty — monochrome staircase */
-  --difficulty-green: #d8d8d8;
-  --difficulty-green-glow: #a8a8a8;
-  --difficulty-amber: #c0c0c0;
-  --difficulty-amber-glow: #909090;
-  --difficulty-red: #ffffff;
-  --difficulty-red-glow: #b8b8b8;
-  --difficulty-violet: #b8b8b8;
-  --difficulty-violet-glow: #888888;
-  --difficulty-pink: #cccccc;
-  --difficulty-pink-glow: #989898;
-  --difficulty-light-pink: #e0e0e0;
-  --difficulty-light-pink-glow: #a8a8a8;
-  --difficulty-cyan: #c0c0c0;
-  --difficulty-cyan-glow: #909090;
+  /* Difficulty — monochrome staircase, gradient by tone not chroma */
+  --difficulty-green: #cfcfcf;
+  --difficulty-green-glow: #9e9e9e;
+  --difficulty-amber: #b6b6b6;
+  --difficulty-amber-glow: #888888;
+  --difficulty-red: #f6f6f6;
+  --difficulty-red-glow: #b0b0b0;
+  --difficulty-violet: #ababab;
+  --difficulty-violet-glow: #7e7e7e;
+  --difficulty-pink: #c2c2c2;
+  --difficulty-pink-glow: #909090;
+  --difficulty-light-pink: #d8d8d8;
+  --difficulty-light-pink-glow: #a0a0a0;
+  --difficulty-cyan: #b6b6b6;
+  --difficulty-cyan-glow: #888888;
 
-  --glow-difficulty-green: 0 0 14px rgba(255, 255, 255, 0.30), 0 0 28px rgba(255, 255, 255, 0.16);
-  --glow-difficulty-amber: 0 0 14px rgba(255, 255, 255, 0.32), 0 0 28px rgba(255, 255, 255, 0.18);
-  --glow-difficulty-red: 0 0 14px rgba(255, 255, 255, 0.42), 0 0 28px rgba(255, 255, 255, 0.24);
-  --glow-difficulty-violet: 0 0 14px rgba(255, 255, 255, 0.30), 0 0 28px rgba(255, 255, 255, 0.16);
-  --glow-difficulty-pink: 0 0 14px rgba(255, 255, 255, 0.30), 0 0 28px rgba(255, 255, 255, 0.16);
-  --glow-difficulty-light-pink: 0 0 14px rgba(255, 255, 255, 0.32), 0 0 28px rgba(255, 255, 255, 0.18);
-  --glow-difficulty-cyan: 0 0 14px rgba(255, 255, 255, 0.30), 0 0 28px rgba(255, 255, 255, 0.16);
+  /* Difficulty glows — flat, near-zero halos */
+  --glow-difficulty-green: none;
+  --glow-difficulty-amber: none;
+  --glow-difficulty-red: none;
+  --glow-difficulty-violet: none;
+  --glow-difficulty-pink: none;
+  --glow-difficulty-light-pink: none;
+  --glow-difficulty-cyan: none;
 
   /* Semantic */
   --background: var(--void-black);
@@ -3168,36 +3171,38 @@ html.ying-yang {
   --surface: var(--ink-deep);
   --surface-hover: var(--ink-mid);
   --border: var(--ink-light);
-  --border-glow: var(--pure-white);
+  --border-glow: var(--mist-pale);
   --text-primary: var(--cloud-white);
   --text-secondary: var(--mist-light);
   --text-muted: var(--mist-dark);
-  --accent: var(--pure-white);
-  --accent-hover: var(--mist-pale);
-  --danger: var(--mist-light);
-  --danger-hover: var(--pure-white);
+  --accent: var(--cloud-white);
+  --accent-hover: var(--pure-white);
+  --danger: var(--mist-pale);
+  --danger-hover: var(--cloud-white);
 
-  --glow-jade: 0 0 16px rgba(255, 255, 255, 0.42), 0 0 32px rgba(255, 255, 255, 0.22);
-  --glow-crimson: 0 0 16px rgba(255, 255, 255, 0.36), 0 0 32px rgba(255, 255, 255, 0.20);
-  --glow-gold: 0 0 16px rgba(216, 216, 216, 0.36), 0 0 32px rgba(216, 216, 216, 0.20);
-  --glow-blue: 0 0 16px rgba(192, 192, 192, 0.36), 0 0 32px rgba(192, 192, 192, 0.20);
-  --glow-subtle: 0 0 10px rgba(255, 255, 255, 0.22);
-  --glow-modal: 0 0 36px rgba(255, 255, 255, 0.30), 0 0 72px rgba(255, 255, 255, 0.14), inset 0 0 28px rgba(255, 255, 255, 0.06);
+  /* All glows neutralized for a strictly flat aesthetic */
+  --glow-jade: none;
+  --glow-crimson: none;
+  --glow-gold: none;
+  --glow-blue: none;
+  --glow-subtle: none;
+  --glow-modal: 0 0 0 1px color-mix(in srgb, var(--pure-white) 18%, transparent), 0 24px 48px color-mix(in srgb, #000 60%, transparent);
 
-  --col-weight: var(--mist-pale);
-  --col-weight-bg: color-mix(in srgb, var(--mist-pale) 12%, transparent);
-  --col-reps: var(--pure-white);
-  --col-reps-bg: color-mix(in srgb, var(--pure-white) 10%, transparent);
+  /* Value labels — weight reads as white, reps as bone grey for a clean two-tone hierarchy */
+  --col-weight: var(--cloud-white);
+  --col-weight-bg: color-mix(in srgb, var(--cloud-white) 10%, transparent);
+  --col-reps: var(--gold);
+  --col-reps-bg: color-mix(in srgb, var(--gold) 12%, transparent);
 
-  --chart-primary: #ffffff;
+  --chart-primary: var(--pure-white);
   --chart-primary-rgb: 255 255 255;
-  --chart-secondary: #a0a0a0;
-  --chart-grid: rgba(255, 255, 255, 0.10);
-  --chart-bg: rgba(0, 0, 0, 0.55);
-  --timed-color: #c0c0c0;
+  --chart-secondary: var(--gold);
+  --chart-grid: color-mix(in srgb, var(--pure-white) 10%, transparent);
+  --chart-bg: color-mix(in srgb, var(--void-black) 55%, transparent);
+  --timed-color: var(--mountain-blue-glow);
   --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 84%, var(--border));
   --nyaa-table-row-hover: color-mix(in srgb, var(--surface) 80%, var(--pure-white));
-  --system-bar-fallback: #000000;
+  --system-bar-fallback: var(--void-black);
 }
 
 html.ying-yang * {
@@ -3254,69 +3259,70 @@ html.ying-yang [class*="hover\\:text-[#8ea1ff]"]:hover { color: var(--accent) !i
  * No hue — only paper-grey shades carry depth. Danger reads as deep ink.
  * ===================================================================== */
 html.ying-yang-light {
-  /* Canvas — paper white tiers */
-  --void-black: #ffffff;
-  --ink-deep: #fafafa;
-  --ink-dark: #f2f2f2;
-  --ink-mid: #e8e8e8;
-  --ink-light: #d0d0d0;
+  /* Canvas — paper white tiers, slightly warmed off pure white */
+  --void-black: #fbfbfb;
+  --ink-deep: #f5f5f5;
+  --ink-dark: #ededed;
+  --ink-mid: #e2e2e2;
+  --ink-light: #cfcfcf;
 
   /* Text — graphite to ink */
-  --mist-dark: #5a5a5a;
-  --mist-mid: #404040;
-  --mist-light: #2a2a2a;
-  --mist-pale: #1a1a1a;
-  --cloud-white: #0a0a0a;
+  --mist-dark: #6a6a6a;
+  --mist-mid: #4a4a4a;
+  --mist-light: #2c2c2c;
+  --mist-pale: #1c1c1c;
+  --cloud-white: #0c0c0c;
   --pure-white: #000000;
 
-  /* Accent #1 — Pure black (primary) */
+  /* Accent #1 — Soft black (primary) */
   --jade-deep: #d8d8d8;
-  --jade: #2a2a2a;
-  --jade-glow: #000000;
+  --jade: #2c2c2c;
+  --jade-glow: #0c0c0c;
   --jade-light: #000000;
 
   /* Accent #2 — Slate grey */
   --gold-dim: #c0c0c0;
-  --gold: #585858;
-  --gold-glow: #2a2a2a;
+  --gold: #5e5e5e;
+  --gold-glow: #2e2e2e;
 
-  /* Accent #3 — Inverted ink (danger uses deep black on light) */
+  /* Accent #3 — Danger reads as deep ink */
   --crimson-deep: #e8e8e8;
-  --crimson: #404040;
-  --crimson-glow: #000000;
-  --crimson-light: #000000;
+  --crimson: #444444;
+  --crimson-glow: #161616;
+  --crimson-light: #0c0c0c;
 
   /* Accent #4 — Stone grey */
-  --mountain-blue: #c0c0c0;
-  --mountain-blue-glow: #404040;
+  --mountain-blue: #c2c2c2;
+  --mountain-blue-glow: #444444;
 
   /* Accent #5 — Echo black (under-tone) */
   --forest-deep: #e0e0e0;
-  --forest: #000000;
+  --forest: #0c0c0c;
 
-  /* Difficulty — monochrome staircase (dark on light) */
-  --difficulty-green: #2a2a2a;
+  /* Difficulty — staircase tones, dark on light */
+  --difficulty-green: #2c2c2c;
   --difficulty-green-glow: #1a1a1a;
-  --difficulty-amber: #404040;
+  --difficulty-amber: #424242;
   --difficulty-amber-glow: #2a2a2a;
-  --difficulty-red: #000000;
+  --difficulty-red: #0a0a0a;
   --difficulty-red-glow: #000000;
-  --difficulty-violet: #4a4a4a;
-  --difficulty-violet-glow: #2a2a2a;
-  --difficulty-pink: #585858;
-  --difficulty-pink-glow: #383838;
+  --difficulty-violet: #4c4c4c;
+  --difficulty-violet-glow: #2e2e2e;
+  --difficulty-pink: #5a5a5a;
+  --difficulty-pink-glow: #3a3a3a;
   --difficulty-light-pink: #6e6e6e;
-  --difficulty-light-pink-glow: #4a4a4a;
-  --difficulty-cyan: #404040;
+  --difficulty-light-pink-glow: #4c4c4c;
+  --difficulty-cyan: #424242;
   --difficulty-cyan-glow: #2a2a2a;
 
-  --glow-difficulty-green: 0 0 10px rgba(0, 0, 0, 0.18), 0 0 20px rgba(0, 0, 0, 0.10);
-  --glow-difficulty-amber: 0 0 10px rgba(0, 0, 0, 0.20), 0 0 20px rgba(0, 0, 0, 0.10);
-  --glow-difficulty-red: 0 0 10px rgba(0, 0, 0, 0.30), 0 0 20px rgba(0, 0, 0, 0.16);
-  --glow-difficulty-violet: 0 0 10px rgba(0, 0, 0, 0.18), 0 0 20px rgba(0, 0, 0, 0.10);
-  --glow-difficulty-pink: 0 0 10px rgba(0, 0, 0, 0.18), 0 0 20px rgba(0, 0, 0, 0.10);
-  --glow-difficulty-light-pink: 0 0 10px rgba(0, 0, 0, 0.20), 0 0 20px rgba(0, 0, 0, 0.10);
-  --glow-difficulty-cyan: 0 0 10px rgba(0, 0, 0, 0.18), 0 0 20px rgba(0, 0, 0, 0.10);
+  /* Difficulty glows — flat */
+  --glow-difficulty-green: none;
+  --glow-difficulty-amber: none;
+  --glow-difficulty-red: none;
+  --glow-difficulty-violet: none;
+  --glow-difficulty-pink: none;
+  --glow-difficulty-light-pink: none;
+  --glow-difficulty-cyan: none;
 
   /* Semantic */
   --background: var(--void-black);
@@ -3324,33 +3330,35 @@ html.ying-yang-light {
   --surface: var(--ink-deep);
   --surface-hover: var(--ink-mid);
   --border: var(--ink-light);
-  --border-glow: var(--pure-white);
+  --border-glow: var(--mist-pale);
   --text-primary: var(--cloud-white);
   --text-secondary: var(--mist-light);
   --text-muted: var(--mist-dark);
-  --accent: var(--pure-white);
-  --accent-hover: var(--mist-pale);
+  --accent: var(--cloud-white);
+  --accent-hover: var(--pure-white);
   --danger: var(--mist-light);
   --danger-hover: var(--pure-white);
 
-  --glow-jade: 0 0 12px rgba(0, 0, 0, 0.28), 0 0 24px rgba(0, 0, 0, 0.14);
-  --glow-crimson: 0 0 12px rgba(0, 0, 0, 0.24), 0 0 24px rgba(0, 0, 0, 0.12);
-  --glow-gold: 0 0 12px rgba(88, 88, 88, 0.24), 0 0 24px rgba(88, 88, 88, 0.12);
-  --glow-blue: 0 0 12px rgba(64, 64, 64, 0.22), 0 0 24px rgba(64, 64, 64, 0.10);
-  --glow-subtle: 0 0 8px rgba(0, 0, 0, 0.16);
-  --glow-modal: 0 0 28px rgba(0, 0, 0, 0.20), 0 0 56px rgba(0, 0, 0, 0.10), inset 0 0 24px rgba(0, 0, 0, 0.04);
+  /* Flat — no glows */
+  --glow-jade: none;
+  --glow-crimson: none;
+  --glow-gold: none;
+  --glow-blue: none;
+  --glow-subtle: none;
+  --glow-modal: 0 0 0 1px color-mix(in srgb, var(--pure-white) 14%, transparent), 0 18px 40px color-mix(in srgb, #000 14%, transparent);
 
-  --col-weight: var(--mist-pale);
-  --col-weight-bg: color-mix(in srgb, var(--mist-pale) 10%, transparent);
-  --col-reps: var(--pure-white);
-  --col-reps-bg: color-mix(in srgb, var(--pure-white) 8%, transparent);
+  /* Value labels — weight reads as ink, reps as graphite */
+  --col-weight: var(--cloud-white);
+  --col-weight-bg: color-mix(in srgb, var(--cloud-white) 8%, transparent);
+  --col-reps: var(--gold);
+  --col-reps-bg: color-mix(in srgb, var(--gold) 12%, transparent);
 
-  --chart-primary: #000000;
+  --chart-primary: var(--pure-white);
   --chart-primary-rgb: 0 0 0;
-  --chart-secondary: #585858;
-  --chart-grid: rgba(0, 0, 0, 0.10);
-  --chart-bg: rgba(255, 255, 255, 0.55);
-  --timed-color: #404040;
+  --chart-secondary: var(--gold);
+  --chart-grid: color-mix(in srgb, var(--pure-white) 10%, transparent);
+  --chart-bg: color-mix(in srgb, var(--void-black) 55%, transparent);
+  --timed-color: var(--mountain-blue-glow);
   --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 88%, var(--border));
   --nyaa-table-head-text: var(--text-primary);
   --nyaa-table-grid: color-mix(in srgb, var(--border) 88%, var(--text-muted));
@@ -3358,7 +3366,7 @@ html.ying-yang-light {
   --nyaa-table-row-odd: var(--surface);
   --nyaa-table-row-even: color-mix(in srgb, var(--surface) 94%, var(--border));
   --nyaa-table-row-hover: color-mix(in srgb, var(--surface) 80%, var(--pure-white));
-  --system-bar-fallback: #ffffff;
+  --system-bar-fallback: var(--void-black);
 }
 
 html.ying-yang-light * {
@@ -3471,13 +3479,13 @@ html.ying-yang-magenta {
   --difficulty-cyan: #80205c;
   --difficulty-cyan-glow: #5a1440;
 
-  --glow-difficulty-green: 0 0 10px rgba(90, 20, 64, 0.20), 0 0 20px rgba(90, 20, 64, 0.10);
-  --glow-difficulty-amber: 0 0 10px rgba(128, 32, 92, 0.22), 0 0 20px rgba(128, 32, 92, 0.10);
-  --glow-difficulty-red: 0 0 10px rgba(24, 4, 26, 0.32), 0 0 20px rgba(24, 4, 26, 0.18);
-  --glow-difficulty-violet: 0 0 10px rgba(152, 48, 110, 0.20), 0 0 20px rgba(152, 48, 110, 0.10);
-  --glow-difficulty-pink: 0 0 10px rgba(176, 48, 136, 0.22), 0 0 20px rgba(176, 48, 136, 0.10);
-  --glow-difficulty-light-pink: 0 0 10px rgba(198, 64, 152, 0.22), 0 0 20px rgba(198, 64, 152, 0.10);
-  --glow-difficulty-cyan: 0 0 10px rgba(128, 32, 92, 0.20), 0 0 20px rgba(128, 32, 92, 0.10);
+  --glow-difficulty-green: 0 0 10px color-mix(in srgb, var(--difficulty-green) 20%, transparent), 0 0 20px color-mix(in srgb, var(--difficulty-green) 10%, transparent);
+  --glow-difficulty-amber: 0 0 10px color-mix(in srgb, var(--difficulty-amber) 22%, transparent), 0 0 20px color-mix(in srgb, var(--difficulty-amber) 10%, transparent);
+  --glow-difficulty-red: 0 0 10px color-mix(in srgb, var(--difficulty-red) 32%, transparent), 0 0 20px color-mix(in srgb, var(--difficulty-red) 18%, transparent);
+  --glow-difficulty-violet: 0 0 10px color-mix(in srgb, var(--difficulty-violet) 20%, transparent), 0 0 20px color-mix(in srgb, var(--difficulty-violet) 10%, transparent);
+  --glow-difficulty-pink: 0 0 10px color-mix(in srgb, var(--difficulty-pink) 22%, transparent), 0 0 20px color-mix(in srgb, var(--difficulty-pink) 10%, transparent);
+  --glow-difficulty-light-pink: 0 0 10px color-mix(in srgb, var(--difficulty-light-pink) 22%, transparent), 0 0 20px color-mix(in srgb, var(--difficulty-light-pink) 10%, transparent);
+  --glow-difficulty-cyan: 0 0 10px color-mix(in srgb, var(--difficulty-cyan) 20%, transparent), 0 0 20px color-mix(in srgb, var(--difficulty-cyan) 10%, transparent);
 
   /* Semantic */
   --background: var(--void-black);
@@ -3494,24 +3502,24 @@ html.ying-yang-magenta {
   --danger: var(--mist-light);
   --danger-hover: var(--pure-white);
 
-  --glow-jade: 0 0 12px rgba(24, 4, 26, 0.30), 0 0 24px rgba(214, 34, 142, 0.18);
-  --glow-crimson: 0 0 12px rgba(24, 4, 26, 0.26), 0 0 24px rgba(128, 32, 92, 0.14);
-  --glow-gold: 0 0 12px rgba(152, 74, 120, 0.24), 0 0 24px rgba(152, 74, 120, 0.12);
-  --glow-blue: 0 0 12px rgba(90, 20, 64, 0.22), 0 0 24px rgba(90, 20, 64, 0.10);
-  --glow-subtle: 0 0 8px rgba(24, 4, 26, 0.18);
-  --glow-modal: 0 0 28px rgba(24, 4, 26, 0.22), 0 0 56px rgba(214, 34, 142, 0.14), inset 0 0 24px rgba(214, 34, 142, 0.06);
+  --glow-jade: 0 0 12px color-mix(in srgb, var(--pure-white) 30%, transparent), 0 0 24px color-mix(in srgb, var(--jade-glow) 18%, transparent);
+  --glow-crimson: 0 0 12px color-mix(in srgb, var(--pure-white) 26%, transparent), 0 0 24px color-mix(in srgb, var(--crimson) 14%, transparent);
+  --glow-gold: 0 0 12px color-mix(in srgb, var(--gold) 24%, transparent), 0 0 24px color-mix(in srgb, var(--gold) 12%, transparent);
+  --glow-blue: 0 0 12px color-mix(in srgb, var(--mist-light) 22%, transparent), 0 0 24px color-mix(in srgb, var(--mist-light) 10%, transparent);
+  --glow-subtle: 0 0 8px color-mix(in srgb, var(--pure-white) 18%, transparent);
+  --glow-modal: 0 0 28px color-mix(in srgb, var(--pure-white) 22%, transparent), 0 0 56px color-mix(in srgb, var(--jade-glow) 14%, transparent), inset 0 0 24px color-mix(in srgb, var(--jade-glow) 6%, transparent);
 
   --col-weight: var(--mist-pale);
   --col-weight-bg: color-mix(in srgb, var(--mist-pale) 10%, transparent);
   --col-reps: var(--pure-white);
   --col-reps-bg: color-mix(in srgb, var(--pure-white) 8%, transparent);
 
-  --chart-primary: #18041a;
+  --chart-primary: var(--pure-white);
   --chart-primary-rgb: 24 4 26;
-  --chart-secondary: #984a78;
-  --chart-grid: rgba(24, 4, 26, 0.10);
-  --chart-bg: rgba(255, 255, 255, 0.55);
-  --timed-color: #80205c;
+  --chart-secondary: var(--gold);
+  --chart-grid: color-mix(in srgb, var(--pure-white) 10%, transparent);
+  --chart-bg: color-mix(in srgb, var(--void-black) 55%, transparent);
+  --timed-color: var(--mountain-blue-glow);
   --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 88%, var(--border));
   --nyaa-table-head-text: var(--text-primary);
   --nyaa-table-grid: color-mix(in srgb, var(--border) 88%, var(--text-muted));
@@ -3519,7 +3527,7 @@ html.ying-yang-magenta {
   --nyaa-table-row-odd: var(--surface);
   --nyaa-table-row-even: color-mix(in srgb, var(--surface) 94%, var(--border));
   --nyaa-table-row-hover: color-mix(in srgb, var(--surface) 80%, var(--pure-white));
-  --system-bar-fallback: #ffffff;
+  --system-bar-fallback: var(--void-black);
 }
 
 html.ying-yang-magenta * {
