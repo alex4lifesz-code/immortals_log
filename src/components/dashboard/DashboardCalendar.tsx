@@ -327,7 +327,7 @@ function CalendarDay({ dayNumber, checkedInUsers, isToday, isPast, hasNote, hasF
       <div className="flex h-full flex-col justify-between p-1.5">
         <div className="flex items-start justify-between gap-1">
           <span className={`${compact ? "text-xs" : "text-sm"} font-semibold`} style={{ color: dayNumberColor }}>{dayNumber}</span>
-          {isToday ? <span className="rounded-sm px-1 py-[1px] text-[8px] font-bold uppercase tracking-[0.08em] shadow-sm" style={{ backgroundColor: "var(--accent)", color: "var(--cloud-white)" }}>Now</span> : null}
+          {isToday ? <span className="rounded-sm border px-1 py-[1px] text-[8px] font-bold uppercase tracking-[0.08em] shadow-sm" style={{ backgroundColor: "color-mix(in srgb, var(--accent) 22%, var(--background))", borderColor: "var(--accent)", color: "var(--accent)" }}>Now</span> : null}
         </div>
 
         <div className="flex items-end justify-between gap-1">

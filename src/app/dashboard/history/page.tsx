@@ -1195,9 +1195,9 @@ export default function HistoryPage() {
             <motion.aside
               key="mobile-exercise-drawer-panel"
               initial={{ x: "100%" }}
-              animate={{ x: "0%" }}
+              animate={mobileDrawerAnimReady ? { x: 0 } : { x: "0%" }}
               exit={{ x: "100%" }}
-              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+              transition={mobileDrawerAnimReady ? { duration: 0 } : { duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
               onAnimationComplete={(definition) => {
                 if (typeof definition === "object" && definition !== null && "x" in (definition as Record<string, unknown>)) {
                   const target = (definition as { x?: string | number }).x;
@@ -1210,7 +1210,8 @@ export default function HistoryPage() {
               style={{
                 borderLeftColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
                 backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))",
-                willChange: "transform",
+                willChange: mobileDrawerAnimReady ? "auto" : "transform",
+                transform: mobileDrawerAnimReady ? "none" : undefined,
               }}
             >
               <div

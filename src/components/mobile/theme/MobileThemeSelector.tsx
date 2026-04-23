@@ -41,6 +41,46 @@ const themePreviews: { id: ThemeStyle; title: string; colors: string[]; favorite
     ],
   },
   {
+    id: "evolved-ink-dragon",
+    title: "Evolved Ink Dragon",
+    colors: [
+      "var(--theme-preview-evolved-ink-dragon-1)",
+      "var(--theme-preview-evolved-ink-dragon-2)",
+      "var(--theme-preview-evolved-ink-dragon-3)",
+      "var(--theme-preview-evolved-ink-dragon-4)",
+    ],
+  },
+  {
+    id: "lemon-dragon",
+    title: "Lemon Dragon",
+    colors: [
+      "var(--theme-preview-lemon-dragon-1)",
+      "var(--theme-preview-lemon-dragon-2)",
+      "var(--theme-preview-lemon-dragon-3)",
+      "var(--theme-preview-lemon-dragon-4)",
+    ],
+  },
+  {
+    id: "ying-yang",
+    title: "Ying Yang",
+    colors: [
+      "var(--theme-preview-ying-yang-1)",
+      "var(--theme-preview-ying-yang-2)",
+      "var(--theme-preview-ying-yang-3)",
+      "var(--theme-preview-ying-yang-4)",
+    ],
+  },
+  {
+    id: "ying-yang-light",
+    title: "Ying Yang Light",
+    colors: [
+      "var(--theme-preview-ying-yang-light-1)",
+      "var(--theme-preview-ying-yang-light-2)",
+      "var(--theme-preview-ying-yang-light-3)",
+      "var(--theme-preview-ying-yang-light-4)",
+    ],
+  },
+  {
     id: "phoenix-bloom",
     title: "Phoenix Bloom",
     colors: [

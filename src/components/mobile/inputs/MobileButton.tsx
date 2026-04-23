@@ -27,8 +27,8 @@ export default function MobileButton({
       : variant === "ghost"
       ? "bg-transparent text-cloud-white border-border"
       : variant === "danger"
-      ? "bg-crimson text-cloud-white border-crimson-glow"
-      : "bg-jade text-cloud-white border-jade-glow";
+      ? "bg-crimson/20 text-crimson-light border-crimson hover:bg-crimson/30"
+      : "bg-jade/20 text-jade-light border-jade hover:bg-jade/30";
 
   return (
     <motion.button

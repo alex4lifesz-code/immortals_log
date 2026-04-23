@@ -900,13 +900,11 @@ export default function DaoHallPage() {
   const navButtonClass = "rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-[border-color,background-color,color]";
   const navButtonStyle = (active: boolean) => ({
     minWidth: "fit-content" as const,
-    borderColor: active
-      ? "color-mix(in srgb, var(--accent) 60%, var(--border))"
-      : "var(--border)",
+    borderColor: active ? "var(--accent)" : "var(--border)",
     backgroundColor: active
-      ? "color-mix(in srgb, var(--accent) 18%, var(--surface-hover))"
+      ? "color-mix(in srgb, var(--accent) 18%, var(--surface))"
       : "var(--surface-hover)",
-    color: active ? "var(--text-primary)" : "var(--text-secondary)",
+    color: active ? "var(--accent)" : "var(--text-secondary)",
     boxShadow: "none" as const,
   });
   const historySurfaceClass = "rounded-xl border";

@@ -151,6 +151,22 @@
     --theme-preview-ink-dragon-2: #16161e;
     --theme-preview-ink-dragon-3: #9a6ee0;
     --theme-preview-ink-dragon-4: #b8343a;
+    --theme-preview-evolved-ink-dragon-1: #07061a;
+    --theme-preview-evolved-ink-dragon-2: #110d28;
+    --theme-preview-evolved-ink-dragon-3: #9d7aff;
+    --theme-preview-evolved-ink-dragon-4: #c8a05a;
+    --theme-preview-lemon-dragon-1: #100e08;
+    --theme-preview-lemon-dragon-2: #1a1810;
+    --theme-preview-lemon-dragon-3: #ffd84a;
+    --theme-preview-lemon-dragon-4: #d8cba8;
+    --theme-preview-ying-yang-1: #000000;
+    --theme-preview-ying-yang-2: #141414;
+    --theme-preview-ying-yang-3: #ffffff;
+    --theme-preview-ying-yang-4: #8a8a8a;
+    --theme-preview-ying-yang-light-1: #ffffff;
+    --theme-preview-ying-yang-light-2: #f2f2f2;
+    --theme-preview-ying-yang-light-3: #000000;
+    --theme-preview-ying-yang-light-4: #585858;
     --theme-preview-phoenix-bloom-1: #0c0c12;
     --theme-preview-phoenix-bloom-2: #16161e;
     --theme-preview-phoenix-bloom-3: #e060a0;
@@ -2027,10 +2043,10 @@ html.cherry-blossom .completionist-modern-skill-desktop {
 }
 
 .dao-modern-page .theme-control-btn-active {
-  border-color: color-mix(in srgb, var(--accent) 28%, var(--border)) !important;
-  background: color-mix(in srgb, var(--accent) 10%, var(--surface)) !important;
-  color: var(--text-primary) !important;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 8%, transparent) !important;
+  border-color: var(--accent) !important;
+  background: color-mix(in srgb, var(--accent) 18%, var(--surface)) !important;
+  color: var(--accent) !important;
+  box-shadow: none !important;
 }
 
 .dao-modern-monthly-stats-panel,

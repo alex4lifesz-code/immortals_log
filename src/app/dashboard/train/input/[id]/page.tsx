@@ -12,7 +12,7 @@ import { buildIsoAtUserDateTime } from "@/lib/constants";
 import { PROGRESSION_EXERCISES_UPDATED_EVENT } from "@/lib/progression-events";
 import { api, ApiRequestError } from "@/lib/api-client";
 import { kgToLbs, lbsToKg } from "@/lib/unit-conversion";
-import type { ProgressionExercise } from "@/app/dashboard/workout/types";
+import type { ProgressionExercise, ProgressionLog } from "@/app/dashboard/workout/types";
 
 type InputMode = "existing" | "custom";
 type ValueMode = "weight" | "timed";
@@ -40,12 +40,12 @@ type ExistingLogPayload = {
 };
 
 const SESSION_PANELS: Array<{ id: SessionPanelId; label: string; description: string }> = [
-  { id: "exercise", label: "Exercise", description: "Selected movement" },
-  { id: "details", label: "Details", description: "Progression and variant" },
-  { id: "format", label: "Format", description: "Choose the log style" },
-  { id: "session", label: "Session", description: "Date and working sets" },
-  { id: "notes", label: "Notes", description: "Add context" },
-  { id: "review", label: "Review", description: "Save to Train" },
+  { id: "exercise", label: "Exercise", description: "Pick what you trained" },
+  { id: "details", label: "Details", description: "Level and variation" },
+  { id: "format", label: "Format", description: "Weight or time" },
+  { id: "session", label: "Session", description: "Date and sets" },
+  { id: "notes", label: "Notes", description: "Optional notes" },
+  { id: "review", label: "Review", description: "Check and save" },
 ];
 
 function createSetRow(seed: number): SetRow {
@@ -673,11 +673,50 @@ export default function TrainInputCanvasPage() {
 
   const shellMinHeight = "calc(var(--app-viewport-height) - 0.5rem)";
   const selectedExerciseMeta = inputMode === "custom"
-    ? "This custom exercise will be saved to the pending section in Exercise DB for review."
+    ? "We'll save this as a custom exercise so you can keep using it."
     : selectedExercise
       ? `${selectedExercise.category || "Training"} • ${selectedExercise.tiers.length} progression tiers`
       : "Choose an exercise from the previous screen.";
   const setValuePlaceholder = valueMode === "timed" ? "time" : weightUnit;
+
+  const recentLogPlaceholders = useMemo<Array<{ value: string; reps: string }>>(() => {
+    if (!selectedExercise) return [];
+    const logs = (selectedExercise.userProgress ?? []).flatMap((progress) => progress.logs ?? []);
+    if (logs.length === 0) return [];
+    const numericLevel = Number.parseInt(selectedLevel, 10);
+    const variantName = selectedVariant.trim();
+    const matchesScope = (log: ProgressionLog) => {
+      if (Number.isFinite(numericLevel) && log.level !== numericLevel) return false;
+      if (variantName && (log.variant?.trim() || "") !== variantName) return false;
+      return true;
+    };
+    const sorted = [...logs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const recent = sorted.find(matchesScope) ?? sorted[0];
+    if (!recent) return [];
+    const usesTimedMetrics = recent.holdTime != null || recent.holdTime2 != null || recent.holdTime3 != null;
+    if ((valueMode === "timed") !== usesTimedMetrics) return [];
+    const formatValue = (weight: number | null, hold: number | null) => {
+      if (valueMode === "timed") {
+        return hold != null ? formatInputNumber(hold) : "";
+      }
+      if (weight == null) return "";
+      return formatInputNumber(weightUnit === "lbs" ? kgToLbs(weight) : weight);
+    };
+    const formatReps = (reps: number | null) => (reps != null ? String(reps) : "");
+    return [
+      { value: formatValue(recent.weight1, recent.holdTime), reps: formatReps(recent.reps1) },
+      { value: formatValue(recent.weight2, recent.holdTime2), reps: formatReps(recent.reps2) },
+      { value: formatValue(recent.weight3, recent.holdTime3), reps: formatReps(recent.reps3) },
+    ];
+  }, [selectedExercise, selectedLevel, selectedVariant, valueMode, weightUnit]);
+
+  const placeholderForSetIndex = (index: number, field: "value" | "reps", fallback: string): string => {
+    const recent = recentLogPlaceholders[index];
+    if (!recent) return fallback;
+    const value = field === "value" ? recent.value : recent.reps;
+    return value || fallback;
+  };
+
   const panelShellStyle = {
     minHeight: 0,
     height: "100%",
@@ -746,10 +785,10 @@ export default function TrainInputCanvasPage() {
       && currentEditSnapshot
       && currentEditSnapshot !== initialEditSnapshot,
   );
-  const editorPageTitle = isEditingExistingLog ? "Edit Logged Session" : "Log a Session";
+  const editorPageTitle = isEditingExistingLog ? "Edit Workout" : "Log a Workout";
   const editorPageDescription = isEditingExistingLog
-    ? "Update or delete this saved workout entry."
-    : "A cleaner train-aligned input page with dynamic sets.";
+    ? "Update or delete this workout."
+    : "Track your sets and reps.";
   const isFocusedField = (field: string) => highlightedField === field;
   const getFieldHighlightStyle = (field: string) => (isFocusedField(field)
     ? {
@@ -880,13 +919,12 @@ export default function TrainInputCanvasPage() {
 
   return (
     <PageLayout
-      title={isEditingExistingLog ? "Edit Session" : "Train Input"}
-      subtitle={isEditingExistingLog ? "Edit or delete a saved workout log" : "Fresh training canvas with dynamic sets"}
+      title={editorPageTitle}
       mobileContentPaddingClass="p-0 pb-0"
     >
       {loading || !editLogHydrated ? (
         <GlowCard glow="jade" hoverable={false}>
-          <p className="py-4 text-center text-sm text-mist-dark">Loading input canvas...</p>
+          <p className="py-4 text-center text-sm text-mist-dark">Loading...</p>
         </GlowCard>
       ) : (
         <div className="flex flex-col px-0" style={{ minHeight: shellMinHeight }}>
@@ -918,8 +956,7 @@ export default function TrainInputCanvasPage() {
                     </svg>
                   </Link>
                   <div className="min-w-0">
-                    <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Training Canvas</p>
-                    <h2 className="mt-0.5 text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--text-primary)]">{editorPageTitle}</h2>
+                    <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--text-primary)]">{editorPageTitle}</h2>
                     <p className="mt-0.5 text-[11px] text-[color:var(--text-secondary)]">{editorPageDescription}</p>
                   </div>
                 </div>
@@ -1053,8 +1090,8 @@ export default function TrainInputCanvasPage() {
                             type="date"
                             value={trainingDate}
                             onChange={(event) => setTrainingDate(event.target.value)}
-                            className="h-10 w-full rounded-md border px-3 text-sm outline-none"
-                            style={{ borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--text-primary)" }}
+                            className="h-10 w-full rounded-md border px-3 text-sm font-semibold outline-none"
+                            style={{ borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--col-weight)" }}
                           />
                         </div>
 
@@ -1095,7 +1132,12 @@ export default function TrainInputCanvasPage() {
                                     ))}
                                 </select>
                               ) : (
-                                <p className="mt-1 text-base font-semibold text-[color:var(--text-primary)]">{selectedExercise?.name || customExerciseName || "No exercise selected"}</p>
+                                <p
+                                  className="mt-1 text-base font-semibold"
+                                  style={{ color: selectedExercise?.name || customExerciseName ? "var(--accent)" : "var(--text-muted)" }}
+                                >
+                                  {selectedExercise?.name || customExerciseName || "No exercise selected"}
+                                </p>
                               )}
                               <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">{selectedExerciseMeta}</p>
                             </div>
@@ -1115,7 +1157,7 @@ export default function TrainInputCanvasPage() {
                                 style={{ borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--text-primary)" }}
                               />
                               <p className="mt-2 text-[11px] text-[color:var(--text-secondary)]">
-                                When you save this workout, the exercise will appear in the pending section of Exercise DB where admins can review, edit, and approve it.
+                                We'll save this as a custom exercise so it's available next time you log a workout.
                               </p>
                             </div>
                           </div>
@@ -1142,8 +1184,8 @@ export default function TrainInputCanvasPage() {
                               value={selectedLevel}
                               onChange={(event) => setSelectedLevel(event.target.value)}
                               disabled={inputMode !== "existing" || !selectedExercise}
-                              className="h-10 w-full rounded-md border px-3 text-sm outline-none"
-                              style={{ borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--text-primary)", opacity: inputMode !== "existing" || !selectedExercise ? 0.6 : 1 }}
+                              className="h-10 w-full rounded-md border px-3 text-sm font-semibold outline-none"
+                              style={{ borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--col-reps)", opacity: inputMode !== "existing" || !selectedExercise ? 0.6 : 1 }}
                             >
                               {(selectedExercise?.tiers.length ? selectedExercise.tiers : [{ level: 1, name: "Progression 1" }]).map((tier) => (
                                 <option key={`${tier.level}-${tier.name}`} value={String(tier.level)}>
@@ -1159,8 +1201,8 @@ export default function TrainInputCanvasPage() {
                               value={selectedVariant}
                               onChange={(event) => setSelectedVariant(event.target.value)}
                               disabled={inputMode !== "existing" || !selectedExercise}
-                              className="h-10 w-full rounded-md border px-3 text-sm outline-none"
-                              style={{ borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--text-primary)", opacity: inputMode !== "existing" || !selectedExercise ? 0.6 : 1 }}
+                              className="h-10 w-full rounded-md border px-3 text-sm font-semibold outline-none"
+                              style={{ borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--col-weight)", opacity: inputMode !== "existing" || !selectedExercise ? 0.6 : 1 }}
                             >
                               <option value="">Default</option>
                               {(selectedExercise?.variations || []).map((variation) => (
@@ -1191,9 +1233,9 @@ export default function TrainInputCanvasPage() {
                             className="rounded-xl border px-3 py-3 text-left transition-colors"
                             style={{
                               borderColor: valueMode === "weight" ? "color-mix(in srgb, var(--accent) 60%, transparent)" : "color-mix(in srgb, var(--border) 80%, transparent)",
-                              backgroundColor: valueMode === "weight" ? "color-mix(in srgb, var(--accent) 14%, var(--ink-dark))" : "color-mix(in srgb, var(--surface-hover) 60%, var(--surface))",
-                              color: valueMode === "weight" ? "var(--text-primary)" : "var(--text-secondary)",
-                              boxShadow: valueMode === "weight" ? "0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent) inset" : "none",
+                              backgroundColor: valueMode === "weight" ? "color-mix(in srgb, var(--accent) 14%, var(--surface))" : "color-mix(in srgb, var(--surface-hover) 60%, var(--surface))",
+                              color: valueMode === "weight" ? "var(--accent)" : "var(--text-secondary)",
+                              boxShadow: "none",
                             }}
                           >
                             <div className="flex items-center gap-3">
@@ -1220,9 +1262,9 @@ export default function TrainInputCanvasPage() {
                             className="rounded-xl border px-3 py-3 text-left transition-colors"
                             style={{
                               borderColor: valueMode === "timed" ? "color-mix(in srgb, var(--accent) 60%, transparent)" : "color-mix(in srgb, var(--border) 80%, transparent)",
-                              backgroundColor: valueMode === "timed" ? "color-mix(in srgb, var(--accent) 14%, var(--ink-dark))" : "color-mix(in srgb, var(--surface-hover) 60%, var(--surface))",
-                              color: valueMode === "timed" ? "var(--text-primary)" : "var(--text-secondary)",
-                              boxShadow: valueMode === "timed" ? "0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent) inset" : "none",
+                              backgroundColor: valueMode === "timed" ? "color-mix(in srgb, var(--accent) 14%, var(--surface))" : "color-mix(in srgb, var(--surface-hover) 60%, var(--surface))",
+                              color: valueMode === "timed" ? "var(--accent)" : "var(--text-secondary)",
+                              boxShadow: "none",
                             }}
                           >
                             <div className="flex items-center gap-3">
@@ -1266,9 +1308,9 @@ export default function TrainInputCanvasPage() {
                                 className="rounded-xl border px-3 py-2 text-[11px] font-semibold transition-all"
                                 style={{
                                   borderColor: weightUnit === "kg" ? "color-mix(in srgb, var(--accent) 64%, transparent)" : "color-mix(in srgb, var(--border) 78%, transparent)",
-                                  backgroundColor: weightUnit === "kg" ? "color-mix(in srgb, var(--accent) 22%, transparent)" : "color-mix(in srgb, var(--surface-hover) 72%, var(--surface))",
-                                  color: weightUnit === "kg" ? "var(--text-primary)" : "var(--text-secondary)",
-                                  boxShadow: weightUnit === "kg" ? "inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent), inset 0 0 12px color-mix(in srgb, var(--accent) 16%, transparent)" : "inset 0 0 0 1px color-mix(in srgb, var(--cloud-white) 3%, transparent)",
+                                  backgroundColor: weightUnit === "kg" ? "color-mix(in srgb, var(--accent) 18%, var(--surface))" : "color-mix(in srgb, var(--surface-hover) 72%, var(--surface))",
+                                  color: weightUnit === "kg" ? "var(--accent)" : "var(--text-secondary)",
+                                  boxShadow: "none",
                                 }}
                               >
                                 Kilograms (kg)
@@ -1279,9 +1321,9 @@ export default function TrainInputCanvasPage() {
                                 className="rounded-xl border px-3 py-2 text-[11px] font-semibold transition-all"
                                 style={{
                                   borderColor: weightUnit === "lbs" ? "color-mix(in srgb, var(--accent) 64%, transparent)" : "color-mix(in srgb, var(--border) 78%, transparent)",
-                                  backgroundColor: weightUnit === "lbs" ? "color-mix(in srgb, var(--accent) 22%, transparent)" : "color-mix(in srgb, var(--surface-hover) 72%, var(--surface))",
-                                  color: weightUnit === "lbs" ? "var(--text-primary)" : "var(--text-secondary)",
-                                  boxShadow: weightUnit === "lbs" ? "inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent), inset 0 0 12px color-mix(in srgb, var(--accent) 16%, transparent)" : "inset 0 0 0 1px color-mix(in srgb, var(--cloud-white) 3%, transparent)",
+                                  backgroundColor: weightUnit === "lbs" ? "color-mix(in srgb, var(--accent) 18%, var(--surface))" : "color-mix(in srgb, var(--surface-hover) 72%, var(--surface))",
+                                  color: weightUnit === "lbs" ? "var(--accent)" : "var(--text-secondary)",
+                                  boxShadow: "none",
                                 }}
                               >
                                 Pounds (lbs)
@@ -1316,10 +1358,11 @@ export default function TrainInputCanvasPage() {
                                 </div>
                                 <div className="flex shrink-0 items-center gap-1.5">
                                   <span
-                                    className="min-w-[84px] rounded-full border px-2.5 py-1 text-center text-[10px] font-semibold text-[color:var(--text-primary)]"
+                                    className="min-w-[84px] rounded-full border px-2.5 py-1 text-center text-[10px] font-semibold"
                                     style={{
-                                      borderColor: "color-mix(in srgb, var(--accent) 36%, transparent)",
-                                      backgroundColor: "color-mix(in srgb, var(--accent) 10%, transparent)",
+                                      borderColor: modifierKg === 0 ? "color-mix(in srgb, var(--accent) 36%, transparent)" : "color-mix(in srgb, var(--danger) 56%, transparent)",
+                                      backgroundColor: modifierKg === 0 ? "color-mix(in srgb, var(--accent) 10%, transparent)" : "color-mix(in srgb, var(--danger) 14%, transparent)",
+                                      color: modifierKg === 0 ? "var(--text-muted)" : "var(--danger-hover)",
                                     }}
                                   >
                                     {modifierKg === 0 ? "None" : formatSignedModifierKg(modifierKg)}
@@ -1358,37 +1401,18 @@ export default function TrainInputCanvasPage() {
                           ) : null}
 
                           <div className="rounded-xl border px-3 py-3" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface-hover) 62%, var(--surface))" }}>
-                            <div className="flex items-start justify-between gap-2">
-                              <div>
-                                <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Sets</p>
-                                <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">Start with one set and add more as you go</p>
-                              </div>
-                              <GlowButton
-                                variant="jade"
-                                size="sm"
-                                onClick={addSetRow}
-                                className="h-9 rounded-xl px-3 transition-all"
-                                style={(() => {
-                                  const currentSet = sets.find((set) => set.id === expandedSetId) ?? sets[sets.length - 1];
-                                  const ready = Boolean(currentSet && currentSet.value.trim() && currentSet.reps.trim());
-                                  return ready
-                                    ? {
-                                        boxShadow:
-                                          "0 0 0 1px color-mix(in srgb, var(--jade-glow) 72%, transparent) inset, 0 0 14px color-mix(in srgb, var(--jade-glow) 55%, transparent), 0 0 26px color-mix(in srgb, var(--jade-glow) 32%, transparent)",
-                                      }
-                                    : { boxShadow: "0 0 0 1px rgba(88,101,242,0.14) inset" };
-                                })()}
-                              >
-                                + Add Set
-                              </GlowButton>
+                            <div>
+                              <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Sets</p>
+                              <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">Start with one set and add more as you go</p>
                             </div>
 
                             <div className="mt-3 space-y-2.5">
                               {sets.map((set, index) => {
                                 const isExpanded = expandedSetId === set.id;
-                                const setSummary = set.value || set.reps
-                                  ? `${set.value || "—"} ${valueMode === "timed" ? "sec" : weightUnit} · ${set.reps || "—"} reps`
-                                  : "Tap to continue this set";
+                                const hasSummaryValues = Boolean(set.value || set.reps);
+                                const summaryValueLabel = set.value || "—";
+                                const summaryValueUnit = valueMode === "timed" ? "sec" : weightUnit;
+                                const summaryRepsLabel = set.reps || "—";
 
                                 return (
                                   <div
@@ -1420,35 +1444,84 @@ export default function TrainInputCanvasPage() {
                                         >
                                           Set {index + 1}
                                         </span>
-                                        <span className="truncate text-[10px] text-[color:var(--text-muted)]">{setSummary}</span>
+                                        {hasSummaryValues ? (
+                                          <span className="truncate text-[10px]">
+                                            <span style={{ color: "var(--col-weight)" }}>{summaryValueLabel}</span>
+                                            <span style={{ color: "var(--text-muted)" }}> {summaryValueUnit} · </span>
+                                            <span style={{ color: "var(--col-reps)" }}>{summaryRepsLabel}</span>
+                                            <span style={{ color: "var(--text-muted)" }}> reps</span>
+                                          </span>
+                                        ) : (
+                                          <span className="truncate text-[10px] text-[color:var(--text-muted)]">Tap to continue this set</span>
+                                        )}
                                       </button>
 
                                       <div className="flex items-center gap-2">
-                                        {!isExpanded ? (
+                                        {index === sets.length - 1 ? (
+                                          (() => {
+                                            const ready = Boolean(set.value.trim() && set.reps.trim());
+                                            return (
+                                              <>
+                                                {sets.length > 1 ? (
+                                                  <button
+                                                    type="button"
+                                                    onClick={(event) => {
+                                                      event.stopPropagation();
+                                                      removeSetRow(set.id);
+                                                    }}
+                                                    className="rounded-full border px-2.5 py-1 text-[10px] font-medium transition-all"
+                                                    style={{
+                                                      borderColor: "color-mix(in srgb, var(--border) 78%, transparent)",
+                                                      backgroundColor: "color-mix(in srgb, var(--surface-hover) 72%, var(--surface))",
+                                                      color: "var(--text-secondary)",
+                                                      opacity: 0.96,
+                                                      boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--cloud-white) 3%, transparent)",
+                                                    }}
+                                                  >
+                                                    Remove
+                                                  </button>
+                                                ) : null}
+                                                <GlowButton
+                                                  variant="jade"
+                                                  size="sm"
+                                                  onClick={(event) => {
+                                                    event.stopPropagation();
+                                                    addSetRow();
+                                                  }}
+                                                  className="h-7 rounded-full px-3 text-[10px] transition-all"
+                                                  style={
+                                                    ready
+                                                      ? {
+                                                          boxShadow:
+                                                            "0 0 0 1px color-mix(in srgb, var(--jade-glow) 72%, transparent) inset, 0 0 14px color-mix(in srgb, var(--jade-glow) 55%, transparent), 0 0 26px color-mix(in srgb, var(--jade-glow) 32%, transparent)",
+                                                        }
+                                                      : { boxShadow: "0 0 0 1px rgba(88,101,242,0.14) inset" }
+                                                  }
+                                                >
+                                                  + Add Set
+                                                </GlowButton>
+                                              </>
+                                            );
+                                          })()
+                                        ) : (
                                           <button
                                             type="button"
-                                            onClick={() => setExpandedSetId(set.id)}
-                                            className="rounded-full border px-2.5 py-1 text-[10px] font-medium"
-                                            style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface-hover) 72%, var(--surface))", color: "var(--text-secondary)", boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--cloud-white) 3%, transparent)" }}
+                                            onClick={(event) => {
+                                              event.stopPropagation();
+                                              removeSetRow(set.id);
+                                            }}
+                                            className="rounded-full border px-2.5 py-1 text-[10px] font-medium transition-all"
+                                            style={{
+                                              borderColor: "color-mix(in srgb, var(--border) 78%, transparent)",
+                                              backgroundColor: "color-mix(in srgb, var(--surface-hover) 72%, var(--surface))",
+                                              color: "var(--text-secondary)",
+                                              opacity: 0.96,
+                                              boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--cloud-white) 3%, transparent)",
+                                            }}
                                           >
-                                            Edit
+                                            Remove
                                           </button>
-                                        ) : null}
-                                        <button
-                                          type="button"
-                                          onClick={() => removeSetRow(set.id)}
-                                          disabled={sets.length <= 1}
-                                          className="rounded-full border px-2.5 py-1 text-[10px] font-medium transition-all"
-                                          style={{
-                                            borderColor: "color-mix(in srgb, var(--border) 78%, transparent)",
-                                            backgroundColor: "color-mix(in srgb, var(--surface-hover) 72%, var(--surface))",
-                                            color: sets.length <= 1 ? "color-mix(in srgb, var(--text-muted) 72%, transparent)" : "var(--text-secondary)",
-                                            opacity: sets.length <= 1 ? 0.45 : 0.96,
-                                            boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--cloud-white) 3%, transparent)",
-                                          }}
-                                        >
-                                          Remove
-                                        </button>
+                                        )}
                                       </div>
                                     </div>
 
@@ -1464,9 +1537,9 @@ export default function TrainInputCanvasPage() {
                                             step={valueMode === "timed" ? "1" : "0.5"}
                                             value={set.value}
                                             onChange={(event) => updateSetRow(set.id, "value", event.target.value)}
-                                            placeholder={setValuePlaceholder}
-                                            className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
-                                            style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--text-primary)" }}
+                                            placeholder={placeholderForSetIndex(index, "value", setValuePlaceholder)}
+                                            className="h-11 w-full rounded-xl border px-3 text-sm font-semibold outline-none"
+                                            style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--col-weight)" }}
                                           />
                                         </label>
                                         <label className="block">
@@ -1477,9 +1550,9 @@ export default function TrainInputCanvasPage() {
                                             step="1"
                                             value={set.reps}
                                             onChange={(event) => updateSetRow(set.id, "reps", event.target.value)}
-                                            placeholder="reps"
-                                            className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
-                                            style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--text-primary)" }}
+                                            placeholder={placeholderForSetIndex(index, "reps", "reps")}
+                                            className="h-11 w-full rounded-xl border px-3 text-sm font-semibold outline-none"
+                                            style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--col-reps)" }}
                                           />
                                         </label>
                                       </div>
@@ -1531,67 +1604,74 @@ export default function TrainInputCanvasPage() {
                     <section className="flex flex-col overflow-hidden px-1 py-1" style={panelShellStyle}>
                       <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">
                         <div
-                          className="rounded-2xl border px-3 py-3"
+                          className="rounded-xl border px-3 py-3"
                           style={{
-                            borderColor: "color-mix(in srgb, var(--accent) 22%, var(--border))",
-                            background: "linear-gradient(180deg, color-mix(in srgb, var(--surface-hover) 78%, var(--surface)) 0%, color-mix(in srgb, var(--surface) 96%, black) 100%)",
+                            borderColor: "color-mix(in srgb, var(--border) 70%, transparent)",
+                            backgroundColor: "var(--surface)",
                           }}
                         >
-                          <p className="text-[10px] uppercase tracking-[0.12em] text-[color:var(--text-muted)]">Review</p>
-                          <p className="mt-1 text-sm font-semibold text-[color:var(--text-primary)]">Ready for final save</p>
-                          <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">Everything is filled out and prepared for submission.</p>
-                        </div>
+                          <div className="flex items-baseline justify-between gap-2">
+                            <p className="text-[10px] uppercase tracking-[0.12em] text-[color:var(--text-muted)]">Review</p>
+                            <p className="text-[10px] text-[color:var(--text-muted)]">Ready for final save</p>
+                          </div>
 
-                        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                          <div className="rounded-xl border px-3 py-2.5" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface-hover) 62%, var(--surface))" }}>
-                            <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Exercise</p>
-                            <p className="mt-1 text-sm font-semibold text-[color:var(--text-primary)]">{selectedExerciseLabel}</p>
+                          <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5">
+                            <div>
+                              <dt className="text-[9px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Exercise</dt>
+                              <dd className="text-[12px] font-semibold truncate" style={{ color: "var(--accent)" }}>{selectedExerciseLabel}</dd>
+                            </div>
+                            <div>
+                              <dt className="text-[9px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Progression</dt>
+                              <dd className="text-[12px] font-semibold truncate" style={{ color: "var(--col-reps)" }}>{selectedProgressionLabel}</dd>
+                            </div>
+                            <div>
+                              <dt className="text-[9px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Variation</dt>
+                              <dd className="text-[12px] font-semibold truncate" style={{ color: "var(--col-weight)" }}>{selectedVariant || "Default"}</dd>
+                            </div>
+                            <div>
+                              <dt className="text-[9px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Date</dt>
+                              <dd className="text-[12px] font-semibold" style={{ color: "var(--col-weight)" }}>{trainingDate}</dd>
+                            </div>
+                            <div>
+                              <dt className="text-[9px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Format</dt>
+                              <dd className="text-[12px] font-semibold" style={{ color: "var(--accent)" }}>
+                                {valueMode === "timed" ? "Timed" : `Weight · ${weightUnit}`}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-[9px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Modifier</dt>
+                              <dd
+                                className="text-[12px] font-semibold"
+                                style={{ color: valueMode === "weight" && modifierKg !== 0 ? "var(--danger-hover)" : "var(--text-muted)" }}
+                              >
+                                {valueMode === "weight" && modifierKg !== 0 ? formatSignedModifierKg(modifierKg) : "—"}
+                              </dd>
+                            </div>
+                          </dl>
+
+                          <div className="mt-3 border-t pt-2" style={{ borderColor: "color-mix(in srgb, var(--border) 56%, transparent)" }}>
+                            <p className="text-[9px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Working sets</p>
+                            <ul className="mt-1 divide-y" style={{ borderColor: "color-mix(in srgb, var(--border) 50%, transparent)" }}>
+                              {reviewSetPreview.length ? reviewSetPreview.map((set) => (
+                                <li key={set.label} className="flex items-baseline justify-between gap-2 py-1 text-[11px]">
+                                  <span className="font-semibold" style={{ color: "var(--accent)" }}>{set.label}</span>
+                                  <span className="truncate" style={{ color: "var(--col-weight)" }}>{set.summary}</span>
+                                </li>
+                              )) : (
+                                <li className="py-1 text-[11px] text-[color:var(--text-secondary)]">No sets added yet.</li>
+                              )}
+                            </ul>
                           </div>
-                          <div className="rounded-xl border px-3 py-2.5" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface-hover) 62%, var(--surface))" }}>
-                            <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Progression</p>
-                            <p className="mt-1 text-sm font-semibold text-[color:var(--text-primary)]">{selectedProgressionLabel}</p>
-                          </div>
-                          <div className="rounded-xl border px-3 py-2.5" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface-hover) 62%, var(--surface))" }}>
-                            <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Variation</p>
-                            <p className="mt-1 text-sm font-semibold text-[color:var(--text-primary)]">{selectedVariant || "Default"}</p>
-                          </div>
-                          <div className="rounded-xl border px-3 py-2.5" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface-hover) 62%, var(--surface))" }}>
-                            <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Date</p>
-                            <p className="mt-1 text-sm font-semibold text-[color:var(--text-primary)]">{trainingDate}</p>
-                          </div>
-                          <div className="rounded-xl border px-3 py-2.5" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface-hover) 62%, var(--surface))" }}>
-                            <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Format</p>
-                            <p className="mt-1 text-sm font-semibold text-[color:var(--text-primary)]">
-                              {valueMode === "timed" ? "Timed session" : `Weight · ${weightUnit === "kg" ? "Kilograms (kg)" : "Pounds (lbs)"}`}
+
+                          <div className="mt-3 border-t pt-2" style={{ borderColor: "color-mix(in srgb, var(--border) 56%, transparent)" }}>
+                            <p className="text-[9px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Session notes</p>
+                            <p
+                              className="mt-1 text-[11px] leading-5"
+                              style={{ color: notes.trim() ? "var(--text-primary)" : "var(--text-muted)" }}
+                            >
+                              {notes.trim() || "No notes added for this session."}
                             </p>
                           </div>
-                          <div className="rounded-xl border px-3 py-2.5" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface-hover) 62%, var(--surface))" }}>
-                            <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Modifier</p>
-                            <p className="mt-1 text-sm font-semibold text-[color:var(--text-primary)]">
-                              {valueMode === "weight" && modifierKg !== 0 ? formatSignedModifierKg(modifierKg) : "No modifier"}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="mt-3 rounded-xl border px-3 py-3" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface-hover) 58%, var(--surface))" }}>
-                          <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Working sets</p>
-                          <div className="mt-2 space-y-2">
-                            {reviewSetPreview.length ? reviewSetPreview.map((set) => (
-                              <div key={set.label} className="rounded-lg px-2.5 py-2" style={{ backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)" }}>
-                                <p className="text-[11px] text-[color:var(--text-secondary)]">
-                                  <span className="font-semibold text-[color:var(--text-primary)]">{set.label}</span>
-                                </p>
-                                <p className="mt-0.5 text-[11px] text-[color:var(--text-secondary)]">{set.summary}</p>
-                              </div>
-                            )) : (
-                              <p className="text-[11px] text-[color:var(--text-secondary)]">No sets added yet.</p>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="mt-3 rounded-xl border px-3 py-3" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface-hover) 58%, var(--surface))" }}>
-                          <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Session notes</p>
-                          <p className="mt-2 text-[11px] leading-5 text-[color:var(--text-secondary)]">{notes.trim() || "No notes added for this session."}</p>
                         </div>
                       </div>
 
