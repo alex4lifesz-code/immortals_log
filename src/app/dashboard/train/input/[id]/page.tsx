@@ -244,17 +244,23 @@ export default function TrainInputCanvasPage() {
       if (typeof draft.modifierKg === "number" && Number.isFinite(draft.modifierKg)) setModifierKg(draft.modifierKg);
       if (typeof draft.trainingDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(draft.trainingDate)) setTrainingDate(draft.trainingDate);
       if (typeof draft.notes === "string") setNotes(draft.notes);
-      if (Array.isArray(draft.sets) && draft.sets.length) {
-        const restored = draft.sets
-          .filter((set): set is SetRow => Boolean(set) && typeof set.id === "string" && typeof set.value === "string" && typeof set.reps === "string")
-          .map((set) => ({ id: set.id, value: set.value, reps: set.reps }));
-        if (restored.length) setSets(restored);
-      }
-      if (draft.activePanel && SESSION_PANELS.some((panel) => panel.id === draft.activePanel)) {
-        setActivePanel(draft.activePanel);
-      }
-      if (Array.isArray(draft.confirmedPanels)) {
-        setConfirmedPanels(draft.confirmedPanels.filter((id): id is SessionPanelId => SESSION_PANELS.some((panel) => panel.id === id)));
+      // When the user just picked a fresh exercise via the + flow (URL carries prefill params),
+      // ignore any persisted sets/activePanel/confirmedPanels — always restart the stepper at
+      // "exercise" with empty inputs so prior values render only as placeholder hints.
+      const arrivedFromPicker = Boolean(prefillExerciseId || prefillExerciseName || prefillCustomExercise);
+      if (!arrivedFromPicker) {
+        if (Array.isArray(draft.sets) && draft.sets.length) {
+          const restored = draft.sets
+            .filter((set): set is SetRow => Boolean(set) && typeof set.id === "string" && typeof set.value === "string" && typeof set.reps === "string")
+            .map((set) => ({ id: set.id, value: set.value, reps: set.reps }));
+          if (restored.length) setSets(restored);
+        }
+        if (draft.activePanel && SESSION_PANELS.some((panel) => panel.id === draft.activePanel)) {
+          setActivePanel(draft.activePanel);
+        }
+        if (Array.isArray(draft.confirmedPanels)) {
+          setConfirmedPanels(draft.confirmedPanels.filter((id): id is SessionPanelId => SESSION_PANELS.some((panel) => panel.id === id)));
+        }
       }
     } catch (err) {
       console.warn("Failed to restore log draft:", err);
@@ -1670,7 +1676,7 @@ export default function TrainInputCanvasPage() {
                                             value={set.value}
                                             onChange={(event) => updateSetRow(set.id, "value", event.target.value)}
                                             placeholder={placeholderForSetIndex(index, "value", setValuePlaceholder)}
-                                            className="h-11 w-full rounded-xl border px-3 text-sm font-semibold outline-none"
+                                            className="h-11 w-full rounded-xl border px-3 text-sm font-semibold outline-none placeholder:font-normal placeholder:italic placeholder:opacity-40"
                                             style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--col-weight)" }}
                                           />
                                         </label>
@@ -1683,7 +1689,7 @@ export default function TrainInputCanvasPage() {
                                             value={set.reps}
                                             onChange={(event) => updateSetRow(set.id, "reps", event.target.value)}
                                             placeholder={placeholderForSetIndex(index, "reps", "reps")}
-                                            className="h-11 w-full rounded-xl border px-3 text-sm font-semibold outline-none"
+                                            className="h-11 w-full rounded-xl border px-3 text-sm font-semibold outline-none placeholder:font-normal placeholder:italic placeholder:opacity-40"
                                             style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--col-reps)" }}
                                           />
                                         </label>
