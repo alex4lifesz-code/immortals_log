@@ -716,9 +716,8 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                 }}
               >
                 <div
-                  className="h-full border overflow-hidden"
+                  className="h-full overflow-hidden"
                   style={{
-                    borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
                     backgroundColor: "color-mix(in srgb, var(--ink-mid) 20%, var(--ink-deep))",
                   }}
                 >
@@ -790,12 +789,13 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                         </div>
                       </div>
 
-                      {friendActionItems.map((item) => (
+                      {friendActionItems.map((item) => {
+                        const isAvailable = item.id === "history";
+                        return (
                         <article
                           key={item.id}
                           className="mx-1 my-0.5 rounded-md px-3 py-2.5"
                           style={{
-                            borderTop: "1px solid color-mix(in srgb, var(--ink-light) 72%, transparent)",
                             cursor: "pointer",
                           }}
                           role="button"
@@ -813,15 +813,16 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                           }}
                         >
                           <div className="flex items-start justify-between gap-2">
-                            <p className="text-sm font-semibold leading-tight" style={{ color: "var(--text-muted)" }}>
+                            <p className="text-sm font-semibold leading-tight" style={{ color: isAvailable ? "var(--text-primary)" : "var(--text-muted)" }}>
                               {item.label}
                             </p>
                           </div>
-                          <p className="mt-0.5 text-[11px] italic" style={{ color: "var(--text-muted)" }}>
+                          <p className="mt-0.5 text-[11px] italic" style={{ color: isAvailable ? "var(--text-secondary)" : "var(--text-muted)" }}>
                             {item.hint}
                           </p>
                         </article>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 </div>

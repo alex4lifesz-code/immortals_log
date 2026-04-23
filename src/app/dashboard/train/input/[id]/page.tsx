@@ -1367,8 +1367,17 @@ export default function TrainInputCanvasPage() {
                                 variant="jade"
                                 size="sm"
                                 onClick={addSetRow}
-                                className="h-9 rounded-xl px-3"
-                                style={{ boxShadow: "0 0 0 1px rgba(88,101,242,0.14) inset" }}
+                                className="h-9 rounded-xl px-3 transition-all"
+                                style={(() => {
+                                  const currentSet = sets.find((set) => set.id === expandedSetId) ?? sets[sets.length - 1];
+                                  const ready = Boolean(currentSet && currentSet.value.trim() && currentSet.reps.trim());
+                                  return ready
+                                    ? {
+                                        boxShadow:
+                                          "0 0 0 1px color-mix(in srgb, var(--jade-glow) 72%, transparent) inset, 0 0 14px color-mix(in srgb, var(--jade-glow) 55%, transparent), 0 0 26px color-mix(in srgb, var(--jade-glow) 32%, transparent)",
+                                      }
+                                    : { boxShadow: "0 0 0 1px rgba(88,101,242,0.14) inset" };
+                                })()}
                               >
                                 + Add Set
                               </GlowButton>

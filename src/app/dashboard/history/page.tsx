@@ -149,6 +149,7 @@ export default function HistoryPage() {
   const [mobileDrawerRepsFilter, setMobileDrawerRepsFilter] = useState<"all" | "1-5" | "6-10" | "11+">("all");
   const [mobileDrawerSort, setMobileDrawerSort] = useState<"recent" | "oldest" | "progression-asc" | "progression-desc">("recent");
   const [mobileExerciseDrawerExerciseId, setMobileExerciseDrawerExerciseId] = useState<string | null>(null);
+  const [mobileDrawerAnimReady, setMobileDrawerAnimReady] = useState(false);
   const [mobileLastSelectedExerciseId, setMobileLastSelectedExerciseId] = useState<string | null>(null);
   const [mobileLogFabOpen, setMobileLogFabOpen] = useState(false);
   const [mobileLogFabSearchQuery, setMobileLogFabSearchQuery] = useState("");
@@ -598,6 +599,12 @@ export default function HistoryPage() {
     setMobileDrawerWeightFilter("all");
     setMobileDrawerRepsFilter("all");
     setMobileDrawerSort("recent");
+  }, [mobileExerciseDrawerExerciseId]);
+
+  useEffect(() => {
+    if (!mobileExerciseDrawerExerciseId) {
+      setMobileDrawerAnimReady(false);
+    }
   }, [mobileExerciseDrawerExerciseId]);
 
   useEffect(() => {
@@ -1106,7 +1113,6 @@ export default function HistoryPage() {
                     type="button"
                     className="mx-1 my-0.5 block w-[calc(100%-0.5rem)] rounded-md px-3 py-2.5 text-left"
                     style={{
-                      borderTop: "1px solid color-mix(in srgb, var(--ink-light) 72%, transparent)",
                       backgroundColor: "transparent",
                     }}
                     onClick={() => {
@@ -1141,7 +1147,6 @@ export default function HistoryPage() {
                         type="button"
                         className="mx-1 my-0.5 block w-[calc(100%-0.5rem)] rounded-md px-3 py-2.5 text-left"
                         style={{
-                          borderTop: "1px solid color-mix(in srgb, var(--ink-light) 72%, transparent)",
                           backgroundColor: "transparent",
                         }}
                         onClick={() => {
@@ -1193,10 +1198,19 @@ export default function HistoryPage() {
               animate={{ x: "0%" }}
               exit={{ x: "100%" }}
               transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+              onAnimationComplete={(definition) => {
+                if (typeof definition === "object" && definition !== null && "x" in (definition as Record<string, unknown>)) {
+                  const target = (definition as { x?: string | number }).x;
+                  if (target === "0%" || target === 0) {
+                    setMobileDrawerAnimReady(true);
+                  }
+                }
+              }}
               className="fixed inset-y-0 right-0 z-[240] w-full border-l overflow-hidden safe-area-top safe-area-bottom safe-area-right"
               style={{
                 borderLeftColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
                 backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))",
+                willChange: "transform",
               }}
             >
               <div
@@ -1236,6 +1250,31 @@ export default function HistoryPage() {
                       </p>
                     </div>
                     <div className="flex items-center gap-3 pt-0.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!selectedMobileExercise) return;
+                          const recent = selectedMobileExerciseLogs[0];
+                          const progressionName = recent
+                            ? selectedMobileExercise.tiers.find((tier) => tier.level === recent.level)?.name ?? ""
+                            : "";
+                          const variant = recent?.variant?.trim() ?? "";
+                          const pathId = `${selectedMobileExercise.id}-quick`;
+                          const params = new URLSearchParams();
+                          params.set("prefillExerciseId", selectedMobileExercise.id);
+                          params.set("prefillExercise", selectedMobileExercise.name);
+                          if (progressionName) params.set("prefillProgression", progressionName);
+                          if (variant) params.set("prefillVariant", variant);
+                          router.push(`/dashboard/train/input/${encodeURIComponent(pathId)}?${params.toString()}`);
+                        }}
+                        className="inline-flex h-8 items-center justify-center text-[#b5bac1] transition-colors hover:text-[#f2f3f5]"
+                        aria-label="Log a session for this exercise"
+                        title="Log a session"
+                      >
+                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
+                        </svg>
+                      </button>
                       <button
                         type="button"
                         onClick={() => setMobileDrawerSearchOpen((prev) => !prev)}
@@ -1467,7 +1506,11 @@ export default function HistoryPage() {
                 </AnimatePresence>
 
                 <div>
-                  {filteredSelectedMobileExerciseLogs.length === 0 ? (
+                  {!mobileDrawerAnimReady ? (
+                    <div className="px-3 py-6 text-center text-xs" style={{ color: "var(--text-muted)" }}>
+                      Loading...
+                    </div>
+                  ) : filteredSelectedMobileExerciseLogs.length === 0 ? (
                     <div className="px-3 py-4 text-center text-xs" style={{ color: "var(--text-muted)" }}>
                       {selectedMobileExerciseLogs.length === 0 ? "No workout history for this exercise yet." : "No logs match your search or filters."}
                     </div>

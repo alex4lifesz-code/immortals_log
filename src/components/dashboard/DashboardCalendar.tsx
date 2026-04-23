@@ -275,31 +275,45 @@ function CalendarDay({ dayNumber, checkedInUsers, isToday, isPast, hasNote, hasF
   const hasCheckIns = checkedInUsers.length > 0;
   const visibleDots = checkedInUsers.slice(0, compact ? 3 : 4);
   const extraCount = checkedInUsers.length - visibleDots.length;
+  const isFuture = !isPast && !isToday;
+  // Tier: today > future-note > past-checkin > past > future
   const dayStyle = isToday
     ? {
-        borderColor: "color-mix(in srgb, var(--accent) 68%, var(--border))",
-        backgroundColor: "color-mix(in srgb, var(--accent) 12%, var(--surface-hover))",
-        boxShadow: "0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent) inset",
+        borderColor: "color-mix(in srgb, var(--accent) 78%, var(--border))",
+        backgroundColor: "color-mix(in srgb, var(--accent) 18%, var(--surface-hover))",
+        boxShadow: "0 0 0 2px color-mix(in srgb, var(--accent) 38%, transparent), 0 0 14px color-mix(in srgb, var(--accent) 28%, transparent)",
       }
     : hasFutureNote
       ? {
-          borderColor: "color-mix(in srgb, var(--gold) 20%, var(--border))",
-          backgroundColor: "color-mix(in srgb, var(--gold) 6%, var(--surface-hover))",
+          borderColor: "color-mix(in srgb, var(--gold) 38%, var(--border))",
+          backgroundColor: "color-mix(in srgb, var(--gold) 10%, var(--surface))",
         }
-      : hasCheckIns
+      : isPast && hasCheckIns
         ? {
-            borderColor: "color-mix(in srgb, var(--border) 94%, transparent)",
-            backgroundColor: "color-mix(in srgb, var(--surface-hover) 78%, var(--surface))",
+            borderColor: "color-mix(in srgb, var(--jade-glow, var(--accent)) 32%, var(--border))",
+            backgroundColor: "color-mix(in srgb, var(--jade-glow, var(--accent)) 10%, color-mix(in srgb, var(--surface) 70%, black))",
           }
         : isPast
           ? {
-              borderColor: "color-mix(in srgb, var(--border) 74%, transparent)",
-              backgroundColor: "color-mix(in srgb, var(--surface) 92%, black)",
+              borderColor: "color-mix(in srgb, var(--border) 40%, transparent)",
+              backgroundColor: "color-mix(in srgb, var(--surface) 55%, black)",
+              opacity: 0.78,
             }
-          : {
-              borderColor: "color-mix(in srgb, var(--border) 58%, transparent)",
-              backgroundColor: "color-mix(in srgb, var(--surface) 88%, black)",
-            };
+          : isFuture && hasCheckIns
+            ? {
+                borderColor: "color-mix(in srgb, var(--border) 92%, transparent)",
+                backgroundColor: "color-mix(in srgb, var(--surface-hover) 86%, var(--surface))",
+              }
+            : {
+                borderColor: "color-mix(in srgb, var(--accent) 18%, var(--border))",
+                backgroundColor: "color-mix(in srgb, var(--surface-hover) 60%, var(--surface))",
+              };
+
+  const dayNumberColor = isToday
+    ? "var(--text-primary)"
+    : isPast
+      ? "var(--text-muted)"
+      : "var(--text-primary)";
 
   return (
     <motion.button
@@ -312,8 +326,8 @@ function CalendarDay({ dayNumber, checkedInUsers, isToday, isPast, hasNote, hasF
     >
       <div className="flex h-full flex-col justify-between p-1.5">
         <div className="flex items-start justify-between gap-1">
-          <span className={`${compact ? "text-xs" : "text-sm"} font-semibold`} style={{ color: isPast && !isToday ? "var(--text-secondary)" : "var(--text-primary)" }}>{dayNumber}</span>
-          {isToday ? <span className="rounded-sm px-1 py-[1px] text-[7px] font-bold uppercase tracking-[0.08em]" style={{ backgroundColor: "color-mix(in srgb, var(--accent) 18%, transparent)", color: "color-mix(in srgb, var(--accent-hover) 80%, var(--text-primary))" }}>Now</span> : null}
+          <span className={`${compact ? "text-xs" : "text-sm"} font-semibold`} style={{ color: dayNumberColor }}>{dayNumber}</span>
+          {isToday ? <span className="rounded-sm px-1 py-[1px] text-[8px] font-bold uppercase tracking-[0.08em] shadow-sm" style={{ backgroundColor: "var(--accent)", color: "var(--cloud-white)" }}>Now</span> : null}
         </div>
 
         <div className="flex items-end justify-between gap-1">
@@ -417,7 +431,7 @@ export function Calendar({
         boxShadow: "0 1px 0 color-mix(in srgb, var(--text-primary) 3%, transparent) inset",
       }}
     >
-      <div className={`border-b ${compactMode ? "space-y-2 pb-2" : "flex items-center justify-between gap-3 pb-3"}`} style={{ borderBottomColor: "color-mix(in srgb, var(--border) 94%, transparent)" }}>
+      <div className={`flex items-center justify-between gap-3 border-b ${compactMode ? "pb-2" : "pb-3"}`} style={{ borderBottomColor: "color-mix(in srgb, var(--border) 94%, transparent)" }}>
         <div className="min-w-0">
           <p className="text-[9px] uppercase tracking-[0.1em]" style={{ color: "var(--text-muted)" }}>Check-In Calendar</p>
           <h3 className="mt-0.5 text-sm font-semibold uppercase tracking-wider" style={{ color: "var(--text-primary)" }}>

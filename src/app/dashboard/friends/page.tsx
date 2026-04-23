@@ -133,6 +133,15 @@ export default function FriendsPage() {
   const [checkins, setCheckins] = useState<CheckInRow[]>([]);
   const [friendCodeInput, setFriendCodeInput] = useState("");
   const [addFriendMessage, setAddFriendMessage] = useState("");
+  const [expandedFriendIds, setExpandedFriendIds] = useState<Set<string>>(() => new Set());
+  const toggleFriendExpanded = useCallback((friendId: string) => {
+    setExpandedFriendIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(friendId)) next.delete(friendId);
+      else next.add(friendId);
+      return next;
+    });
+  }, []);
   const shareableFriendId = data.me?.friendCode?.trim() || data.me?.id || "";
 
   const broadcastFriendRequestsUpdated = useCallback(() => {
@@ -424,7 +433,12 @@ export default function FriendsPage() {
 
                       return (
                         <article key={friend.id} className="rounded-lg p-3" style={{ border: "1px solid color-mix(in srgb, var(--ink-light) 40%, transparent)", backgroundColor: "color-mix(in srgb, var(--ink-mid) 48%, var(--ink-deep))" }}>
-                          <div className="flex items-start justify-between gap-3">
+                          <button
+                            type="button"
+                            onClick={() => toggleFriendExpanded(friend.id)}
+                            aria-expanded={expandedFriendIds.has(friend.id)}
+                            className="flex w-full items-start justify-between gap-3 text-left"
+                          >
                             <div className="min-w-0">
                               <p className="truncate text-sm font-semibold text-[#f2f3f5]">{friend.name}</p>
                               <p className="truncate text-[11px] text-[#b5bac1]">@{friend.username}</p>
@@ -432,8 +446,10 @@ export default function FriendsPage() {
                             <span className="rounded-md px-2 py-1 text-[11px] text-[#dbdee1]" style={{ backgroundColor: "color-mix(in srgb, var(--accent) 14%, transparent)", border: "1px solid color-mix(in srgb, var(--accent) 34%, transparent)" }}>
                               {stats.lastSeenAt ? `${stats.lastSeenLabel}: ${formatRelativeRecentDate(stats.lastSeenAt, dateFormat, timeZone)}` : "No recent activity"}
                             </span>
-                          </div>
+                          </button>
 
+                          {expandedFriendIds.has(friend.id) ? (
+                            <>
                           {(() => {
                             const themeId = (friend.themeStyle ?? "discord") as string;
                             const themeLabel = FRIEND_THEME_LABELS[themeId] ?? themeId;
@@ -483,6 +499,8 @@ export default function FriendsPage() {
                               <p className="mt-0.5 font-semibold text-[#f2f3f5]">{typeof stats.latestWeight === "number" ? `${stats.latestWeight}` : "-"}</p>
                             </div>
                           </div>
+                            </>
+                          ) : null}
                         </article>
                       );
                     })}

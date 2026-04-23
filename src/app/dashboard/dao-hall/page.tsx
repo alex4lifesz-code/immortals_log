@@ -1035,7 +1035,8 @@ export default function DaoHallPage() {
                       return (
                         <article
                           key={date}
-                          className="cursor-pointer rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] px-3 py-2.5 shadow-[0_6px_14px_rgba(0,0,0,0.12)] transition-colors hover:bg-[color:var(--surface-hover)]"
+                          className="cursor-pointer rounded-lg border border-[color:var(--border)] px-3 py-2.5 shadow-[0_6px_14px_rgba(0,0,0,0.12)] transition-colors"
+                          style={{ backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))" }}
                           role="button"
                           tabIndex={0}
                           onClick={() => setHistoryDayChoice(date)}
