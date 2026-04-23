@@ -363,7 +363,10 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
   }, [activeFriend?.id, friendViewMode]);
 
   const friendHistoryRows = useMemo(() => {
-    const rows: Array<{ exerciseId: string; exerciseName: string; date: string; progression: string; variant: string }> = [];
+    const rows: Array<{ exerciseId: string; exerciseName: string; date: string; progression: string; variant: string; recent24hCount: number }> = [];
+
+    const now = Date.now();
+    const dayMs = 24 * 60 * 60 * 1000;
 
     for (const exercise of friendHistoryExercises) {
       const logs = exercise.userProgress?.[0]?.logs ?? [];
@@ -372,12 +375,18 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
       const latestLog = [...logs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
       const tierName = exercise.tiers.find((tier) => tier.level === latestLog.level)?.name ?? `Progression ${latestLog.level}`;
 
+      const recent24hCount = logs.reduce((count, log) => {
+        const ts = new Date(log.createdAt).getTime();
+        return Number.isFinite(ts) && now - ts <= dayMs ? count + 1 : count;
+      }, 0);
+
       rows.push({
         exerciseId: exercise.id,
         exerciseName: exercise.name,
         date: latestLog.createdAt,
         progression: tierName,
         variant: latestLog.variant?.trim() || "",
+        recent24hCount,
       });
     }
 
@@ -958,6 +967,11 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                               <div className="flex items-start justify-between gap-2">
                                 <p className="text-sm font-semibold leading-tight" style={{ color: getRecentExerciseTextColor(row.date) }}>
                                   {row.exerciseName}
+                                  {row.recent24hCount >= 2 ? (
+                                    <sup className="ml-0.5 text-[12px] font-bold leading-none" style={{ color: "var(--accent)" }}>
+                                      {row.recent24hCount}
+                                    </sup>
+                                  ) : null}
                                 </p>
                                 <span className="shrink-0 text-[11px]" style={{ color: "var(--text-muted)" }}>
                                   {formatRelativeRecentDate(row.date, dateFormat, timeZone)}

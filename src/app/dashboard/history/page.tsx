@@ -349,7 +349,11 @@ export default function HistoryPage() {
       variant: string;
       category: string;
       isDeleted: boolean;
+      recent24hCount: number;
     }> = [];
+
+    const now = Date.now();
+    const dayMs = 24 * 60 * 60 * 1000;
 
     for (const exercise of exercises) {
       const logs = exercise.userProgress?.[0]?.logs ?? [];
@@ -360,6 +364,11 @@ export default function HistoryPage() {
 
       const deletedExercise = isDeletedExerciseDescription(exercise.story);
 
+      const recent24hCount = logs.reduce((count, log) => {
+        const ts = new Date(log.createdAt).getTime();
+        return Number.isFinite(ts) && now - ts <= dayMs ? count + 1 : count;
+      }, 0);
+
       rows.push({
         exerciseId: exercise.id,
         exerciseName: deletedExercise ? getDeletedExerciseLabel(exercise) : exercise.name,
@@ -369,6 +378,7 @@ export default function HistoryPage() {
         variant: latestLog.variant?.trim() || "",
         category: (exercise.category || "Uncategorized").trim() || "Uncategorized",
         isDeleted: deletedExercise,
+        recent24hCount,
       });
     }
 
@@ -443,7 +453,11 @@ export default function HistoryPage() {
       variant: string;
       category: string;
       isDeleted: boolean;
+      recent24hCount: number;
     }> = [];
+
+    const now = Date.now();
+    const dayMs = 24 * 60 * 60 * 1000;
 
     for (const exercise of exercises) {
       const logs = exercise.userProgress?.[0]?.logs ?? [];
@@ -455,6 +469,11 @@ export default function HistoryPage() {
       const progressionName = exercise.tiers.find((tier) => tier.level === progressionLevel)?.name ?? `Progression ${progressionLevel}`;
       const deletedExercise = isDeletedExerciseDescription(exercise.story);
 
+      const recent24hCount = logs.reduce((count, log) => {
+        const ts = new Date(log.createdAt).getTime();
+        return Number.isFinite(ts) && now - ts <= dayMs ? count + 1 : count;
+      }, 0);
+
       rows.push({
         exerciseId: exercise.id,
         exerciseName: deletedExercise ? getDeletedExerciseLabel(exercise) : exercise.name,
@@ -464,6 +483,7 @@ export default function HistoryPage() {
         variant: latestLog?.variant?.trim() || "",
         category: (exercise.category || "Uncategorized").trim() || "Uncategorized",
         isDeleted: deletedExercise,
+        recent24hCount,
       });
     }
 
@@ -833,6 +853,11 @@ export default function HistoryPage() {
                                   style={{ color: row.isDeleted ? "var(--crimson-light)" : getRecentExerciseTextColor(row.date, isPreviouslySelected) }}
                                 >
                                   {row.exerciseName}
+                                  {row.recent24hCount >= 2 ? (
+                                    <sup className="ml-0.5 text-[12px] font-bold leading-none" style={{ color: "var(--accent)" }}>
+                                      {row.recent24hCount}
+                                    </sup>
+                                  ) : null}
                                 </p>
                                   <span className="shrink-0 text-[11px]" style={{ color: "var(--text-muted)" }}>
                                     {formatRelativeRecentDate(row.date, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone)}
@@ -1159,6 +1184,11 @@ export default function HistoryPage() {
                         <div className="flex items-start justify-between gap-2">
                           <p className="text-sm font-semibold leading-tight" style={{ color: row.isDeleted ? "var(--crimson-light)" : getRecentExerciseTextColor(row.date) }}>
                             {row.exerciseName}
+                            {row.recent24hCount >= 2 ? (
+                              <sup className="ml-0.5 text-[12px] font-bold leading-none" style={{ color: "var(--accent)" }}>
+                                {row.recent24hCount}
+                              </sup>
+                            ) : null}
                           </p>
                           <span className="shrink-0 text-[11px]" style={{ color: "var(--text-muted)" }}>
                             {row.date ? formatRelativeRecentDate(row.date, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone) : "Never"}

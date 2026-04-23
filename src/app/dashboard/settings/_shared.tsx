@@ -13,6 +13,7 @@ export const THEME_OPTIONS: Array<{ value: Theme; label: string; desc: string }>
   { value: "lemon-dragon", label: "Lemon Dragon", desc: "柠龙 — warm graphite, lemon-hex accents & brushed-steel cream" },
   { value: "ying-yang", label: "Ying Yang", desc: "阴阳 — pure monochrome: absolute black canvas, white ink only" },
   { value: "ying-yang-light", label: "Ying Yang Light", desc: "阳 — inverted monochrome: pure white canvas, black ink only" },
+  { value: "ying-yang-magenta", label: "Ying Yang Magenta", desc: "洋红 — white canvas, magenta ink replaces every black" },
   { value: "phoenix-bloom", label: "Phoenix Bloom", desc: "凤凰花 — ink-wash charcoal, amethyst purple & phoenix-pink blossom" },
   { value: "storm-chains", label: "Storm Chains", desc: "锁云 — storm-iron sky, lightning azure, silver chains & vermilion seal" },
   { value: "obsidian-ember", label: "Obsidian Ember", desc: "黑曜 — pure black & graphite grey with a single ember of crimson" },

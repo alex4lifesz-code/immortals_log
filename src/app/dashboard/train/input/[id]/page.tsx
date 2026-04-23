@@ -182,6 +182,134 @@ export default function TrainInputCanvasPage() {
     setWeightUnit(settings.defaultWeightUnit === "lbs" ? "lbs" : "kg");
   }, [settings.defaultWeightUnit]);
 
+  // Persist in-progress new logs to localStorage so a refresh doesn't wipe them.
+  // Edit mode is intentionally skipped — server fetch already restores data there.
+  // Key intentionally omits userId (which loads asynchronously); this is a per-device
+  // draft for the new-log flow only and is cleared on save/delete.
+  const draftKey = useMemo(() => {
+    if (editLogId) return null;
+    return `train.input.draft.v1.${routeExerciseId || "blank"}`;
+  }, [editLogId, routeExerciseId]);
+
+  const [draftHydrated, setDraftHydrated] = useState(false);
+
+  const clearDraft = useCallback(() => {
+    if (!draftKey || typeof window === "undefined") return;
+    try {
+      window.localStorage.removeItem(draftKey);
+    } catch {
+      /* ignore */
+    }
+  }, [draftKey]);
+
+  useEffect(() => {
+    if (!draftKey) {
+      setDraftHydrated(true);
+      return;
+    }
+    if (typeof window === "undefined") {
+      setDraftHydrated(true);
+      return;
+    }
+    try {
+      const raw = window.localStorage.getItem(draftKey);
+      if (!raw) {
+        setDraftHydrated(true);
+        return;
+      }
+      const draft = JSON.parse(raw) as Partial<{
+        inputMode: InputMode;
+        valueMode: ValueMode;
+        weightUnit: WeightUnit;
+        searchTerm: string;
+        selectedExerciseId: string;
+        customExerciseName: string;
+        selectedLevel: string;
+        selectedVariant: string;
+        modifierKg: number;
+        trainingDate: string;
+        notes: string;
+        sets: SetRow[];
+        activePanel: SessionPanelId;
+        confirmedPanels: SessionPanelId[];
+      }>;
+      if (draft.inputMode === "existing" || draft.inputMode === "custom") setInputMode(draft.inputMode);
+      if (draft.valueMode === "weight" || draft.valueMode === "timed") setValueMode(draft.valueMode);
+      if (draft.weightUnit === "kg" || draft.weightUnit === "lbs") setWeightUnit(draft.weightUnit);
+      if (typeof draft.searchTerm === "string") setSearchTerm(draft.searchTerm);
+      if (typeof draft.selectedExerciseId === "string") setSelectedExerciseId(draft.selectedExerciseId);
+      if (typeof draft.customExerciseName === "string") setCustomExerciseName(draft.customExerciseName);
+      if (typeof draft.selectedLevel === "string") setSelectedLevel(draft.selectedLevel);
+      if (typeof draft.selectedVariant === "string") setSelectedVariant(draft.selectedVariant);
+      if (typeof draft.modifierKg === "number" && Number.isFinite(draft.modifierKg)) setModifierKg(draft.modifierKg);
+      if (typeof draft.trainingDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(draft.trainingDate)) setTrainingDate(draft.trainingDate);
+      if (typeof draft.notes === "string") setNotes(draft.notes);
+      if (Array.isArray(draft.sets) && draft.sets.length) {
+        const restored = draft.sets
+          .filter((set): set is SetRow => Boolean(set) && typeof set.id === "string" && typeof set.value === "string" && typeof set.reps === "string")
+          .map((set) => ({ id: set.id, value: set.value, reps: set.reps }));
+        if (restored.length) setSets(restored);
+      }
+      if (draft.activePanel && SESSION_PANELS.some((panel) => panel.id === draft.activePanel)) {
+        setActivePanel(draft.activePanel);
+      }
+      if (Array.isArray(draft.confirmedPanels)) {
+        setConfirmedPanels(draft.confirmedPanels.filter((id): id is SessionPanelId => SESSION_PANELS.some((panel) => panel.id === id)));
+      }
+    } catch (err) {
+      console.warn("Failed to restore log draft:", err);
+    } finally {
+      setDraftHydrated(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey]);
+
+  useEffect(() => {
+    if (!draftKey) return;
+    if (!draftHydrated) return;
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(
+        draftKey,
+        JSON.stringify({
+          inputMode,
+          valueMode,
+          weightUnit,
+          searchTerm,
+          selectedExerciseId,
+          customExerciseName,
+          selectedLevel,
+          selectedVariant,
+          modifierKg,
+          trainingDate,
+          notes,
+          sets,
+          activePanel,
+          confirmedPanels,
+        }),
+      );
+    } catch {
+      /* ignore quota / private mode */
+    }
+  }, [
+    draftKey,
+    draftHydrated,
+    inputMode,
+    valueMode,
+    weightUnit,
+    searchTerm,
+    selectedExerciseId,
+    customExerciseName,
+    selectedLevel,
+    selectedVariant,
+    modifierKg,
+    trainingDate,
+    notes,
+    sets,
+    activePanel,
+    confirmedPanels,
+  ]);
+
   useEffect(() => {
     if (!highlightedSetId) return;
     const timeout = window.setTimeout(() => setHighlightedSetId(null), 1200);
@@ -620,6 +748,8 @@ export default function TrainInputCanvasPage() {
         });
       }
 
+      clearDraft();
+
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("progression-exercises-updated"));
       }
@@ -639,7 +769,7 @@ export default function TrainInputCanvasPage() {
     } finally {
       setSaving(false);
     }
-  }, [customExerciseName, deleting, editLogId, inputMode, isEditingExistingLog, notes, returnHref, router, saving, selectedExerciseId, selectedLevel, selectedVariant, sets, settings.timeZone, trainingDate, valueMode, weightUnit]);
+  }, [customExerciseName, clearDraft, deleting, editLogId, inputMode, isEditingExistingLog, notes, returnHref, router, saving, selectedExerciseId, selectedLevel, selectedVariant, sets, settings.timeZone, trainingDate, valueMode, weightUnit]);
 
   const handleDeleteLoggedSession = useCallback(async () => {
     if (!isEditingExistingLog || !editLogId || saving || deleting) return;
@@ -650,6 +780,8 @@ export default function TrainInputCanvasPage() {
 
     try {
       await api.post("/api/progressions/logs/delete", { logId: editLogId });
+
+      clearDraft();
 
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("progression-exercises-updated"));
@@ -669,7 +801,7 @@ export default function TrainInputCanvasPage() {
     } finally {
       setDeleting(false);
     }
-  }, [deleting, editLogId, isEditingExistingLog, returnHref, router, saving]);
+  }, [clearDraft, deleting, editLogId, isEditingExistingLog, returnHref, router, saving]);
 
   const shellMinHeight = "calc(var(--app-viewport-height) - 0.5rem)";
   const selectedExerciseMeta = inputMode === "custom"

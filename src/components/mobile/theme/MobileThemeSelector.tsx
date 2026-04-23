@@ -81,6 +81,16 @@ const themePreviews: { id: ThemeStyle; title: string; colors: string[]; favorite
     ],
   },
   {
+    id: "ying-yang-magenta",
+    title: "Ying Yang Magenta",
+    colors: [
+      "var(--theme-preview-ying-yang-magenta-1)",
+      "var(--theme-preview-ying-yang-magenta-2)",
+      "var(--theme-preview-ying-yang-magenta-3)",
+      "var(--theme-preview-ying-yang-magenta-4)",
+    ],
+  },
+  {
     id: "phoenix-bloom",
     title: "Phoenix Bloom",
     colors: [

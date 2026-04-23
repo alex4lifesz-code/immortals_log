@@ -34,6 +34,7 @@ const FRIEND_THEME_LABELS: Record<string, string> = {
   "lemon-dragon": "Lemon Dragon",
   "ying-yang": "Ying Yang",
   "ying-yang-light": "Ying Yang Light",
+  "ying-yang-magenta": "Ying Yang Magenta",
   "phoenix-bloom": "Phoenix Bloom",
   "storm-chains": "Storm Chains",
   "obsidian-ember": "Obsidian Ember",

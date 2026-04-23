@@ -8,6 +8,7 @@ export const THEME_CLASS_NAMES = [
   "lemon-dragon",
   "ying-yang",
   "ying-yang-light",
+  "ying-yang-magenta",
   "phoenix-bloom",
   "storm-chains",
   "obsidian-ember",

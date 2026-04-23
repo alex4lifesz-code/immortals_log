@@ -3409,4 +3409,165 @@ html.ying-yang-light [class*="hover\\:bg-[#454852]"]:hover { background-color: c
 html.ying-yang-light [class*="hover\\:text-[#f2f3f5]"]:hover { color: var(--text-primary) !important; }
 html.ying-yang-light [class*="hover\\:text-[#8ea1ff]"]:hover { color: var(--accent) !important; }
 
+/* =====================================================================
+ * THEME — YING YANG MAGENTA (洋红)
+ * Ying Yang Light recolored: pure white canvas, magenta ink replaces
+ * every black. Single-hue duotone — only magenta and paper-white shades.
+ * ===================================================================== */
+html.ying-yang-magenta {
+  /* Canvas — paper white tiers (with the faintest magenta wash) */
+  --void-black: #ffffff;
+  --ink-deep: #fdf7fb;
+  --ink-dark: #f7e8f1;
+  --ink-mid: #f0d4e4;
+  --ink-light: #d8a4c0;
+
+  /* Text — magenta graphite to deep magenta ink */
+  --mist-dark: #a02a78;
+  --mist-mid: #80205c;
+  --mist-light: #5a1440;
+  --mist-pale: #3a0c2a;
+  --cloud-white: #2a081e;
+  --pure-white: #18041a;
+
+  /* Accent #1 — Pure magenta (primary, replaces pure black) */
+  --jade-deep: #e8c0d8;
+  --jade: #b03088;
+  --jade-glow: #d6228e;
+  --jade-light: #ff3aa8;
+
+  /* Accent #2 — Soft magenta */
+  --gold-dim: #c890b0;
+  --gold: #984a78;
+  --gold-glow: #5a1440;
+
+  /* Accent #3 — Inverted ink (danger uses deep magenta) */
+  --crimson-deep: #f0d4e4;
+  --crimson: #80205c;
+  --crimson-glow: #d6228e;
+  --crimson-light: #18041a;
+
+  /* Accent #4 — Stone magenta */
+  --mountain-blue: #c890b0;
+  --mountain-blue-glow: #80205c;
+
+  /* Accent #5 — Echo magenta (under-tone) */
+  --forest-deep: #f0d4e4;
+  --forest: #18041a;
+
+  /* Difficulty — magenta staircase (dark on light) */
+  --difficulty-green: #5a1440;
+  --difficulty-green-glow: #3a0c2a;
+  --difficulty-amber: #80205c;
+  --difficulty-amber-glow: #5a1440;
+  --difficulty-red: #18041a;
+  --difficulty-red-glow: #18041a;
+  --difficulty-violet: #98306e;
+  --difficulty-violet-glow: #6a1c4e;
+  --difficulty-pink: #b03088;
+  --difficulty-pink-glow: #80205c;
+  --difficulty-light-pink: #c64098;
+  --difficulty-light-pink-glow: #98306e;
+  --difficulty-cyan: #80205c;
+  --difficulty-cyan-glow: #5a1440;
+
+  --glow-difficulty-green: 0 0 10px rgba(90, 20, 64, 0.20), 0 0 20px rgba(90, 20, 64, 0.10);
+  --glow-difficulty-amber: 0 0 10px rgba(128, 32, 92, 0.22), 0 0 20px rgba(128, 32, 92, 0.10);
+  --glow-difficulty-red: 0 0 10px rgba(24, 4, 26, 0.32), 0 0 20px rgba(24, 4, 26, 0.18);
+  --glow-difficulty-violet: 0 0 10px rgba(152, 48, 110, 0.20), 0 0 20px rgba(152, 48, 110, 0.10);
+  --glow-difficulty-pink: 0 0 10px rgba(176, 48, 136, 0.22), 0 0 20px rgba(176, 48, 136, 0.10);
+  --glow-difficulty-light-pink: 0 0 10px rgba(198, 64, 152, 0.22), 0 0 20px rgba(198, 64, 152, 0.10);
+  --glow-difficulty-cyan: 0 0 10px rgba(128, 32, 92, 0.20), 0 0 20px rgba(128, 32, 92, 0.10);
+
+  /* Semantic */
+  --background: var(--void-black);
+  --foreground: var(--cloud-white);
+  --surface: var(--ink-deep);
+  --surface-hover: var(--ink-mid);
+  --border: var(--ink-light);
+  --border-glow: var(--pure-white);
+  --text-primary: var(--cloud-white);
+  --text-secondary: var(--mist-light);
+  --text-muted: var(--mist-dark);
+  --accent: var(--pure-white);
+  --accent-hover: var(--mist-pale);
+  --danger: var(--mist-light);
+  --danger-hover: var(--pure-white);
+
+  --glow-jade: 0 0 12px rgba(24, 4, 26, 0.30), 0 0 24px rgba(214, 34, 142, 0.18);
+  --glow-crimson: 0 0 12px rgba(24, 4, 26, 0.26), 0 0 24px rgba(128, 32, 92, 0.14);
+  --glow-gold: 0 0 12px rgba(152, 74, 120, 0.24), 0 0 24px rgba(152, 74, 120, 0.12);
+  --glow-blue: 0 0 12px rgba(90, 20, 64, 0.22), 0 0 24px rgba(90, 20, 64, 0.10);
+  --glow-subtle: 0 0 8px rgba(24, 4, 26, 0.18);
+  --glow-modal: 0 0 28px rgba(24, 4, 26, 0.22), 0 0 56px rgba(214, 34, 142, 0.14), inset 0 0 24px rgba(214, 34, 142, 0.06);
+
+  --col-weight: var(--mist-pale);
+  --col-weight-bg: color-mix(in srgb, var(--mist-pale) 10%, transparent);
+  --col-reps: var(--pure-white);
+  --col-reps-bg: color-mix(in srgb, var(--pure-white) 8%, transparent);
+
+  --chart-primary: #18041a;
+  --chart-primary-rgb: 24 4 26;
+  --chart-secondary: #984a78;
+  --chart-grid: rgba(24, 4, 26, 0.10);
+  --chart-bg: rgba(255, 255, 255, 0.55);
+  --timed-color: #80205c;
+  --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 88%, var(--border));
+  --nyaa-table-head-text: var(--text-primary);
+  --nyaa-table-grid: color-mix(in srgb, var(--border) 88%, var(--text-muted));
+  --nyaa-table-row-text: var(--text-primary);
+  --nyaa-table-row-odd: var(--surface);
+  --nyaa-table-row-even: color-mix(in srgb, var(--surface) 94%, var(--border));
+  --nyaa-table-row-hover: color-mix(in srgb, var(--surface) 80%, var(--pure-white));
+  --system-bar-fallback: #ffffff;
+}
+
+html.ying-yang-magenta * {
+  scrollbar-color: var(--ink-light) var(--void-black);
+}
+
+/* ----- Ying Yang Magenta overlay (mirrors shared overlay for hardcoded Discord hex) ----- */
+html.ying-yang-magenta [class*="bg-[#1e1f22]"] { background-color: var(--void-black) !important; }
+html.ying-yang-magenta [class*="bg-[#2b2d31]"],
+html.ying-yang-magenta [class*="bg-[#23252b]"],
+html.ying-yang-magenta [class*="bg-[#232428]"] { background-color: var(--ink-deep) !important; }
+html.ying-yang-magenta [class*="bg-[#313338]"] { background-color: var(--ink-dark) !important; }
+html.ying-yang-magenta [class*="bg-[#383a40]"],
+html.ying-yang-magenta [class*="bg-[#454852]"] { background-color: var(--ink-mid) !important; }
+html.ying-yang-magenta [class*="bg-[#32353b]"] { background-color: var(--ink-light) !important; }
+html.ying-yang-magenta [class*="bg-[#5865f2]"] { background-color: var(--accent) !important; }
+html.ying-yang-magenta [class*="bg-[#7289da]"] { background-color: var(--jade) !important; }
+html.ying-yang-magenta [class*="bg-[#57f287]"] { background-color: var(--forest) !important; }
+html.ying-yang-magenta [class*="bg-[#fee75c]"] { background-color: var(--gold) !important; }
+html.ying-yang-magenta [class*="bg-[#ed4245]"] { background-color: var(--crimson) !important; }
+
+html.ying-yang-magenta [class*="text-[#f2f3f5]"],
+html.ying-yang-magenta [class*="text-[#dbe3ff]"] { color: var(--text-primary) !important; }
+html.ying-yang-magenta [class*="text-[#dbdee1]"],
+html.ying-yang-magenta [class*="text-[#e3e5e8]"] { color: var(--mist-light) !important; }
+html.ying-yang-magenta [class*="text-[#b5bac1]"] { color: var(--text-secondary) !important; }
+html.ying-yang-magenta [class*="text-[#949ba4]"] { color: var(--text-muted) !important; }
+html.ying-yang-magenta [class*="text-[#8ea1ff]"],
+html.ying-yang-magenta [class*="text-[#8ea1e1]"],
+html.ying-yang-magenta [class*="text-[#c9d2ff]"],
+html.ying-yang-magenta [class*="text-[#5865f2]"] { color: var(--accent) !important; }
+html.ying-yang-magenta [class*="text-[#7289da]"] { color: var(--jade-light) !important; }
+html.ying-yang-magenta [class*="text-[#57f287]"] { color: var(--forest) !important; }
+html.ying-yang-magenta [class*="text-[#fee75c]"] { color: var(--gold) !important; }
+html.ying-yang-magenta [class*="text-[#ed4245]"] { color: var(--crimson) !important; }
+html.ying-yang-magenta [class*="text-[#ff8fa3]"],
+html.ying-yang-magenta [class*="text-[#f0b96a]"] { color: var(--gold-glow) !important; }
+
+html.ying-yang-magenta [class*="border-[#3b3f48]"],
+html.ying-yang-magenta [class*="border-[#32353b]"],
+html.ying-yang-magenta [class*="border-[#383a40]"],
+html.ying-yang-magenta [class*="border-[#2b2d31]"] { border-color: var(--border) !important; }
+html.ying-yang-magenta [class*="border-[#5865f2]"] { border-color: var(--accent) !important; }
+
+html.ying-yang-magenta [class*="hover\\:bg-[#2b2d31]"]:hover,
+html.ying-yang-magenta [class*="hover\\:bg-[#313338]"]:hover { background-color: var(--surface-hover) !important; }
+html.ying-yang-magenta [class*="hover\\:bg-[#454852]"]:hover { background-color: color-mix(in srgb, var(--surface-hover) 60%, var(--accent)) !important; }
+html.ying-yang-magenta [class*="hover\\:text-[#f2f3f5]"]:hover { color: var(--text-primary) !important; }
+html.ying-yang-magenta [class*="hover\\:text-[#8ea1ff]"]:hover { color: var(--accent) !important; }
+
 
