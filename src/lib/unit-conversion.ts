@@ -5,6 +5,7 @@ const LBS_TO_KG = 0.453592;
 const KG_TO_LBS = 2.20462;
 
 export type WeightUnit = "kg" | "lbs";
+export type TimedUnitPref = "seconds" | "minutes";
 export type ExerciseType = "weighted" | "timed" | "bodyweight";
 export type TrainingCategory = "Calisthenics" | "GYM" | "Yoga" | "Cardio" | "Other";
 
@@ -25,16 +26,26 @@ export function displayWeight(kg: number, displayUnit: WeightUnit): string {
   return `${value}`;
 }
 
+export function formatTimedDuration(seconds: number, unit: TimedUnitPref): string {
+  if (unit === "minutes") {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return s === 0 ? `${m}m` : `${m}m ${s}s`;
+  }
+  return `${seconds}s`;
+}
+
 export function formatSetValue(
   value: number | null,
   exerciseType: ExerciseType,
   displayUnit: WeightUnit,
   addedWeight?: number | null,
+  timedUnit: TimedUnitPref = "seconds",
 ): string {
   if (value == null) return "—";
 
   if (exerciseType === "timed") {
-    return `${value}s`;
+    return formatTimedDuration(Math.round(value), timedUnit);
   }
 
   if (exerciseType === "bodyweight") {

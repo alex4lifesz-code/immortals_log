@@ -15,11 +15,13 @@ export type ActiveCardStyle = "default" | "scroll-card";
 
 export type DateFormatOption = "dd-mm-yyyy" | "dd-mmm-yyyy" | "dd-mm-yy" | "dd-mmm-yy";
 
-export type CalendarWeekStartOption = "auto" | "sunday" | "monday";
+export type CalendarWeekStartOption = "sunday" | "monday";
 
 export type TerminologyMode = "fantasy" | "normal";
 
 export type VariationDisplayMode = "abbreviation" | "full";
+
+export type TimedUnitPref = "seconds" | "minutes";
 
 export type WeightUnitPref = "kg" | "lbs";
 
@@ -73,6 +75,8 @@ export interface DisplaySettings {
   progressionVariationDisplay: VariationDisplayMode;
   // Default weight unit preference
   defaultWeightUnit: WeightUnitPref;
+  // Default timed display unit preference
+  defaultTimedUnit: TimedUnitPref;
   // UI language mode
   languageMode: LanguageMode;
   // Show opposite-language exercise name alongside primary name
@@ -90,10 +94,11 @@ function getBrowserTimeZone(): string {
 const DEFAULT_SETTINGS: DisplaySettings = {
   dateFormat: "dd-mmm-yyyy",
   timeZone: getBrowserTimeZone(),
-  calendarWeekStart: "auto",
+  calendarWeekStart: "sunday",
   terminologyMode: "normal",
   progressionVariationDisplay: "abbreviation",
   defaultWeightUnit: "kg",
+    defaultTimedUnit: "seconds",
   languageMode: "english",
   showExerciseForeignLanguage: true,
 };

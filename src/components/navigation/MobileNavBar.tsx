@@ -15,11 +15,6 @@ import { ADMIN_NAV_IDS_ORDER, DASHBOARD_ROUTES, MAIN_NAV_IDS_ORDER, MOBILE_MORE_
 const ADMIN_NAV_IDS = new Set(["attendance", "admin", "website-information"]);
 
 const NAV_ICON_MAP: Record<string, ReactNode> = {
-  [DASHBOARD_ROUTES.community]: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
-    </svg>
-  ),
   [DASHBOARD_ROUTES.overview]: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z" />
@@ -43,13 +38,6 @@ const NAV_ICON_MAP: Record<string, ReactNode> = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 4v4h4" />
     </svg>
   ),
-  [DASHBOARD_ROUTES.trainingLogHistory]: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 12a9 9 0 109-9" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 4v4h4" />
-    </svg>
-  ),
   [DASHBOARD_ROUTES.checkIn]: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
@@ -57,15 +45,9 @@ const NAV_ICON_MAP: Record<string, ReactNode> = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4" />
     </svg>
   ),
-  [DASHBOARD_ROUTES.exercises]: (
+  [DASHBOARD_ROUTES.circle]: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-    </svg>
-  ),
-  [DASHBOARD_ROUTES.friends]: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M16 11a4 4 0 100-8 4 4 0 000 8zM8 12a4 4 0 100-8 4 4 0 000 8z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M2 20a6 6 0 0112 0M14 20a6 6 0 018 0" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
     </svg>
   ),
   [DASHBOARD_ROUTES.settings]: (
@@ -120,28 +102,7 @@ function MobileNavBar({
   }, [items]);
 
   const moreItems = useMemo(
-    () => {
-      const baseMore = items.filter((item) => !primaryItems.find((p) => p.id === item.id));
-      const hasTrainingLogHistory = baseMore.some(
-        (item) => item.id === "training-log-history" || item.path === DASHBOARD_ROUTES.trainingLogHistory,
-      );
-
-      if (hasTrainingLogHistory) {
-        return baseMore;
-      }
-
-      return [
-        {
-          id: "training-log-history",
-          label: "History",
-          icon: "🕘",
-          path: DASHBOARD_ROUTES.trainingLogHistory,
-          pinned: false,
-          visible: true,
-        },
-        ...baseMore,
-      ];
-    },
+    () => items.filter((item) => !primaryItems.find((p) => p.id === item.id)),
     [items, primaryItems]
   );
 
@@ -174,7 +135,7 @@ function MobileNavBar({
       { id: "profile", label: t("Profile", "normal"), path: DASHBOARD_ROUTES.profile, icon: "👤" },
       { id: "checkin", label: t("Check-In", "normal"), path: DASHBOARD_ROUTES.checkIn, icon: NAV_ICON_MAP[DASHBOARD_ROUTES.checkIn] },
       { id: "settings", label: t("Settings", "normal"), path: DASHBOARD_ROUTES.settings, icon: NAV_ICON_MAP[DASHBOARD_ROUTES.settings] },
-      { id: "friends", label: t("Friends", "normal"), path: DASHBOARD_ROUTES.friends, icon: NAV_ICON_MAP[DASHBOARD_ROUTES.friends] },
+      { id: "circle", label: t("Circle", "normal"), path: "/dashboard/circle?tab=members", icon: NAV_ICON_MAP[DASHBOARD_ROUTES.circle] },
     ],
     [],
   );
@@ -457,7 +418,7 @@ function MobileNavBar({
                 <span className={`text-[11px] font-medium tracking-wide`} style={{ color: isActive ? "var(--text-primary)" : undefined }}>
                   {t(item.label, terminologyMode).split(" ")[0]}
                 </span>
-                {item.id === "friends" && incomingFriendRequestCount > 0 && (
+                {item.id === "circle" && incomingFriendRequestCount > 0 && (
                   <span className="absolute top-1 right-2 min-w-[16px] h-[16px] px-1 rounded-full bg-crimson-light text-void-black text-[9px] font-bold flex items-center justify-center">
                     {incomingFriendRequestCount > 99 ? "99+" : incomingFriendRequestCount}
                   </span>

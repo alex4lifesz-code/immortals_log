@@ -24,7 +24,7 @@ export default function EmptyTrainingLog({ lang = "english" }: EmptyTrainingLogP
       }}
       secondaryAction={{
         label: copy.secondaryCta,
-        onClick: () => router.push("/dashboard/exercises"),
+        onClick: () => router.push("/dashboard/train?library=1"),
       }}
     />
   );

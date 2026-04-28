@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -246,21 +246,21 @@ export default function ManageFriendsPage() {
             >
               <div className="flex items-center gap-2">
                 <Link
-                  href="/dashboard/friends"
+                  href="/dashboard/circle?tab=members"
                   className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md transition-colors"
                   style={{
                     color: "var(--mist-light)",
                     backgroundColor: "transparent",
                   }}
-                  aria-label="Back to friends"
+                  aria-label="Back to circle members"
                 >
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                   </svg>
                 </Link>
                 <div className="min-w-0">
-                  <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[#dbdee1]">Manage Friends</h2>
-                  <p className="mt-0.5 text-[11px] text-[#b5bac1]">Accept requests, send invites, and manage your cultivation circle.</p>
+                  <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--mist-light)]">Manage Friends</h2>
+                  <p className="mt-0.5 text-[11px] text-[var(--mist-mid)]">Accept requests, send invites, and manage your cultivation circle.</p>
                 </div>
               </div>
             </div>
@@ -268,13 +268,13 @@ export default function ManageFriendsPage() {
             <div className="flex flex-1 flex-col space-y-3 px-2 py-2.5 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)]">
               <section className="border-t pt-3" style={{ borderTopColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)" }}>
                 <div className="mb-3">
-                  <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Add Friend</p>
-                  <p className="mt-1 text-[11px] text-[#b5bac1]">Share your code or send a request directly.</p>
+                  <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-muted)]">Add Friend</p>
+                  <p className="mt-1 text-[11px] text-[var(--mist-mid)]">Share your code or send a request directly.</p>
                 </div>
 
                 <div className="rounded-lg px-2.5 py-2" style={rowStyle}>
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-[10px] uppercase tracking-[0.08em] text-[#949ba4]">Your Friend ID</p>
+                    <p className="text-[10px] uppercase tracking-[0.08em] text-[var(--text-muted)]">Your Friend ID</p>
                     <GlowButton
                       variant="ghost"
                       size="sm"
@@ -286,7 +286,7 @@ export default function ManageFriendsPage() {
                       Copy
                     </GlowButton>
                   </div>
-                  <p className="mt-1 break-all text-xs font-semibold text-[#f2f3f5]">{shareableFriendId || "-"}</p>
+                  <p className="mt-1 break-all text-xs font-semibold text-[var(--text-primary)]">{shareableFriendId || "-"}</p>
                 </div>
 
                 <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -313,15 +313,15 @@ export default function ManageFriendsPage() {
                   </GlowButton>
                 </div>
 
-                {addFriendMessage ? <p className="mt-2 text-[11px] text-[#dbdee1]">{addFriendMessage}</p> : null}
+                {addFriendMessage ? <p className="mt-2 text-[11px] text-[var(--mist-light)]">{addFriendMessage}</p> : null}
               </section>
 
               <section className="border-t pt-3" style={{ borderTopColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)" }}>
                 <div className="mb-2">
-                  <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Incoming Requests</p>
+                  <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-muted)]">Incoming Requests</p>
                 </div>
                 {data.incomingRequests.length === 0 ? (
-                  <div className="rounded-lg px-3 py-3 text-[11px] text-[#949ba4]" style={rowStyle}>
+                  <div className="rounded-lg px-3 py-3 text-[11px] text-[var(--text-muted)]" style={rowStyle}>
                     No pending incoming requests.
                   </div>
                 ) : (
@@ -330,8 +330,8 @@ export default function ManageFriendsPage() {
                       <article key={request.id} className="rounded-lg px-3 py-2.5" style={rowStyle}>
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-[#f2f3f5]">{request.requester.name}</p>
-                            <p className="truncate text-[11px] text-[#b5bac1]">@{request.requester.username}</p>
+                            <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{request.requester.name}</p>
+                            <p className="truncate text-[11px] text-[var(--mist-mid)]">@{request.requester.username}</p>
                           </div>
                           <div className="flex items-center gap-2">
                             <GlowButton variant="jade" size="sm" disabled={working} onClick={() => respondRequest(request.id, "accept")}>
@@ -350,10 +350,10 @@ export default function ManageFriendsPage() {
 
               <section className="border-t pt-3" style={{ borderTopColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)" }}>
                 <div className="mb-2">
-                  <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Outgoing Requests</p>
+                  <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-muted)]">Outgoing Requests</p>
                 </div>
                 {data.outgoingRequests.length === 0 ? (
-                  <div className="rounded-lg px-3 py-3 text-[11px] text-[#949ba4]" style={rowStyle}>
+                  <div className="rounded-lg px-3 py-3 text-[11px] text-[var(--text-muted)]" style={rowStyle}>
                     No outgoing pending requests.
                   </div>
                 ) : (
@@ -362,8 +362,8 @@ export default function ManageFriendsPage() {
                       <article key={request.id} className="rounded-lg px-3 py-2.5" style={rowStyle}>
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-[#f2f3f5]">{request.receiver.name}</p>
-                            <p className="truncate text-[11px] text-[#b5bac1]">@{request.receiver.username}</p>
+                            <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{request.receiver.name}</p>
+                            <p className="truncate text-[11px] text-[var(--mist-mid)]">@{request.receiver.username}</p>
                           </div>
                           <GlowButton variant="ghost" size="sm" disabled={working} onClick={() => cancelOutgoing(request.id)}>
                             Cancel
@@ -377,7 +377,7 @@ export default function ManageFriendsPage() {
 
               <section className="border-t pt-3" style={{ borderTopColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)" }}>
                 <div className="mb-2">
-                  <p className="text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Connected Friends</p>
+                  <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--text-muted)]">Connected Friends</p>
                 </div>
                 {sortedFriends.length === 0 ? (
                   <div className="rounded-lg p-3" style={rowStyle}>
@@ -396,9 +396,9 @@ export default function ManageFriendsPage() {
                         <article key={friend.id} className="rounded-lg p-3" style={rowStyle}>
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
-                              <p className="text-sm font-semibold text-[#f2f3f5]">{friend.name}</p>
-                              <p className="text-[11px] text-[#b5bac1]">@{friend.username}</p>
-                              <p className="mt-1 text-[10px] text-[#949ba4]">
+                              <p className="text-sm font-semibold text-[var(--text-primary)]">{friend.name}</p>
+                              <p className="text-[11px] text-[var(--mist-mid)]">@{friend.username}</p>
+                              <p className="mt-1 text-[10px] text-[var(--text-muted)]">
                                 {stats.lastCheckInDate ? `Last check-in on ${formatDateWithPreference(stats.lastCheckInDate, dateFormat)}` : "No check-in activity yet."}
                               </p>
                             </div>

@@ -20,11 +20,11 @@ export default function EmptyFeed({ lang = "english" }: EmptyFeedProps) {
       description={copy.description}
       primaryAction={{
         label: copy.primaryCta,
-        onClick: () => router.push("/dashboard/friends"),
+        onClick: () => router.push("/dashboard/circle?tab=members"),
       }}
       secondaryAction={{
         label: copy.secondaryCta,
-        onClick: () => router.push("/dashboard/friends"),
+        onClick: () => router.push("/dashboard/circle?tab=members"),
       }}
     />
   );

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { motion } from "framer-motion";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
@@ -387,22 +387,22 @@ export default function CommunityFeedClient() {
                             aria-expanded={isMemberExpanded}
                           >
                             <div className="grid grid-cols-[36px_1fr_auto] sm:grid-cols-[40px_1fr_auto] gap-2 sm:gap-3 items-center">
-                              <div className="grid h-9 w-9 place-items-center rounded-md border border-[#3b3f48] bg-[#313338] sm:h-10 sm:w-10">
-                                <span className="text-base font-bold text-[#f2f3f5] sm:text-lg">
+                              <div className="grid h-9 w-9 place-items-center rounded-md border border-[var(--border)] bg-[var(--ink-deep)] sm:h-10 sm:w-10">
+                                <span className="text-base font-bold text-[var(--text-primary)] sm:text-lg">
                                   {member.userName.charAt(0).toUpperCase()}
                                 </span>
                               </div>
                               <div className="min-w-0">
-                                <h3 className="truncate text-sm font-semibold text-[#f2f3f5] sm:text-base">{member.userName}</h3>
-                                <p className="truncate text-[10px] text-[#b5bac1] sm:text-xs">
+                                <h3 className="truncate text-sm font-semibold text-[var(--text-primary)] sm:text-base">{member.userName}</h3>
+                                <p className="truncate text-[10px] text-[var(--mist-mid)] sm:text-xs">
                                   {member.exerciseGroups.length} {member.exerciseGroups.length === 1 ? "exercise" : "exercises"} • {member.logs.length} {member.logs.length === 1 ? "entry" : "entries"} • active {timeAgo(member.stats.lastActiveAt)}
                                 </p>
                               </div>
                               <div className="justify-self-end flex flex-col items-end gap-1 shrink-0">
-                                <div className="rounded-md border border-[#3b3f48] bg-[#232428] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[#b5bac1] whitespace-nowrap sm:px-2.5 sm:py-1 sm:text-[10px]">
+                                <div className="rounded-md border border-[var(--border)] bg-[var(--void-black)] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--mist-mid)] whitespace-nowrap sm:px-2.5 sm:py-1 sm:text-[10px]">
                                   {formatDayHeader(member.dateKey)}
                                 </div>
-                                <span className="text-[10px] text-[#949ba4]">
+                                <span className="text-[10px] text-[var(--text-muted)]">
                                   {isMemberExpanded ? "Hide exercises" : "Show exercises"}
                                 </span>
                               </div>
@@ -426,7 +426,7 @@ export default function CommunityFeedClient() {
                                     <button
                                       type="button"
                                       onClick={() => toggleExerciseGroup(exerciseKey)}
-                                      className="w-full rounded-md px-1 py-1 text-left transition-colors hover:bg-[#313338]/55"
+                                      className="w-full rounded-md px-1 py-1 text-left transition-colors hover:bg-[var(--ink-deep)]/55"
                                       aria-expanded={isExerciseExpanded}
                                     >
                                       <article
@@ -439,14 +439,14 @@ export default function CommunityFeedClient() {
                                         }}
                                       >
                                         <div className="flex items-start justify-between gap-2">
-                                          <p className="text-sm font-semibold leading-tight text-[#f2f3f5]">
+                                          <p className="text-sm font-semibold leading-tight text-[var(--text-primary)]">
                                             {exerciseGroup.exerciseName}
                                           </p>
-                                          <span className="shrink-0 text-[11px] text-[#949ba4]">
+                                          <span className="shrink-0 text-[11px] text-[var(--text-muted)]">
                                             {timeAgo(exerciseGroup.lastActiveAt)}
                                           </span>
                                         </div>
-                                        <p className="mt-0.5 text-[11px] italic text-[#949ba4]">
+                                        <p className="mt-0.5 text-[11px] italic text-[var(--text-muted)]">
                                           {`Recent: ${exerciseGroup.logs.length} ${exerciseGroup.logs.length === 1 ? "entry" : "entries"} • ${isExerciseExpanded ? "hide logs" : "show logs"}`}
                                         </p>
                                       </article>
@@ -466,15 +466,15 @@ export default function CommunityFeedClient() {
                                           >
                                             <div className="flex items-start justify-between gap-2">
                                               <div className="min-w-0">
-                                                <p className="text-sm font-semibold leading-tight text-[#8ea1ff]">
+                                                <p className="text-sm font-semibold leading-tight text-[var(--accent)]">
                                                   {log.progressionName || `Progression ${log.level}`}
                                                 </p>
                                               </div>
-                                              <span className="shrink-0 text-[11px] text-[#949ba4]">
+                                              <span className="shrink-0 text-[11px] text-[var(--text-muted)]">
                                                 {timeAgo(log.createdAt)}
                                               </span>
                                             </div>
-                                            <div className="mt-1.5 space-y-0.5 text-[11px] leading-relaxed text-[#dbdee1]">
+                                            <div className="mt-1.5 space-y-0.5 text-[11px] leading-relaxed text-[var(--mist-light)]">
                                               {[1, 2, 3].map((setNumber) => {
                                                 const weight = log[`weight${setNumber}` as keyof ExerciseLog] as number | undefined;
                                                 const reps = log[`reps${setNumber}` as keyof ExerciseLog] as number | undefined;
@@ -482,14 +482,14 @@ export default function CommunityFeedClient() {
                                                 return (
                                                   <div key={`${log.id}-set-${setNumber}`} className="grid grid-cols-2 gap-x-3">
                                                     <div className="min-w-0 truncate">
-                                                      <span className="text-[#949ba4]">Weight {setNumber}:</span>{" "}
-                                                      <span className="text-[#33b9ff]">
-                                                        {formatSetValue(weight, weight > 0 ? "weighted" : "bodyweight", weightUnit)} {weight > 0 ? (weightUnit === "kg" ? "Kg" : "Lbs") : "seconds"}
+                                                      <span className="text-[var(--text-muted)]">Weight {setNumber}:</span>{" "}
+                                                      <span className="text-[var(--accent)]">
+                                                        {formatSetValue(weight, weight > 0 ? "weighted" : "bodyweight", weightUnit)}{weight > 0 ? ` ${weightUnit}` : ""}
                                                       </span>
                                                     </div>
                                                     <div className="min-w-0 truncate">
-                                                      <span className="text-[#949ba4]">Reps:</span>{" "}
-                                                      <span className="text-[#57f287]">{reps}</span>
+                                                      <span className="text-[var(--text-muted)]">Reps:</span>{" "}
+                                                      <span className="text-[var(--forest)]">{reps}</span>
                                                     </div>
                                                   </div>
                                                 );
@@ -499,16 +499,16 @@ export default function CommunityFeedClient() {
                                                   <div className="min-w-0 truncate">
                                                     {notesValue ? (
                                                       <>
-                                                        <span className="text-[#949ba4]">Notes:</span>{" "}
-                                                        <span className="text-[#dbdee1]">{notesValue}</span>
+                                                        <span className="text-[var(--text-muted)]">Notes:</span>{" "}
+                                                        <span className="text-[var(--mist-light)]">{notesValue}</span>
                                                       </>
                                                     ) : <span aria-hidden="true" />}
                                                   </div>
                                                   <div className="min-w-0 truncate">
                                                     {modifierValue ? (
                                                       <>
-                                                        <span className="text-[#949ba4]">Mod:</span>{" "}
-                                                        <span className="text-[#fee75c]">{modifierValue}</span>
+                                                        <span className="text-[var(--text-muted)]">Mod:</span>{" "}
+                                                        <span className="text-[var(--gold)]">{modifierValue}</span>
                                                       </>
                                                     ) : <span aria-hidden="true" />}
                                                   </div>
@@ -516,20 +516,20 @@ export default function CommunityFeedClient() {
                                               ) : null}
                                               <div className="grid grid-cols-2 gap-x-3">
                                                 <div className="min-w-0 truncate">
-                                                  <span className="text-[#949ba4]">Status:</span>{" "}
-                                                  <span className={log.completed ? "text-[#57f287]" : "text-[#b5bac1]"}>
+                                                  <span className="text-[var(--text-muted)]">Status:</span>{" "}
+                                                  <span className={log.completed ? "text-[var(--forest)]" : "text-[var(--mist-mid)]"}>
                                                     {log.completed ? "Completed" : "Logged"}
                                                   </span>
                                                 </div>
                                               </div>
                                               <div className="grid grid-cols-2 gap-x-3">
                                                 <div className="min-w-0 truncate">
-                                                  <span className="text-[#949ba4]">Sets:</span>{" "}
-                                                  <span className="text-[#f2f3f5]">{countLogSets(log)}</span>
+                                                  <span className="text-[var(--text-muted)]">Sets:</span>{" "}
+                                                  <span className="text-[var(--text-primary)]">{countLogSets(log)}</span>
                                                 </div>
                                                 <div className="min-w-0 truncate">
-                                                  <span className="text-[#949ba4]">Volume:</span>{" "}
-                                                  <span className="text-[#ff7b7d]">{calculateLogVolume(log).toFixed(1)} {weightUnit}-reps</span>
+                                                  <span className="text-[var(--text-muted)]">Volume:</span>{" "}
+                                                  <span className="text-[var(--danger)]">{calculateLogVolume(log).toFixed(1)} {weightUnit}-reps</span>
                                                 </div>
                                               </div>
                                             </div>

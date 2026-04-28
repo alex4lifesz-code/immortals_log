@@ -382,7 +382,7 @@ export function Calendar({
   onManageNotes,
   forceCompact = false,
   timeZone,
-  calendarWeekStart = "auto",
+  calendarWeekStart = "sunday",
 }: {
   checkInUsersByDate: Map<string, string[]>;
   currentMonth: Date;

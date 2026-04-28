@@ -186,7 +186,7 @@ export default function WorkoutHistoryDetailPage() {
 
   const backHref = useMemo(() => {
     const base = fromExercisesPage
-      ? DASHBOARD_ROUTES.exercises
+      ? "/dashboard/train?library=1"
       : fromHistoryPage
         ? DASHBOARD_ROUTES.trainingLogHistory
         : DASHBOARD_ROUTES.workoutHistory;
@@ -194,7 +194,7 @@ export default function WorkoutHistoryDetailPage() {
     return `${base}?targetUserId=${encodeURIComponent(targetUserId)}`;
   }, [fromExercisesPage, fromHistoryPage, targetUserId]);
 
-  const backLabel = fromExercisesPage ? "Back to Exercises" : fromHistoryPage ? "Back to History" : "Back to Train";
+  const backLabel = fromExercisesPage ? "Back to Exercise Library" : fromHistoryPage ? "Back to History" : "Back to Train";
 
   return (
     <PageLayout

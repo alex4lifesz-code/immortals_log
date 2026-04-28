@@ -18,13 +18,13 @@ import { isDeletedExerciseDescription } from "@/lib/pending-exercises";
 import { DEFAULT_USER_PHYSIQUE, loadUserPhysique } from "@/lib/user-physique";
 import { PROGRESSION_EXERCISES_UPDATED_EVENT } from "@/lib/progression-events";
 import { formatDateWithPreference } from "@/lib/constants";
-import { formatSetValue, type WeightUnit } from "@/lib/unit-conversion";
+import { formatSetValue, type TimedUnitPref, type WeightUnit } from "@/lib/unit-conversion";
 import type { UserPhysiqueSettings } from "@/lib/user-physique";
 import type { ProgressionExercise, ProgressionLog } from "../workout/types";
 
 type WorkoutMetricRow = { weight: string; reps: string };
 
-function getWorkoutMetricRows(log: ProgressionLog, displayUnit: WeightUnit = "kg"): WorkoutMetricRow[] {
+function getWorkoutMetricRows(log: ProgressionLog, displayUnit: WeightUnit = "kg", timedUnit: TimedUnitPref = "seconds"): WorkoutMetricRow[] {
   const hasHold = log.holdTime != null || log.holdTime2 != null || log.holdTime3 != null;
   const primaryRows = (hasHold
     ? [log.holdTime, log.holdTime2, log.holdTime3]
@@ -33,7 +33,7 @@ function getWorkoutMetricRows(log: ProgressionLog, displayUnit: WeightUnit = "kg
     const reps = [log.reps1, log.reps2, log.reps3][index];
     if (metric == null && reps == null) return null;
     return {
-      weight: metric == null ? "-" : formatSetValue(metric, hasHold ? "timed" : "weighted", displayUnit),
+      weight: metric == null ? "-" : formatSetValue(metric, hasHold ? "timed" : "weighted", displayUnit, undefined, timedUnit),
       reps: reps == null ? "-" : String(reps),
     };
   }).filter((row): row is WorkoutMetricRow => Boolean(row));
@@ -43,8 +43,8 @@ function getWorkoutMetricRows(log: ProgressionLog, displayUnit: WeightUnit = "kg
   return rows.length > 0 ? rows : [{ weight: "-", reps: "-" }];
 }
 
-function formatWorkoutValueChips(log: ProgressionLog, displayUnit: WeightUnit = "kg"): string[] {
-  const chips = getWorkoutMetricRows(log, displayUnit)
+function formatWorkoutValueChips(log: ProgressionLog, displayUnit: WeightUnit = "kg", timedUnit: TimedUnitPref = "seconds"): string[] {
+  const chips = getWorkoutMetricRows(log, displayUnit, timedUnit)
     .map((row) => (row.reps !== "-" ? `${row.weight} x ${row.reps}` : row.weight))
     .filter(Boolean);
 
@@ -121,6 +121,7 @@ export default function HistoryPage() {
   const { themeStyle } = useAppContext();
   const { settings } = useDisplaySettings();
   const weightUnit = settings.defaultWeightUnit ?? "kg";
+  const timedUnit: TimedUnitPref = settings.defaultTimedUnit ?? "seconds";
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -162,6 +163,23 @@ export default function HistoryPage() {
   const prefillExerciseName = searchParams.get("prefillExercise");
   const prefillProgression = searchParams.get("prefillProgression");
   const prefillVariant = searchParams.get("prefillVariant");
+  const librarySheetRequested = searchParams.get("library") === "1" && !targetUserId && !searchParams.get("friendView");
+
+  const setLibrarySheetOpen = useCallback((open: boolean) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (open) {
+      params.set("library", "1");
+    } else {
+      params.delete("library");
+    }
+
+    const next = params.toString();
+    router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
+  }, [pathname, router, searchParams]);
+
+  useEffect(() => {
+    setMobileLogFabOpen(librarySheetRequested);
+  }, [librarySheetRequested]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !mobileDrawerSearchOpen) return;
@@ -312,9 +330,7 @@ export default function HistoryPage() {
     ? `${targetUserDisplayName} Train ${friendView === "history" ? "History" : friendView === "chart" ? "Chart" : "Check-in"}`
     : "Train";
   const trainQuickNavItems = [
-    { label: "Community Feed", href: DASHBOARD_ROUTES.community },
-    { label: "Completionist", href: DASHBOARD_ROUTES.rankUp },
-    { label: "Exercise Library", href: DASHBOARD_ROUTES.exercises },
+    { label: "Exercise Library", href: "/dashboard/train?library=1" },
   ] as const;
   const subtitle = targetUserDisplayName
     ? `Review ${targetUserDisplayName}'s training logs and cultivation entries`
@@ -569,7 +585,7 @@ export default function HistoryPage() {
     const filtered = selectedMobileExerciseLogs.filter((log) => {
       const progressionName = selectedMobileExercise?.tiers.find((tier) => tier.level === log.level)?.name ?? `Progression ${log.level}`;
       const variationValue = log.variant?.trim() || "-";
-      const metricRows = getWorkoutMetricRows(log, weightUnit);
+      const metricRows = getWorkoutMetricRows(log, weightUnit, timedUnit);
       const hasWeightedValue = metricRows.some((row) => row.weight !== "-" && !row.weight.endsWith("s"));
       const reps = metricRows
         .map((row) => Number.parseInt(row.reps, 10))
@@ -655,7 +671,7 @@ export default function HistoryPage() {
       setMobileLogFabCategory("all");
       setMobileLogFabSort("recent");
 
-      if (targetUserId || searchParams.get("friendView")) {
+      if (targetUserId || searchParams.get("friendView") || searchParams.get("library") === "1") {
         router.replace(DASHBOARD_ROUTES.workoutHistory, { scroll: false });
       }
     };
@@ -863,11 +879,11 @@ export default function HistoryPage() {
                       </div>
                       ) : (
                         <div className="px-3 py-5">
-                          <div className="rounded-2xl border border-[#3b3f48] bg-[#232428] p-4">
-                            <p className="text-sm font-semibold text-[#f2f3f5]">
+                          <div className="rounded-2xl border border-[var(--border)] bg-[var(--void-black)] p-4">
+                            <p className="text-sm font-semibold text-[var(--text-primary)]">
                               {friendView === "chart" ? "Chart" : "Check-in"} coming soon
                             </p>
-                            <p className="mt-1 text-xs text-[#949ba4]">
+                            <p className="mt-1 text-xs text-[var(--text-muted)]">
                               UI placeholder ready. Functionality will be added in the next step.
                             </p>
                           </div>
@@ -910,13 +926,13 @@ export default function HistoryPage() {
               <div className="shrink-0 border-b px-4 pb-3 pt-[max(env(safe-area-inset-top,0px),1rem)]" style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)" }}>
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-[10px] uppercase tracking-[0.14em] text-[#949ba4]">Filters</p>
-                    <h2 className="mt-1 text-base font-semibold text-[#f2f3f5]">Train History</h2>
+                    <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">Filters</p>
+                    <h2 className="mt-1 text-base font-semibold text-[var(--text-primary)]">Train History</h2>
                   </div>
                   <button
                     type="button"
                     onClick={() => setMobileHistoryFilterOpen(false)}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-md border text-[#b5bac1] transition hover:text-[#f2f3f5]"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-md border text-[var(--mist-mid)] transition hover:text-[var(--text-primary)]"
                     style={{
                       borderColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)",
                       backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
@@ -931,15 +947,15 @@ export default function HistoryPage() {
               <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4" style={{ WebkitOverflowScrolling: "touch" }}>
                 <div className="space-y-4">
                   <div>
-                    <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">Category</label>
+                    <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">Category</label>
                     <select
                       value={mobileHistoryCategory}
                       onChange={(event) => setMobileHistoryCategory(event.target.value)}
                       className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
                       style={{
-                        borderColor: "#3b3f48",
-                        backgroundColor: "#232428",
-                        color: "#f2f3f5",
+                        borderColor: "var(--border)",
+                        backgroundColor: "var(--void-black)",
+                        color: "var(--text-primary)",
                       }}
                     >
                       {mobileHistoryCategoryOptions.map((category) => (
@@ -951,15 +967,15 @@ export default function HistoryPage() {
                   </div>
 
                   <div>
-                    <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">Sort by</label>
+                    <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">Sort by</label>
                     <select
                       value={mobileHistorySort}
                       onChange={(event) => setMobileHistorySort(event.target.value as "recent" | "oldest" | "name-az" | "relevant")}
                       className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
                       style={{
-                        borderColor: "#3b3f48",
-                        backgroundColor: "#232428",
-                        color: "#f2f3f5",
+                        borderColor: "var(--border)",
+                        backgroundColor: "var(--void-black)",
+                        color: "var(--text-primary)",
                       }}
                     >
                       <option value="relevant">Relevant</option>
@@ -970,15 +986,15 @@ export default function HistoryPage() {
                   </div>
 
                   <div>
-                    <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">Updated</label>
+                    <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">Updated</label>
                     <select
                       value={mobileHistoryRecency}
                       onChange={(event) => setMobileHistoryRecency(event.target.value as "all" | "7d" | "30d")}
                       className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
                       style={{
-                        borderColor: "#3b3f48",
-                        backgroundColor: "#232428",
-                        color: "#f2f3f5",
+                        borderColor: "var(--border)",
+                        backgroundColor: "var(--void-black)",
+                        color: "var(--text-primary)",
                       }}
                     >
                       <option value="all">All time</option>
@@ -995,16 +1011,16 @@ export default function HistoryPage() {
                         setMobileHistorySort("recent");
                         setMobileHistoryRecency("all");
                       }}
-                      className="h-11 rounded-xl border px-3 text-sm font-medium text-[#f2f3f5] transition-colors"
-                      style={{ borderColor: "#3b3f48", backgroundColor: "#232428" }}
+                      className="h-11 rounded-xl border px-3 text-sm font-medium text-[var(--text-primary)] transition-colors"
+                      style={{ borderColor: "var(--border)", backgroundColor: "var(--void-black)" }}
                     >
                       Reset
                     </button>
                     <button
                       type="button"
                       onClick={() => setMobileHistoryFilterOpen(false)}
-                      className="h-11 rounded-xl border px-3 text-sm font-semibold text-[#08120c] transition-colors"
-                      style={{ borderColor: "rgba(87, 242, 135, 0.42)", backgroundColor: "#57f287" }}
+                      className="h-11 rounded-xl border px-3 text-sm font-semibold text-[var(--void-black)] transition-colors"
+                      style={{ borderColor: "color-mix(in srgb, var(--forest) 42%, transparent)", backgroundColor: "var(--forest)" }}
                     >
                       Done
                     </button>
@@ -1027,7 +1043,7 @@ export default function HistoryPage() {
               transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
               className="fixed inset-0 z-[236]"
               style={{ backgroundColor: "color-mix(in srgb, var(--void-black) 74%, transparent)" }}
-              onClick={() => setMobileLogFabOpen(false)}
+              onClick={() => setLibrarySheetOpen(false)}
             />
             <motion.aside
               key="train-log-fab-sheet"
@@ -1055,7 +1071,7 @@ export default function HistoryPage() {
                       </h2>
                       <button
                         type="button"
-                        onClick={() => setMobileLogFabOpen(false)}
+                        onClick={() => setLibrarySheetOpen(false)}
                         className="h-8 w-8 rounded-md border text-sm"
                         style={{
                           borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
@@ -1137,7 +1153,7 @@ export default function HistoryPage() {
                       if (customName) {
                         params.set("prefillExercise", customName);
                       }
-                      setMobileLogFabOpen(false);
+                      setLibrarySheetOpen(false);
                       router.push(`/dashboard/train/input/new?${params.toString()}`);
                     }}
                   >
@@ -1167,7 +1183,7 @@ export default function HistoryPage() {
                         onClick={() => {
                           const pathId = `${row.exerciseId}-quick`;
                           const href = `/dashboard/train/input/${encodeURIComponent(pathId)}?prefillExerciseId=${encodeURIComponent(row.exerciseId)}&prefillExercise=${encodeURIComponent(row.exerciseName)}&prefillProgression=${encodeURIComponent(row.progression)}&prefillVariant=${encodeURIComponent(row.variant || "")}`;
-                          setMobileLogFabOpen(false);
+                          setLibrarySheetOpen(false);
                           router.push(href);
                         }}
                       >
@@ -1288,7 +1304,7 @@ export default function HistoryPage() {
                           if (variant) params.set("prefillVariant", variant);
                           router.push(`/dashboard/train/input/${encodeURIComponent(pathId)}?${params.toString()}`);
                         }}
-                        className="inline-flex h-8 items-center justify-center text-[#b5bac1] transition-colors hover:text-[#f2f3f5]"
+                        className="inline-flex h-8 items-center justify-center text-[var(--mist-mid)] transition-colors hover:text-[var(--text-primary)]"
                         aria-label="Log a session for this exercise"
                         title="Log a session"
                       >
@@ -1299,7 +1315,7 @@ export default function HistoryPage() {
                       <button
                         type="button"
                         onClick={() => setMobileDrawerSearchOpen((prev) => !prev)}
-                        className="inline-flex h-8 items-center justify-center text-[#b5bac1] transition-colors hover:text-[#f2f3f5]"
+                        className="inline-flex h-8 items-center justify-center text-[var(--mist-mid)] transition-colors hover:text-[var(--text-primary)]"
                         aria-label={mobileDrawerSearchOpen ? "Close log search" : "Open log search"}
                         aria-expanded={mobileDrawerSearchOpen}
                       >
@@ -1310,14 +1326,14 @@ export default function HistoryPage() {
                       <button
                         type="button"
                         onClick={() => setMobileDrawerFilterOpen(true)}
-                        className="relative inline-flex h-8 items-center justify-center text-[#b5bac1] transition-colors hover:text-[#f2f3f5]"
+                        className="relative inline-flex h-8 items-center justify-center text-[var(--mist-mid)] transition-colors hover:text-[var(--text-primary)]"
                         aria-label="Open log filters"
                       >
                         <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M3 5h18M6 12h12m-9 7h6" />
                         </svg>
                         {(mobileDrawerLevelFilter !== "all" || mobileDrawerVariantFilter !== "all" || mobileDrawerWeightFilter !== "all" || mobileDrawerRepsFilter !== "all" || mobileDrawerSort !== "recent") ? (
-                          <span className="absolute right-0.5 top-1 h-2 w-2 rounded-full bg-[#5865f2]" />
+                          <span className="absolute right-0.5 top-1 h-2 w-2 rounded-full bg-[var(--accent)]" />
                         ) : null}
                       </button>
                     </div>
@@ -1381,13 +1397,13 @@ export default function HistoryPage() {
                         <div className="shrink-0 border-b px-4 pb-3 pt-[max(env(safe-area-inset-top,0px),1rem)]" style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)" }}>
                           <div className="flex items-start justify-between gap-3">
                             <div>
-                              <p className="text-[10px] uppercase tracking-[0.14em] text-[#949ba4]">Filters</p>
-                              <h2 className="mt-1 text-base font-semibold text-[#f2f3f5]">Log Filters</h2>
+                              <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">Filters</p>
+                              <h2 className="mt-1 text-base font-semibold text-[var(--text-primary)]">Log Filters</h2>
                             </div>
                             <button
                               type="button"
                               onClick={() => setMobileDrawerFilterOpen(false)}
-                              className="inline-flex h-9 w-9 items-center justify-center rounded-md border text-[#b5bac1] transition hover:text-[#f2f3f5]"
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-md border text-[var(--mist-mid)] transition hover:text-[var(--text-primary)]"
                               style={{
                                 borderColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)",
                                 backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
@@ -1402,15 +1418,15 @@ export default function HistoryPage() {
                         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4" style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: "contain" }}>
                           <div className="space-y-4">
                             <div>
-                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">Progression</label>
+                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">Progression</label>
                               <select
                                 value={mobileDrawerLevelFilter}
                                 onChange={(event) => setMobileDrawerLevelFilter(event.target.value)}
                                 className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
                                 style={{
-                                  borderColor: "#3b3f48",
-                                  backgroundColor: "#232428",
-                                  color: "#f2f3f5",
+                                  borderColor: "var(--border)",
+                                  backgroundColor: "var(--void-black)",
+                                  color: "var(--text-primary)",
                                 }}
                               >
                                 <option value="all">All progressions</option>
@@ -1421,15 +1437,15 @@ export default function HistoryPage() {
                             </div>
 
                             <div>
-                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">Variation</label>
+                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">Variation</label>
                               <select
                                 value={mobileDrawerVariantFilter}
                                 onChange={(event) => setMobileDrawerVariantFilter(event.target.value)}
                                 className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
                                 style={{
-                                  borderColor: "#3b3f48",
-                                  backgroundColor: "#232428",
-                                  color: "#f2f3f5",
+                                  borderColor: "var(--border)",
+                                  backgroundColor: "var(--void-black)",
+                                  color: "var(--text-primary)",
                                 }}
                               >
                                 <option value="all">All variations</option>
@@ -1440,15 +1456,15 @@ export default function HistoryPage() {
                             </div>
 
                             <div>
-                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">Weight</label>
+                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">Weight</label>
                               <select
                                 value={mobileDrawerWeightFilter}
                                 onChange={(event) => setMobileDrawerWeightFilter(event.target.value as "all" | "weighted" | "bodyweight")}
                                 className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
                                 style={{
-                                  borderColor: "#3b3f48",
-                                  backgroundColor: "#232428",
-                                  color: "#f2f3f5",
+                                  borderColor: "var(--border)",
+                                  backgroundColor: "var(--void-black)",
+                                  color: "var(--text-primary)",
                                 }}
                               >
                                 <option value="all">All loads</option>
@@ -1458,15 +1474,15 @@ export default function HistoryPage() {
                             </div>
 
                             <div>
-                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">Reps</label>
+                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">Reps</label>
                               <select
                                 value={mobileDrawerRepsFilter}
                                 onChange={(event) => setMobileDrawerRepsFilter(event.target.value as "all" | "1-5" | "6-10" | "11+")}
                                 className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
                                 style={{
-                                  borderColor: "#3b3f48",
-                                  backgroundColor: "#232428",
-                                  color: "#f2f3f5",
+                                  borderColor: "var(--border)",
+                                  backgroundColor: "var(--void-black)",
+                                  color: "var(--text-primary)",
                                 }}
                               >
                                 <option value="all">All rep ranges</option>
@@ -1477,15 +1493,15 @@ export default function HistoryPage() {
                             </div>
 
                             <div>
-                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[#949ba4]">Sort by</label>
+                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">Sort by</label>
                               <select
                                 value={mobileDrawerSort}
                                 onChange={(event) => setMobileDrawerSort(event.target.value as "recent" | "oldest" | "progression-asc" | "progression-desc")}
                                 className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
                                 style={{
-                                  borderColor: "#3b3f48",
-                                  backgroundColor: "#232428",
-                                  color: "#f2f3f5",
+                                  borderColor: "var(--border)",
+                                  backgroundColor: "var(--void-black)",
+                                  color: "var(--text-primary)",
                                 }}
                               >
                                 <option value="recent">Recent first</option>
@@ -1505,16 +1521,16 @@ export default function HistoryPage() {
                                   setMobileDrawerRepsFilter("all");
                                   setMobileDrawerSort("recent");
                                 }}
-                                className="h-11 rounded-xl border px-3 text-sm font-medium text-[#f2f3f5] transition-colors"
-                                style={{ borderColor: "#3b3f48", backgroundColor: "#232428" }}
+                                className="h-11 rounded-xl border px-3 text-sm font-medium text-[var(--text-primary)] transition-colors"
+                                style={{ borderColor: "var(--border)", backgroundColor: "var(--void-black)" }}
                               >
                                 Reset
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setMobileDrawerFilterOpen(false)}
-                                className="h-11 rounded-xl border px-3 text-sm font-semibold text-[#08120c] transition-colors"
-                                style={{ borderColor: "rgba(87, 242, 135, 0.42)", backgroundColor: "#57f287" }}
+                                className="h-11 rounded-xl border px-3 text-sm font-semibold text-[var(--void-black)] transition-colors"
+                                style={{ borderColor: "color-mix(in srgb, var(--forest) 42%, transparent)", backgroundColor: "var(--forest)" }}
                               >
                                 Done
                               </button>
@@ -1542,7 +1558,7 @@ export default function HistoryPage() {
                       const variationValue = log.variant?.trim() || "-";
                       const modValue = log.modifier?.trim() || "-";
                       const notesValue = log.notes?.trim() || "-";
-                      const alignedMetricRows = getWorkoutMetricRows(log, weightUnit);
+                      const alignedMetricRows = getWorkoutMetricRows(log, weightUnit, timedUnit);
                       const openEditorField = (step: string, field: string) => {
                         const params = new URLSearchParams({ step, field });
                         router.push(`/dashboard/workout-history/input/${log.id}?${params.toString()}`);
@@ -1676,24 +1692,25 @@ export default function HistoryPage() {
         <motion.button
           key="train-log-fab"
           type="button"
-          onClick={() => setMobileLogFabOpen(true)}
+          onClick={() => setLibrarySheetOpen(true)}
           initial={{ opacity: 0, y: 18, scale: 0.92 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 18, scale: 0.92 }}
           transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-          className="fixed right-[max(env(safe-area-inset-right,0px),0.95rem)] z-[210] flex h-12 w-12 items-center justify-center rounded-2xl border backdrop-blur-sm"
+          className="fixed left-1/2 z-[210] -translate-x-1/2 inline-flex h-12 items-center gap-2 rounded-full border px-5 text-sm font-semibold"
           style={{
-            bottom: "var(--mobile-nav-offset, calc(env(safe-area-inset-bottom,0px) + 4.85rem))",
-            borderColor: "color-mix(in srgb, var(--accent) 32%, var(--ink-light))",
-            backgroundColor: "color-mix(in srgb, var(--accent) 40%, var(--ink-mid))",
+            bottom: "calc(var(--mobile-nav-offset, calc(env(safe-area-inset-bottom,0px) + 4.85rem)) + 0.5rem)",
+            borderColor: "color-mix(in srgb, var(--accent) 48%, transparent)",
+            backgroundColor: "var(--accent)",
             color: "var(--cloud-white)",
-            boxShadow: "0 8px 18px color-mix(in srgb, var(--accent) 18%, transparent)",
+            boxShadow: "0 6px 20px color-mix(in srgb, var(--accent) 35%, transparent)",
           }}
           aria-label="Log workout"
         >
-          <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.9}>
+          <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
           </svg>
+          Log workout
         </motion.button>
       ) : null}
     </>

@@ -12,7 +12,7 @@ import { api, ApiRequestError } from "@/lib/api-client";
 import { getDeletedExerciseLabel, getExerciseDisplayName, getTypeDisplayName, getTypeColorKey } from "@/lib/exercise-name";
 import { isDeletedExerciseDescription } from "@/lib/pending-exercises";
 import { t, tHint } from "@/lib/terminology";
-import { inferExerciseType, formatSetValue, formatSetReps, getColumnHeaders, kgToLbs, type ExerciseType } from "@/lib/unit-conversion";
+import { inferExerciseType, formatSetValue, formatSetReps, getColumnHeaders, kgToLbs, type ExerciseType, type TimedUnitPref } from "@/lib/unit-conversion";
 import { UserPhysiqueSettings } from "@/lib/user-physique";
 
 // Types — single source of truth
@@ -278,6 +278,7 @@ function UnifiedTrainingLogTable({
   const variationDisplay = settings.progressionVariationDisplay ?? "abbreviation";
   const dateFormat = settings.dateFormat || "dd-mmm-yyyy";
   const weightUnit = settings.defaultWeightUnit ?? "kg";
+    const timedUnit: TimedUnitPref = settings.defaultTimedUnit ?? "seconds";
   const visibleColumnKeys = DEFAULT_UNIFIED_VISIBLE_COLUMNS;
   const visibleColumnSet = useMemo(() => new Set(visibleColumnKeys), [visibleColumnKeys]);
   const showDate = visibleColumnSet.has("date");
@@ -473,7 +474,7 @@ function UnifiedTrainingLogTable({
     }
     // Value column
     const val = fieldIndex === 0 ? entry.val1 : fieldIndex === 1 ? entry.val2 : entry.val3;
-    return formatSetValue(val, entry.exerciseType, weightUnit);
+    return formatSetValue(val, entry.exerciseType, weightUnit, undefined, timedUnit);
   };
 
   /** Get the raw numeric value for a data column */

@@ -10,6 +10,8 @@ const ADMIN_ONLY_ROUTES = [
   DASHBOARD_ROUTES.attendance,
   DASHBOARD_ROUTES.checkinLegacy,
   DASHBOARD_ROUTES.websiteInformation,
+  DASHBOARD_ROUTES.adminExercises,
+  "/dashboard/exercise-db",
 ];
 
 /**

@@ -1,21 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import PageLayout from "@/components/layout/PageLayout";
 import GlowButton from "@/components/ui/GlowButton";
 import GlowCard from "@/components/ui/GlowCard";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
-import { buildIsoAtUserDateTime } from "@/lib/constants";
+import { buildIsoAtUserDateTime, getTodayInTimeZone } from "@/lib/constants";
 import { PROGRESSION_EXERCISES_UPDATED_EVENT } from "@/lib/progression-events";
 import { api, ApiRequestError } from "@/lib/api-client";
-import { kgToLbs, lbsToKg } from "@/lib/unit-conversion";
+import { kgToLbs, lbsToKg, type TimedUnitPref } from "@/lib/unit-conversion";
 import type { ProgressionExercise, ProgressionLog } from "@/app/dashboard/workout/types";
 
 type InputMode = "existing" | "custom";
 type ValueMode = "weight" | "timed";
+type TimedUnit = TimedUnitPref;
 type WeightUnit = "kg" | "lbs";
 type SessionPanelId = "exercise" | "details" | "format" | "session" | "notes" | "review";
 type SetRow = { id: string; value: string; reps: string };
@@ -56,12 +57,12 @@ function createInitialSets(): SetRow[] {
   return [createSetRow(1)];
 }
 
-function getTodayInputValue(): string {
-  return new Date().toISOString().slice(0, 10);
+function getTodayInputValue(timeZone?: string): string {
+  return getTodayInTimeZone(timeZone);
 }
 
 function buildCreatedAtFromDateInput(dateInput: string, timeZone?: string): string {
-  const safeDate = /^\d{4}-\d{2}-\d{2}$/.test(dateInput) ? dateInput : getTodayInputValue();
+  const safeDate = /^\d{4}-\d{2}-\d{2}$/.test(dateInput) ? dateInput : getTodayInputValue(timeZone);
   return buildIsoAtUserDateTime(safeDate, timeZone) ?? new Date().toISOString();
 }
 
@@ -92,6 +93,13 @@ function formatInputNumber(value: number | null): string {
   return Number.isInteger(normalized) ? String(normalized) : normalized.toFixed(1).replace(/\.0$/, "");
 }
 
+function formatTimedInputSeconds(seconds: number | null, unit: "seconds" | "minutes"): string {
+  if (seconds == null || !Number.isFinite(seconds)) return "";
+  const value = unit === "minutes" ? seconds / 60 : seconds;
+  const normalized = Math.round(value * 10) / 10;
+  return Number.isInteger(normalized) ? String(normalized) : normalized.toFixed(1).replace(/\.0$/, "");
+}
+
 function normalizeEditableSetRows(rows: SetRow[]): Array<{ value: string; reps: string }> {
   const normalized = rows.map((set) => ({
     value: set.value.trim(),
@@ -110,6 +118,7 @@ function buildEditSnapshot(input: {
   inputMode: InputMode;
   valueMode: ValueMode;
   weightUnit: WeightUnit;
+  timedUnit: TimedUnit;
   selectedExerciseId: string;
   customExerciseName: string;
   selectedLevel: string;
@@ -123,6 +132,7 @@ function buildEditSnapshot(input: {
     inputMode: input.inputMode,
     valueMode: input.valueMode,
     weightUnit: input.weightUnit,
+    timedUnit: input.timedUnit,
     selectedExerciseId: input.selectedExerciseId,
     customExerciseName: input.customExerciseName.trim(),
     selectedLevel: input.selectedLevel || "",
@@ -163,13 +173,14 @@ export default function TrainInputCanvasPage() {
   const [inputMode, setInputMode] = useState<InputMode>(prefillCustomExercise ? "custom" : "existing");
   const [valueMode, setValueMode] = useState<ValueMode>("weight");
   const [weightUnit, setWeightUnit] = useState<WeightUnit>(settings.defaultWeightUnit === "lbs" ? "lbs" : "kg");
+  const [timedUnit, setTimedUnit] = useState<TimedUnit>(settings.defaultTimedUnit === "minutes" ? "minutes" : "seconds");
   const [searchTerm, setSearchTerm] = useState(prefillExerciseName);
   const [selectedExerciseId, setSelectedExerciseId] = useState(prefillExerciseId);
   const [customExerciseName, setCustomExerciseName] = useState(prefillExerciseName);
   const [selectedLevel, setSelectedLevel] = useState("");
   const [selectedVariant, setSelectedVariant] = useState(prefillVariant);
   const [modifierKg, setModifierKg] = useState(0);
-  const [trainingDate, setTrainingDate] = useState(getTodayInputValue());
+  const [trainingDate, setTrainingDate] = useState(getTodayInputValue(settings.timeZone));
   const [notes, setNotes] = useState("");
   const [sets, setSets] = useState<SetRow[]>(createInitialSets);
   const [expandedSetId, setExpandedSetId] = useState<string | null>(null);
@@ -177,10 +188,32 @@ export default function TrainInputCanvasPage() {
   const [highlightedSetId, setHighlightedSetId] = useState<string | null>(null);
   const [highlightedField, setHighlightedField] = useState<string | null>(null);
   const [confirmedPanels, setConfirmedPanels] = useState<SessionPanelId[]>([]);
+  const previousTimedUnitRef = useRef<TimedUnit>(timedUnit);
 
   useEffect(() => {
     setWeightUnit(settings.defaultWeightUnit === "lbs" ? "lbs" : "kg");
   }, [settings.defaultWeightUnit]);
+
+  useEffect(() => {
+    setTimedUnit(settings.defaultTimedUnit === "minutes" ? "minutes" : "seconds");
+  }, [settings.defaultTimedUnit]);
+
+  useEffect(() => {
+    const previousUnit = previousTimedUnitRef.current;
+    if (previousUnit === timedUnit) return;
+
+    if (valueMode === "timed") {
+      setSets((current) => current.map((set) => {
+        const parsed = parseNumber(set.value);
+        if (parsed == null) return set;
+        const seconds = previousUnit === "minutes" ? parsed * 60 : parsed;
+        const converted = timedUnit === "minutes" ? seconds / 60 : seconds;
+        return { ...set, value: formatInputNumber(converted) };
+      }));
+    }
+
+    previousTimedUnitRef.current = timedUnit;
+  }, [timedUnit, valueMode]);
 
   // Persist in-progress new logs to localStorage so a refresh doesn't wipe them.
   // Edit mode is intentionally skipped — server fetch already restores data there.
@@ -221,6 +254,7 @@ export default function TrainInputCanvasPage() {
         inputMode: InputMode;
         valueMode: ValueMode;
         weightUnit: WeightUnit;
+        timedUnit: TimedUnit;
         searchTerm: string;
         selectedExerciseId: string;
         customExerciseName: string;
@@ -236,6 +270,7 @@ export default function TrainInputCanvasPage() {
       if (draft.inputMode === "existing" || draft.inputMode === "custom") setInputMode(draft.inputMode);
       if (draft.valueMode === "weight" || draft.valueMode === "timed") setValueMode(draft.valueMode);
       if (draft.weightUnit === "kg" || draft.weightUnit === "lbs") setWeightUnit(draft.weightUnit);
+        if (draft.timedUnit === "seconds" || draft.timedUnit === "minutes") setTimedUnit(draft.timedUnit);
       if (typeof draft.searchTerm === "string") setSearchTerm(draft.searchTerm);
       if (typeof draft.selectedExerciseId === "string") setSelectedExerciseId(draft.selectedExerciseId);
       if (typeof draft.customExerciseName === "string") setCustomExerciseName(draft.customExerciseName);
@@ -281,6 +316,7 @@ export default function TrainInputCanvasPage() {
           inputMode,
           valueMode,
           weightUnit,
+          timedUnit,
           searchTerm,
           selectedExerciseId,
           customExerciseName,
@@ -303,6 +339,7 @@ export default function TrainInputCanvasPage() {
     inputMode,
     valueMode,
     weightUnit,
+    timedUnit,
     searchTerm,
     selectedExerciseId,
     customExerciseName,
@@ -417,17 +454,17 @@ export default function TrainInputCanvasPage() {
         const nextSets = [
           {
             id: `${log.id}-set-1`,
-            value: usesTimedMetrics ? formatInputNumber(log.holdTime) : displayWeight(log.weight1),
+            value: usesTimedMetrics ? formatTimedInputSeconds(log.holdTime, timedUnit) : displayWeight(log.weight1),
             reps: log.reps1 != null ? String(log.reps1) : "",
           },
           {
             id: `${log.id}-set-2`,
-            value: usesTimedMetrics ? formatInputNumber(log.holdTime2) : displayWeight(log.weight2),
+            value: usesTimedMetrics ? formatTimedInputSeconds(log.holdTime2, timedUnit) : displayWeight(log.weight2),
             reps: log.reps2 != null ? String(log.reps2) : "",
           },
           {
             id: `${log.id}-set-3`,
-            value: usesTimedMetrics ? formatInputNumber(log.holdTime3) : displayWeight(log.weight3),
+            value: usesTimedMetrics ? formatTimedInputSeconds(log.holdTime3, timedUnit) : displayWeight(log.weight3),
             reps: log.reps3 != null ? String(log.reps3) : "",
           },
         ];
@@ -447,6 +484,7 @@ export default function TrainInputCanvasPage() {
           inputMode: nextInputMode,
           valueMode: nextValueMode,
           weightUnit,
+          timedUnit,
           selectedExerciseId: nextSelectedExerciseId,
           customExerciseName: nextCustomExerciseName,
           selectedLevel: nextSelectedLevel,
@@ -608,7 +646,7 @@ export default function TrainInputCanvasPage() {
     setSelectedLevel("");
     setSelectedVariant("");
     setModifierKg(0);
-    setTrainingDate(getTodayInputValue());
+    setTrainingDate(getTodayInputValue(settings.timeZone));
     setNotes("");
     setSets(createInitialSets());
     setExpandedSetId(null);
@@ -662,7 +700,8 @@ export default function TrainInputCanvasPage() {
 
     const toStoredSeconds = (value: number | null): number | null => {
       if (value == null || valueMode !== "timed") return null;
-      return Math.max(0, Math.round(value));
+      const seconds = timedUnit === "minutes" ? value * 60 : value;
+      return Math.max(0, Math.round(seconds));
     };
 
     const createdAt = buildCreatedAtFromDateInput(trainingDate, settings.timeZone);
@@ -775,7 +814,7 @@ export default function TrainInputCanvasPage() {
     } finally {
       setSaving(false);
     }
-  }, [customExerciseName, clearDraft, deleting, editLogId, inputMode, isEditingExistingLog, notes, returnHref, router, saving, selectedExerciseId, selectedLevel, selectedVariant, sets, settings.timeZone, trainingDate, valueMode, weightUnit]);
+  }, [customExerciseName, clearDraft, deleting, editLogId, inputMode, isEditingExistingLog, notes, returnHref, router, saving, selectedExerciseId, selectedLevel, selectedVariant, sets, settings.timeZone, timedUnit, trainingDate, valueMode, weightUnit]);
 
   const handleDeleteLoggedSession = useCallback(async () => {
     if (!isEditingExistingLog || !editLogId || saving || deleting) return;
@@ -835,7 +874,7 @@ export default function TrainInputCanvasPage() {
     if ((valueMode === "timed") !== usesTimedMetrics) return [];
     const formatValue = (weight: number | null, hold: number | null) => {
       if (valueMode === "timed") {
-        return hold != null ? formatInputNumber(hold) : "";
+        return hold != null ? formatTimedInputSeconds(hold, timedUnit) : "";
       }
       if (weight == null) return "";
       return formatInputNumber(weightUnit === "lbs" ? kgToLbs(weight) : weight);
@@ -846,7 +885,7 @@ export default function TrainInputCanvasPage() {
       { value: formatValue(recent.weight2, recent.holdTime2), reps: formatReps(recent.reps2) },
       { value: formatValue(recent.weight3, recent.holdTime3), reps: formatReps(recent.reps3) },
     ];
-  }, [selectedExercise, selectedLevel, selectedVariant, valueMode, weightUnit]);
+  }, [selectedExercise, selectedLevel, selectedVariant, timedUnit, valueMode, weightUnit]);
 
   const placeholderForSetIndex = (index: number, field: "value" | "reps", fallback: string): string => {
     const recent = recentLogPlaceholders[index];
@@ -895,7 +934,7 @@ export default function TrainInputCanvasPage() {
     if (!value && !reps) return [];
 
     const summary = valueMode === "timed"
-      ? `${value || "0"} sec • ${reps || "0"} reps`
+      ? `${value || "0"} ${timedUnit === "minutes" ? "min" : "sec"} • ${reps || "0"} reps`
       : `${value || "0"} ${weightUnit} • ${reps || "0"} reps`;
 
     return [{ label: `Set ${index + 1}`, summary }];
@@ -906,6 +945,7 @@ export default function TrainInputCanvasPage() {
       inputMode,
       valueMode,
       weightUnit,
+      timedUnit,
       selectedExerciseId,
       customExerciseName,
       selectedLevel,
@@ -915,7 +955,7 @@ export default function TrainInputCanvasPage() {
       notes,
       sets,
     });
-  }, [customExerciseName, inputMode, isEditingExistingLog, modifierKg, notes, selectedExerciseId, selectedLevel, selectedVariant, sets, trainingDate, valueMode, weightUnit]);
+  }, [customExerciseName, inputMode, isEditingExistingLog, modifierKg, notes, selectedExerciseId, selectedLevel, selectedVariant, sets, timedUnit, trainingDate, valueMode, weightUnit]);
   const hasPendingEditChanges = Boolean(
     isEditingExistingLog
       && editLogHydrated
@@ -1425,15 +1465,37 @@ export default function TrainInputCanvasPage() {
                         </div>
 
                         {valueMode === "timed" ? (
-                          <div
-                            className="mt-3 rounded-lg border px-3 py-2 text-[11px]"
-                            style={{
-                              borderColor: "color-mix(in srgb, var(--jade-glow) 36%, transparent)",
-                              backgroundColor: "color-mix(in srgb, var(--jade-glow) 8%, var(--ink-dark))",
-                              color: "var(--text-secondary)",
-                            }}
-                          >
-                            Timed entries will be saved in seconds.
+                          <div className="mt-3 max-w-[320px]">
+                            <p className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Input unit</p>
+                            <p className="mb-2 text-[11px] text-[color:var(--text-secondary)]">Values are always stored in seconds. Choose how you enter them.</p>
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setTimedUnit("seconds")}
+                                className="rounded-xl border px-3 py-2 text-[11px] font-semibold transition-all"
+                                style={{
+                                  borderColor: timedUnit === "seconds" ? "color-mix(in srgb, var(--accent) 64%, transparent)" : "color-mix(in srgb, var(--border) 78%, transparent)",
+                                  backgroundColor: timedUnit === "seconds" ? "color-mix(in srgb, var(--accent) 18%, var(--surface))" : "color-mix(in srgb, var(--surface-hover) 72%, var(--surface))",
+                                  color: timedUnit === "seconds" ? "var(--accent)" : "var(--text-secondary)",
+                                  boxShadow: "none",
+                                }}
+                              >
+                                Seconds (s)
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setTimedUnit("minutes")}
+                                className="rounded-xl border px-3 py-2 text-[11px] font-semibold transition-all"
+                                style={{
+                                  borderColor: timedUnit === "minutes" ? "color-mix(in srgb, var(--accent) 64%, transparent)" : "color-mix(in srgb, var(--border) 78%, transparent)",
+                                  backgroundColor: timedUnit === "minutes" ? "color-mix(in srgb, var(--accent) 18%, var(--surface))" : "color-mix(in srgb, var(--surface-hover) 72%, var(--surface))",
+                                  color: timedUnit === "minutes" ? "var(--accent)" : "var(--text-secondary)",
+                                  boxShadow: "none",
+                                }}
+                              >
+                                Minutes (m)
+                              </button>
+                            </div>
                           </div>
                         ) : (
                           <div className="mt-3 max-w-[320px]">
@@ -1549,7 +1611,7 @@ export default function TrainInputCanvasPage() {
                                 const isExpanded = expandedSetId === set.id;
                                 const hasSummaryValues = Boolean(set.value || set.reps);
                                 const summaryValueLabel = set.value || "—";
-                                const summaryValueUnit = valueMode === "timed" ? "sec" : weightUnit;
+                                const summaryValueUnit = valueMode === "timed" ? (timedUnit === "minutes" ? "min" : "sec") : weightUnit;
                                 const summaryRepsLabel = set.reps || "—";
 
                                 return (
@@ -1667,7 +1729,7 @@ export default function TrainInputCanvasPage() {
                                       <div className="mt-3 grid grid-cols-2 gap-2">
                                         <label className="block">
                                           <span className="mb-1 block text-[10px] uppercase tracking-[0.08em] text-[color:var(--text-muted)]">
-                                            {valueMode === "timed" ? "Seconds" : "Weight"}
+                                            {valueMode === "timed" ? (timedUnit === "minutes" ? "Minutes" : "Seconds") : "Weight"}
                                           </span>
                                           <input
                                             type="number"

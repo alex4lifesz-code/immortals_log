@@ -591,7 +591,7 @@ export function ExerciseDbSettingsPanel({ embedded = false }: { embedded?: boole
       const confirmed = window.confirm("You have unsaved DB setting changes. Leave without saving?");
       if (!confirmed) return;
     }
-    router.push("/dashboard/exercises");
+    router.push("/dashboard/train?library=1");
   }, [hasUnsavedChanges, router]);
 
   const registerRename = useCallback((key: keyof RenameState, from: string, to: string) => {

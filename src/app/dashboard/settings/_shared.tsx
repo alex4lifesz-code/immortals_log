@@ -40,9 +40,8 @@ export const TIMEZONE_OPTIONS: Array<{ value: string; label: string; desc: strin
 ];
 
 export const CALENDAR_START_OPTIONS: Array<{ value: CalendarWeekStartOption; label: string; desc: string }> = [
-  { value: "auto", label: "Auto", desc: "Match the selected region" },
-  { value: "monday", label: "Monday", desc: "Common in AU, NZ, Vietnam" },
   { value: "sunday", label: "Sunday", desc: "Common in the US" },
+  { value: "monday", label: "Monday", desc: "Common in AU, NZ, Vietnam" },
 ];
 
 export const sectionShellStyle = {

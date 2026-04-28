@@ -16,7 +16,7 @@ import { rankExerciseSearchResults, type ExerciseSearchMatchSource } from "@/lib
 import { DASHBOARD_ROUTES } from "@/lib/navigation";
 import { t, tHint } from "@/lib/terminology";
 import { isDeletedExerciseDescription } from "@/lib/pending-exercises";
-import { inferExerciseType, formatSetValue, formatSetReps, getColumnHeaders, kgToLbs, lbsToKg, type ExerciseType } from "@/lib/unit-conversion";
+import { inferExerciseType, formatSetValue, formatSetReps, getColumnHeaders, kgToLbs, lbsToKg, type ExerciseType, type TimedUnitPref } from "@/lib/unit-conversion";
 import { UserPhysiqueSettings } from "@/lib/user-physique";
 
 // Types — single source of truth
@@ -269,6 +269,7 @@ const TrainingLogMobileCard = memo(function TrainingLogMobileCard({
   typeLabel,
   formattedEntryDate,
   weightUnit,
+  timedUnit,
   onOpenExerciseHistory,
 }: {
   entry: UnifiedFlatLogEntry;
@@ -276,6 +277,7 @@ const TrainingLogMobileCard = memo(function TrainingLogMobileCard({
   typeLabel: string;
   formattedEntryDate: string;
   weightUnit: "kg" | "lbs";
+  timedUnit: TimedUnitPref;
   onOpenExerciseHistory: () => void;
 }) {
   const typeTone = getCategoryTone(typeLabel);
@@ -286,7 +288,7 @@ const TrainingLogMobileCard = memo(function TrainingLogMobileCard({
   const repsSamples = [entry.reps1, entry.reps2, entry.reps3].filter((reps): reps is number => reps != null && Number.isFinite(reps));
   const averageValue = valueSamples.length > 0 ? Math.round((valueSamples.reduce((sum, value) => sum + value, 0) / valueSamples.length) * 10) / 10 : null;
   const averageReps = repsSamples.length > 0 ? Math.round((repsSamples.reduce((sum, reps) => sum + reps, 0) / repsSamples.length) * 10) / 10 : null;
-  const averageValueText = formatSetValue(averageValue, entry.exerciseType, weightUnit);
+  const averageValueText = formatSetValue(averageValue, entry.exerciseType, weightUnit, undefined, timedUnit);
   const averageRepsText = formatSetReps(averageReps, entry.exerciseType);
   const hasAverageWeight = averageValue !== null;
   const hasAverageReps = averageReps !== null;
@@ -911,6 +913,7 @@ function TrainingLogTable({
     return "dd-mmm-yyyy";
   }, [dateFormat]);
   const weightUnit = settings.defaultWeightUnit ?? "kg";
+  const timedUnit: TimedUnitPref = settings.defaultTimedUnit ?? "seconds";
   const effectiveSimpleView = forceSimpleViewOnly ? true : isSimpleView;
   const useMobileAverageSummary = isMobile
     && Boolean(forceDesktopTableOnMobile)
@@ -2390,7 +2393,7 @@ function TrainingLogTable({
     }
     // Value column
     const val = fieldIndex === 0 ? entry.val1 : fieldIndex === 1 ? entry.val2 : entry.val3;
-    return val == null ? "" : formatSetValue(val, entry.exerciseType, weightUnit);
+    return val == null ? "" : formatSetValue(val, entry.exerciseType, weightUnit, undefined, timedUnit);
   };
 
   /** Map visible column back to edit data field */
@@ -3712,6 +3715,7 @@ function TrainingLogTable({
                       typeLabel={typeLabel}
                       formattedEntryDate={formattedEntryDate}
                       weightUnit={weightUnit}
+                      timedUnit={timedUnit}
                       onOpenExerciseHistory={() => openExerciseHistoryFromMobileCard(entry)}
                     />
                   );
@@ -4475,7 +4479,7 @@ function TrainingLogTable({
                                 : null;
                               return {
                                 raw: averageValue,
-                                text: averageValue != null ? formatSetValue(averageValue, entry.exerciseType, weightUnit) : "—",
+                                text: averageValue != null ? formatSetValue(averageValue, entry.exerciseType, weightUnit, undefined, timedUnit) : "—",
                                 type: "value" as const,
                               };
                             }
@@ -4562,6 +4566,7 @@ function TrainingLogTable({
                     typeLabel={typeLabel}
                     formattedEntryDate={formattedEntryDate}
                     weightUnit={weightUnit}
+                    timedUnit={timedUnit}
                     onOpenExerciseHistory={() => openExerciseHistoryFromMobileCard(entry)}
                   />
                 );

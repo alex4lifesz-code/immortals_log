@@ -916,7 +916,7 @@ export default function DaoHallPage() {
   return (
     <PageLayout
       title="Check-in"
-      subtitle="Daily attendance and notes"
+      subtitle="Daily check-in and notes"
       mobileContentPaddingClass="p-2 pb-24"
       contentMaxWidthClass="max-w-[1220px]"
     >

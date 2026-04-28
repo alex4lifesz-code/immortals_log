@@ -475,7 +475,7 @@ export default function DataManagement() {
             </div>
 
             <Link
-              href="/dashboard/exercise-db"
+              href="/dashboard/admin/exercises"
               className="inline-flex items-center justify-center rounded-lg border border-ink-light/50 px-3 py-2 text-xs font-medium text-mist-light transition hover:border-sky-300/45 hover:text-cloud-white"
             >
               Open full Exercise DB

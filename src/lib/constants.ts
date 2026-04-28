@@ -12,14 +12,12 @@ export interface NavItem {
 
 export const defaultNavItems: NavItem[] = [
   { id: "dashboard", label: NAV_LABELS.dashboard, icon: "⛩️", path: DASHBOARD_ROUTES.overview, pinned: false, visible: true },
-  { id: "newsfeed", label: NAV_LABELS.newsfeed, icon: "🌿", path: DASHBOARD_ROUTES.community, pinned: false, visible: true },
-  { id: "rank-up", label: NAV_LABELS["rank-up"], icon: "🏆", path: DASHBOARD_ROUTES.rankUp, pinned: false, visible: true },
+  { id: "rank-up", label: "Progress", icon: "📊", path: DASHBOARD_ROUTES.progress, pinned: false, visible: true },
   { id: "history", label: NAV_LABELS.history, icon: "📜", path: DASHBOARD_ROUTES.workoutHistory, pinned: false, visible: true },
-  { id: "training-log-history", label: NAV_LABELS["training-log-history"], icon: "🕘", path: DASHBOARD_ROUTES.trainingLogHistory, pinned: false, visible: true },
   { id: "checkin", label: NAV_LABELS.checkin, icon: "📋", path: DASHBOARD_ROUTES.checkIn, pinned: false, visible: true },
-  { id: "exercise-db", label: NAV_LABELS["exercise-db"], icon: "📚", path: DASHBOARD_ROUTES.exercises, pinned: false, visible: true },
+  { id: "exercise-db", label: NAV_LABELS["exercise-db"], icon: "📚", path: "/dashboard/train?library=1", pinned: false, visible: true },
   { id: "attendance", label: NAV_LABELS.attendance, icon: "🗓️", path: DASHBOARD_ROUTES.attendance, pinned: false, visible: true },
-  { id: "friends", label: NAV_LABELS.friends, icon: "🤝", path: DASHBOARD_ROUTES.friends, pinned: false, visible: true },
+  { id: "circle", label: NAV_LABELS.circle, icon: "⭕", path: DASHBOARD_ROUTES.circle, pinned: false, visible: true },
   { id: "settings", label: NAV_LABELS.settings, icon: "⚙️", path: DASHBOARD_ROUTES.settings, pinned: false, visible: true },
   { id: "website-information", label: NAV_LABELS["website-information"], icon: "🗂️", path: DASHBOARD_ROUTES.websiteInformation, pinned: false, visible: true },
   { id: "admin", label: NAV_LABELS.admin, icon: "👑", path: DASHBOARD_ROUTES.admin, pinned: false, visible: true },
@@ -265,27 +263,11 @@ export function getPreferredLocaleForTimeZone(timeZone?: string): string {
 }
 
 export function resolveCalendarWeekStartsOn(
-  option: CalendarWeekStartOption = "auto",
+  option: CalendarWeekStartOption = "sunday",
   timeZone?: string,
 ): 0 | 1 {
   if (option === "monday") return 1;
-  if (option === "sunday") return 0;
-
-  const locale = getPreferredLocaleForTimeZone(timeZone);
-
-  try {
-    const intlLocale = new Intl.Locale(locale) as Intl.Locale & {
-      weekInfo?: { firstDay?: number };
-      getWeekInfo?: () => { firstDay?: number };
-    };
-    const firstDay = intlLocale.weekInfo?.firstDay ?? intlLocale.getWeekInfo?.().firstDay;
-    if (firstDay === 7) return 0;
-    if (firstDay === 1) return 1;
-  } catch {
-    // Ignore locale week metadata failures.
-  }
-
-  return locale === "en-US" ? 0 : 1;
+  return 0;
 }
 
 export function formatCalendarMonthLabel(date: Date, timeZone?: string): string {

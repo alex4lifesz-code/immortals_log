@@ -116,7 +116,7 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
   const dateFormat = settings.dateFormat || "dd-mmm-yyyy";
   const timeZone = settings.timeZone;
 
-  const isActive = pathname === DASHBOARD_ROUTES.friends || pathname?.startsWith(`${DASHBOARD_ROUTES.friends}/`);
+  const isActive = pathname === DASHBOARD_ROUTES.circle || pathname?.startsWith(`${DASHBOARD_ROUTES.circle}/`);
   const drawerFriendId = searchParams.get("friendDrawerId") || "";
   const rawFriendView = searchParams.get("friendView") || "";
   const selectedFriendExerciseId = searchParams.get("friendExerciseId") || "";
@@ -569,10 +569,10 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
               whileTap={{ scale: 0.94 }}
               onClick={() => {
                 closeFriendPanels(false);
-                router.push(DASHBOARD_ROUTES.friends);
+                router.push("/dashboard/circle?tab=members");
               }}
               aria-current={isFriendsHomeActive ? "page" : undefined}
-              aria-label="Friends"
+              aria-label="Circle members"
               className="relative mx-auto flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-2xl border transition-colors duration-150"
               style={{
                 borderColor: isFriendsHomeActive
@@ -586,7 +586,7 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                   ? "0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent), 0 10px 22px color-mix(in srgb, var(--accent) 28%, transparent)"
                   : "none",
               }}
-              title="Friends"
+              title="Circle members"
             >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.9}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M16 11a4 4 0 100-8 4 4 0 000 8M8 12a4 4 0 100-8 4 4 0 000 8" />

@@ -9,7 +9,6 @@ import { MotionConfig, useReducedMotion } from "framer-motion";
 import MobileNavBar from "@/components/navigation/MobileNavBar";
 import FloatingMobileSidebar from "@/components/navigation/FloatingMobileSidebar";
 import SwipeNavigation from "@/components/navigation/SwipeNavigation";
-import DiscordFriendsRail from "@/components/navigation/DiscordFriendsRail";
 import ConnectivityBanner from "@/components/system/ConnectivityBanner";
 import AtmosphericBackground from "@/components/atmosphere/AtmosphericBackground";
 import { useIncomingFriendRequestsCount } from "@/hooks/useIncomingFriendRequestsCount";
@@ -33,46 +32,41 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     && Boolean(searchParams.get("targetUserId"))
     && Boolean(searchParams.get("friendView"));
   const matchesRouteOrChild = (route: string) => pathname === route || pathname?.startsWith(`${route}/`);
-  const hideFriendsRail =
-    pathname === DASHBOARD_ROUTES.overview
-    || matchesRouteOrChild(DASHBOARD_ROUTES.admin)
-    || matchesRouteOrChild(DASHBOARD_ROUTES.community)
-    || matchesRouteOrChild(DASHBOARD_ROUTES.rankUp)
-    || matchesRouteOrChild(DASHBOARD_ROUTES.exercises)
-    || matchesRouteOrChild(DASHBOARD_ROUTES.profile)
-    || matchesRouteOrChild(DASHBOARD_ROUTES.settings)
-    || matchesRouteOrChild(DASHBOARD_ROUTES.checkIn)
-    || matchesRouteOrChild(DASHBOARD_ROUTES.attendance)
-    || matchesRouteOrChild(DASHBOARD_ROUTES.checkinLegacy)
-    || pathname === "/dashboard/mobile/profile"
-    || pathname?.startsWith("/dashboard/mobile/profile/")
-    || false;
   const mobileRootScrollEnabled = !isFriendDrawerRoute;
   const showMobileNav = !isWorkoutInputFullscreen && !isTrainExerciseHistoryOpen;
   const lastLoggedActivityKeyRef = useRef("");
 
   const currentActivity = useMemo(() => {
     const friendView = searchParams.get("friendView");
+    const circleTab = searchParams.get("tab");
 
     if (matchesRouteOrChild(DASHBOARD_ROUTES.admin)) return { label: "Admin Panel", route: pathname || DASHBOARD_ROUTES.admin };
     if (matchesRouteOrChild(DASHBOARD_ROUTES.websiteInformation)) return { label: "Website Information", route: pathname || DASHBOARD_ROUTES.websiteInformation };
-    if (matchesRouteOrChild(DASHBOARD_ROUTES.community)) return { label: "Community Feed", route: pathname || DASHBOARD_ROUTES.community };
-    if (matchesRouteOrChild(DASHBOARD_ROUTES.rankUp)) return { label: "Completionist", route: pathname || DASHBOARD_ROUTES.rankUp };
-    if (matchesRouteOrChild(DASHBOARD_ROUTES.exercises)) return { label: "Exercise Library", route: pathname || DASHBOARD_ROUTES.exercises };
+    if (matchesRouteOrChild(DASHBOARD_ROUTES.rankUp)) return { label: "Progress", route: pathname || DASHBOARD_ROUTES.rankUp };
     if (matchesRouteOrChild(DASHBOARD_ROUTES.profile)) return { label: "Profile", route: pathname || DASHBOARD_ROUTES.profile };
     if (matchesRouteOrChild(DASHBOARD_ROUTES.settings)) return { label: "Settings", route: pathname || DASHBOARD_ROUTES.settings };
     if (matchesRouteOrChild(DASHBOARD_ROUTES.checkIn) || matchesRouteOrChild(DASHBOARD_ROUTES.checkinLegacy)) return { label: "Check-In", route: pathname || DASHBOARD_ROUTES.checkIn };
-    if (matchesRouteOrChild(DASHBOARD_ROUTES.friends)) return { label: "Friends", route: pathname || DASHBOARD_ROUTES.friends };
+    if (matchesRouteOrChild(DASHBOARD_ROUTES.circle)) {
+      const label = circleTab === "members"
+        ? "Circle Members"
+        : circleTab === "requests"
+          ? "Circle Requests"
+          : "Circle";
+      return { label, route: pathname || DASHBOARD_ROUTES.circle };
+    }
     if (matchesRouteOrChild(DASHBOARD_ROUTES.workoutHistory)) {
-      const label = friendView === "history"
-        ? "Friend History"
-        : friendView === "chart"
-          ? "Friend Chart"
-          : friendView === "checkin"
-            ? "Friend Check-In"
-            : friendView === "chat"
-              ? "Friend Chat"
-              : "Train";
+      const isLibrary = searchParams.get("library") === "1" && !friendView;
+      const label = isLibrary
+        ? "Exercise Library"
+        : friendView === "history"
+          ? "Friend History"
+          : friendView === "chart"
+            ? "Friend Chart"
+            : friendView === "checkin"
+              ? "Friend Check-In"
+              : friendView === "chat"
+                ? "Friend Chat"
+                : "Train";
       return { label, route: pathname || DASHBOARD_ROUTES.workoutHistory };
     }
 
@@ -127,9 +121,6 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     <MotionConfig transition={disableMotion ? { duration: 0 } : undefined}>
       <div className="app-atmosphere safe-area-shell h-app flex overflow-hidden nyaa-layout">
         <AtmosphericBackground />
-        {!isWorkoutInputFullscreen && !isTrainExerciseHistoryOpen && !hideFriendsRail && (
-          <DiscordFriendsRail incomingFriendRequestCount={incomingFriendRequestCount} />
-        )}
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           {!isWorkoutInputFullscreen && <ConnectivityBanner />}
           <div className="flex-1 flex min-w-0 flex-col overflow-hidden nyaa-content-area">
