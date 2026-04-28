@@ -391,11 +391,17 @@ function MobileNavBar({
           data-mobile-bottom-nav="true"
           className="relative flex items-end justify-around gap-0.5 border-t px-1 pt-1 pb-1.5 shadow-[0_-10px_28px_rgba(0,0,0,0.4)] backdrop-blur-md safe-area-bottom"
           style={{
-            borderTopColor: "var(--border)",
+            borderTopColor: "color-mix(in srgb, var(--ink-light) 72%, var(--border))",
             backgroundColor: "color-mix(in srgb, var(--ink-deep) 95%, transparent)",
           }}
         >
-          <div className="absolute inset-x-0 top-0 h-px" style={{ backgroundColor: "var(--border)" }} />
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 h-px"
+            style={{
+              background:
+                "linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--accent) 18%, var(--ink-light)) 20%, color-mix(in srgb, var(--ink-light) 84%, var(--border)) 50%, color-mix(in srgb, var(--accent) 18%, var(--ink-light)) 80%, transparent 100%)",
+            }}
+          />
 
           {/* Fixed primary nav items */}
           {primaryItems.map((item) => {

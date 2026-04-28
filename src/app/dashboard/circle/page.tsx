@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import PageLayout from "@/components/layout/PageLayout";
+import PageHeader from "@/components/layout/PageHeader";
 import DiscordFriendsRail from "@/components/navigation/DiscordFriendsRail";
 import { api } from "@/lib/api-client";
 import { useAuth } from "@/context/AuthContext";
@@ -36,6 +37,7 @@ interface BasicUser {
   id: string;
   name: string;
   username: string;
+  createdAt?: string | null;
   friendCode?: string | null;
   sessionCount?: number | null;
   checkInCount?: number | null;
@@ -214,17 +216,37 @@ function FeedTab({ userId }: { userId: string }) {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {Object.entries(grouped)
         .slice(0, 14)
-        .map(([day, dayLogs]) => (
+        .map(([day, dayLogs], groupIndex) => (
           <div key={day}>
-            <p className="mb-1.5 px-1 text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">
-              {formatDateWithPreference(
-                new Date(`${day}T00:00:00`),
-                settings.dateFormat || "dd-mmm-yyyy"
-              )}
-            </p>
+            {/* Date separator with visual weight */}
+            <div className={`flex items-center gap-2 ${groupIndex === 0 ? "mb-2" : "mb-2 mt-6"}`}>
+              <div
+                className="h-px flex-1"
+                style={{
+                  background:
+                    "color-mix(in srgb, var(--ink-light) 55%, transparent)",
+                }}
+              />
+              <p
+                className="shrink-0 text-[9px] font-semibold uppercase tracking-[0.12em]"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                {formatDateWithPreference(
+                  new Date(`${day}T00:00:00`),
+                  settings.dateFormat || "dd-mmm-yyyy"
+                )}
+              </p>
+              <div
+                className="h-px flex-1"
+                style={{
+                  background:
+                    "color-mix(in srgb, var(--ink-light) 55%, transparent)",
+                }}
+              />
+            </div>
             <div className="space-y-2">
               {dayLogs.map((log) => {
                 const sets = (
@@ -542,7 +564,7 @@ function MembersTab({ userId: _userId }: { userId: string }) {
 
                 {expanded && (
                   <div className="mt-2.5 space-y-2">
-                    <div className="grid grid-cols-3 gap-1.5">
+                    <div className="grid grid-cols-2 gap-1.5">
                       <div className="rounded-md px-2 py-1.5" style={microTileStyle}>
                         <p className="text-[10px] uppercase tracking-[0.08em] text-[color:var(--text-muted)]">
                           Sessions
@@ -572,7 +594,30 @@ function MembersTab({ userId: _userId }: { userId: string }) {
                               )
                             : "-"}
                         </p>
-                      </div>                    </div>
+                      </div>
+                      <div className="rounded-md px-2 py-1.5" style={microTileStyle}>
+                        <p className="text-[10px] uppercase tracking-[0.08em] text-[color:var(--text-muted)]">
+                          Member since
+                        </p>
+                        <p className="mt-0.5 text-[12px] font-semibold text-[color:var(--text-primary)]">
+                          {friend.createdAt
+                            ? formatDateWithPreference(friend.createdAt, dateFormat, timeZone)
+                            : "-"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="rounded-md px-2 py-1.5" style={microTileStyle}>
+                      <p className="text-[10px] uppercase tracking-[0.08em] text-[color:var(--text-muted)]">
+                        Last activity
+                      </p>
+                      <p className="mt-0.5 text-[12px] font-semibold text-[color:var(--text-primary)]">
+                        {friend.lastActivityAt
+                          ? `${friend.lastActivityLabel || "Active"} · ${formatRelative(friend.lastActivityAt)}`
+                          : stats?.lastSeenAt
+                            ? formatRelative(stats.lastSeenAt)
+                            : "No activity"}
+                      </p>
+                    </div>
                     <button
                       type="button"
                       onClick={() => void removeFriend(friend.id, friend.name)}
@@ -826,6 +871,7 @@ export default function CirclePage() {
       title="Circle"
       subtitle="Your cultivation circle"
       mobileContentPaddingClass="p-0 pb-0"
+      mobileScrollContainerEnabled={false}
     >
       <div className="flex min-h-0" style={{ minHeight: shellMinHeight }}>
         <div className="flex shrink-0">
@@ -837,23 +883,33 @@ export default function CirclePage() {
               className="flex min-h-0 flex-1 flex-col rounded-tl-2xl border"
               style={{ ...sectionShellStyle, minHeight: shellMinHeight }}
             >
-              {/* Tab bar */}
+              {/* Fixed top region: Page header + Tab bar */}
               <div
-                className="sticky top-0 z-10 border-b rounded-tl-2xl"
+                className="shrink-0 rounded-tl-2xl"
                 style={{
-                  borderBottomColor:
-                    "color-mix(in srgb, var(--ink-light) 42%, transparent)",
                   backgroundColor:
                     "color-mix(in srgb, var(--ink-deep) 94%, var(--ink-mid))",
                 }}
               >
-                <div className="flex">
+                <PageHeader
+                  eyebrow="Circle"
+                  title={tabs.find((t) => t.id === tab)?.label ?? "Feed"}
+                  className="px-3 pt-3 pb-2.5"
+                  noBorder
+                />
+                <div
+                  className="flex border-b"
+                  style={{
+                    borderBottomColor:
+                      "color-mix(in srgb, var(--ink-light) 42%, transparent)",
+                  }}
+                >
                   {tabs.map((t) => (
                     <button
                       key={t.id}
                       type="button"
                       onClick={() => setTab(t.id)}
-                      className="flex-1 py-3 text-[12px] font-semibold tracking-wide transition-colors"
+                      className="flex-1 py-2.5 text-[12px] font-semibold tracking-wide transition-colors"
                       style={{
                         color: tab === t.id ? "var(--text-primary)" : "var(--text-muted)",
                         borderBottom:
@@ -868,9 +924,10 @@ export default function CirclePage() {
                 </div>
               </div>
 
-              {/* Tab content */}
+              {/* Tab content — scrolls internally */}
               <div
-                className="flex-1 px-2 py-3"
+                data-mobile-scroll-container="true"
+                className="min-h-0 flex-1 overflow-y-auto scrollbar-hide px-2 py-3"
                 style={{
                   paddingBottom:
                     "calc(var(--mobile-nav-offset, calc(env(safe-area-inset-bottom, 0px) + 4.85rem)) + 0.75rem)",

@@ -12,9 +12,16 @@ export default function MobileBottomNav() {
   return (
     <nav
       data-mobile-bottom-nav="true"
-      className="mobile-bottom-nav-polish fixed bottom-0 left-0 right-0 z-50 border-t bg-ink-deep/98 pb-[max(env(safe-area-inset-bottom,0px),8px)] pt-2 pl-[max(env(safe-area-inset-left,0px),8px)] pr-[max(env(safe-area-inset-right,0px),8px)]"
-      style={{ borderTopColor: "var(--neon-border)" }}
+      className="mobile-bottom-nav-polish fixed bottom-0 left-0 right-0 z-50 border-t bg-ink-deep/98 pb-[max(env(safe-area-inset-bottom,0px),8px)] pt-2 pl-[max(env(safe-area-inset-left,0px),8px)] pr-[max(env(safe-area-inset-right,0px),8px)] relative"
+      style={{ borderTopColor: "color-mix(in srgb, var(--ink-light) 72%, var(--border))" }}
     >
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-px"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--accent) 18%, var(--ink-light)) 20%, color-mix(in srgb, var(--ink-light) 84%, var(--border)) 50%, color-mix(in srgb, var(--accent) 18%, var(--ink-light)) 80%, transparent 100%)",
+        }}
+      />
       <ul className="mx-auto grid max-w-xl gap-1 px-2" style={{ gridTemplateColumns: `repeat(${MOBILE_BOTTOM_TABS.length}, minmax(0, 1fr))` }}>
         {MOBILE_BOTTOM_TABS.map((tab) => {
           const active = pathname === tab.href;

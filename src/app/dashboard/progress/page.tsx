@@ -303,9 +303,9 @@ export default function ProgressPage() {
     <PageLayout
       title="Progress"
       subtitle="Coverage across all skill progressions"
-      mobileContentPaddingClass="p-2 pb-24"
+      mobileContentPaddingClass="px-2 pt-4 pb-24"
     >
-      <div className="space-y-3 px-0 py-2 sm:space-y-4 sm:py-3">
+      <div className="space-y-3 px-0 py-0 sm:space-y-4 sm:py-1">
         <section
           className="overflow-hidden rounded-xl border"
           style={{

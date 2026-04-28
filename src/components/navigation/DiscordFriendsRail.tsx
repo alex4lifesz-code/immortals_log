@@ -34,6 +34,12 @@ function initials(value: string) {
   return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
 }
 
+function toPossessive(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "Friend's";
+  return /s$/i.test(trimmed) ? `${trimmed}'` : `${trimmed}'s`;
+}
+
 function formatRelativeRecentDate(
   dateLike: string,
   dateFormat: "dd-mm-yyyy" | "dd-mmm-yyyy" | "dd-mm-yy" | "dd-mmm-yy" = "dd-mmm-yyyy",
@@ -749,7 +755,7 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                             </svg>
                           </button>
                           <h2 className="truncate text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--mist-light)" }}>
-                            {`${activeFriend.name} Train`}
+                            {`${toPossessive(activeFriend.name)} Train`}
                           </h2>
                         </div>
                       </div>
@@ -757,41 +763,6 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                     </div>
 
                     <div>
-                      <div
-                        className="mx-1 mt-1 mb-1.5 rounded-md border px-2.5 py-2"
-                        style={{
-                          borderColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)",
-                          backgroundColor: "rgba(35, 36, 40, 0.32)",
-                        }}
-                      >
-                        <div className="mb-1.5 flex items-center justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="text-[10px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>Friend Profile</p>
-                            <p className="truncate text-[12px] font-semibold" style={{ color: "var(--text-primary)" }}>{activeFriend.name}</p>
-                            <p className="truncate text-[10px]" style={{ color: "var(--text-secondary)" }}>@{activeFriend.username || activeFriend.name.toLowerCase().replace(/\s+/g, "")}</p>
-                          </div>
-                          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "var(--forest)" }} />
-                        </div>
-
-                        <div className="space-y-1 text-[10px]">
-                          {[
-                            { label: "Sessions", value: String(activeFriend.sessionCount ?? 0) },
-                            { label: "Check-Ins", value: String(activeFriend.checkInCount ?? 0) },
-                            { label: "Member Since", value: activeFriend.createdAt ? formatDateWithPreference(activeFriend.createdAt, dateFormat, timeZone) : "-" },
-                            { label: selectedActivityMeta.label, value: selectedActivityMeta.value },
-                          ].map((item) => (
-                            <div
-                              key={item.label}
-                              className="flex items-center justify-between gap-3 rounded-sm px-1.5 py-1"
-                              style={{ backgroundColor: "rgba(255, 255, 255, 0.02)" }}
-                            >
-                              <span style={{ color: "var(--text-muted)" }}>{item.label}</span>
-                              <span className="truncate text-right font-semibold" style={{ color: "var(--text-primary)" }}>{item.value}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
                       {friendActionItems.map((item) => {
                         const isAvailable = item.id === "history";
                         return (
@@ -871,7 +842,7 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                               </svg>
                             </button>
                             <h2 className="truncate text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--mist-light)" }}>
-                              {`${activeFriend.name} ${friendViewMode === "history" ? "History" : friendViewMode === "chart" ? "Chart" : friendViewMode === "chat" ? "Chat" : "Check-in"}`}
+                              {`${toPossessive(activeFriend.name)} ${friendViewMode === "history" ? "History" : friendViewMode === "chart" ? "Chart" : friendViewMode === "chat" ? "Chat" : "Check-in"}`}
                             </h2>
                           </div>
 

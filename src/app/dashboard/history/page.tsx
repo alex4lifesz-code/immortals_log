@@ -329,9 +329,6 @@ export default function HistoryPage() {
   const trainPageTitle = targetUserDisplayName
     ? `${targetUserDisplayName} Train ${friendView === "history" ? "History" : friendView === "chart" ? "Chart" : "Check-in"}`
     : "Train";
-  const trainQuickNavItems = [
-    { label: "Exercise Library", href: "/dashboard/train?library=1" },
-  ] as const;
   const subtitle = targetUserDisplayName
     ? `Review ${targetUserDisplayName}'s training logs and cultivation entries`
     : "Review your training logs and cultivation entries";
@@ -687,7 +684,7 @@ export default function HistoryPage() {
       <PageLayout
         title={trainPageTitle}
         subtitle={isFriendTrainOverlay ? undefined : subtitle}
-        mobileContentPaddingClass={isFriendTrainOverlay ? "p-0 pb-0" : "p-2 pb-0"}
+        mobileContentPaddingClass={isFriendTrainOverlay ? "p-0 pb-0" : "px-2 pt-4 pb-0"}
         mobileScrollContainerEnabled={!isFriendTrainOverlay}
       >
       <div className={`nyaa-history-page px-0 ${isFriendTrainOverlay ? "space-y-0" : "space-y-4"}`}>
@@ -741,9 +738,12 @@ export default function HistoryPage() {
                                 </svg>
                               </button>
                             ) : null}
-                            <h2 className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--mist-light)" }}>
-                              {trainPageTitle}
-                            </h2>
+                            <div>
+                              <p className="text-[9px] uppercase tracking-[0.1em]" style={{ color: "var(--text-muted)" }}>Training</p>
+                              <h2 className="mt-0.5 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-primary)" }}>
+                                {trainPageTitle}
+                              </h2>
+                            </div>
                           </div>
 
                           {friendView === "history" && (
@@ -777,33 +777,7 @@ export default function HistoryPage() {
                                 </button>
                               </div>
 
-                              {!isFriendTrainOverlay ? (
-                                <div className="mt-2 flex flex-wrap items-center gap-2">
-                                    {trainQuickNavItems.map((item) => {
-                                      const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
-                                      return (
-                                        <button
-                                          key={item.href}
-                                          type="button"
-                                          onClick={() => router.push(item.href)}
-                                          className="rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-[border-color,background-color,color]"
-                                          style={{
-                                            minWidth: "fit-content",
-                                            borderColor: isActive ? "var(--accent)" : "var(--border)",
-                                            backgroundColor: isActive
-                                              ? "color-mix(in srgb, var(--accent) 18%, var(--surface))"
-                                              : "var(--surface-hover)",
-                                            color: isActive ? "var(--accent)" : "var(--text-secondary)",
-                                            boxShadow: "none",
-                                          }}
-                                          aria-current={isActive ? "page" : undefined}
-                                        >
-                                          {item.label}
-                                        </button>
-                                      );
-                                    })}
-                                </div>
-                              ) : null}
+
                             </>
                           )}
                         </div>

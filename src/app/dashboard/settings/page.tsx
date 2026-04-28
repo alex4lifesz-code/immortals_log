@@ -32,9 +32,9 @@ export default function SettingsPage() {
     <PageLayout
       title="Settings"
       subtitle="Appearance, dates, and training"
-      mobileContentPaddingClass="p-2 pb-24"
+      mobileContentPaddingClass="px-2 pt-4 pb-24"
     >
-      <div className="space-y-3 px-0 py-2 sm:space-y-4 sm:py-3">
+      <div className="space-y-3 px-0 py-0 sm:space-y-4 sm:py-1">
 
         {/* ── Appearance ───────────────────────────────────── */}
         <SectionCard eyebrow="Appearance" title="Theme" description="Visual style applied across the entire app." badge="Visual">

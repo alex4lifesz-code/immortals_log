@@ -293,6 +293,7 @@ export default function DaoHallPage() {
       // Only send the current user's entry to enforce ownership
       const ownEntry = checkInModal.entries[user.id];
       const ownEntries = ownEntry ? { [user.id]: ownEntry } : {};
+      const shouldScrollToHistory = hasCheckInContent(ownEntry);
 
       // For far-future dates, save the user's personal note so it appears in Upcoming Notes
       const ownComment = (checkInModal.entries[user.id]?.comment?.trim()) || "";
@@ -349,9 +350,11 @@ export default function DaoHallPage() {
       setWeightPromptValue("");
 
       // Scroll to Sect Register to show the saved entry
-      setTimeout(() => {
-        sectRegisterRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 100);
+      if (shouldScrollToHistory) {
+        setTimeout(() => {
+          sectRegisterRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 100);
+      }
     } catch (err) {
       console.error("Failed to save check-in:", err);
     }
@@ -382,6 +385,7 @@ export default function DaoHallPage() {
       syncWeightFromLatestCheckin(user.id);
 
       const currentEntry = updatedEntries[user.id];
+      const shouldScrollToHistory = hasCheckInContent(currentEntry);
       if (currentEntry?.present) {
         // Check-in saved
       }
@@ -413,9 +417,11 @@ export default function DaoHallPage() {
 
       setCheckInModal(null);
 
-      setTimeout(() => {
-        sectRegisterRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 100);
+      if (shouldScrollToHistory) {
+        setTimeout(() => {
+          sectRegisterRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 100);
+      }
     } catch (err) {
       console.error("Failed to save check-in:", err);
     }
@@ -897,6 +903,14 @@ export default function DaoHallPage() {
 
   if (!user) return null;
 
+  const todayKey = formatDateLocal(new Date(), settings.timeZone);
+  const todayRow = checkInRows.find((row) => row.date === todayKey);
+  const todayEntry = todayRow?.entries[user.id] || { present: false, weight: "", comment: "" };
+  const hasTodayCheckIn = Boolean(todayEntry.present);
+  const hasTodayWeight = Boolean(todayEntry.weight?.toString().trim());
+  const shouldShowCheckInFab = !checkInModal && !showWeightPrompt && !(hasTodayCheckIn && hasTodayWeight);
+  const checkInFabMode: "checkin" | "weight" = hasTodayCheckIn ? "weight" : "checkin";
+
   const navButtonClass = "rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-[border-color,background-color,color]";
   const navButtonStyle = (active: boolean) => ({
     minWidth: "fit-content" as const,
@@ -917,13 +931,13 @@ export default function DaoHallPage() {
     <PageLayout
       title="Check-in"
       subtitle="Daily check-in and notes"
-      mobileContentPaddingClass="p-2 pb-24"
+      mobileContentPaddingClass="px-2 pt-4 pb-24"
       contentMaxWidthClass="max-w-[1220px]"
     >
       {loading ? (
         <PageSkeleton statCards={4} wideBlock rows={3} />
       ) : (
-        <div className="dao-modern-page space-y-4 px-0 py-2 sm:py-3">
+        <div className="dao-modern-page space-y-4 px-0 py-0 sm:py-1">
           {/* Upcoming Notes */}
           {scopedFutureNotes.length > 0 && (
             <GlowCard glow="none" hoverable={false} className={historySurfaceClass} style={historySurfaceStyle}>
@@ -985,6 +999,7 @@ export default function DaoHallPage() {
                 dateFormat={dateFormat}
                 timeZone={settings.timeZone}
                 calendarWeekStart={settings.calendarWeekStart}
+                currentUserId={user.id}
                 onManageNotes={undefined}
                 forceCompact
               />
@@ -1265,6 +1280,48 @@ export default function DaoHallPage() {
           </GlowCard>
         </div>
       )}
+
+      {shouldShowCheckInFab ? (
+        <motion.button
+          type="button"
+          initial={{ opacity: 0, y: 14, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 14, scale: 0.96 }}
+          transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+          onClick={() => handleDayClick(todayKey)}
+          className="fixed bottom-[calc(var(--mobile-nav-offset)+0.75rem)] right-3 z-[140] inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-[12px] font-semibold shadow-lg"
+          style={
+            checkInFabMode === "weight"
+              ? {
+                  borderColor: "color-mix(in srgb, var(--gold) 52%, transparent)",
+                  backgroundColor: "color-mix(in srgb, var(--gold) 18%, var(--ink-mid))",
+                  color: "var(--gold-glow)",
+                  boxShadow: "0 10px 22px color-mix(in srgb, var(--gold) 28%, transparent)",
+                }
+              : {
+                  borderColor: "color-mix(in srgb, var(--accent) 56%, transparent)",
+                  backgroundColor: "color-mix(in srgb, var(--accent) 20%, var(--ink-mid))",
+                  color: "var(--accent)",
+                  boxShadow: "0 10px 22px color-mix(in srgb, var(--accent) 24%, transparent)",
+                }
+          }
+          aria-label={checkInFabMode === "weight" ? "Log today's weight" : "Check in today"}
+        >
+          <span
+            className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px]"
+            style={{
+              backgroundColor:
+                checkInFabMode === "weight"
+                  ? "color-mix(in srgb, var(--gold) 24%, transparent)"
+                  : "color-mix(in srgb, var(--accent) 24%, transparent)",
+            }}
+          >
+            {checkInFabMode === "weight" ? "⚖" : "+"}
+          </span>
+          <span>{checkInFabMode === "weight" ? "Log Weight" : "Check-In"}</span>
+        </motion.button>
+      ) : null}
+
       <GlowModal
         isOpen={!!checkInModal}
         onClose={() => { setCheckInModal(null); }}
@@ -1276,10 +1333,24 @@ export default function DaoHallPage() {
         {checkInModal && (() => {
           const todayKey = formatDateLocal(new Date(), settings.timeZone);
           const isFarFuture = checkInModal.date > todayKey;
+          const isTodayEntry = checkInModal.date === todayKey;
           const currentUserEntry = user?.id
             ? (checkInModal.entries[user.id] || { present: false, weight: "", comment: "" })
             : { present: false, weight: "", comment: "" };
           const checkedInUsers = allUsers.filter((u) => checkInModal.entries[u.id]?.present);
+          const circleUsers = checkedInUsers.filter((u) => u.id !== user?.id);
+          const noteValue = user?.id ? (checkInModal.entries[user.id]?.comment || "") : "";
+          const noteCharCount = noteValue.length;
+          const previousWeightRecord = user?.id
+            ? checkInRows
+                .filter((row) => row.date < checkInModal.date)
+                .map((row) => {
+                  const raw = Number(row.entries[user.id]?.weight ?? "");
+                  return Number.isFinite(raw) && raw > 0 ? { date: row.date, weight: raw } : null;
+                })
+                .filter((entry): entry is { date: string; weight: number } => Boolean(entry))
+                .sort((a, b) => b.date.localeCompare(a.date))[0] ?? null
+            : null;
           const hasExistingFutureNote = Boolean(
             user?.id && futureNotes.some((n) => n.date === checkInModal.date && n.user.id === user.id)
           );
@@ -1299,32 +1370,13 @@ export default function DaoHallPage() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--accent)]">Editing Day</p>
-                    <h2 className="mt-1 truncate text-[16px] font-semibold text-[color:var(--text-primary)]">Edit Check-In</h2>
+                    <h2 className="truncate text-[16px] font-semibold text-[color:var(--text-primary)]">Check-In</h2>
                     <p className="mt-1 text-[12px] text-[color:var(--text-secondary)]">
-                      {formatDateWithPreference(checkInModal.date, dateFormat)}
+                      {formatDateWithPreference(checkInModal.date, dateFormat)} {isTodayEntry ? "(Today)" : ""}
                     </p>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span
-                      className="rounded-md border px-2 py-1 text-[10px] font-semibold"
-                      style={{
-                        borderColor: isFarFuture
-                          ? "color-mix(in srgb, var(--gold) 50%, transparent)"
-                          : currentUserEntry.present
-                            ? "color-mix(in srgb, var(--forest) 52%, transparent)"
-                            : "color-mix(in srgb, var(--accent) 52%, transparent)",
-                        backgroundColor: isFarFuture
-                          ? "color-mix(in srgb, var(--gold) 12%, transparent)"
-                          : currentUserEntry.present
-                            ? "color-mix(in srgb, var(--forest) 12%, transparent)"
-                            : "color-mix(in srgb, var(--accent) 14%, transparent)",
-                        color: isFarFuture ? "var(--gold-glow)" : currentUserEntry.present ? "var(--cloud-white)" : "var(--text-primary)",
-                      }}
-                    >
-                      {isFarFuture ? "Note Only" : currentUserEntry.present ? "Checked In" : "Ready"}
-                    </span>
                     <button
                       type="button"
                       onClick={() => setCheckInModal(null)}
@@ -1359,7 +1411,7 @@ export default function DaoHallPage() {
                     </div>
                   ) : null}
 
-                  {!isFarFuture && checkedInUsers.length > 0 ? (
+                  {!isFarFuture && circleUsers.length > 0 ? (
                     <section
                       className="rounded-xl border p-3"
                       style={{
@@ -1367,7 +1419,9 @@ export default function DaoHallPage() {
                         backgroundColor: "color-mix(in srgb, var(--ink-deep) 90%, var(--ink-mid))",
                       }}
                     >
-                      <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Checked in today</p>
+                      <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">
+                        {isTodayEntry ? "Circle today" : `Circle on ${formatDateWithPreference(checkInModal.date, dateFormat)}`}
+                      </p>
                       <div className="mt-2 flex flex-wrap gap-2">
                         {checkedInUsers.map((u) => (
                           <span
@@ -1397,31 +1451,31 @@ export default function DaoHallPage() {
                         backgroundColor: "color-mix(in srgb, var(--ink-deep) 90%, var(--ink-mid))",
                       }}
                     >
-                      <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Today’s check-in</p>
-                      <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">Mark your check-in here to record your presence for the day.</p>
-                      <label className="mt-3 block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Body weight</label>
-                      <input
-                        type="number"
-                        placeholder="Weight in kg"
-                        value={currentUserEntry.weight}
-                        onChange={(e) => updateCheckInModalEntry(user.id, "weight", e.target.value)}
-                        className="mt-2 w-full rounded-md border px-3 py-2 text-[12px] text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)]"
-                        style={{
-                          borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)",
-                          backgroundColor: "color-mix(in srgb, var(--ink-mid) 58%, var(--ink-deep))",
+                      <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">
+                        {isTodayEntry ? "Today" : `Check-In for ${formatDateWithPreference(checkInModal.date, dateFormat)}`}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCheckInTogglePulse(true);
+                          updateCheckInModalEntry(user.id, "present", !currentUserEntry.present);
                         }}
-                        min="0"
-                        max="500"
-                        step="0.1"
-                      />
-                      <div className="mt-3 flex items-center gap-2">
+                        className="mt-3 flex w-full items-center gap-2 rounded-lg border px-3 py-2.5 text-[12px] font-semibold transition-colors"
+                        style={{
+                          borderColor: currentUserEntry.present
+                            ? "color-mix(in srgb, var(--forest) 52%, transparent)"
+                            : "color-mix(in srgb, var(--accent) 52%, transparent)",
+                          backgroundColor: currentUserEntry.present
+                            ? "color-mix(in srgb, var(--forest) 12%, transparent)"
+                            : "color-mix(in srgb, var(--accent) 14%, transparent)",
+                          color: currentUserEntry.present ? "var(--cloud-white)" : "var(--text-primary)",
+                        }}
+                        aria-pressed={currentUserEntry.present}
+                      >
                         <motion.span
                           initial={false}
-                          animate={{
-                            scale: checkInTogglePulse ? [1, 1.18, 1] : 1,
-                            rotate: currentUserEntry.present ? [0, -8, 0] : 0,
-                          }}
-                          transition={{ duration: 0.28, ease: "easeOut" }}
+                          animate={{ scale: checkInTogglePulse ? [1, 1.12, 1] : 1 }}
+                          transition={{ duration: 0.26, ease: "easeOut" }}
                           className="flex h-5 w-5 shrink-0 items-center justify-center rounded border"
                           style={{
                             borderColor: currentUserEntry.present
@@ -1449,34 +1503,30 @@ export default function DaoHallPage() {
                             />
                           </motion.svg>
                         </motion.span>
+                        <span>{currentUserEntry.present ? "Checked in for this day" : "Mark check-in for this day"}</span>
+                      </button>
 
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCheckInTogglePulse(true);
-                            updateCheckInModalEntry(user.id, "present", !currentUserEntry.present);
-                          }}
-                          className="flex-1 rounded-lg border px-3 py-2.5 text-[12px] font-semibold transition-colors"
-                          style={{
-                            borderColor: currentUserEntry.present
-                              ? "color-mix(in srgb, var(--forest) 52%, transparent)"
-                              : "color-mix(in srgb, var(--accent) 52%, transparent)",
-                            backgroundColor: currentUserEntry.present
-                              ? "color-mix(in srgb, var(--forest) 12%, transparent)"
-                              : "color-mix(in srgb, var(--accent) 14%, transparent)",
-                            color: currentUserEntry.present ? "var(--cloud-white)" : "var(--text-primary)",
-                          }}
-                        >
-                          <motion.span
-                            initial={false}
-                            animate={{ scale: checkInTogglePulse ? [1, 1.03, 1] : 1 }}
-                            transition={{ duration: 0.26, ease: "easeOut" }}
-                            className="block"
-                          >
-                            {currentUserEntry.present ? "Checked In" : "Mark Check-In"}
-                          </motion.span>
-                        </button>
-                      </div>
+                      <label className="mt-3 block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Body weight</label>
+                      {previousWeightRecord ? (
+                        <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">
+                          Last: {previousWeightRecord.weight} kg on {formatDateWithPreference(previousWeightRecord.date, dateFormat)}
+                        </p>
+                      ) : null}
+                      <input
+                        type="number"
+                        placeholder="Weight in kg"
+                        value={currentUserEntry.weight}
+                        onChange={(e) => updateCheckInModalEntry(user.id, "weight", e.target.value)}
+                        className="mt-2 w-full rounded-md border px-3 py-2 text-[12px] text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)]"
+                        style={{
+                          borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)",
+                          backgroundColor: "color-mix(in srgb, var(--ink-mid) 58%, var(--ink-deep))",
+                        }}
+                        min="0"
+                        max="500"
+                        step="0.1"
+                        autoFocus
+                      />
                     </section>
                   ) : null}
 
@@ -1487,14 +1537,16 @@ export default function DaoHallPage() {
                       backgroundColor: "color-mix(in srgb, var(--ink-deep) 90%, var(--ink-mid))",
                     }}
                   >
-                    <label className="block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Personal note</label>
-                    <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">Keep it short and relevant to the day.</p>
+                    <div className="flex items-center justify-between gap-2">
+                      <label className="block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Personal note</label>
+                      <span className="text-[10px] text-[color:var(--text-muted)]">{noteCharCount}/280</span>
+                    </div>
                     <textarea
                       placeholder="Add a short note for this day"
-                      value={user?.id ? checkInModal.entries[user.id]?.comment || "" : ""}
+                      value={noteValue}
                       onChange={(e) => {
                         if (user?.id) {
-                          updateCheckInModalEntry(user.id, "comment", e.target.value);
+                          updateCheckInModalEntry(user.id, "comment", e.target.value.slice(0, 280));
                         }
                       }}
                       rows={4}
@@ -1504,6 +1556,7 @@ export default function DaoHallPage() {
                         backgroundColor: "color-mix(in srgb, var(--ink-mid) 58%, var(--ink-deep))",
                       }}
                     />
+                    <p className="mt-2 text-[10px] text-[color:var(--text-muted)]">Private note for your own tracking.</p>
                   </section>
 
                 </div>
@@ -1527,7 +1580,7 @@ export default function DaoHallPage() {
                         backgroundColor: "color-mix(in srgb, var(--ink-mid) 52%, transparent)",
                       }}
                     >
-                      Close
+                      Cancel
                     </button>
                     {hasExistingFutureNote ? (
                       <button
@@ -1592,7 +1645,43 @@ export default function DaoHallPage() {
                         backgroundColor: "color-mix(in srgb, var(--ink-mid) 52%, transparent)",
                       }}
                     >
-                      Close
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!user?.id) return;
+                        await api.post("/api/checkins", {
+                          date: checkInModal.date,
+                          entries: { [user.id]: { present: false, weight: "", comment: "" } },
+                        });
+                        setCheckInRows((prev) => {
+                          return prev
+                            .map((row) => {
+                              if (row.date !== checkInModal.date) return row;
+                              const nextEntries = { ...row.entries };
+                              delete nextEntries[user.id];
+                              if (Object.keys(nextEntries).length === 0) return null;
+                              return { ...row, entries: nextEntries };
+                            })
+                            .filter(Boolean) as typeof prev;
+                        });
+                        setCheckInUsersByDate((prev) => {
+                          const next = new Map(prev);
+                          const users = (next.get(checkInModal.date) || []).filter((entryId) => entryId !== user.id);
+                          if (users.length === 0) next.delete(checkInModal.date);
+                          else next.set(checkInModal.date, users);
+                          return next;
+                        });
+                        setCheckInModal(null);
+                      }}
+                      className="rounded-md border px-3 py-2.5 text-sm font-semibold text-[color:var(--danger-hover)]"
+                      style={{
+                        borderColor: "color-mix(in srgb, var(--danger) 46%, transparent)",
+                        backgroundColor: "color-mix(in srgb, var(--danger) 12%, transparent)",
+                      }}
+                    >
+                      Remove
                     </button>
                     <button
                       type="button"
@@ -1604,7 +1693,7 @@ export default function DaoHallPage() {
                         boxShadow: "0 8px 18px color-mix(in srgb, var(--accent) 24%, transparent)",
                       }}
                     >
-                      Submit
+                      {currentUserEntry.present ? "Save changes" : "Save"}
                     </button>
                   </div>
                 )}

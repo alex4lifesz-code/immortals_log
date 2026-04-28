@@ -141,6 +141,7 @@ export default function ProfilePage() {
   const adminItems = user?.role === "admin"
     ? [
         { id: "attendance", label: "Check-In Log", path: DASHBOARD_ROUTES.attendance, icon: "🗓️" },
+        { id: "exercise-db", label: "Exercise DB", path: "/dashboard/exercise-db", icon: "🗃️" },
         { id: "website-information", label: "Website Information", path: DASHBOARD_ROUTES.websiteInformation, icon: "🛠️" },
         { id: "admin", label: "Admin Panel", path: DASHBOARD_ROUTES.admin, icon: "🛡️" },
       ] as const
@@ -161,9 +162,9 @@ export default function ProfilePage() {
   return (
     <PageLayout
       title="Me"
-      mobileContentPaddingClass="p-2 pb-24"
+      mobileContentPaddingClass="px-2 pt-4 pb-24"
     >
-      <div className="space-y-3 px-0 py-2 sm:py-3">
+      <div className="space-y-3 px-0 py-0 sm:py-1">
         <section className="rounded-xl border p-3.5" style={sectionShellStyle}>
           <div className="mb-3 flex items-start justify-between gap-3 border-b pb-3" style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)" }}>
             <div>

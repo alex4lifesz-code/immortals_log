@@ -271,48 +271,50 @@ export function DashboardSidebar({
 
 // ── Calendar Day Cell ──
 
-function CalendarDay({ dayNumber, checkedInUsers, isToday, isPast, hasNote, hasFutureNote, compact, onClick }: { dayNumber: number; checkedInUsers: { id: string; name: string; color: string }[]; isToday: boolean; isPast?: boolean; hasNote?: boolean; hasFutureNote?: boolean; compact: boolean; onClick?: () => void }) {
+function CalendarDay({ dayNumber, checkedInUsers, isToday, isPast, hasNote, hasFutureNote, compact, onClick }: { dayNumber: number; checkedInUsers: { id: string; name: string; color: string; isCurrentUser: boolean }[]; isToday: boolean; isPast?: boolean; hasNote?: boolean; hasFutureNote?: boolean; compact: boolean; onClick?: () => void }) {
   const hasCheckIns = checkedInUsers.length > 0;
-  const visibleDots = checkedInUsers.slice(0, compact ? 3 : 4);
-  const extraCount = checkedInUsers.length - visibleDots.length;
-  const isFuture = !isPast && !isToday;
-  // Tier: today > future-note > past-checkin > past > future
-  const dayStyle = isToday
+  const hasCurrentUserCheckIn = checkedInUsers.some((entry) => entry.isCurrentUser);
+  const friendDots = checkedInUsers.filter((entry) => !entry.isCurrentUser);
+  const visibleDots = friendDots.slice(0, compact ? 3 : 4);
+  const extraCount = friendDots.length - visibleDots.length;
+
+  // Prioritize meaningful status over time-based dimming.
+  const dayStyle = isToday && hasCurrentUserCheckIn
     ? {
-        borderColor: "color-mix(in srgb, var(--accent) 78%, var(--border))",
-        backgroundColor: "color-mix(in srgb, var(--accent) 18%, var(--surface-hover))",
+        borderColor: "color-mix(in srgb, var(--accent) 90%, var(--border))",
+        backgroundColor: "color-mix(in srgb, var(--accent) 30%, var(--surface-hover))",
+        boxShadow: "0 0 0 2px color-mix(in srgb, var(--accent) 44%, transparent), 0 0 14px color-mix(in srgb, var(--accent) 32%, transparent)",
+      }
+    : isToday
+    ? {
+        borderColor: "color-mix(in srgb, var(--accent) 86%, var(--border))",
+        backgroundColor: "color-mix(in srgb, var(--accent) 22%, var(--surface-hover))",
         boxShadow: "0 0 0 2px color-mix(in srgb, var(--accent) 38%, transparent), 0 0 14px color-mix(in srgb, var(--accent) 28%, transparent)",
       }
-    : hasFutureNote
+    : hasCurrentUserCheckIn
       ? {
-          borderColor: "color-mix(in srgb, var(--gold) 38%, var(--border))",
-          backgroundColor: "color-mix(in srgb, var(--gold) 10%, var(--surface))",
+          borderColor: "color-mix(in srgb, var(--accent) 56%, var(--border))",
+          backgroundColor: "color-mix(in srgb, var(--accent) 14%, var(--surface))",
         }
-      : isPast && hasCheckIns
+      : hasCheckIns
         ? {
-            borderColor: "color-mix(in srgb, var(--jade-glow, var(--accent)) 32%, var(--border))",
-            backgroundColor: "color-mix(in srgb, var(--jade-glow, var(--accent)) 10%, color-mix(in srgb, var(--surface) 70%, black))",
+            borderColor: "color-mix(in srgb, var(--border) 88%, transparent)",
+            backgroundColor: "color-mix(in srgb, var(--surface-hover) 86%, var(--surface))",
           }
-        : isPast
+        : hasFutureNote
           ? {
-              borderColor: "color-mix(in srgb, var(--border) 40%, transparent)",
-              backgroundColor: "color-mix(in srgb, var(--surface) 55%, black)",
-              opacity: 0.78,
+              borderColor: "color-mix(in srgb, var(--gold) 38%, var(--border))",
+              backgroundColor: "color-mix(in srgb, var(--gold) 10%, var(--surface))",
             }
-          : isFuture && hasCheckIns
-            ? {
-                borderColor: "color-mix(in srgb, var(--border) 92%, transparent)",
-                backgroundColor: "color-mix(in srgb, var(--surface-hover) 86%, var(--surface))",
-              }
-            : {
-                borderColor: "color-mix(in srgb, var(--accent) 18%, var(--border))",
-                backgroundColor: "color-mix(in srgb, var(--surface-hover) 60%, var(--surface))",
-              };
+          : {
+              borderColor: "color-mix(in srgb, var(--border) 94%, transparent)",
+              backgroundColor: "color-mix(in srgb, var(--surface-hover) 62%, var(--surface))",
+            };
 
-  const dayNumberColor = isToday
+  const dayNumberColor = isToday || hasCurrentUserCheckIn
     ? "var(--text-primary)"
     : isPast
-      ? "var(--text-muted)"
+      ? "color-mix(in srgb, var(--text-secondary) 84%, var(--text-muted))"
       : "var(--text-primary)";
 
   return (
@@ -327,7 +329,6 @@ function CalendarDay({ dayNumber, checkedInUsers, isToday, isPast, hasNote, hasF
       <div className="flex h-full flex-col justify-between p-1.5">
         <div className="flex items-start justify-between gap-1">
           <span className={`${compact ? "text-xs" : "text-sm"} font-semibold`} style={{ color: dayNumberColor }}>{dayNumber}</span>
-          {isToday ? <span className="rounded-sm border px-1 py-[1px] text-[8px] font-bold uppercase tracking-[0.08em] shadow-sm" style={{ backgroundColor: "color-mix(in srgb, var(--accent) 22%, var(--background))", borderColor: "var(--accent)", color: "var(--accent)" }}>Now</span> : null}
         </div>
 
         <div className="flex items-end justify-between gap-1">
@@ -383,6 +384,7 @@ export function Calendar({
   forceCompact = false,
   timeZone,
   calendarWeekStart = "sunday",
+  currentUserId,
 }: {
   checkInUsersByDate: Map<string, string[]>;
   currentMonth: Date;
@@ -398,6 +400,7 @@ export function Calendar({
   forceCompact?: boolean;
   timeZone?: string;
   calendarWeekStart?: CalendarWeekStartOption;
+  currentUserId?: string;
 }) {
   const isMobile = useIsMobile();
   const compactMode = isMobile || forceCompact;
@@ -487,6 +490,7 @@ export function Calendar({
                       id: uid,
                       name: u?.name || "Unknown",
                       color: getUserCultivatorColor(uid, userColors),
+                      isCurrentUser: uid === currentUserId,
                     };
                   })
                 }
@@ -556,7 +560,7 @@ export function Calendar({
 
       <div className={`flex flex-wrap border-t pt-3 ${compactMode ? "gap-2 text-[10px]" : "gap-3 text-xs"}`} style={{ borderTopColor: "color-mix(in srgb, var(--border) 94%, transparent)" }}>
         <div className="flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
-          <div className="h-2.5 w-2.5 rounded-sm border" style={{ borderColor: "color-mix(in srgb, var(--accent) 68%, var(--border))", backgroundColor: "color-mix(in srgb, var(--accent) 12%, var(--surface-hover))" }} />
+          <div className="h-2.5 w-2.5 rounded-sm border" style={{ borderColor: "color-mix(in srgb, var(--accent) 86%, var(--border))", backgroundColor: "color-mix(in srgb, var(--accent) 22%, var(--surface-hover))" }} />
           <span>{t("Today", "normal")}</span>
         </div>
         <div className="flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
@@ -573,16 +577,13 @@ export function Calendar({
           </svg>
           <span>{t("Note", "normal")}</span>
         </div>
-        <div className="flex items-center gap-1" style={{ color: "var(--text-secondary)" }}>
-          {allUsers.slice(0, compactMode ? 3 : 4).map((u) => (
-            <span
-              key={u.id}
-              className="h-2 w-2 rounded-full"
-              style={{ backgroundColor: getUserCultivatorColor(u.id, userColors) }}
-              title={u.name}
-            />
-          ))}
-          <span className="ml-1">= {t("cultivator", "normal")}</span>
+        <div className="flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
+          <div className="h-2.5 w-2.5 rounded-sm border" style={{ borderColor: "color-mix(in srgb, var(--accent) 62%, var(--border))", backgroundColor: "color-mix(in srgb, var(--accent) 12%, var(--surface))" }} />
+          <span>{t("You", "normal")}</span>
+        </div>
+        <div className="flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
+          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "var(--cultivator-rose)" }} />
+          <span>{t("Friend", "normal")}</span>
         </div>
       </div>
     </div>
