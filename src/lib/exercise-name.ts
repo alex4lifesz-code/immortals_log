@@ -40,94 +40,61 @@ function tokenVariants(token: string): string[] {
   return Array.from(new Set([token, singular]));
 }
 
-export function getDeletedExerciseLabel(exercise: ExerciseNameLike): string {
-  const originalName = exercise.englishName?.trim()
+function getPrimaryExerciseName(exercise: ExerciseNameLike): string {
+  return exercise.englishName?.trim()
     || exercise.name?.trim()
     || exercise.vietnameseName?.trim()
     || exercise.wuxiaName?.trim()
     || "";
+}
 
-  return originalName ? `Deleted exercise — ${originalName}` : "Deleted exercise";
+export function getDeletedExerciseLabel(exercise: ExerciseNameLike): string {
+  const originalName = getPrimaryExerciseName(exercise);
+  return originalName ? `Deleted exercise - ${originalName}` : "Deleted exercise";
 }
 
 export function getExerciseDisplayName(
   exercise: ExerciseNameLike,
-  terminologyMode: TerminologyMode,
-  showForeignLanguage = true
+  _terminologyMode: TerminologyMode,
+  _showForeignLanguage = false
 ): string {
   if (isDeletedExerciseDescription(exercise.story)) {
     return getDeletedExerciseLabel(exercise);
   }
 
-  const englishName = exercise.englishName?.trim() || "";
-  const vietnameseName = exercise.vietnameseName?.trim() || "";
-  const canonicalName = exercise.name?.trim() || "";
-  const canonicalForeignName = exercise.wuxiaName?.trim() || "";
-  const normalName = englishName || canonicalName || vietnameseName || canonicalForeignName;
-  const wuxiaName = vietnameseName || canonicalForeignName || englishName || canonicalName;
-
-  const primary = terminologyMode === "normal"
-    ? normalName || wuxiaName || "Unknown Exercise"
-    : wuxiaName || normalName || "Unknown Technique";
-
-  if (!showForeignLanguage) return primary;
-
-  const preferredSecondary = terminologyMode === "normal" ? wuxiaName : normalName;
-  const secondary = [
-    preferredSecondary,
-    ...(terminologyMode === "normal" ? [vietnameseName, englishName] : [englishName, vietnameseName]),
-  ].find((candidate) => {
-    const value = candidate?.trim();
-    return value && value.toLowerCase() !== primary.toLowerCase();
-  }) || "";
-
-  if (!secondary) return primary;
-
-  return `${primary} (${secondary})`;
+  return getPrimaryExerciseName(exercise) || "Unknown Exercise";
 }
 
-/** Returns the type label to display based on the current terminology mode. */
 export function getTypeDisplayName(
   exercise: ExerciseTypeLike,
-  terminologyMode: TerminologyMode
+  _terminologyMode: TerminologyMode
 ): string {
-  if (terminologyMode === "normal") {
-    const raw = exercise.type?.trim() || exercise.wuxiaType?.trim() || "";
-    return raw ? t(raw, "normal") : "";
-  }
-  return exercise.wuxiaType?.trim() || exercise.type?.trim() || "";
+  const raw = exercise.type?.trim() || exercise.wuxiaType?.trim() || "";
+  return raw ? t(raw, "normal", "english") : "";
 }
 
-/** Returns the difficulty label to display based on the current terminology mode. */
 export function getDifficultyDisplayName(
   exercise: ExerciseDifficultyLike,
-  terminologyMode: TerminologyMode
+  _terminologyMode: TerminologyMode
 ): string {
-  if (terminologyMode === "normal") {
-    const raw = exercise.difficulty?.trim() || exercise.wuxiaDifficulty?.trim() || "";
-    return raw ? t(raw, "normal") : "";
-  }
-  return exercise.wuxiaDifficulty?.trim() || exercise.difficulty?.trim() || "";
+  const raw = exercise.difficulty?.trim() || exercise.wuxiaDifficulty?.trim() || "";
+  return raw ? t(raw, "normal", "english") : "";
 }
 
-/**
- * Returns the wuxia difficulty key to use for color/glow lookups.
- * Always uses wuxiaDifficulty when available so color mapping stays consistent.
- */
 export function getDifficultyColorKey(exercise: ExerciseDifficultyLike): string {
   return exercise.wuxiaDifficulty?.trim() || exercise.difficulty?.trim() || "";
 }
 
-/**
- * Returns the wuxia type key to use for icon/color lookups.
- * Always uses wuxiaType when available so icon mapping stays consistent.
- */
 export function getTypeColorKey(exercise: ExerciseTypeLike): string {
   return exercise.wuxiaType?.trim() || exercise.type?.trim() || "";
 }
 
 export function getExerciseSearchText(exercise: ExerciseNameLike): string {
-  return `${exercise.name || ""} ${exercise.wuxiaName || ""} ${exercise.englishName || ""} ${exercise.vietnameseName || ""}`.toLowerCase().trim();
+  return [exercise.englishName, exercise.name, exercise.vietnameseName, exercise.wuxiaName]
+    .filter((value): value is string => Boolean(value && value.trim()))
+    .join(" ")
+    .toLowerCase()
+    .trim();
 }
 
 export function matchesLooseSearch(haystack: string, query: string): boolean {
@@ -160,36 +127,19 @@ export function matchesLooseSearchInFields(query: string, fields: Array<string |
 
 export function getExerciseNameTooltip(
   exercise: ExerciseNameLike,
-  terminologyMode: TerminologyMode,
+  _terminologyMode: TerminologyMode,
   story?: string | null,
-  showForeignLanguage = true
+  _showForeignLanguage = false
 ): string {
   if (isDeletedExerciseDescription(story ?? exercise.story)) {
     return getDeletedExerciseLabel(exercise);
   }
 
-  const normalName = exercise.englishName?.trim() || exercise.name?.trim() || "";
-  const fantasyName = exercise.vietnameseName?.trim() || exercise.wuxiaName?.trim() || "";
-  const conventionalName = normalName || fantasyName;
-  const cultivationName = fantasyName || normalName;
-
   const lines: string[] = [];
+  const primaryName = getPrimaryExerciseName(exercise);
 
-  if (showForeignLanguage) {
-    if (terminologyMode === "normal") {
-      if (conventionalName) lines.push(`Conventional: ${conventionalName}`);
-      if (cultivationName) lines.push(`Cultivation: ${cultivationName}`);
-    } else {
-      if (cultivationName) lines.push(`Cultivation: ${cultivationName}`);
-      if (conventionalName) lines.push(`Conventional: ${conventionalName}`);
-    }
-  } else {
-    const single = terminologyMode === "normal" ? conventionalName : cultivationName;
-    if (single) lines.push(single);
-  }
-
-  if (lines.length === 0) {
-    return terminologyMode === "normal" ? "Unknown Exercise" : "Unknown Technique";
+  if (primaryName) {
+    lines.push(primaryName);
   }
 
   if (story?.trim()) {
@@ -197,5 +147,5 @@ export function getExerciseNameTooltip(
     lines.push(story.trim().slice(0, 180));
   }
 
-  return lines.join("\n");
+  return lines.join("\n") || "Unknown Exercise";
 }

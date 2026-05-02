@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import GlowButton from "@/components/ui/GlowButton";
 import { useIsMobile } from "@/context/AppContext";
 import type { CalendarWeekStartOption } from "@/context/DisplaySettingsContext";
@@ -29,67 +29,10 @@ export interface DashboardUpcomingNote {
   user: { id: string; name: string };
 }
 
-const CULTIVATOR_VAR_TO_RGB_VAR: Record<string, string> = {
-  "var(--cultivator-jade)": "--cultivator-jade-rgb",
-  "var(--cultivator-gold)": "--cultivator-gold-rgb",
-  "var(--cultivator-crimson)": "--cultivator-crimson-rgb",
-  "var(--cultivator-azure)": "--cultivator-azure-rgb",
-  "var(--cultivator-violet)": "--cultivator-violet-rgb",
-  "var(--cultivator-emerald)": "--cultivator-emerald-rgb",
-  "var(--cultivator-amber)": "--cultivator-amber-rgb",
-  "var(--cultivator-rose)": "--cultivator-rose-rgb",
-};
-
 export const DEFAULT_CULTIVATOR_COLORS = [
   "var(--cultivator-jade)", "var(--cultivator-gold)", "var(--cultivator-crimson)", "var(--cultivator-azure)",
   "var(--cultivator-violet)", "var(--cultivator-emerald)", "var(--cultivator-amber)", "var(--cultivator-rose)",
 ];
-
-export const CULTIVATOR_COLOR_OPTIONS = [
-  { name: "Jade", value: "var(--cultivator-jade)" },
-  { name: "Gold", value: "var(--cultivator-gold)" },
-  { name: "Crimson", value: "var(--cultivator-crimson)" },
-  { name: "Azure", value: "var(--cultivator-azure)" },
-  { name: "Violet", value: "var(--cultivator-violet)" },
-  { name: "Emerald", value: "var(--cultivator-emerald)" },
-  { name: "Amber", value: "var(--cultivator-amber)" },
-  { name: "Rose", value: "var(--cultivator-rose)" },
-];
-
-function hslToHex(h: number, s: number, l: number): string {
-  const sat = s / 100;
-  const light = l / 100;
-  const c = (1 - Math.abs(2 * light - 1)) * sat;
-  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
-  const m = light - c / 2;
-
-  let r = 0;
-  let g = 0;
-  let b = 0;
-
-  if (h < 60) {
-    r = c;
-    g = x;
-  } else if (h < 120) {
-    r = x;
-    g = c;
-  } else if (h < 180) {
-    g = c;
-    b = x;
-  } else if (h < 240) {
-    g = x;
-    b = c;
-  } else if (h < 300) {
-    r = x;
-    b = c;
-  } else {
-    r = c;
-    b = x;
-  }
-
-  const toHex = (value: number) => Math.round((value + m) * 255).toString(16).padStart(2, "0");
-  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-}
 
 function hashString(input: string): number {
   let hash = 0;
@@ -102,56 +45,37 @@ function hashString(input: string): number {
 
 export function getDeterministicCultivatorColor(userId: string): string {
   const hash = hashString(userId || "cultivator");
-  const hue = hash % 360;
-  const saturation = 62 + (hash % 18);
-  const lightness = 45 + ((hash >> 3) % 12);
-  return hslToHex(hue, saturation, lightness);
+  return DEFAULT_CULTIVATOR_COLORS[hash % DEFAULT_CULTIVATOR_COLORS.length];
+}
+
+/** Assigns each user a distinct color from the palette, cycling if needed.
+ *  Sort order determines who gets which color slot so the same group always
+ *  gets the same assignments regardless of fetch order. */
+export function assignCultivatorColors(userIds: string[]): Record<string, string> {
+  const sorted = [...userIds].sort();
+  return Object.fromEntries(
+    sorted.map((id, i) => [id, DEFAULT_CULTIVATOR_COLORS[i % DEFAULT_CULTIVATOR_COLORS.length]])
+  );
 }
 
 export function getUserCultivatorColor(userId: string, userColors: Record<string, string>): string {
-  return normalizeCultivatorColor(userColors[userId] || getDeterministicCultivatorColor(userId));
-}
-
-function cssColorToHex(colorValue: string, fallbackHex: string): string {
-  if (colorValue.startsWith("#") && colorValue.length === 7) return colorValue.toLowerCase();
-  if (typeof window === "undefined" || typeof document === "undefined") return fallbackHex;
-
-  const probe = document.createElement("span");
-  probe.style.color = colorValue;
-  document.body.appendChild(probe);
-  const resolved = window.getComputedStyle(probe).color;
-  document.body.removeChild(probe);
-
-  const numbers = resolved.match(/\d+(?:\.\d+)?/g);
-  if (!numbers || numbers.length < 3) return fallbackHex;
-
-  const [r, g, b] = numbers.slice(0, 3).map((v) => Number(v));
-  if ([r, g, b].some((v) => Number.isNaN(v))) return fallbackHex;
-
-  const toHex = (value: number) => Math.max(0, Math.min(255, Math.round(value))).toString(16).padStart(2, "0");
-  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  return userColors[userId] || getDeterministicCultivatorColor(userId);
 }
 
 export function normalizeCultivatorColor(colorValue: string | undefined): string {
   if (!colorValue) return DEFAULT_CULTIVATOR_COLORS[0];
   const normalized = colorValue.trim();
-  if (CULTIVATOR_VAR_TO_RGB_VAR[normalized]) return normalized;
   if (normalized.startsWith("var(")) return normalized;
   if (normalized.startsWith("#") && normalized.length === 7) return normalized.toLowerCase();
-  if (normalized.startsWith("cultivator-")) {
-    const cssVarRef = `var(--${normalized})`;
-    if (CULTIVATOR_VAR_TO_RGB_VAR[cssVarRef]) return cssVarRef;
-  }
+  if (normalized.startsWith("cultivator-")) return `var(--${normalized})`;
   return normalized;
 }
 
 export function getCultivatorGlowColor(colorValue: string | undefined, alpha = 0.5): string {
   const normalized = normalizeCultivatorColor(colorValue);
-  const rgbVar = CULTIVATOR_VAR_TO_RGB_VAR[normalized];
-  if (rgbVar) return `rgb(var(${rgbVar}) / ${alpha})`;
-  if (normalized.startsWith("#") && normalized.length === 7) {
-    const alphaHex = Math.round(alpha * 255).toString(16).padStart(2, "0");
-    return `${normalized}${alphaHex}`;
+  const pct = Math.round(alpha * 100);
+  if (normalized.startsWith("var(") || normalized.startsWith("#")) {
+    return `color-mix(in srgb, ${normalized} ${pct}%, transparent)`;
   }
   return `rgb(255 255 255 / ${alpha})`;
 }
@@ -166,19 +90,15 @@ export function DashboardSidebar({
   stats,
   allUsers,
   userColors,
-  onColorChange,
   currentUserId,
   isAdmin,
 }: {
   stats: { sessions: number; techniques: number; streak: number };
   allUsers: DashboardUser[];
   userColors: Record<string, string>;
-  onColorChange: (userId: string, color: string) => void | Promise<void>;
   currentUserId?: string;
   isAdmin?: boolean;
 }) {
-  const [adminColorEditEnabled, setAdminColorEditEnabled] = useState(false);
-
   return (
     <div className="dashboard-sidebar-shell">
       <div className="dashboard-sidebar-scroll sidebar-scroll space-y-3">
@@ -208,56 +128,18 @@ export function DashboardSidebar({
         </div>
         {allUsers.length > 0 && (
           <div className="dashboard-sidebar-card space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="text-xs text-jade-glow uppercase">Cultivator Colours</h3>
-              {isAdmin && (
-                <button
-                  type="button"
-                  onClick={() => setAdminColorEditEnabled((v) => !v)}
-                  className={`rounded-full border px-2 py-0.5 text-[10px] transition-colors ${
-                    adminColorEditEnabled
-                      ? "border-jade-glow/45 bg-jade-deep/20 text-jade-light"
-                      : "border-ink-light/55 text-mist-mid hover:text-mist-light"
-                  }`}
-                  title="Enable editing other users' cultivator colors"
-                >
-                  Admin Edit {adminColorEditEnabled ? "On" : "Off"}
-                </button>
-              )}
-            </div>
+            <h3 className="text-xs text-jade-glow uppercase">Cultivators</h3>
             <div className="space-y-2">
               {allUsers.map((u) => {
-                const selectedColor = getUserCultivatorColor(u.id, userColors);
-                const isSelf = currentUserId === u.id;
-                const canEdit = isSelf || (Boolean(isAdmin) && adminColorEditEnabled);
-                const pickerValue = cssColorToHex(selectedColor, getDeterministicCultivatorColor(u.id));
+                const isSelf = u.id === currentUserId;
+                const color = isSelf ? "var(--cultivator-self)" : "var(--cultivator-friend)";
                 return (
-                  <div key={u.id} className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span
-                        className="w-2 h-2 rounded-full shrink-0"
-                        style={{ backgroundColor: selectedColor }}
-                      />
-                      <span className="text-xs text-mist-light truncate">{u.name}</span>
-                    </div>
-                    {canEdit ? (
-                      <div className="flex items-center gap-1 shrink-0">
-                        <input
-                          type="color"
-                          value={pickerValue}
-                          onChange={(e) => void onColorChange(u.id, e.target.value)}
-                          className="h-4 w-6 cursor-pointer rounded border border-ink-light/60 bg-transparent p-0"
-                          title={isSelf ? "Pick your cultivator color" : `Pick color for ${u.name}`}
-                          aria-label={isSelf ? "Pick your cultivator color" : `Pick color for ${u.name}`}
-                        />
-                      </div>
-                    ) : (
-                      <span
-                        className="h-3.5 w-3.5 rounded-full shrink-0 border border-ink-light/50"
-                        style={{ backgroundColor: selectedColor }}
-                        title="Cultivator selected color"
-                      />
-                    )}
+                  <div key={u.id} className="flex items-center gap-1.5 min-w-0">
+                    <span
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ backgroundColor: color }}
+                    />
+                    <span className="text-xs text-mist-light truncate">{u.name}</span>
                   </div>
                 );
               })}
@@ -271,10 +153,11 @@ export function DashboardSidebar({
 
 // ── Calendar Day Cell ──
 
-function CalendarDay({ dayNumber, checkedInUsers, isToday, isPast, hasNote, hasFutureNote, compact, onClick }: { dayNumber: number; checkedInUsers: { id: string; name: string; color: string; isCurrentUser: boolean }[]; isToday: boolean; isPast?: boolean; hasNote?: boolean; hasFutureNote?: boolean; compact: boolean; onClick?: () => void }) {
+function CalendarDay({ dayNumber, checkedInUsers, hasCurrentUserWeight, isToday, isPast, hasNote, hasFutureNote, isOutsideMonth, compact, onClick }: { dayNumber: number; checkedInUsers: { id: string; name: string; color: string; isCurrentUser: boolean }[]; hasCurrentUserWeight?: boolean; isToday: boolean; isPast?: boolean; hasNote?: boolean; hasFutureNote?: boolean; isOutsideMonth?: boolean; compact: boolean; onClick?: () => void }) {
   const hasCheckIns = checkedInUsers.length > 0;
   const hasCurrentUserCheckIn = checkedInUsers.some((entry) => entry.isCurrentUser);
-  const isElapsedDay = Boolean(isPast && !isToday);
+  const isElapsedDay = Boolean(isPast && !isToday && !hasCurrentUserCheckIn);
+  const isUserPastCheckInDay = Boolean(isPast && !isToday && hasCurrentUserCheckIn);
   const friendDots = checkedInUsers.filter((entry) => !entry.isCurrentUser);
   const visibleDots = friendDots.slice(0, compact ? 3 : 4);
   const extraCount = friendDots.length - visibleDots.length;
@@ -282,15 +165,15 @@ function CalendarDay({ dayNumber, checkedInUsers, isToday, isPast, hasNote, hasF
   // Prioritize meaningful status over time-based dimming.
   const baseDayStyle = isToday && hasCurrentUserCheckIn
     ? {
-        borderColor: "color-mix(in srgb, var(--accent) 90%, var(--border))",
-        backgroundColor: "color-mix(in srgb, var(--accent) 30%, var(--surface-hover))",
-        boxShadow: "0 0 0 2px color-mix(in srgb, var(--accent) 44%, transparent), 0 0 14px color-mix(in srgb, var(--accent) 32%, transparent)",
+        borderColor: "color-mix(in srgb, var(--accent) 88%, var(--border))",
+        backgroundColor: "color-mix(in srgb, var(--accent) 24%, var(--surface))",
+        boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--accent) 32%, transparent), 0 0 8px color-mix(in srgb, var(--accent) 34%, transparent), 0 0 14px color-mix(in srgb, var(--accent) 22%, transparent)",
       }
     : isToday
     ? {
-        borderColor: "color-mix(in srgb, var(--accent) 86%, var(--border))",
-        backgroundColor: "color-mix(in srgb, var(--accent) 22%, var(--surface-hover))",
-        boxShadow: "0 0 0 2px color-mix(in srgb, var(--accent) 38%, transparent), 0 0 14px color-mix(in srgb, var(--accent) 28%, transparent)",
+        borderColor: "color-mix(in srgb, var(--accent) 84%, var(--border))",
+        backgroundColor: "color-mix(in srgb, var(--accent) 18%, var(--surface))",
+        boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--accent) 26%, transparent), 0 0 7px color-mix(in srgb, var(--accent) 28%, transparent), 0 0 12px color-mix(in srgb, var(--accent) 18%, transparent)",
       }
     : hasCurrentUserCheckIn
       ? {
@@ -316,11 +199,30 @@ function CalendarDay({ dayNumber, checkedInUsers, isToday, isPast, hasNote, hasF
     ? {
         ...baseDayStyle,
         borderStyle: "dashed" as const,
-        backgroundImage: "repeating-linear-gradient(-45deg, color-mix(in srgb, var(--text-muted) 12%, transparent) 0px, color-mix(in srgb, var(--text-muted) 12%, transparent) 4px, transparent 4px, transparent 8px)",
+        borderColor: "color-mix(in srgb, var(--gold) 44%, var(--border))",
+        backgroundImage: "repeating-linear-gradient(-45deg, color-mix(in srgb, var(--gold) 16%, transparent) 0px, color-mix(in srgb, var(--gold) 16%, transparent) 4px, transparent 4px, transparent 8px)",
+        boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--gold) 10%, transparent)",
       }
+    : isUserPastCheckInDay
+      ? {
+          ...baseDayStyle,
+          backgroundImage: "repeating-linear-gradient(-45deg, color-mix(in srgb, var(--accent) 12%, transparent) 0px, color-mix(in srgb, var(--accent) 12%, transparent) 4px, transparent 4px, transparent 8px)",
+        }
     : baseDayStyle;
 
-  const dayNumberColor = isToday || hasCurrentUserCheckIn
+  const resolvedDayStyle = isOutsideMonth
+    ? {
+        ...dayStyle,
+        borderColor: "color-mix(in srgb, var(--border) 84%, transparent)",
+        backgroundColor: "color-mix(in srgb, var(--surface) 92%, transparent)",
+        boxShadow: "none",
+        opacity: 0.62,
+      }
+    : dayStyle;
+
+  const dayNumberColor = isOutsideMonth
+    ? "color-mix(in srgb, var(--text-muted) 92%, var(--surface))"
+    : isToday || hasCurrentUserCheckIn
     ? "var(--text-primary)"
     : isPast
       ? "color-mix(in srgb, var(--text-secondary) 84%, var(--text-muted))"
@@ -333,20 +235,26 @@ function CalendarDay({ dayNumber, checkedInUsers, isToday, isPast, hasNote, hasF
       whileTap={{ scale: 0.985 }}
       onClick={onClick}
       className="dao-modern-calendar-day relative aspect-square w-full overflow-hidden rounded-[10px] border text-left transition-all duration-150"
-      style={dayStyle}
+      style={resolvedDayStyle}
     >
       <div className="flex h-full flex-col justify-between p-1.5">
         <div className="flex items-start justify-between gap-1">
           <span className={`${compact ? "text-xs" : "text-sm"} font-semibold`} style={{ color: dayNumberColor }}>{dayNumber}</span>
-          {isElapsedDay ? (
-            compact ? (
-              <span className="text-[9px] leading-none" style={{ color: "var(--text-muted)" }} title="Elapsed">⌛</span>
-            ) : (
-              <span className="rounded px-1 py-0.5 text-[8px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)", backgroundColor: "color-mix(in srgb, var(--text-muted) 14%, transparent)" }}>
-                Elapsed
+          <div className="flex flex-col items-end gap-0.5">
+            {hasCurrentUserWeight ? (
+              <span
+                className="inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full border px-1 text-[8px] font-semibold leading-none"
+                title="Weight recorded"
+                style={{
+                  borderColor: "color-mix(in srgb, var(--mountain-blue-glow) 56%, var(--border))",
+                  backgroundColor: "color-mix(in srgb, var(--mountain-blue-glow) 18%, var(--surface))",
+                  color: "var(--mountain-blue-glow)",
+                }}
+              >
+                W
               </span>
-            )
-          ) : null}
+            ) : null}
+          </div>
         </div>
 
         <div className="flex items-end justify-between gap-1">
@@ -389,6 +297,7 @@ function CalendarDay({ dayNumber, checkedInUsers, isToday, isPast, hasNote, hasF
 
 export function Calendar({
   checkInUsersByDate,
+  currentUserWeightDates,
   currentMonth,
   setCurrentMonth,
   dayNotes,
@@ -405,6 +314,7 @@ export function Calendar({
   currentUserId,
 }: {
   checkInUsersByDate: Map<string, string[]>;
+  currentUserWeightDates?: Set<string>;
   currentMonth: Date;
   setCurrentMonth: (d: Date) => void;
   dayNotes?: Map<string, string>;
@@ -427,7 +337,7 @@ export function Calendar({
   const firstDayOfMonth = new Date(Date.UTC(currentYear, currentMonthNumber - 1, 1)).getUTCDay();
   const weekStartsOn = resolveCalendarWeekStartsOn(calendarWeekStart, timeZone);
   const leadingBlankDays = (firstDayOfMonth - weekStartsOn + 7) % 7;
-  const days: Array<{ dateStr: string; dayNumber: number } | null> = [];
+  const days: Array<{ dateStr: string; dayNumber: number; isOutsideMonth: boolean }> = [];
   const today = formatDateLocalForZone(new Date(), timeZone);
   const weekdayHeaders = weekStartsOn === 1
     ? ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -487,13 +397,27 @@ export function Calendar({
     goToPreviousMonth();
   };
 
-  for (let i = 0; i < leadingBlankDays; i++) {
-    days.push(null);
+  const previousMonthNumber = currentMonthNumber === 1 ? 12 : currentMonthNumber - 1;
+  const previousYear = currentMonthNumber === 1 ? currentYear - 1 : currentYear;
+  const nextMonthNumber = currentMonthNumber === 12 ? 1 : currentMonthNumber + 1;
+  const nextYear = currentMonthNumber === 12 ? currentYear + 1 : currentYear;
+  const daysInPreviousMonth = new Date(Date.UTC(previousYear, previousMonthNumber, 0)).getUTCDate();
+
+  for (let i = leadingBlankDays; i > 0; i--) {
+    const dayNumber = daysInPreviousMonth - i + 1;
+    const dateStr = `${previousYear}-${String(previousMonthNumber).padStart(2, "0")}-${String(dayNumber).padStart(2, "0")}`;
+    days.push({ dateStr, dayNumber, isOutsideMonth: true });
   }
 
   for (let i = 1; i <= daysInMonth; i++) {
     const dateStr = `${currentYear}-${String(currentMonthNumber).padStart(2, "0")}-${String(i).padStart(2, "0")}`;
-    days.push({ dateStr, dayNumber: i });
+    days.push({ dateStr, dayNumber: i, isOutsideMonth: false });
+  }
+
+  const trailingDays = (7 - (days.length % 7)) % 7;
+  for (let i = 1; i <= trailingDays; i++) {
+    const dateStr = `${nextYear}-${String(nextMonthNumber).padStart(2, "0")}-${String(i).padStart(2, "0")}`;
+    days.push({ dateStr, dayNumber: i, isOutsideMonth: true });
   }
 
   return (
@@ -546,30 +470,29 @@ export function Calendar({
       <div className={`grid grid-cols-7 ${compactMode ? "gap-1" : "gap-2"} min-w-0`}>
         {days.map((date, i) => (
           <div key={i}>
-            {date ? (
-              <CalendarDay
-                dayNumber={date.dayNumber}
-                checkedInUsers={
-                  (checkInUsersByDate.get(date.dateStr) || []).map(uid => {
-                    const u = allUsers.find(usr => usr.id === uid);
-                    return {
-                      id: uid,
-                      name: u?.name || "Unknown",
-                      color: getUserCultivatorColor(uid, userColors),
-                      isCurrentUser: uid === currentUserId,
-                    };
-                  })
-                }
-                isToday={date.dateStr === today}
-                isPast={date.dateStr < today}
-                hasNote={dayNotes?.has(date.dateStr)}
-                hasFutureNote={futureNoteDates?.has(date.dateStr)}
-                compact={compactMode}
-                onClick={() => onDayClick?.(date.dateStr)}
-              />
-            ) : (
-              <div className="aspect-square" />
-            )}
+            <CalendarDay
+              dayNumber={date.dayNumber}
+              checkedInUsers={
+                (checkInUsersByDate.get(date.dateStr) || []).map(uid => {
+                  const u = allUsers.find(usr => usr.id === uid);
+                  const isCurrentUser = uid === currentUserId;
+                  return {
+                    id: uid,
+                    name: u?.name || "Unknown",
+                    color: isCurrentUser ? "var(--cultivator-self)" : "var(--cultivator-friend)",
+                    isCurrentUser,
+                  };
+                })
+              }
+              hasCurrentUserWeight={currentUserWeightDates?.has(date.dateStr)}
+              isToday={date.dateStr === today}
+              isPast={date.dateStr < today}
+              hasNote={dayNotes?.has(date.dateStr)}
+              hasFutureNote={futureNoteDates?.has(date.dateStr)}
+              isOutsideMonth={date.isOutsideMonth}
+              compact={compactMode}
+              onClick={() => onDayClick?.(date.dateStr)}
+            />
           </div>
         ))}
       </div>
@@ -594,7 +517,7 @@ export function Calendar({
 
           <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
             {upcomingNotes.map((note) => {
-              const noteColor = getUserCultivatorColor(note.user.id, userColors);
+              const noteColor = note.user.id === currentUserId ? "var(--cultivator-self)" : "var(--cultivator-friend)";
               return (
                 <button
                   key={note.id}
@@ -626,7 +549,7 @@ export function Calendar({
 
       <div className={`flex flex-wrap border-t pt-3 ${compactMode ? "gap-2 text-[10px]" : "gap-3 text-xs"}`} style={{ borderTopColor: "color-mix(in srgb, var(--border) 94%, transparent)" }}>
         <div className="flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
-          <div className="h-2.5 w-2.5 rounded-sm border" style={{ borderStyle: "dashed", borderColor: "color-mix(in srgb, var(--text-muted) 72%, var(--border))", backgroundColor: "color-mix(in srgb, var(--text-muted) 8%, var(--surface))" }} />
+          <div className="h-2.5 w-2.5 rounded-sm border" style={{ borderStyle: "dashed", borderColor: "color-mix(in srgb, var(--gold) 48%, var(--border))", backgroundColor: "color-mix(in srgb, var(--gold) 12%, var(--surface))" }} />
           <span>{t("Elapsed", "normal")}</span>
         </div>
         <div className="flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
@@ -648,11 +571,24 @@ export function Calendar({
           <span>{t("Note", "normal")}</span>
         </div>
         <div className="flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
-          <div className="h-2.5 w-2.5 rounded-sm border" style={{ borderColor: "color-mix(in srgb, var(--accent) 62%, var(--border))", backgroundColor: "color-mix(in srgb, var(--accent) 12%, var(--surface))" }} />
+          <div
+            className="inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full border px-1 text-[8px] font-semibold leading-none"
+            style={{
+              borderColor: "color-mix(in srgb, var(--mountain-blue-glow) 56%, var(--border))",
+              backgroundColor: "color-mix(in srgb, var(--mountain-blue-glow) 18%, var(--surface))",
+              color: "var(--mountain-blue-glow)",
+            }}
+          >
+            W
+          </div>
+          <span>{t("Weight", "normal")}</span>
+        </div>
+        <div className="flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
+          <div className="h-2.5 w-2.5 rounded-sm border" style={{ borderColor: "color-mix(in srgb, var(--cultivator-self) 62%, var(--border))", backgroundColor: "color-mix(in srgb, var(--cultivator-self) 12%, var(--surface))" }} />
           <span>{t("You", "normal")}</span>
         </div>
         <div className="flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
-          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "var(--cultivator-rose)" }} />
+          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "var(--cultivator-friend)" }} />
           <span>{t("Friend", "normal")}</span>
         </div>
       </div>

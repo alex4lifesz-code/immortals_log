@@ -191,7 +191,11 @@ export default function WorkoutHistoryDetailPage() {
         ? DASHBOARD_ROUTES.trainingLogHistory
         : DASHBOARD_ROUTES.workoutHistory;
     if (!targetUserId) return base;
-    return `${base}?targetUserId=${encodeURIComponent(targetUserId)}`;
+    const params = new URLSearchParams({ targetUserId });
+    if (fromHistoryPage) {
+      params.set("friendView", "history");
+    }
+    return `${base}?${params.toString()}`;
   }, [fromExercisesPage, fromHistoryPage, targetUserId]);
 
   const backLabel = fromExercisesPage ? "Back to Exercise Library" : fromHistoryPage ? "Back to History" : "Back to Train";

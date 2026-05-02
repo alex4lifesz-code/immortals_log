@@ -1020,9 +1020,10 @@ export default function CirclePage() {
 
   const setTab = useCallback(
     (newTab: Tab) => {
-      router.replace(`${pathname}?tab=${newTab}`, { scroll: false });
+      if (newTab === tab) return;
+      router.push(`${pathname}?tab=${newTab}`, { scroll: false });
     },
-    [pathname, router]
+    [pathname, router, tab]
   );
 
   const tabs: Array<{ id: Tab; label: string }> = [

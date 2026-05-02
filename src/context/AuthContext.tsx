@@ -111,7 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Best-effort — cookie will expire anyway
     }
     localStorage.removeItem("cultivation-nav-state");
-    router.push("/");
+    router.replace("/");
   }, [router]);
 
   return (

@@ -5,7 +5,7 @@ import { useAppContext } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { useState, memo, useCallback, useMemo, useEffect, useRef, type ReactNode } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { loadUserPhysique } from "@/lib/user-physique";
 import { kgToLbs } from "@/lib/unit-conversion";
 import { api } from "@/lib/api-client";
@@ -82,6 +82,7 @@ function MobileNavBar({
   const terminologyMode = settings.terminologyMode ?? "fantasy";
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const isAdmin = user?.role === "admin";
   const items = sortNavItemsByIdOrder(
     getSortedNavItems().filter((item) => item.id !== "main" && (isAdmin ? true : !ADMIN_NAV_IDS.has(item.id))),
@@ -158,15 +159,15 @@ function MobileNavBar({
       }
     }
 
-    const isSameRoute = pathname === path || pathname?.startsWith(`${path}/`);
-    if (isSameRoute) {
-      router.replace(path, { scroll: false });
+    const currentQuery = searchParams.toString();
+    const isExactRoute = pathname === path;
+    if (isExactRoute && !currentQuery) {
       router.refresh();
       return;
     }
 
     router.push(path);
-  }, [pathname, router, setMobileSidebarOpen]);
+  }, [pathname, router, searchParams, setMobileSidebarOpen]);
 
   const handleMenuToggle = useCallback(() => {
     setMobileSidebarOpen(false);

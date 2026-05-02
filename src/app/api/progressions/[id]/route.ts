@@ -3,10 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { serializeDayAssignments } from "@/lib/constants";
 import { withAuth } from "@/lib/auth/middleware";
 import { canViewUserData } from "@/lib/friends";
-import {
-  applyProgressionExerciseTranslation,
-  getUserLanguageMode,
-} from "@/lib/exercise-translation-db";
 import { resolveVietnameseValue } from "@/lib/auto-vietnamese";
 
 // GET /api/progressions/[id] — get a shared progression exercise with selected user's progress
@@ -29,8 +25,6 @@ export const GET = withAuth(async (request, { auth, params }) => {
       userId = targetUserId;
     }
 
-    const languageMode = await getUserLanguageMode(auth.userId);
-
     const exercise = await prisma.progressionExercise.findFirst({
       where: {
         id,
@@ -40,14 +34,10 @@ export const GET = withAuth(async (request, { auth, params }) => {
         ],
       },
       include: {
-        translation: true,
         tiers: {
-          include: { translation: true },
           orderBy: { level: "asc" },
         },
-        variations: {
-          include: { translation: true },
-        },
+        variations: true,
         modifiers: true,
         userProgress: {
           where: { userId },
@@ -62,25 +52,7 @@ export const GET = withAuth(async (request, { auth, params }) => {
       return ApiErrors.notFound("Exercise not found");
     }
 
-    const { translation, ...baseExercise } = exercise;
-    const localizedExercise = applyProgressionExerciseTranslation(
-      baseExercise,
-      translation,
-      languageMode
-    );
-
-    const englishName = translation?.englishName || baseExercise.name;
-    const vietnameseName = translation?.vietnameseName || baseExercise.wuxiaName || baseExercise.name;
-
-    return apiSuccess({
-      exercise: {
-        ...localizedExercise,
-        name: englishName,
-        wuxiaName: vietnameseName,
-        englishName,
-        vietnameseName,
-      },
-    });
+    return apiSuccess({ exercise });
   } catch (error) {
     console.error("Progression fetch error:", error);
     return ApiErrors.internal("Failed to fetch progression");
@@ -327,20 +299,13 @@ export const PATCH = withAuth(async (request, { auth, params }) => {
       await prisma.progressionExercise.findUnique({ where: { id } });
     }
 
-    // Re-fetch with full includes
-    const languageMode = await getUserLanguageMode(auth.userId);
-
     const full = await prisma.progressionExercise.findUnique({
       where: { id },
       include: {
-        translation: true,
         tiers: {
-          include: { translation: true },
           orderBy: { level: "asc" },
         },
-        variations: {
-          include: { translation: true },
-        },
+        variations: true,
         modifiers: true,
         userProgress: {
           where: { userId: auth.userId },
@@ -353,14 +318,7 @@ export const PATCH = withAuth(async (request, { auth, params }) => {
       return ApiErrors.notFound("Exercise not found");
     }
 
-    const { translation, ...baseFull } = full;
-    const localizedExercise = applyProgressionExerciseTranslation(
-      baseFull,
-      translation,
-      languageMode
-    );
-
-    return apiSuccess({ exercise: localizedExercise });
+    return apiSuccess({ exercise: full });
   } catch (error) {
     console.error("Progression update error:", error);
     return ApiErrors.internal("Failed to update progression exercise");

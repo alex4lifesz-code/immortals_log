@@ -21,7 +21,15 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [languageMode, setLanguageMode] = useState<LanguageMode>("english");
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, isAuthenticated, isLoading } = useAuth();
+
+  // Redirect already-authenticated users away from the login page
+  // (e.g. when the browser back button is used after login)
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.replace("/dashboard");
+    }
+  }, [isLoading, isAuthenticated, router]);
 
   // Apply the saved palette while keeping the same shared canvas.
   useEffect(() => {
@@ -92,9 +100,9 @@ export default function LoginPage() {
       }
 
       if (userData && !userData.onboardingCompleted && !userData.onboardingSkipped) {
-        router.push("/onboarding");
+        router.replace("/onboarding");
       } else {
-        router.push("/dashboard");
+        router.replace("/dashboard");
       }
     } catch {
       setError("Cannot connect to server/database. Please verify the server URL and your network connection.");

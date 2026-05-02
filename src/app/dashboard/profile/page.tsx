@@ -130,10 +130,7 @@ export default function ProfilePage() {
   }, [latestCheckinWeight, weightUnit]);
 
   const pageItems = [
-    { id: "checkin", label: "Check-In", path: DASHBOARD_ROUTES.checkIn, icon: "📝" },
-    { id: "train", label: "Train", path: DASHBOARD_ROUTES.workoutHistory, icon: "🕘" },
     { id: "progress", label: "Progress", path: DASHBOARD_ROUTES.rankUp, icon: "✅" },
-    { id: "circle", label: "Circle", path: DASHBOARD_ROUTES.circle, icon: "👥" },
     { id: "exercises", label: "Exercise Library", path: "/dashboard/train?library=1", icon: "📚" },
     { id: "settings", label: "Settings", path: DASHBOARD_ROUTES.settings, icon: "⚙️" },
   ] as const;
@@ -168,13 +165,8 @@ export default function ProfilePage() {
         <section className="rounded-xl border p-3.5" style={sectionShellStyle}>
           <div className="mb-3 flex items-start justify-between gap-3 border-b pb-3" style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)" }}>
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--accent)" }}>Me</p>
               <h2 className="mt-1 text-[18px] font-semibold" style={{ color: "var(--text-primary)" }}>Profile & preferences</h2>
-              <p className="mt-1 text-[12px]" style={{ color: "var(--text-secondary)" }}>A flatter Train-style home for your account, settings, and personal tools.</p>
             </div>
-            <span className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--accent)" }}>
-              Active
-            </span>
           </div>
 
           {user && (
@@ -197,7 +189,6 @@ export default function ProfilePage() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[14px] font-semibold" style={{ color: "var(--text-primary)" }}>{user.name}</p>
                   <p className="truncate text-[11px]" style={{ color: "var(--text-muted)" }}>@{user.username}</p>
-                  <p className="mt-1 text-[12px]" style={{ color: "var(--text-secondary)" }}>Open your profile, review your stats, and keep preferences in sync.</p>
                 </div>
               </div>
 
@@ -233,7 +224,6 @@ export default function ProfilePage() {
 
         <section className="rounded-xl border p-3.5" style={sectionShellStyle}>
           <div className="mb-2 border-b pb-2" style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)" }}>
-            <p className="text-[10px] uppercase tracking-[0.14em]" style={{ color: "var(--accent)" }}>Navigation</p>
             <h3 className="mt-1 text-[15px] font-semibold" style={{ color: "var(--text-primary)" }}>Pages</h3>
           </div>
           <div className="grid grid-cols-1 gap-2">

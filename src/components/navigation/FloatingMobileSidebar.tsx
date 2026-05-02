@@ -4,12 +4,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAppContext } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { memo, useCallback, useEffect, useRef } from "react";
 import { t, tHint } from "@/lib/terminology";
 import UserPhysiqueButton from "@/components/navigation/UserPhysiqueButton";
 
 const ADMIN_NAV_IDS = new Set(["attendance", "admin", "website-information"]);
+const ME_NAV_ALLOWED_IDS = new Set(["rank-up", "exercise-db", "settings"]);
 
 function FloatingMobileSidebar() {
   const { getSortedNavItems, isMobile, mobileSidebarOpen, setMobileSidebarOpen } = useAppContext();
@@ -18,9 +19,10 @@ function FloatingMobileSidebar() {
   const terminologyMode = settings.terminologyMode ?? "fantasy";
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const isAdmin = user?.role === "admin";
   const items = getSortedNavItems().filter((item) => (isAdmin ? true : !ADMIN_NAV_IDS.has(item.id)));
-  const mainItems = items.filter((item) => !ADMIN_NAV_IDS.has(item.id));
+  const mainItems = items.filter((item) => !ADMIN_NAV_IDS.has(item.id) && ME_NAV_ALLOWED_IDS.has(item.id));
   const adminItems = isAdmin ? items.filter((item) => ADMIN_NAV_IDS.has(item.id)) : [];
   const touchStartXRef = useRef<number | null>(null);
   const touchCurrentXRef = useRef<number | null>(null);
@@ -44,9 +46,9 @@ function FloatingMobileSidebar() {
       }
     }
 
-    const isSameRoute = pathname === path || pathname?.startsWith(`${path}/`);
-    if (isSameRoute) {
-      router.replace(path, { scroll: false });
+    const currentQuery = searchParams.toString();
+    const isExactRoute = pathname === path;
+    if (isExactRoute && !currentQuery) {
       router.refresh();
       setMobileSidebarOpen(false);
       return;
@@ -54,7 +56,7 @@ function FloatingMobileSidebar() {
 
     router.push(path);
     setMobileSidebarOpen(false);
-  }, [pathname, router, setMobileSidebarOpen]);
+  }, [pathname, router, searchParams, setMobileSidebarOpen]);
 
   const onSidebarTouchStart = (event: React.TouchEvent<HTMLElement>) => {
     touchStartXRef.current = event.touches[0]?.clientX ?? null;

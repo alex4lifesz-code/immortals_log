@@ -286,21 +286,16 @@ const VI_TO_EN_MAP: Record<string, string> = Object.fromEntries(
   Object.entries(EN_TO_VI_MAP).map(([en, vi]) => [vi, en]),
 );
 
-export function translateEnglishToLanguage(englishText: string, languageMode: LanguageMode): string {
-  if (languageMode === "english") return englishText;
-  return EN_TO_VI_MAP[englishText] ?? englishText;
-}
-
-export function getLearningHintFromEnglish(englishText: string, languageMode: LanguageMode): string | null {
-  if (languageMode === "english") {
-    return EN_TO_VI_MAP[englishText] ?? null;
-  }
+export function translateEnglishToLanguage(englishText: string, _languageMode: LanguageMode): string {
   return englishText;
 }
 
-export function translateLooseText(text: string, languageMode: LanguageMode): string {
-  if (languageMode === "english") return text;
-  return EN_TO_VI_MAP[text] ?? text;
+export function getLearningHintFromEnglish(_englishText: string, _languageMode: LanguageMode): string | null {
+  return null;
+}
+
+export function translateLooseText(text: string, _languageMode: LanguageMode): string {
+  return text;
 }
 
 export function reverseTranslateLooseText(text: string): string | null {

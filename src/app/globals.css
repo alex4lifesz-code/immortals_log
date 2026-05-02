@@ -200,23 +200,19 @@
     --theme-preview-cherry-3: #ef8fbc;
     --theme-preview-cherry-4: #f7f2f5;
 
-    /* Cultivator colors */
-    --cultivator-jade: #3a8f8f;
-    --cultivator-jade-rgb: 58 143 143;
-    --cultivator-gold: #d4a843;
-    --cultivator-gold-rgb: 212 168 67;
-    --cultivator-crimson: #c9433e;
-    --cultivator-crimson-rgb: 201 67 62;
-    --cultivator-azure: #4a9eff;
-    --cultivator-azure-rgb: 74 158 255;
-    --cultivator-violet: #9b59b6;
-    --cultivator-violet-rgb: 155 89 182;
-    --cultivator-emerald: #2ecc71;
-    --cultivator-emerald-rgb: 46 204 113;
-    --cultivator-amber: #f39c12;
-    --cultivator-amber-rgb: 243 156 18;
-    --cultivator-rose: #e74c8c;
-    --cultivator-rose-rgb: 231 76 140;
+    /* Cultivator colors — derived from current theme palette */
+    --cultivator-jade: var(--accent);
+    --cultivator-gold: var(--gold);
+    --cultivator-crimson: var(--crimson);
+    --cultivator-azure: var(--mountain-blue-glow);
+    --cultivator-violet: color-mix(in srgb, var(--accent) 50%, var(--crimson));
+    --cultivator-emerald: color-mix(in srgb, var(--accent) 65%, var(--gold));
+    --cultivator-amber: var(--gold-glow);
+    --cultivator-rose: color-mix(in srgb, var(--crimson) 60%, var(--mountain-blue-glow));
+    /* Friends — use the active theme accent */
+    --cultivator-friend: var(--accent);
+    /* Self — warm gold, complementary to the cool accent */
+    --cultivator-self: var(--gold-glow);
     --system-bar-fallback: #0d0f14;
 
     /* Motion + surface system */

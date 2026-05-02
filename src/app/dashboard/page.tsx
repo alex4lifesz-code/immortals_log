@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import PageLayout from "@/components/layout/PageLayout";
 import { useAppContext } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
-import { useIncomingFriendRequestsCount } from "@/hooks/useIncomingFriendRequestsCount";
+import type { CalendarWeekStartOption } from "@/context/DisplaySettingsContext";
 import { api } from "@/lib/api-client";
 import { formatDateWithPreference, getTodayInTimeZone, normalizeDateOnlyKey, resolveCalendarWeekStartsOn } from "@/lib/constants";
 import { DASHBOARD_ROUTES } from "@/lib/navigation";
@@ -23,12 +23,6 @@ type PublicUser = {
   id: string;
   name?: string | null;
   username?: string | null;
-};
-
-type CirclePreviewItem = {
-  userId: string;
-  name: string;
-  dateKey: string;
 };
 
 type WeightTrend = {
@@ -69,23 +63,175 @@ function computeStreak(checkins: CheckIn[], userId: string, todayKey: string): n
   return streak;
 }
 
-function relativeTimeFromDateKeys(dateKey: string, todayKey: string): string {
-  const diffMs = new Date(`${todayKey}T00:00:00.000Z`).getTime() - new Date(`${dateKey}T00:00:00.000Z`).getTime();
-  const diffDays = Math.max(0, Math.floor(diffMs / (24 * 60 * 60 * 1000)));
-  if (diffDays === 0) return "today";
-  if (diffDays === 1) return "yesterday";
-  if (diffDays < 7) return `${diffDays} days ago`;
-  if (diffDays < 14) return "1 week ago";
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-  if (diffDays < 60) return "1 month ago";
-  return `${Math.floor(diffDays / 30)} months ago`;
-}
-
 function friendNameFallback(entry: PublicUser | undefined, userId: string): string {
   const primary = (entry?.name || entry?.username || "").trim();
   if (primary) return primary;
   const shortId = userId.slice(0, 6);
   return shortId ? `Friend ${shortId}` : "Friend";
+}
+
+function buildWeekDays(
+  todayKey: string,
+  weekOffset: number,
+  calendarWeekStart: CalendarWeekStartOption,
+  timeZone: string,
+  checkinDates: Set<string>
+) {
+  const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
+  const weekStartsOn = resolveCalendarWeekStartsOn(calendarWeekStart, timeZone);
+  const todayDow = new Date(`${todayKey}T00:00:00Z`).getUTCDay();
+  const offsetToStart = (todayDow - weekStartsOn + 7) % 7;
+  const startKey = shiftDateKey(todayKey, -offsetToStart + weekOffset * 7);
+  return Array.from({ length: 7 }, (_, i) => {
+    const key = shiftDateKey(startKey, i);
+    const dow = new Date(key + "T00:00:00Z").getUTCDay();
+    return { key, label: DAY_LABELS[dow], active: checkinDates.has(key), isToday: key === todayKey };
+  });
+}
+
+function buildWeekLabel(
+  weekOffset: number,
+  todayKey: string,
+  calendarWeekStart: CalendarWeekStartOption,
+  timeZone: string
+): string {
+  if (weekOffset === 0) return "This week";
+  if (weekOffset === -1) return "Last week";
+  const weekStartsOn = resolveCalendarWeekStartsOn(calendarWeekStart, timeZone);
+  const todayDow = new Date(`${todayKey}T00:00:00Z`).getUTCDay();
+  const offsetToStart = (todayDow - weekStartsOn + 7) % 7;
+  const startKey = shiftDateKey(todayKey, -offsetToStart + weekOffset * 7);
+  const endKey = shiftDateKey(startKey, 6);
+  return `${startKey.slice(5)} \u2013 ${endKey.slice(5)}`;
+}
+
+interface WeekCardProps {
+  name?: string;
+  checkinDates: Set<string>;
+  todayKey: string;
+  calendarWeekStart: CalendarWeekStartOption;
+  timeZone: string;
+  activeColor: string;
+  inactiveColor: string;
+  borderColor: string;
+  dayLabelColor: string;
+  shellStyle: React.CSSProperties;
+}
+
+function WeekCard({
+  name,
+  checkinDates,
+  todayKey,
+  calendarWeekStart,
+  timeZone,
+  activeColor,
+  inactiveColor,
+  borderColor,
+  dayLabelColor,
+  shellStyle,
+}: WeekCardProps) {
+  const [offset, setOffset] = useState(0);
+  const cardRef = useRef<HTMLElement | null>(null);
+  const txStart = useRef<number | null>(null);
+  const tyStart = useRef<number | null>(null);
+  const isHoriz = useRef<boolean | null>(null);
+
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el) return;
+    const onStart = (e: TouchEvent) => {
+      txStart.current = e.touches[0].clientX;
+      tyStart.current = e.touches[0].clientY;
+      isHoriz.current = null;
+    };
+    const onMove = (e: TouchEvent) => {
+      if (txStart.current === null || tyStart.current === null) return;
+      if (isHoriz.current === null) {
+        const dx = Math.abs(e.touches[0].clientX - txStart.current);
+        const dy = Math.abs(e.touches[0].clientY - tyStart.current);
+        if (dx < 5 && dy < 5) return;
+        isHoriz.current = dx > dy;
+      }
+      if (isHoriz.current) e.preventDefault();
+    };
+    const onEnd = (e: TouchEvent) => {
+      if (txStart.current === null || !isHoriz.current) {
+        txStart.current = null; tyStart.current = null; isHoriz.current = null;
+        return;
+      }
+      const dx = e.changedTouches[0].clientX - txStart.current;
+      txStart.current = null; tyStart.current = null; isHoriz.current = null;
+      if (Math.abs(dx) < 40) return;
+      if (dx > 0) setOffset((p) => Math.max(-2, p - 1));
+      else setOffset((p) => Math.min(0, p + 1));
+    };
+    el.addEventListener("touchstart", onStart, { passive: true });
+    el.addEventListener("touchmove", onMove, { passive: false });
+    el.addEventListener("touchend", onEnd, { passive: true });
+    return () => {
+      el.removeEventListener("touchstart", onStart);
+      el.removeEventListener("touchmove", onMove);
+      el.removeEventListener("touchend", onEnd);
+    };
+  }, []);
+
+  const weekLabel = buildWeekLabel(offset, todayKey, calendarWeekStart, timeZone);
+  const days = buildWeekDays(todayKey, offset, calendarWeekStart, timeZone, checkinDates);
+
+  return (
+    <section ref={cardRef} className="rounded-xl border p-3" style={shellStyle}>
+      <div className="mb-2.5 flex items-center justify-between">
+        <div className="flex flex-col gap-0.5">
+          {name && (
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>{name}</p>
+          )}
+          <div className="flex items-center gap-0.5">
+            <button
+              onClick={() => setOffset((p) => Math.max(-2, p - 1))}
+              className="flex h-5 w-5 items-center justify-center rounded text-[14px]"
+              style={{ color: "var(--text-muted)" }}
+              aria-label="Previous week"
+            >&#8249;</button>
+            <p className="text-[10px] font-medium" style={{ color: "var(--text-muted)" }}>{weekLabel}</p>
+            <button
+              onClick={() => setOffset((p) => Math.min(0, p + 1))}
+              className="flex h-5 w-5 items-center justify-center rounded text-[14px]"
+              style={{ color: "var(--text-muted)", opacity: offset >= 0 ? 0.3 : 1 }}
+              aria-label="Next week"
+              disabled={offset >= 0}
+            >&#8250;</button>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 text-[10px]" style={{ color: "var(--text-muted)" }}>
+          <span className="flex items-center gap-1">
+            <span className="inline-block h-2 w-2 rounded-sm" style={{ backgroundColor: activeColor }} />
+            Logged
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block h-2 w-2 rounded-sm border" style={{ borderColor }} />
+            Today
+          </span>
+        </div>
+      </div>
+      <div className="flex items-end gap-1.5">
+        {days.map(({ key, label, active, isToday }) => (
+          <div key={key} className="flex flex-1 flex-col items-center gap-1">
+            <div
+              className="w-full rounded-md"
+              style={{
+                height: 28,
+                backgroundColor: active ? activeColor : inactiveColor,
+                border: isToday ? `1.5px solid ${borderColor}` : "1px solid transparent",
+              }}
+            />
+            <span className="text-[9px] font-medium" style={{ color: isToday ? dayLabelColor : "var(--text-muted)" }}>
+              {label}
+            </span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 export default function DashboardHomePage() {
@@ -98,12 +244,10 @@ export default function DashboardHomePage() {
   const [streak, setStreak] = useState<number | null>(null);
   const [latestWeight, setLatestWeight] = useState<number | null>(null);
   const [activeCheckinDates, setActiveCheckinDates] = useState<Set<string>>(new Set());
-  const [friendWeekSections, setFriendWeekSections] = useState<FriendWeekSection[]>([]);
+  const [friendInfoList, setFriendInfoList] = useState<Array<{ userId: string; name: string }>>([]);
+  const [friendCheckinData, setFriendCheckinData] = useState<Map<string, Set<string>>>(new Map());
   const [weightTrend, setWeightTrend] = useState<WeightTrend | null>(null);
   const [cultivationDay, setCultivationDay] = useState<number | null>(null);
-  const [circlePreview, setCirclePreview] = useState<CirclePreviewItem[]>([]);
-
-  const { count: incomingRequestCount } = useIncomingFriendRequestsCount(user?.id);
 
   const todayKey = useMemo(() => getTodayInTimeZone(settings.timeZone), [settings.timeZone]);
 
@@ -114,9 +258,9 @@ export default function DashboardHomePage() {
       setLatestWeight(null);
       setWeightTrend(null);
       setCultivationDay(null);
-      setCirclePreview([]);
       setActiveCheckinDates(new Set());
-      setFriendWeekSections([]);
+      setFriendInfoList([]);
+      setFriendCheckinData(new Map());
       return;
     }
     let cancelled = false;
@@ -128,7 +272,6 @@ export default function DashboardHomePage() {
         if (cancelled) return;
         const raw: CheckIn[] = Array.isArray(payload?.checkins) ? payload.checkins : [];
         const users = Array.isArray(usersPayload?.users) ? usersPayload.users : [];
-        const userById = new Map(users.map((entry) => [entry.id, entry]));
         const mine = raw.filter((c) => c.userId === user.id && c.present !== false);
         const friendRows = users
           .filter((entry) => entry.id && entry.id !== user.id)
@@ -156,25 +299,8 @@ export default function DashboardHomePage() {
         setCheckInCount(mine.length);
         setStreak(computeStreak(raw, user.id, todayKey));
         setActiveCheckinDates(new Set(mineDateKeys));
-
-        const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
-        const weekStartsOn = resolveCalendarWeekStartsOn(settings.calendarWeekStart, settings.timeZone);
-        const todayDow = new Date(`${todayKey}T00:00:00Z`).getUTCDay();
-        const offset = (todayDow - weekStartsOn + 7) % 7;
-        const startKey = shiftDateKey(todayKey, -offset);
-        const sections = friendRows.map((friend) => {
-          const activeDates = friendCheckinDatesByUser.get(friend.userId) || new Set<string>();
-          return {
-            userId: friend.userId,
-            name: friend.name,
-            days: Array.from({ length: 7 }, (_, i) => {
-              const key = shiftDateKey(startKey, i);
-              const dow = new Date(key + "T00:00:00Z").getUTCDay();
-              return { key, label: DAY_LABELS[dow], active: activeDates.has(key), isToday: key === todayKey };
-            }),
-          };
-        });
-        setFriendWeekSections(sections);
+        setFriendInfoList(friendRows);
+        setFriendCheckinData(new Map(friendCheckinDatesByUser));
 
         const earliest = [...mineDateKeys].sort()[0];
         if (earliest) {
@@ -209,26 +335,6 @@ export default function DashboardHomePage() {
         } else {
           setWeightTrend(null);
         }
-
-        const latestByFriend = new Map<string, string>();
-        for (const entry of raw) {
-          if (!entry.userId || entry.userId === user.id || entry.present === false) continue;
-          const key = normalizeDateOnlyKey(entry.date ?? null);
-          if (!key) continue;
-          const existing = latestByFriend.get(entry.userId);
-          if (!existing || key > existing) {
-            latestByFriend.set(entry.userId, key);
-          }
-        }
-        const preview = [...latestByFriend.entries()]
-          .sort((a, b) => b[1].localeCompare(a[1]))
-          .slice(0, 3)
-          .map(([friendId, dateKey]) => ({
-            userId: friendId,
-            name: friendNameFallback(userById.get(friendId), friendId),
-            dateKey,
-          }));
-        setCirclePreview(preview);
       })
       .catch(() => {
         if (!cancelled) {
@@ -237,26 +343,13 @@ export default function DashboardHomePage() {
           setLatestWeight(null);
           setWeightTrend(null);
           setCultivationDay(null);
-          setCirclePreview([]);
           setActiveCheckinDates(new Set());
-          setFriendWeekSections([]);
+          setFriendInfoList([]);
+          setFriendCheckinData(new Map());
         }
       });
     return () => { cancelled = true; };
   }, [settings.calendarWeekStart, settings.timeZone, todayKey, user?.id]);
-
-  const weekDays = useMemo(() => {
-    const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
-    const weekStartsOn = resolveCalendarWeekStartsOn(settings.calendarWeekStart, settings.timeZone);
-    const todayDow = new Date(`${todayKey}T00:00:00Z`).getUTCDay();
-    const offset = (todayDow - weekStartsOn + 7) % 7;
-    const startKey = shiftDateKey(todayKey, -offset);
-    return Array.from({ length: 7 }, (_, i) => {
-      const key = shiftDateKey(startKey, i);
-      const dow = new Date(key + "T00:00:00Z").getUTCDay();
-      return { key, label: DAY_LABELS[dow], active: activeCheckinDates.has(key), isToday: key === todayKey };
-    });
-  }, [activeCheckinDates, settings.calendarWeekStart, settings.timeZone, todayKey]);
 
   const checkedInToday = activeCheckinDates.has(todayKey);
 
@@ -276,7 +369,7 @@ export default function DashboardHomePage() {
   }, [weightTrend, weightUnit]);
 
   const checkInStatusLabel = checkedInToday ? "Checked in" : "Not checked in";
-  const workoutStatusLabel = checkedInToday ? "Workout ready" : "Workout locked behind check-in";
+  const workoutStatusLabel = "Open your training log";
   const statTiles = [
     {
       label: "Check-ins",
@@ -358,42 +451,27 @@ export default function DashboardHomePage() {
         {/* Today */}
         <section className="rounded-xl border p-3" style={shellStyle}>
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>Today</p>
-          <div className="mt-2 grid grid-cols-2 gap-2">
+          <div className="mt-2">
             <div className="rounded-lg border px-2.5 py-2" style={tileStyle}>
               <p className="text-[9px] uppercase tracking-[0.1em]" style={{ color: "var(--text-muted)" }}>Check-in</p>
               <p className="mt-0.5 text-[12px] font-semibold" style={{ color: checkedInToday ? "var(--forest)" : "var(--text-primary)" }}>
                 {checkInStatusLabel}
               </p>
             </div>
-            <div className="rounded-lg border px-2.5 py-2" style={tileStyle}>
-              <p className="text-[9px] uppercase tracking-[0.1em]" style={{ color: "var(--text-muted)" }}>Workout</p>
-              <p className="mt-0.5 text-[12px] font-semibold" style={{ color: "var(--text-primary)" }}>
-                {workoutStatusLabel}
-              </p>
-            </div>
           </div>
-          <div className="mt-2.5 flex gap-2">
+          <div className="mt-2.5">
             <Link
               href={DASHBOARD_ROUTES.workoutHistory}
-              className="flex-1 rounded-lg border px-3 py-3 text-left"
+              className="block rounded-lg border px-3 py-3 text-left"
               style={{
-                borderColor: "color-mix(in srgb, var(--accent) 56%, transparent)",
-                backgroundColor: "color-mix(in srgb, var(--accent) 18%, var(--ink-mid))",
-                boxShadow: "0 8px 18px color-mix(in srgb, var(--accent) 22%, transparent)",
+                borderColor: "color-mix(in srgb, var(--accent) 84%, var(--border))",
+                backgroundColor: "color-mix(in srgb, var(--accent) 18%, var(--surface))",
+                boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--accent) 26%, transparent), 0 0 7px color-mix(in srgb, var(--accent) 28%, transparent), 0 0 12px color-mix(in srgb, var(--accent) 18%, transparent)",
               }}
             >
               <span className="block text-[13px] font-semibold" style={{ color: "var(--accent)" }}>Start workout</span>
               <span className="mt-0.5 block text-[10px]" style={{ color: "var(--text-secondary)" }}>Open your training log and begin today&apos;s session</span>
             </Link>
-            {!checkedInToday && (
-              <Link
-                href={DASHBOARD_ROUTES.checkIn}
-                className="rounded-lg border px-3 py-3 text-[11px] font-semibold"
-                style={tileStyle}
-              >
-                Check in now
-              </Link>
-            )}
           </div>
         </section>
 
@@ -411,133 +489,37 @@ export default function DashboardHomePage() {
           </div>
         </section>
 
-        {/* This week */}
-        <section className="rounded-xl border p-3" style={shellStyle}>
-          <div className="mb-2.5 flex items-center justify-between">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>Your week</p>
-            <div className="flex items-center gap-2 text-[10px]" style={{ color: "var(--text-muted)" }}>
-              <span className="flex items-center gap-1">
-                <span className="inline-block h-2 w-2 rounded-sm" style={{ backgroundColor: yourWeekPalette.active }} />
-                Logged
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="inline-block h-2 w-2 rounded-sm border" style={{ borderColor: yourWeekPalette.border }} />
-                Today
-              </span>
-            </div>
-          </div>
-          <div className="flex items-end gap-1.5">
-            {weekDays.map(({ key, label, active, isToday }) => (
-              <div key={key} className="flex flex-1 flex-col items-center gap-1">
-                <div
-                  className="w-full rounded-md"
-                  style={{
-                    height: 28,
-                    backgroundColor: active
-                      ? yourWeekPalette.active
-                      : yourWeekPalette.inactive,
-                    border: isToday
-                      ? `1.5px solid ${yourWeekPalette.border}`
-                      : "1px solid transparent",
-                  }}
-                />
-                <span
-                  className="text-[9px] font-medium"
-                  style={{ color: isToday ? yourWeekPalette.label : "var(--text-muted)" }}
-                >
-                  {label}
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
+        {/* This week + Friends */}
+        <div className="space-y-3">
+          <WeekCard
+            name="Your week"
+            checkinDates={activeCheckinDates}
+            todayKey={todayKey}
+            calendarWeekStart={settings.calendarWeekStart}
+            timeZone={settings.timeZone}
+            activeColor={yourWeekPalette.active}
+            inactiveColor={yourWeekPalette.inactive}
+            borderColor={yourWeekPalette.border}
+            dayLabelColor={yourWeekPalette.label}
+            shellStyle={shellStyle}
+          />
 
-        {/* Friends this week */}
-        {friendWeekSections.length > 0 && (
-          <section className="space-y-2">
-            {friendWeekSections.map((friendSection) => (
-              <article key={friendSection.userId} className="rounded-xl border p-3" style={shellStyle}>
-                <div className="mb-2.5 flex items-center justify-between">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>
-                    {friendSection.name}
-                  </p>
-                  <div className="flex items-center gap-2 text-[10px]" style={{ color: "var(--text-muted)" }}>
-                    <span className="flex items-center gap-1">
-                      <span className="inline-block h-2 w-2 rounded-sm" style={{ backgroundColor: "color-mix(in srgb, var(--accent) 72%, transparent)" }} />
-                      Logged
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <span className="inline-block h-2 w-2 rounded-sm border" style={{ borderColor: "var(--accent)" }} />
-                      Today
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-end gap-1.5">
-                  {friendSection.days.map(({ key, label, active, isToday }) => (
-                    <div key={key} className="flex flex-1 flex-col items-center gap-1">
-                      <div
-                        className="w-full rounded-md"
-                        style={{
-                          height: 28,
-                          backgroundColor: active
-                            ? "color-mix(in srgb, var(--accent) 72%, transparent)"
-                            : "color-mix(in srgb, var(--accent) 18%, transparent)",
-                          border: isToday
-                            ? "1.5px solid var(--accent)"
-                            : "1px solid transparent",
-                        }}
-                      />
-                      <span
-                        className="text-[9px] font-medium"
-                        style={{ color: isToday ? "var(--accent)" : "var(--text-muted)" }}
-                      >
-                        {label}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </article>
-            ))}
-          </section>
-        )}
-
-        {/* Circle */}
-        <Link
-          href={DASHBOARD_ROUTES.circle}
-          className="flex items-start justify-between rounded-xl border px-3.5 py-3 transition-all active:scale-[0.98]"
-          style={shellStyle}
-        >
-          <div className="flex min-w-0 items-center gap-2.5">
-            <span className="text-[20px] leading-none">⭕</span>
-            <div className="min-w-0">
-              <p className="text-[12px] font-semibold" style={{ color: "var(--text-primary)" }}>Circle</p>
-              {circlePreview.length > 0 ? (
-                <div className="mt-1.5 space-y-1">
-                  {circlePreview.slice(0, 2).map((item) => (
-                    <p key={item.userId} className="truncate text-[10px]" style={{ color: "var(--text-muted)" }}>
-                      ● {item.name} checked in · {relativeTimeFromDateKeys(item.dateKey, todayKey)}
-                    </p>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>Friends &amp; activity</p>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {(incomingRequestCount ?? 0) > 0 && (
-              <span
-                className="flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold"
-                style={{ backgroundColor: "var(--accent)", color: "var(--void-black)" }}
-              >
-                {incomingRequestCount}
-              </span>
-            )}
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-          </div>
-        </Link>
+          {friendInfoList.map((friend) => (
+            <WeekCard
+              key={friend.userId}
+              name={friend.name}
+              checkinDates={friendCheckinData.get(friend.userId) ?? new Set()}
+              todayKey={todayKey}
+              calendarWeekStart={settings.calendarWeekStart}
+              timeZone={settings.timeZone}
+              activeColor="color-mix(in srgb, var(--accent) 72%, transparent)"
+              inactiveColor="color-mix(in srgb, var(--accent) 18%, transparent)"
+              borderColor="var(--accent)"
+              dayLabelColor="var(--accent)"
+              shellStyle={shellStyle}
+            />
+          ))}
+        </div>
 
       </div>
     </PageLayout>

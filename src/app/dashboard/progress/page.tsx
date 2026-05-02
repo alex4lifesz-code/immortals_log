@@ -95,10 +95,10 @@ function getBestStatText(logs: ProgressionLog[]): string {
 
 function getCategoryTint(category: string): string {
   const key = category.toLowerCase();
-  if (key.includes("gym")) return "var(--warning)";
-  if (key.includes("yoga")) return "var(--forest)";
-  if (key.includes("cardio")) return "var(--danger)";
-  return "var(--accent)";
+  if (key.includes("gym")) return "var(--warning, #f59e0b)";
+  if (key.includes("yoga")) return "var(--forest, #22c55e)";
+  if (key.includes("cardio")) return "var(--danger, #ef4444)";
+  return "var(--accent, #38bdf8)";
 }
 
 export default function ProgressPage() {
@@ -113,7 +113,7 @@ export default function ProgressPage() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
   const [activityFilter, setActivityFilter] = useState<ActivityFilter>("all");
-  const [sortBy, setSortBy] = useState<SortBy>("recent");
+  const [sortBy, setSortBy] = useState<SortBy>("name");
   const [showLoggedOnly, setShowLoggedOnly] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
   const [searchOpen, setSearchOpen] = useState(false);
@@ -272,7 +272,7 @@ export default function ProgressPage() {
       const displayName = getExerciseDisplayName(
         {
           name: skill.englishName || skill.name,
-          wuxiaName: skill.vietnameseName || skill.wuxiaName,
+          wuxiaName: skill.wuxiaName,
           englishName: skill.englishName,
           vietnameseName: skill.vietnameseName,
         },
@@ -284,12 +284,18 @@ export default function ProgressPage() {
     });
 
     return [...list].sort((a, b) => {
-      if (sortBy === "name") return a.name.localeCompare(b.name);
       if (sortBy === "sessions") return b.performed - a.performed;
       if (sortBy === "coverage") return b.coveragePct - a.coveragePct;
-      const aTime = a.lastLogAt ? new Date(a.lastLogAt).getTime() : 0;
-      const bTime = b.lastLogAt ? new Date(b.lastLogAt).getTime() : 0;
-      return bTime - aTime;
+      if (sortBy === "recent") {
+        const aTime = a.lastLogAt ? new Date(a.lastLogAt).getTime() : 0;
+        const bTime = b.lastLogAt ? new Date(b.lastLogAt).getTime() : 0;
+        return bTime - aTime;
+      }
+      // "name" (default): logged exercises first, then alphabetical within each group
+      const aLogged = a.performed > 0 ? 0 : 1;
+      const bLogged = b.performed > 0 ? 0 : 1;
+      if (aLogged !== bLogged) return aLogged - bLogged;
+      return a.name.localeCompare(b.name);
     });
   }, [skills, search, categoryFilter, activityFilter, sortBy, showLoggedOnly, displayTerminologyMode, settings.showExerciseForeignLanguage]);
 
@@ -297,32 +303,28 @@ export default function ProgressPage() {
     setExpandedIds((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const filtersActive = categoryFilter !== "all" || activityFilter !== "all" || sortBy !== "recent" || showLoggedOnly;
+  const filtersActive = categoryFilter !== "all" || activityFilter !== "all" || sortBy !== "name" || showLoggedOnly;
 
   return (
     <PageLayout
       title="Progress"
-      subtitle="Coverage across all skill progressions"
       mobileContentPaddingClass="px-2 pt-4 pb-24"
     >
       <div className="space-y-3 px-0 py-0 sm:space-y-4 sm:py-1">
         <section
-          className="overflow-hidden rounded-xl border"
+          className="completionist-modern-overview overflow-hidden rounded-xl border"
           style={{
             borderColor: "color-mix(in srgb, var(--ink-light) 56%, transparent)",
             backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))",
           }}
         >
           <div
-            className="border-b px-3 py-2.5"
+            className="px-3 py-2.5"
             style={{
-              borderBottomColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)",
               backgroundColor: "color-mix(in srgb, var(--ink-deep) 94%, var(--ink-mid))",
             }}
           >
-            <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Coverage</p>
             <h2 className="mt-0.5 text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--text-primary)]">Progress overview</h2>
-            <p className="mt-0.5 text-[11px] text-[color:var(--text-secondary)]">A snapshot of what you've logged and what's still untouched.</p>
           </div>
 
           <div className="px-3 py-3">
@@ -331,7 +333,7 @@ export default function ProgressPage() {
                 <div
                   className="relative h-28 w-28 rounded-full"
                   style={{
-                    background: `conic-gradient(color-mix(in srgb, var(--forest) 86%, transparent) 0 ${summary.coveragePct}%, color-mix(in srgb, var(--surface) 84%, black) ${summary.coveragePct}% 100%)`,
+                    background: `conic-gradient(var(--forest, #22c55e) 0 ${summary.coveragePct}%, var(--surface, #1f2937) ${summary.coveragePct}% 100%)`,
                   }}
                 >
                   <div
@@ -370,6 +372,7 @@ export default function ProgressPage() {
                             className="h-full rounded-full transition-all duration-300"
                             style={{
                               width: `${item.pct}%`,
+                              backgroundColor: tint,
                               background: `linear-gradient(90deg, ${tint}, color-mix(in srgb, ${tint} 65%, white 35%))`,
                             }}
                           />
@@ -378,8 +381,6 @@ export default function ProgressPage() {
                     );
                   })}
                 </div>
-
-                <p className="text-[11px] text-[color:var(--text-muted)]">Each bar counts a progression once as soon as it has at least one logged session.</p>
               </div>
             </div>
           </div>
@@ -412,23 +413,21 @@ export default function ProgressPage() {
         {!loading ? (
           <>
             <section
-              className="overflow-hidden rounded-xl border"
+              className="completionist-modern-filters overflow-hidden rounded-xl border"
               style={{
                 borderColor: "color-mix(in srgb, var(--ink-light) 52%, transparent)",
                 backgroundColor: "color-mix(in srgb, var(--ink-deep) 95%, var(--ink-mid))",
               }}
             >
               <div
-                className="border-b px-3 py-2.5 sm:px-4"
+                className="px-3 py-2.5 sm:px-4"
                 style={{
-                  borderBottomColor: "color-mix(in srgb, var(--ink-light) 40%, transparent)",
                   backgroundColor: "color-mix(in srgb, var(--ink-deep) 92%, var(--ink-mid))",
                 }}
               >
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <h2 className="text-base font-semibold text-[color:var(--text-primary)]">Skills</h2>
-                    <p className="text-xs text-[color:var(--text-secondary)]">Tap a row to expand.</p>
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -466,8 +465,7 @@ export default function ProgressPage() {
                     animate={{ height: "auto", opacity: 1, y: 0 }}
                     exit={{ height: 0, opacity: 0, y: -6 }}
                     transition={{ duration: 0.2, ease: "easeOut" }}
-                    className="overflow-hidden border-b px-3 py-2.5 sm:px-4"
-                    style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 30%, transparent)" }}
+                    className="overflow-hidden px-3 py-2.5 sm:px-4"
                   >
                     <input
                       type="text"
@@ -490,7 +488,7 @@ export default function ProgressPage() {
                   const displayName = getExerciseDisplayName(
                     {
                       name: skill.englishName || skill.name,
-                      wuxiaName: skill.vietnameseName || skill.wuxiaName,
+                      wuxiaName: skill.wuxiaName,
                       englishName: skill.englishName,
                       vietnameseName: skill.vietnameseName,
                     },
@@ -506,17 +504,17 @@ export default function ProgressPage() {
                   return (
                     <section
                       key={skill.id}
-                      className="overflow-hidden rounded-xl border"
+                      className="completionist-modern-skill-mobile overflow-hidden rounded-xl border"
                       style={{
-                        borderColor: "color-mix(in srgb, var(--border) 78%, transparent)",
-                        backgroundColor: "color-mix(in srgb, var(--surface) 92%, black)",
+                        borderColor: "color-mix(in srgb, var(--ink-light) 52%, transparent)",
+                        backgroundColor: "color-mix(in srgb, var(--ink-deep) 95%, var(--ink-mid))",
                       }}
                     >
                       <button
                         type="button"
                         onClick={() => toggleExpanded(skill.id)}
                         className="flex w-full items-start justify-between gap-3 px-3 py-3 text-left"
-                        style={{ backgroundColor: isExpanded ? "color-mix(in srgb, var(--surface) 84%, transparent)" : "transparent" }}
+                        style={{ backgroundColor: isExpanded ? "color-mix(in srgb, var(--ink-mid) 62%, var(--ink-deep))" : "transparent" }}
                       >
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
@@ -552,8 +550,10 @@ export default function ProgressPage() {
 
                       {isExpanded ? (
                         <div
-                          className="border-t px-3 py-3"
-                          style={{ borderTopColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 84%, transparent)" }}
+                          className="px-3 py-3"
+                          style={{
+                            backgroundColor: "color-mix(in srgb, var(--ink-mid) 50%, var(--ink-deep))",
+                          }}
                         >
                           <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-[color:var(--text-secondary)]">
                             <span>Coverage: <span className="font-semibold text-[color:var(--forest)]">{skill.coveragePct}%</span></span>
@@ -561,7 +561,7 @@ export default function ProgressPage() {
                             <span>Last: <span className="font-semibold text-[color:var(--text-primary)]">{formatDate(skill.lastLogAt, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone)}</span></span>
                           </div>
 
-                          <div className="mt-3 divide-y" style={{ borderColor: "color-mix(in srgb, var(--border) 72%, transparent)" }}>
+                          <div className="mt-3">
                             {skill.tierNames.map((tierName, index) => {
                               const stat = skill.tierStats[index];
                               return (

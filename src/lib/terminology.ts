@@ -13,17 +13,8 @@ import {
 
 const DISPLAY_SETTINGS_STORAGE_KEY = "cultivateos-display-settings";
 
-function resolveLanguageMode(explicit?: LanguageMode): LanguageMode {
-  if (explicit) return explicit;
-  if (typeof window === "undefined") return "english";
-  try {
-    const raw = window.localStorage.getItem(DISPLAY_SETTINGS_STORAGE_KEY);
-    if (!raw) return "english";
-    const parsed = JSON.parse(raw) as { languageMode?: LanguageMode };
-    return parsed.languageMode === "vietnamese" ? "vietnamese" : "english";
-  } catch {
-    return "english";
-  }
+function resolveLanguageMode(_explicit?: LanguageMode): LanguageMode {
+  return "english";
 }
 
 // The terminology dictionary maps fantasy terms to their normal equivalents.

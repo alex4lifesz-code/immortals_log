@@ -155,9 +155,9 @@ function TrainExerciseListRow({
       className="mx-1 my-0.5 rounded-md px-3 py-2.5"
       style={{
         borderTop: "1px solid color-mix(in srgb, var(--ink-light) 72%, transparent)",
-        border: isSelected ? "1px solid color-mix(in srgb, var(--jade-glow) 62%, var(--ink-light))" : undefined,
-        backgroundColor: isSelected ? "color-mix(in srgb, var(--jade-glow) 14%, var(--ink-deep))" : "transparent",
-        boxShadow: isSelected ? "inset 0 0 0 1px color-mix(in srgb, var(--jade-glow) 20%, transparent), 0 0 14px color-mix(in srgb, var(--jade-glow) 24%, transparent)" : "none",
+        border: isSelected ? "1px solid color-mix(in srgb, var(--accent) 62%, var(--ink-light))" : undefined,
+        backgroundColor: isSelected ? "color-mix(in srgb, var(--accent) 14%, var(--ink-deep))" : "transparent",
+        boxShadow: isSelected ? "inset 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent), 0 0 14px color-mix(in srgb, var(--accent) 24%, transparent)" : "none",
         cursor: "pointer",
       }}
       role="button"
@@ -188,7 +188,7 @@ function TrainExerciseListRow({
         </div>
         <span
           className="shrink-0 text-[11px]"
-          style={{ color: row.showAssignedContext && row.isCompleted ? "var(--jade-glow)" : "var(--text-muted)" }}
+          style={{ color: row.showAssignedContext && row.isCompleted ? "var(--forest)" : "var(--text-muted)" }}
         >
           {row.showAssignedContext
             ? (row.isCompleted && row.completionDate ? formatRelativeRecentDate(row.completionDate, dateFormat, timeZone) : "")
@@ -199,7 +199,7 @@ function TrainExerciseListRow({
         <p className="mt-0.5 flex items-center gap-1 text-[11px] italic" style={{ color: row.isDeleted ? "var(--crimson-light)" : "var(--text-muted)" }}>
           <span>{`Assigned: ${row.assignedVariant ? `${row.assignedVariant} ` : ""}${row.assignedProgression || row.progression} ${row.exerciseName}`}</span>
           {row.isCompleted ? (
-            <span className="inline-flex shrink-0" style={{ color: "var(--jade-glow)" }} aria-label="Completed today">
+            <span className="inline-flex shrink-0" style={{ color: "var(--forest)" }} aria-label="Completed today">
               <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
@@ -256,6 +256,7 @@ export default function HistoryPage() {
   const [mobileQuickCheckinLoading, setMobileQuickCheckinLoading] = useState(false);
   const [mobileQuickCheckinSaving, setMobileQuickCheckinSaving] = useState(false);
   const [mobileQuickCheckinMessage, setMobileQuickCheckinMessage] = useState<string | null>(null);
+  const [showWeightHintThankYou, setShowWeightHintThankYou] = useState(false);
   const [mobileLogFabSearchQuery, setMobileLogFabSearchQuery] = useState("");
   const [mobileLogFabCategory, setMobileLogFabCategory] = useState("all");
   const [mobileLogFabSort, setMobileLogFabSort] = useState<"recent" | "oldest" | "name-az" | "relevant">("recent");
@@ -333,6 +334,11 @@ export default function HistoryPage() {
       });
       setMobileQuickCheckinMessage("Saved");
       setMobileQuickCheckinOpen(false);
+      setMobileQuickCheckinTodayWeight(effectiveWeight ?? null);
+      setMobileQuickCheckinTodayNote(effectiveNote);
+      if (!weightLocked && effectiveWeight != null) {
+        setShowWeightHintThankYou(true);
+      }
       setMobileQuickCheckinWeight("");
       setMobileQuickCheckinNote("");
     } catch {
@@ -341,6 +347,56 @@ export default function HistoryPage() {
       setMobileQuickCheckinSaving(false);
     }
   }, [getTodayDateKey, mobileQuickCheckinNote, mobileQuickCheckinSaving, mobileQuickCheckinTodayNote, mobileQuickCheckinTodayWeight, mobileQuickCheckinWeight, userId]);
+
+  useEffect(() => {
+    if (!showWeightHintThankYou) return;
+    const timer = window.setTimeout(() => {
+      setShowWeightHintThankYou(false);
+    }, 1800);
+    return () => window.clearTimeout(timer);
+  }, [showWeightHintThankYou]);
+
+  useEffect(() => {
+    if (!userId || targetUserId) return;
+
+    let cancelled = false;
+    const loadTodayCheckinState = async () => {
+      try {
+        const todayKey = getTodayDateKey();
+        const [latestWeightPayload, checkinsPayload] = await Promise.all([
+          api.get<{ weight: number | null; date: string | null }>("/api/checkins/latest-weight"),
+          api.get<{ checkins: Array<{ userId: string; date: string; weight?: number | null; comment?: string | null }> }>("/api/checkins"),
+        ]);
+
+        if (cancelled) return;
+
+        const latestWeight = typeof latestWeightPayload.weight === "number" ? latestWeightPayload.weight : null;
+        const todayEntry = (checkinsPayload.checkins || []).find((entry) => {
+          if (!entry || entry.userId !== userId || !entry.date) return false;
+          const entryKey = String(entry.date).slice(0, 10);
+          return entryKey === todayKey;
+        });
+
+        const todayWeight = todayEntry && typeof todayEntry.weight === "number" ? todayEntry.weight : null;
+        const todayNote = todayEntry?.comment ? String(todayEntry.comment) : "";
+
+        setMobileQuickCheckinLatestWeight(latestWeight);
+        setMobileQuickCheckinTodayWeight(todayWeight);
+        setMobileQuickCheckinTodayNote(todayNote);
+      } catch {
+        if (!cancelled) {
+          setMobileQuickCheckinLatestWeight(null);
+          setMobileQuickCheckinTodayWeight(null);
+          setMobileQuickCheckinTodayNote("");
+        }
+      }
+    };
+
+    void loadTodayCheckinState();
+    return () => {
+      cancelled = true;
+    };
+  }, [getTodayDateKey, targetUserId, userId]);
 
   useEffect(() => {
     if (!mobileQuickCheckinOpen || !userId) return;
@@ -551,6 +607,8 @@ export default function HistoryPage() {
     ? `Review ${targetUserDisplayName}'s training logs and cultivation entries`
     : "Review your training logs and cultivation entries";
   const isFriendTrainOverlay = Boolean(targetUserId);
+  const shouldShowWeightSwipeHint = !isFriendTrainOverlay && mobileQuickCheckinTodayWeight == null && !showWeightHintThankYou;
+  const shouldShowWeightThankYou = !isFriendTrainOverlay && showWeightHintThankYou;
   const friendRailWidthPx = 64;
   const trainRailWidthPx = 64;
 
@@ -708,9 +766,12 @@ export default function HistoryPage() {
       params.delete("targetUserId");
     } else {
       params.set("targetUserId", nextUserId);
+      params.set("friendView", "history");
     }
+    const current = searchParams.toString();
     const next = params.toString();
-    router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
+    if (next === current) return;
+    router.push(next ? `${pathname}?${next}` : pathname, { scroll: false });
   };
 
   const handleOpenTrainOverview = useCallback(() => {
@@ -1055,16 +1116,13 @@ export default function HistoryPage() {
       setTrainRailOverviewOpen(false);
       setExerciseManagementOpen(false);
 
-      if (targetUserId || searchParams.get("friendView") || searchParams.get("library") === "1") {
-        router.replace(DASHBOARD_ROUTES.workoutHistory, { scroll: false });
-      }
     };
 
     window.addEventListener("train-reset-view", onTrainReset);
     return () => {
       window.removeEventListener("train-reset-view", onTrainReset);
     };
-  }, [router, searchParams, targetUserId]);
+  }, []);
 
   useEffect(() => {
     if (isFriendTrainOverlay) {
@@ -1515,7 +1573,7 @@ export default function HistoryPage() {
               transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
               className="fixed inset-y-0 right-0 z-[260] flex h-[100dvh] max-h-[100dvh] w-[min(22rem,92vw)] flex-col overflow-hidden border-l shadow-2xl safe-area-top safe-area-bottom safe-area-right sm:my-3 sm:mr-3 sm:h-[calc(100dvh-1.5rem)] sm:max-h-[52rem] sm:rounded-2xl sm:border"
               style={{
-                borderColor: "color-mix(in srgb, var(--jade-glow) 18%, var(--ink-light))",
+                borderColor: "color-mix(in srgb, var(--accent) 18%, var(--ink-light))",
                 background: "linear-gradient(180deg, color-mix(in srgb, var(--ink-dark) 98%, transparent) 0%, color-mix(in srgb, var(--ink-mid) 92%, transparent) 100%)",
                 boxShadow: "0 18px 56px rgba(0, 0, 0, 0.45)",
               }}
@@ -1990,7 +2048,7 @@ export default function HistoryPage() {
                         transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
                         className="fixed inset-y-0 right-0 z-[250] flex max-h-[100dvh] w-[min(22rem,92vw)] flex-col overflow-hidden border-l shadow-2xl safe-area-top safe-area-bottom safe-area-right"
                         style={{
-                          borderColor: "color-mix(in srgb, var(--jade-glow) 18%, var(--ink-light))",
+                          borderColor: "color-mix(in srgb, var(--accent) 18%, var(--ink-light))",
                           background: "linear-gradient(180deg, color-mix(in srgb, var(--ink-dark) 98%, transparent) 0%, color-mix(in srgb, var(--ink-mid) 92%, transparent) 100%)",
                           boxShadow: "0 18px 56px rgba(0, 0, 0, 0.45)",
                         }}
@@ -2405,7 +2463,7 @@ export default function HistoryPage() {
                 </div>
 
                 {mobileQuickCheckinMessage ? (
-                  <p className="mt-2 text-[11px]" style={{ color: mobileQuickCheckinMessage === "Saved" ? "var(--jade-glow)" : "var(--danger)" }}>
+                  <p className="mt-2 text-[11px]" style={{ color: mobileQuickCheckinMessage === "Saved" ? "var(--forest)" : "var(--danger)" }}>
                     {mobileQuickCheckinMessage}
                   </p>
                 ) : null}
@@ -2503,7 +2561,28 @@ export default function HistoryPage() {
           aria-label="Slide up for workout log or left for quick weight and note"
           title="Slide up: workout log, slide left: quick weight/note"
         >
-          <span aria-hidden="true">+</span>
+          {shouldShowWeightSwipeHint || shouldShowWeightThankYou ? (
+            <motion.span
+              className="pointer-events-none absolute right-[calc(100%+0.45rem)] top-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border px-2 py-1 text-[10px] font-medium"
+              style={{
+                borderColor: "color-mix(in srgb, var(--accent) 46%, transparent)",
+                backgroundColor: "color-mix(in srgb, var(--ink-mid) 92%, var(--ink-deep))",
+                color: "var(--text-primary)",
+              }}
+              initial={{ opacity: 0, x: 4 }}
+              animate={shouldShowWeightThankYou ? { opacity: 1, x: 0 } : { opacity: [0.72, 1, 0.72], x: [0, -6, 0] }}
+              transition={shouldShowWeightThankYou ? { duration: 0.2 } : { duration: 1.15, repeat: Infinity, ease: "easeInOut" }}
+            >
+              {shouldShowWeightThankYou ? "Thank you!" : "Log your weight!"}
+            </motion.span>
+          ) : null}
+          <motion.span
+            aria-hidden="true"
+            animate={shouldShowWeightSwipeHint ? { x: [0, -8, 0] } : { x: 0 }}
+            transition={shouldShowWeightSwipeHint ? { duration: 1.05, repeat: Infinity, ease: "easeInOut" } : undefined}
+          >
+            +
+          </motion.span>
         </motion.button>
       ) : null}
     </>

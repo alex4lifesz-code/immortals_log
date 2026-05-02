@@ -2,7 +2,7 @@
 
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { DASHBOARD_ROUTES } from "@/lib/navigation";
 import { api } from "@/lib/api-client";
 import { useIsMobile } from "@/context/AppContext";
@@ -123,6 +123,7 @@ function DiscordFriendsRail({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const isMobile = useIsMobile();
   const { user } = useAuth();
   const { settings } = useDisplaySettings();
@@ -757,12 +758,42 @@ function DiscordFriendsRail({
                           role="button"
                           tabIndex={0}
                           onClick={() => {
+                            if (item.id === "history") {
+                              const params = new URLSearchParams({
+                                targetUserId: activeFriend.id,
+                                friendView: "history",
+                              });
+                              const alreadyOnTargetHistory =
+                                pathname === DASHBOARD_ROUTES.workoutHistory
+                                && searchParams.get("targetUserId") === activeFriend.id
+                                && (searchParams.get("friendView") || "history") === "history";
+                              closeFriendPanels(false);
+                              if (alreadyOnTargetHistory) return;
+                              router.push(`${DASHBOARD_ROUTES.workoutHistory}?${params.toString()}`);
+                              return;
+                            }
+
                             setDrawerState(activeFriend.id, { view: item.id as FriendViewMode });
                             setFriendActionsOpen(false);
                           }}
                           onKeyDown={(event) => {
                             if (event.key === "Enter" || event.key === " ") {
                               event.preventDefault();
+                              if (item.id === "history") {
+                                const params = new URLSearchParams({
+                                  targetUserId: activeFriend.id,
+                                  friendView: "history",
+                                });
+                                const alreadyOnTargetHistory =
+                                  pathname === DASHBOARD_ROUTES.workoutHistory
+                                  && searchParams.get("targetUserId") === activeFriend.id
+                                  && (searchParams.get("friendView") || "history") === "history";
+                                closeFriendPanels(false);
+                                if (alreadyOnTargetHistory) return;
+                                router.push(`${DASHBOARD_ROUTES.workoutHistory}?${params.toString()}`);
+                                return;
+                              }
+
                               setDrawerState(activeFriend.id, { view: item.id as FriendViewMode });
                               setFriendActionsOpen(false);
                             }

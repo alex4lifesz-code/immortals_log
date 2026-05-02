@@ -5,10 +5,6 @@ import { ALL_DIFFICULTIES } from "@/lib/exercise-types";
 import { withAuth } from "@/lib/auth/middleware";
 import { getExerciseDbOptionsFromAppPrefs } from "@/lib/exercise-db-settings";
 import { ensureAppExerciseLibraryOwner } from "@/lib/exercise-library-owner";
-import {
-  applyProgressionExerciseTranslation,
-  getUserLanguageMode,
-} from "@/lib/exercise-translation-db";
 import { resolveVietnameseValue } from "@/lib/auto-vietnamese";
 import {
   isDeletedExerciseDescription,
@@ -190,17 +186,14 @@ function inferDifficulty(diff?: string): Difficulty | undefined {
 /** GET /api/exercise-library — Fetch shared exercise library */
 export const GET = withAuth(async (_req, { auth }) => {
   try {
-    const languageMode = await getUserLanguageMode(auth.userId);
     const dbExercises = await prisma.progressionExercise.findMany({
       include: {
-        translation: true,
         tiers: {
           select: {
             name: true,
             level: true,
             description: true,
             difficulty: true,
-            translation: true,
           },
           orderBy: { level: "asc" },
         },
@@ -210,7 +203,6 @@ export const GET = withAuth(async (_req, { auth }) => {
             name: true,
             description: true,
             difficulty: true,
-            translation: true,
           },
           orderBy: { name: "asc" },
         },
@@ -223,16 +215,11 @@ export const GET = withAuth(async (_req, { auth }) => {
 
     const visibleExercises = dbExercises.filter((exercise) => !isDeletedExerciseDescription(exercise.story));
     const exercises: SimpleExercise[] = visibleExercises.map((exercise) => {
-      const { translation, ...baseExercise } = exercise;
-      const localized = applyProgressionExerciseTranslation(baseExercise, translation, languageMode);
-      const mapped = mapDbToSimpleExercise(localized, dbOptions);
-      const englishName = translation?.englishName || baseExercise.name;
-      const vietnameseName = translation?.vietnameseName || baseExercise.wuxiaName || baseExercise.name;
+      const mapped = mapDbToSimpleExercise(exercise, dbOptions);
       return {
         ...mapped,
-        name: englishName,
-        englishName,
-        vietnameseName,
+        name: exercise.name,
+        englishName: exercise.name,
       };
     });
 

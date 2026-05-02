@@ -33,13 +33,12 @@ export default function SettingsPage() {
   return (
     <PageLayout
       title="Settings"
-      subtitle="Appearance, dates, and training"
       mobileContentPaddingClass="px-2 pt-4 pb-24"
     >
       <div className="space-y-3 px-0 py-0 sm:space-y-4 sm:py-1">
 
         {/* ── Appearance ───────────────────────────────────── */}
-        <SectionCard eyebrow="Appearance" title="Theme" description="Visual style applied across the entire app." badge="Visual">
+        <SectionCard eyebrow="Appearance" title="Theme">
           <div className="grid gap-3 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
             <SettingsSelectField
               label="Theme style"
@@ -48,9 +47,7 @@ export default function SettingsPage() {
               options={THEME_OPTIONS.map((t) => ({ value: t.value, label: t.label, desc: t.desc }))}
             />
             <div className="rounded-xl border p-3" style={fieldShellStyle}>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>Current look</p>
               <p className="mt-1 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{selectedTheme?.label ?? themeStyle}</p>
-              <p className="mt-1 text-[11px]" style={{ color: "var(--text-secondary)" }}>{selectedTheme?.desc ?? "Palette synced across the entire app shell."}</p>
               <div className="mt-3 flex items-center gap-2">
                 <span className="h-3 w-3 rounded-full" style={{ backgroundColor: "var(--accent)" }} />
                 <span className="h-3 w-3 rounded-full" style={{ backgroundColor: "var(--ink-mid)" }} />
@@ -59,15 +56,10 @@ export default function SettingsPage() {
             </div>
           </div>
           <div className="mt-3 rounded-xl border p-3" style={fieldShellStyle}>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>Appearance</p>
-            <p className="mt-1 mb-2 text-[11px]" style={{ color: "var(--text-secondary)" }}>
-              Light variants are available for every theme except Discord. Auto follows your device&apos;s system color scheme.
-            </p>
             <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Theme appearance">
               {(["light", "dark", "auto"] as const).map((mode) => {
                 const active = themeMode === mode;
                 const label = mode === "light" ? "Light" : mode === "dark" ? "Dark" : "Auto";
-                const hint = mode === "light" ? "Daytime" : mode === "dark" ? "Nighttime" : "Follow system";
                 return (
                   <button
                     key={mode}
@@ -84,21 +76,15 @@ export default function SettingsPage() {
                     }}
                   >
                     <div className="text-sm font-semibold">{label}</div>
-                    <div className="text-[10px] opacity-80">{hint}</div>
                   </button>
                 );
               })}
             </div>
-            {themeStyle === "discord" && (
-              <p className="mt-2 text-[10px]" style={{ color: "var(--text-muted)" }}>
-                Note: Discord theme has no light variant — appearance applies the moment you switch to another theme.
-              </p>
-            )}
           </div>
         </SectionCard>
 
         {/* ── Calendar ─────────────────────────────────────── */}
-        <SectionCard eyebrow="Calendar" title="Date and region" description="Keep history, schedules, and logs aligned everywhere." badge="Sync">
+        <SectionCard eyebrow="Calendar" title="Date and region">
           <div className="grid gap-3 lg:grid-cols-3">
             <SettingsSelectField
               label="Timezone"
@@ -122,7 +108,7 @@ export default function SettingsPage() {
         </SectionCard>
 
         {/* ── Training ─────────────────────────────────────── */}
-        <SectionCard eyebrow="Training" title="Units" description="Set them once and keep every session log readable." badge="Log">
+        <SectionCard eyebrow="Training" title="Units">
           <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
             <SettingsSelectField
               label="Preferred weight unit"
@@ -134,11 +120,7 @@ export default function SettingsPage() {
               ]}
             />
             <div className="rounded-xl border p-3" style={fieldShellStyle}>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>Preview</p>
               <p className="mt-1 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Bench Press • 20 {settings.defaultWeightUnit.toUpperCase()}</p>
-              <p className="mt-1 text-[11px]" style={{ color: "var(--text-secondary)" }}>
-                History pages, summaries, and input flows will follow this default unit.
-              </p>
             </div>
             <SettingsSelectField
               label="Timed display unit"
@@ -150,12 +132,8 @@ export default function SettingsPage() {
               ]}
             />
             <div className="rounded-xl border p-3" style={fieldShellStyle}>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>Preview</p>
               <p className="mt-1 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
                 Plank • {settings.defaultTimedUnit === "minutes" ? "1m 30s" : "90s"}
-              </p>
-              <p className="mt-1 text-[11px]" style={{ color: "var(--text-secondary)" }}>
-                Timed entries in history and logs will be shown in this unit.
               </p>
             </div>
           </div>
@@ -165,8 +143,6 @@ export default function SettingsPage() {
         <SectionCard
           eyebrow="Check-In"
           title="History defaults"
-          description="These controls were moved here to keep Check-In history clean."
-          badge="Personal"
         >
           <div className="grid gap-3 lg:grid-cols-2">
             <SettingsSelectField
@@ -197,7 +173,6 @@ export default function SettingsPage() {
           title={user?.username ? `@${user.username}` : "Account"}
         >
           <div className="flex items-center justify-between gap-3">
-            <p className="text-[12px]" style={{ color: "var(--text-secondary)" }}>Signed in as {user?.name ?? "Cultivator"}</p>
             <GlowButton variant="crimson" onClick={logout}>
               Logout
             </GlowButton>

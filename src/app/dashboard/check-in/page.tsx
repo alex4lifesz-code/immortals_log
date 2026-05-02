@@ -16,10 +16,7 @@ import { syncWeightFromLatestCheckin } from "@/lib/user-physique";
 import { api } from "@/lib/api-client";
 import {
   Calendar,
-  getDeterministicCultivatorColor,
-  getUserCultivatorColor,
   getCultivatorGlowColor,
-  normalizeCultivatorColor,
   formatDateLocal,
   type DashboardUser,
 } from "@/components/dashboard/DashboardCalendar";
@@ -92,7 +89,6 @@ export default function DaoHallPage() {
   const router = useRouter();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [checkInUsersByDate, setCheckInUsersByDate] = useState<Map<string, string[]>>(new Map());
-  const [userColors, setUserColors] = useState<Record<string, string>>({});
   const [stats, setStats] = useState({ sessions: 0, techniques: 0, streak: 0 });
   const [loading, setLoading] = useState(true);
   const [dayNotes, setDayNotes] = useState<Map<string, string>>(new Map());
@@ -143,25 +139,7 @@ export default function DaoHallPage() {
     return () => window.clearTimeout(timeout);
   }, [checkInTogglePulse]);
 
-  const handleColorChange = useCallback(async (userId: string, color: string) => {
-    if (!user) return;
-    const canEdit = userId === user.id || user.role === "admin";
-    if (!canEdit) return;
 
-    const normalized = normalizeCultivatorColor(color);
-    setUserColors((prev) => ({ ...prev, [userId]: normalized }));
-
-    try {
-      await api.put("/api/users/preferences", {
-        userId,
-        appPrefs: { cultivatorColor: normalized },
-      });
-      await queryClient.invalidateQueries({ queryKey: ["check-in-data", user.id] });
-    } catch (error) {
-      console.error("Failed to save cultivator color:", error);
-      await queryClient.invalidateQueries({ queryKey: ["check-in-data", user.id] });
-    }
-  }, [queryClient, user]);
 
   // Load day notes from per-user localStorage
   useEffect(() => {
@@ -671,6 +649,20 @@ export default function DaoHallPage() {
     return scoped;
   }, [checkInUsersByDate, visibleUserIds]);
 
+  const currentUserWeightDates = useMemo(() => {
+    const dates = new Set<string>();
+    if (!user?.id) return dates;
+
+    for (const row of checkInRows) {
+      const entry = row.entries[user.id];
+      if (!entry) continue;
+      if (entry.weight != null && entry.weight.trim() !== "") {
+        dates.add(row.date);
+      }
+    }
+    return dates;
+  }, [checkInRows, user?.id]);
+
   const scopedDayNotes = useMemo(() => {
     if (calendarScope === "mine") {
       return dayNotes;
@@ -780,14 +772,6 @@ export default function DaoHallPage() {
 
     setFutureNotes(futureNotesData.notes || []);
     setAllUsers(usersData.users || []);
-    setUserColors(
-      Object.fromEntries(
-        (usersData.users || []).map((u) => [
-          u.id,
-          normalizeCultivatorColor(u.cultivatorColor || getDeterministicCultivatorColor(u.id)),
-        ]),
-      ),
-    );
 
     const usersByDate = new Map<string, string[]>();
     const userCheckInDates = new Set<string>();
@@ -874,14 +858,6 @@ export default function DaoHallPage() {
 
   if (!user) return null;
 
-  const todayKey = formatDateLocal(new Date(), settings.timeZone);
-  const todayRow = checkInRows.find((row) => row.date === todayKey);
-  const todayEntry = todayRow?.entries[user.id] || { present: false, weight: "", comment: "" };
-  const hasTodayCheckIn = Boolean(todayEntry.present);
-  const hasTodayWeight = Boolean(todayEntry.weight?.toString().trim());
-  const shouldShowCheckInFab = !checkInModal && !showWeightPrompt && !(hasTodayCheckIn && hasTodayWeight);
-  const checkInFabMode: "checkin" | "weight" = hasTodayCheckIn ? "weight" : "checkin";
-
   const historySurfaceClass = "rounded-xl border";
   const historySurfaceStyle = {
     borderColor: "color-mix(in srgb, var(--ink-light) 60%, transparent)",
@@ -909,7 +885,7 @@ export default function DaoHallPage() {
                 </div>
                 <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
                   {scopedFutureNotes.map((note) => {
-                    const noteColor = getUserCultivatorColor(note.user.id, userColors);
+                    const noteColor = note.user.id === user?.id ? "var(--cultivator-self)" : "var(--cultivator-friend)";
                     return (
                       <button
                         key={note.id}
@@ -949,13 +925,14 @@ export default function DaoHallPage() {
             <div className="min-w-0 dao-modern-calendar-wrap">
               <Calendar
                 checkInUsersByDate={scopedCheckInUsersByDate}
+                currentUserWeightDates={currentUserWeightDates}
                 currentMonth={currentMonth}
                 setCurrentMonth={setCurrentMonth}
                 dayNotes={scopedDayNotes}
                 futureNoteDates={new Set(scopedFutureNotes.map((n) => n.date))}
                 onDayClick={handleDayClick}
                 allUsers={allUsers}
-                userColors={userColors}
+                userColors={{}}
                 upcomingNotes={[]}
                 dateFormat={dateFormat}
                 timeZone={settings.timeZone}
@@ -1097,13 +1074,12 @@ export default function DaoHallPage() {
                             ) : (
                               <>
                                 {everyoneDetails.map((detail, detailIndex) => {
-                                  const c = getUserCultivatorColor(detail.id, userColors);
+                                  const c = detail.id === user?.id ? "var(--cultivator-self)" : "var(--cultivator-friend)";
                                   return (
                                     <div
                                       key={detail.id}
                                       className="space-y-0.5"
                                       style={{
-                                        borderTop: detailIndex === 0 ? "none" : "1px solid color-mix(in srgb, var(--ink-light) 48%, transparent)",
                                         paddingTop: detailIndex === 0 ? 0 : "0.35rem",
                                         marginTop: detailIndex === 0 ? 0 : "0.35rem",
                                       }}
@@ -1197,53 +1173,12 @@ export default function DaoHallPage() {
         </div>
       )}
 
-      {shouldShowCheckInFab ? (
-        <motion.button
-          type="button"
-          initial={{ opacity: 0, y: 14, scale: 0.96 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 14, scale: 0.96 }}
-          transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-          onClick={() => handleDayClick(todayKey)}
-          className="fixed bottom-[calc(var(--mobile-nav-offset)+0.75rem)] right-3 z-[140] inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-[12px] font-semibold shadow-lg"
-          style={
-            checkInFabMode === "weight"
-              ? {
-                  borderColor: "color-mix(in srgb, var(--gold) 52%, transparent)",
-                  backgroundColor: "color-mix(in srgb, var(--gold) 18%, var(--ink-mid))",
-                  color: "var(--gold-glow)",
-                  boxShadow: "0 10px 22px color-mix(in srgb, var(--gold) 28%, transparent)",
-                }
-              : {
-                  borderColor: "color-mix(in srgb, var(--accent) 56%, transparent)",
-                  backgroundColor: "color-mix(in srgb, var(--accent) 20%, var(--ink-mid))",
-                  color: "var(--accent)",
-                  boxShadow: "0 10px 22px color-mix(in srgb, var(--accent) 24%, transparent)",
-                }
-          }
-          aria-label={checkInFabMode === "weight" ? "Log today's weight" : "Check in today"}
-        >
-          <span
-            className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px]"
-            style={{
-              backgroundColor:
-                checkInFabMode === "weight"
-                  ? "color-mix(in srgb, var(--gold) 24%, transparent)"
-                  : "color-mix(in srgb, var(--accent) 24%, transparent)",
-            }}
-          >
-            {checkInFabMode === "weight" ? "⚖" : "+"}
-          </span>
-          <span>{checkInFabMode === "weight" ? "Log Weight" : "Check-In"}</span>
-        </motion.button>
-      ) : null}
-
       <GlowModal
         isOpen={!!checkInModal}
         onClose={() => { setCheckInModal(null); }}
         title={`Day Check-In — ${checkInModal ? formatDateWithPreference(checkInModal.date, dateFormat) : ""}`}
         hideHeader
-        panelClassName="!max-w-[34rem] !max-h-[88vh] !overflow-hidden"
+        panelClassName="!max-w-sm"
         contentClassName="!p-0"
       >
         {checkInModal && (() => {
@@ -1273,346 +1208,193 @@ export default function DaoHallPage() {
 
           return (
             <div
-              className="flex min-h-0 max-h-[min(88vh,85dvh)] flex-col overflow-hidden rounded-xl border"
+              className="rounded-2xl border p-3"
               style={{
-                borderColor: "color-mix(in srgb, var(--ink-light) 56%, transparent)",
+                borderColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
                 backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))",
-                boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--cloud-white) 3%, transparent), 0 14px 30px rgba(0,0,0,0.28)",
               }}
             >
-              <div
-                className="border-b px-3.5 py-3"
-                style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)" }}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <h2 className="truncate text-[16px] font-semibold text-[color:var(--text-primary)]">Check-In</h2>
-                    <p className="mt-1 text-[12px] text-[color:var(--text-secondary)]">
-                      {formatDateWithPreference(checkInModal.date, dateFormat)} {isTodayEntry ? "(Today)" : ""}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setCheckInModal(null)}
-                      aria-label="Close dialog"
-                      className="flex h-8 w-8 items-center justify-center rounded-md border text-[color:var(--text-secondary)] transition-colors hover:text-[color:var(--text-primary)]"
-                      style={{
-                        borderColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)",
-                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 54%, transparent)",
-                      }}
-                    >
-                      ✕
-                    </button>
-                  </div>
-                </div>
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--mist-light)" }}>
+                  {isTodayEntry ? "Today" : formatDateWithPreference(checkInModal.date, dateFormat)}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setCheckInModal(null)}
+                  className="h-8 w-8 rounded-md border text-sm"
+                  style={{
+                    borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                    color: "var(--mist-light)",
+                    backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
+                  }}
+                  aria-label="Close"
+                >
+                  ✕
+                </button>
               </div>
 
-              <div
-                className="min-h-0 flex-1 overflow-y-auto px-3.5 py-3 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] scrollbar-hide"
-                style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain", touchAction: "pan-y" }}
-              >
-                <div className="space-y-3">
-                  {isFarFuture ? (
-                    <div
-                      className="rounded-lg border px-3 py-2 text-[11px]"
-                      style={{
-                        borderColor: "color-mix(in srgb, var(--gold) 50%, transparent)",
-                        backgroundColor: "color-mix(in srgb, var(--gold) 10%, transparent)",
-                        color: "var(--gold-glow)",
-                      }}
-                    >
-                      Future days only support a personal note. Full check-in is available on the day itself.
-                    </div>
-                  ) : null}
-
-                  {!isFarFuture && circleUsers.length > 0 ? (
-                    <section
-                      className="rounded-xl border p-3"
-                      style={{
-                        borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)",
-                        backgroundColor: "color-mix(in srgb, var(--ink-deep) 90%, var(--ink-mid))",
-                      }}
-                    >
-                      <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">
-                        {isTodayEntry ? "Circle today" : `Circle on ${formatDateWithPreference(checkInModal.date, dateFormat)}`}
-                      </p>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {checkedInUsers.map((u) => (
-                          <span
-                            key={u.id}
-                            className="inline-flex items-center gap-2 rounded-md border px-2 py-1 text-[11px] text-[color:var(--text-secondary)]"
-                            style={{
-                              borderColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)",
-                              backgroundColor: "color-mix(in srgb, var(--ink-mid) 52%, transparent)",
-                            }}
-                          >
-                            <span
-                              className="h-2 w-2 rounded-full"
-                              style={{ backgroundColor: getUserCultivatorColor(u.id, userColors) }}
-                            />
-                            {u.id === user?.id ? "You" : u.name}
-                          </span>
-                        ))}
-                      </div>
-                    </section>
-                  ) : null}
-
-                  {!isFarFuture && user?.id ? (
-                    <section
-                      className="rounded-xl border p-3"
-                      style={{
-                        borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)",
-                        backgroundColor: "color-mix(in srgb, var(--ink-deep) 90%, var(--ink-mid))",
-                      }}
-                    >
-                      <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">
-                        {isTodayEntry ? "Today" : `Check-In for ${formatDateWithPreference(checkInModal.date, dateFormat)}`}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCheckInTogglePulse(true);
-                          updateCheckInModalEntry(user.id, "present", !currentUserEntry.present);
-                        }}
-                        className="mt-3 flex w-full items-center gap-2 rounded-lg border px-3 py-2.5 text-[12px] font-semibold transition-colors"
-                        style={{
-                          borderColor: currentUserEntry.present
-                            ? "color-mix(in srgb, var(--forest) 52%, transparent)"
-                            : "color-mix(in srgb, var(--accent) 52%, transparent)",
-                          backgroundColor: currentUserEntry.present
-                            ? "color-mix(in srgb, var(--forest) 12%, transparent)"
-                            : "color-mix(in srgb, var(--accent) 14%, transparent)",
-                          color: currentUserEntry.present ? "var(--cloud-white)" : "var(--text-primary)",
-                        }}
-                        aria-pressed={currentUserEntry.present}
-                      >
-                        <motion.span
-                          initial={false}
-                          animate={{ scale: checkInTogglePulse ? [1, 1.12, 1] : 1 }}
-                          transition={{ duration: 0.26, ease: "easeOut" }}
-                          className="flex h-5 w-5 shrink-0 items-center justify-center rounded border"
-                          style={{
-                            borderColor: currentUserEntry.present
-                              ? "color-mix(in srgb, var(--forest) 62%, transparent)"
-                              : "color-mix(in srgb, var(--text-muted) 55%, transparent)",
-                            backgroundColor: currentUserEntry.present
-                              ? "color-mix(in srgb, var(--forest) 18%, transparent)"
-                              : "transparent",
-                            color: currentUserEntry.present ? "var(--forest)" : "var(--text-muted)",
-                          }}
-                        >
-                          <motion.svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none">
-                            <motion.path
-                              d="M3.5 8.5l2.5 2.5 6-6"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              initial={false}
-                              animate={{
-                                pathLength: currentUserEntry.present ? 1 : 0,
-                                opacity: currentUserEntry.present ? 1 : 0,
-                              }}
-                              transition={{ duration: 0.24, ease: "easeOut" }}
-                            />
-                          </motion.svg>
-                        </motion.span>
-                        <span>{currentUserEntry.present ? "Checked in for this day" : "Mark check-in for this day"}</span>
-                      </button>
-
-                      <label className="mt-3 block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Body weight</label>
-                      {previousWeightRecord ? (
-                        <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">
-                          Last: {previousWeightRecord.weight} kg on {formatDateWithPreference(previousWeightRecord.date, dateFormat)}
-                        </p>
-                      ) : null}
-                      <input
-                        type="number"
-                        placeholder="Weight in kg"
-                        value={currentUserEntry.weight}
-                        onChange={(e) => updateCheckInModalEntry(user.id, "weight", e.target.value)}
-                        className="mt-2 w-full rounded-md border px-3 py-2 text-[12px] text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)]"
-                        style={{
-                          borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)",
-                          backgroundColor: "color-mix(in srgb, var(--ink-mid) 58%, var(--ink-deep))",
-                        }}
-                        min="0"
-                        max="500"
-                        step="0.1"
-                        autoFocus
-                      />
-                    </section>
-                  ) : null}
-
-                  <section
-                    className="rounded-xl border p-3"
+              <div className="mt-3 space-y-3">
+                {isFarFuture ? (
+                  <div
+                    className="rounded-lg border px-3 py-2 text-[11px]"
                     style={{
-                      borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)",
-                      backgroundColor: "color-mix(in srgb, var(--ink-deep) 90%, var(--ink-mid))",
+                      borderColor: "color-mix(in srgb, var(--gold) 50%, transparent)",
+                      backgroundColor: "color-mix(in srgb, var(--gold) 10%, transparent)",
+                      color: "var(--gold-glow)",
                     }}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <label className="block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Personal note</label>
-                      <span className="text-[10px] text-[color:var(--text-muted)]">{noteCharCount}/280</span>
-                    </div>
-                    <textarea
-                      placeholder="Add a short note for this day"
-                      value={noteValue}
-                      onChange={(e) => {
-                        if (user?.id) {
-                          updateCheckInModalEntry(user.id, "comment", e.target.value.slice(0, 280));
-                        }
-                      }}
-                      rows={4}
-                      className="mt-2 w-full resize-none rounded-md border px-3 py-2 text-[12px] text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)]"
-                      style={{
-                        borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)",
-                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 58%, var(--ink-deep))",
-                      }}
-                    />
-                    <p className="mt-2 text-[10px] text-[color:var(--text-muted)]">Private note for your own tracking.</p>
-                  </section>
+                    Future days only support a personal note. Full check-in is available on the day itself.
+                  </div>
+                ) : null}
 
-                </div>
+                {!isFarFuture && circleUsers.length > 0 ? (
+                  <div>
+                    <span className="mb-1 block text-[10px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>
+                      {isTodayEntry ? "Circle today" : `Circle on ${formatDateWithPreference(checkInModal.date, dateFormat)}`}
+                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      {checkedInUsers.map((u) => (
+                        <span
+                          key={u.id}
+                          className="inline-flex items-center gap-2 rounded-md border px-2 py-1 text-[11px]"
+                          style={{
+                            borderColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)",
+                            backgroundColor: "color-mix(in srgb, var(--ink-mid) 52%, transparent)",
+                            color: "var(--text-secondary)",
+                          }}
+                        >
+                          <span
+                            className="h-2 w-2 rounded-full"
+                            style={{ backgroundColor: u.id === user?.id ? "var(--cultivator-self)" : "var(--cultivator-friend)" }}
+                          />
+                          {u.id === user?.id ? "You" : u.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {!isFarFuture && user?.id ? (
+                  <label className="block">
+                    <span className="mb-1 block text-[10px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>
+                      Weight (kg)
+                    </span>
+                    {previousWeightRecord ? (
+                      <span className="mb-1 block text-[10px]" style={{ color: "var(--text-muted)" }}>
+                        Last: {previousWeightRecord.weight} kg — {formatDateWithPreference(previousWeightRecord.date, dateFormat)}
+                      </span>
+                    ) : null}
+                    <input
+                      type="number"
+                      placeholder={previousWeightRecord ? String(previousWeightRecord.weight) : "e.g. 75"}
+                      value={currentUserEntry.weight}
+                      onChange={(e) => updateCheckInModalEntry(user.id, "weight", e.target.value)}
+                      className="h-10 w-full rounded-md border px-3 text-sm outline-none"
+                      style={{
+                        borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
+                        color: "var(--cloud-white)",
+                      }}
+                      min="0"
+                      max="500"
+                      step="0.1"
+                      autoFocus
+                    />
+                    <span className="mt-1 block text-[10px]" style={{ color: "var(--text-muted)" }}>
+                      Check-in is automatic when you log a workout.
+                    </span>
+                  </label>
+                ) : null}
+
+                <label className="block">
+                  <div className="mb-1 flex items-center justify-between">
+                    <span className="text-[10px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>Note</span>
+                    <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>{noteCharCount}/280</span>
+                  </div>
+                  <textarea
+                    placeholder="Add a short note for this day"
+                    value={noteValue}
+                    onChange={(e) => {
+                      if (user?.id) {
+                        updateCheckInModalEntry(user.id, "comment", e.target.value.slice(0, 280));
+                      }
+                    }}
+                    rows={3}
+                    className="w-full resize-none rounded-md border px-3 py-2 text-sm outline-none"
+                    style={{
+                      borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                      backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
+                      color: "var(--cloud-white)",
+                    }}
+                  />
+                </label>
               </div>
 
-              <div
-                className="shrink-0 border-t px-3.5 pt-2.5 pb-[calc(env(safe-area-inset-bottom,0px)+0.85rem)]"
-                style={{
-                  borderTopColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)",
-                  backgroundColor: "color-mix(in srgb, var(--ink-deep) 94%, var(--ink-mid))",
-                }}
-              >
-                {isFarFuture ? (
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setCheckInModal(null)}
-                      className="flex-1 rounded-md border px-3 py-2.5 text-sm font-semibold text-[color:var(--text-secondary)]"
-                      style={{
-                        borderColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)",
-                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 52%, transparent)",
-                      }}
-                    >
-                      Cancel
-                    </button>
-                    {hasExistingFutureNote ? (
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          const existingNote = futureNotes.find((n) => n.date === checkInModal.date && n.user.id === user?.id);
-                          if (existingNote && user?.id) {
-                            await api.delete("/api/checkins/notes", { noteId: existingNote.id });
-                            await api.post("/api/checkins", {
-                              date: checkInModal.date,
-                              entries: { [user.id]: { present: false, weight: "", comment: "" } },
-                            });
-                            refreshFutureNotes();
-                            broadcastNotesUpdated();
-                            updateCheckInModalEntry(user.id, "comment", "");
-                            setCheckInRows((prev) => {
-                              return prev.map((r) => {
-                                if (r.date !== checkInModal.date) return r;
-                                const updatedEntries = { ...r.entries };
-                                if (updatedEntries[user.id]) {
-                                  updatedEntries[user.id] = { ...updatedEntries[user.id], comment: "" };
-                                }
-                                const hasData = Object.values(updatedEntries).some(
-                                  (e) => e.present || e.weight || e.comment?.trim()
-                                );
-                                if (!hasData) return null;
-                                return { ...r, entries: updatedEntries };
-                              }).filter(Boolean) as typeof prev;
-                            });
-                          }
-                        }}
-                        className="flex-1 rounded-md border px-3 py-2.5 text-sm font-semibold text-[color:var(--danger-hover)]"
-                        style={{
-                          borderColor: "color-mix(in srgb, var(--danger) 46%, transparent)",
-                          backgroundColor: "color-mix(in srgb, var(--danger) 12%, transparent)",
-                        }}
-                      >
-                        Clear
-                      </button>
-                    ) : null}
-                    <button
-                      type="button"
-                      onClick={handleSaveCheckIn}
-                      className="flex-1 rounded-md border px-3 py-2.5 text-sm font-semibold text-[color:var(--cloud-white)]"
-                      style={{
-                        borderColor: "color-mix(in srgb, var(--accent) 56%, transparent)",
-                        backgroundColor: "color-mix(in srgb, var(--accent) 82%, transparent)",
-                        boxShadow: "0 8px 18px color-mix(in srgb, var(--accent) 24%, transparent)",
-                      }}
-                    >
-                      Save Note
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setCheckInModal(null)}
-                      className="flex-1 rounded-md border px-3 py-2.5 text-sm font-semibold text-[color:var(--text-secondary)]"
-                      style={{
-                        borderColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)",
-                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 52%, transparent)",
-                      }}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (!user?.id) return;
+              <div className="mt-3 flex items-center justify-end gap-2">
+                {isFarFuture && hasExistingFutureNote ? (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const existingNote = futureNotes.find((n) => n.date === checkInModal.date && n.user.id === user?.id);
+                      if (existingNote && user?.id) {
+                        await api.delete("/api/checkins/notes", { noteId: existingNote.id });
                         await api.post("/api/checkins", {
                           date: checkInModal.date,
                           entries: { [user.id]: { present: false, weight: "", comment: "" } },
                         });
+                        refreshFutureNotes();
+                        broadcastNotesUpdated();
+                        updateCheckInModalEntry(user.id, "comment", "");
                         setCheckInRows((prev) => {
-                          return prev
-                            .map((row) => {
-                              if (row.date !== checkInModal.date) return row;
-                              const nextEntries = { ...row.entries };
-                              delete nextEntries[user.id];
-                              if (Object.keys(nextEntries).length === 0) return null;
-                              return { ...row, entries: nextEntries };
-                            })
-                            .filter(Boolean) as typeof prev;
+                          return prev.map((r) => {
+                            if (r.date !== checkInModal.date) return r;
+                            const updatedEntries = { ...r.entries };
+                            if (updatedEntries[user.id]) {
+                              updatedEntries[user.id] = { ...updatedEntries[user.id], comment: "" };
+                            }
+                            const hasData = Object.values(updatedEntries).some(
+                              (e) => e.present || e.weight || e.comment?.trim()
+                            );
+                            if (!hasData) return null;
+                            return { ...r, entries: updatedEntries };
+                          }).filter(Boolean) as typeof prev;
                         });
-                        setCheckInUsersByDate((prev) => {
-                          const next = new Map(prev);
-                          const users = (next.get(checkInModal.date) || []).filter((entryId) => entryId !== user.id);
-                          if (users.length === 0) next.delete(checkInModal.date);
-                          else next.set(checkInModal.date, users);
-                          return next;
-                        });
-                        setCheckInModal(null);
-                      }}
-                      className="rounded-md border px-3 py-2.5 text-sm font-semibold text-[color:var(--danger-hover)]"
-                      style={{
-                        borderColor: "color-mix(in srgb, var(--danger) 46%, transparent)",
-                        backgroundColor: "color-mix(in srgb, var(--danger) 12%, transparent)",
-                      }}
-                    >
-                      Remove
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleSaveCheckIn}
-                      className="flex-1 rounded-md border px-3 py-2.5 text-sm font-semibold text-[color:var(--cloud-white)]"
-                      style={{
-                        borderColor: "color-mix(in srgb, var(--accent) 56%, transparent)",
-                        backgroundColor: "color-mix(in srgb, var(--accent) 82%, transparent)",
-                        boxShadow: "0 8px 18px color-mix(in srgb, var(--accent) 24%, transparent)",
-                      }}
-                    >
-                      {currentUserEntry.present ? "Save changes" : "Save"}
-                    </button>
-                  </div>
-                )}
+                      }
+                    }}
+                    className="mr-auto h-9 rounded-md border px-3 text-sm font-semibold"
+                    style={{
+                      borderColor: "color-mix(in srgb, var(--danger) 46%, transparent)",
+                      backgroundColor: "color-mix(in srgb, var(--danger) 12%, transparent)",
+                      color: "var(--danger-hover)",
+                    }}
+                  >
+                    Clear
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => setCheckInModal(null)}
+                  className="h-9 rounded-md border px-3 text-sm"
+                  style={{
+                    borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                    color: "var(--mist-light)",
+                    backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveCheckIn}
+                  className="h-9 rounded-md border px-3 text-sm font-semibold"
+                  style={{
+                    borderColor: "color-mix(in srgb, var(--forest) 42%, transparent)",
+                    color: "var(--void-black)",
+                    backgroundColor: "var(--forest)",
+                  }}
+                >
+                  {isFarFuture ? "Save Note" : "Save"}
+                </button>
               </div>
             </div>
           );
@@ -1734,7 +1516,7 @@ export default function DaoHallPage() {
             .map(([userId, entry]) => ({
               userId,
               name: userNameById.get(userId) || "Unknown",
-              color: getUserCultivatorColor(userId, userColors),
+              color: userId === user?.id ? "var(--cultivator-self)" : "var(--cultivator-friend)",
               ...entry,
             }))
             .filter((r) => r.present || r.weight?.trim() || r.comment?.trim())

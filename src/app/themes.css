@@ -272,6 +272,10 @@ html.forest {
 
   /* Charts & misc */
   --chart-primary: var(--jade-glow);
+
+    /* Cultivator self — vermilion seal pops against the violet accent */
+    --cultivator-self: var(--crimson-glow);
+
   --chart-primary-rgb: 184 216 120;
   --chart-secondary: var(--gold);
   --chart-grid: color-mix(in srgb, var(--mist-pale) 14%, transparent);

@@ -106,12 +106,21 @@ const DEFAULT_SETTINGS: DisplaySettings = {
   terminologyMode: "normal",
   progressionVariationDisplay: "abbreviation",
   defaultWeightUnit: "kg",
-    defaultTimedUnit: "seconds",
+  defaultTimedUnit: "seconds",
   languageMode: "english",
-  showExerciseForeignLanguage: true,
-    checkInHistoryView: "compact",
-    checkInCalendarScope: "all",
+  showExerciseForeignLanguage: false,
+  checkInHistoryView: "compact",
+  checkInCalendarScope: "all",
 };
+
+function normalizeDisplaySettings(partial?: Partial<DisplaySettings> | null): DisplaySettings {
+  return {
+    ...DEFAULT_SETTINGS,
+    ...(partial ?? {}),
+    languageMode: "english",
+    showExerciseForeignLanguage: false,
+  };
+}
 
 export const DISPLAY_SETTINGS_STORAGE_KEY = "cultivateos-display-settings";
 
@@ -169,8 +178,8 @@ function loadSettings(userId: string | null | undefined): DisplaySettings {
     const storageKey = getDisplaySettingsStorageKey(userId);
     const stored = localStorage.getItem(storageKey);
     if (stored) {
-      const parsed = JSON.parse(stored);
-      return { ...DEFAULT_SETTINGS, ...parsed };
+      const parsed = JSON.parse(stored) as Partial<DisplaySettings>;
+      return normalizeDisplaySettings(parsed);
     }
   } catch {
     // Ignore parse errors
@@ -255,7 +264,7 @@ export function DisplaySettingsProvider({ children }: { children: ReactNode }) {
 
         if (!cancelled && remoteSettings && typeof remoteSettings === "object" && !Array.isArray(remoteSettings)) {
           // Remote takes precedence — it is the authoritative cross-device copy.
-          setSettings({ ...DEFAULT_SETTINGS, ...(remoteSettings as Partial<DisplaySettings>) });
+          setSettings(normalizeDisplaySettings(remoteSettings as Partial<DisplaySettings>));
         }
       } catch {
         // Ignore remote sync errors; local user-scoped settings already applied.
@@ -295,16 +304,7 @@ export function DisplaySettingsProvider({ children }: { children: ReactNode }) {
   }, [settings, remotePrefsReady, user?.id]);
 
   const updateSettings = useCallback((partial: Partial<DisplaySettings>) => {
-    setSettings((prev) => {
-      const nextPartial = { ...partial };
-
-      // If UI language switches to Vietnamese, ensure foreign exercise names are visible.
-      if (nextPartial.languageMode === "vietnamese" && nextPartial.showExerciseForeignLanguage === undefined) {
-        nextPartial.showExerciseForeignLanguage = true;
-      }
-
-      return { ...prev, ...nextPartial };
-    });
+    setSettings((prev) => normalizeDisplaySettings({ ...prev, ...partial }));
   }, []);
 
   const resetSettings = useCallback(() => {
