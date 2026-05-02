@@ -166,8 +166,9 @@ export default function TrainInputCanvasPage() {
   const assignedDayIndex = assignedDayParam !== null && assignedDayParam !== "" ? Number(assignedDayParam) : null;
   const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const;
   const assignedDayName = assignedDayIndex != null && assignedDayIndex >= 0 && assignedDayIndex <= 6 ? DAY_NAMES[assignedDayIndex] : null;
-  // True when tapped from the day drawer (has a pinned progression assignment)
-  const isDayAssignment = Boolean(prefillProgression && (prefillExerciseId || prefillExerciseName));
+  // True only when opened from day assignment flow (explicit assignedDay in query)
+  const hasAssignedDay = assignedDayName !== null;
+  const isDayAssignment = hasAssignedDay && Boolean(prefillExerciseId || prefillExerciseName);
 
   const [exercises, setExercises] = useState<ProgressionExercise[]>([]);
   const [loading, setLoading] = useState(true);
@@ -621,6 +622,7 @@ export default function TrainInputCanvasPage() {
     if (prefillStepperInitializedRef.current) return;
     if (editLogId) return;
     if (prefillCustomExercise) return;
+    if (!isDayAssignment) return;
     if (!prefillExerciseId && !prefillExerciseName) return;
     if (!selectedExerciseId) return;
     if (!selectedLevel) return;
@@ -634,7 +636,7 @@ export default function TrainInputCanvasPage() {
 
     setActivePanel((prev) => (prev === "exercise" ? "format" : prev));
     prefillStepperInitializedRef.current = true;
-  }, [editLogId, prefillCustomExercise, prefillExerciseId, prefillExerciseName, selectedExerciseId, selectedLevel]);
+  }, [editLogId, isDayAssignment, prefillCustomExercise, prefillExerciseId, prefillExerciseName, selectedExerciseId, selectedLevel]);
 
   const addSetRow = () => {
     setSets((prev) => {
