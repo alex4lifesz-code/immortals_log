@@ -563,6 +563,7 @@ export default function HistoryPage() {
     const now = Date.now();
 
     for (const exercise of exercises) {
+      if ((exercise.userProgress?.length ?? 0) === 0) continue;
       const deletedExercise = isDeletedExerciseDescription(exercise.story);
       const exerciseName = deletedExercise ? getDeletedExerciseLabel(exercise) : exercise.name;
       const category = (exercise.category || "Uncategorized").trim() || "Uncategorized";

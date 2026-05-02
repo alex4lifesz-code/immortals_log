@@ -12,6 +12,12 @@ export const GET = withAuth(async (_request, { auth }) => {
   try {
     const languageMode = await getUserLanguageMode(auth.userId);
     const exercises = await prisma.progressionExercise.findMany({
+      where: {
+        OR: [
+          { userId: auth.userId },
+          { userProgress: { some: { userId: auth.userId } } },
+        ],
+      },
       include: {
         translation: true,
         tiers: {

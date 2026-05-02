@@ -31,8 +31,14 @@ export const GET = withAuth(async (request, { auth, params }) => {
 
     const languageMode = await getUserLanguageMode(auth.userId);
 
-    const exercise = await prisma.progressionExercise.findUnique({
-      where: { id },
+    const exercise = await prisma.progressionExercise.findFirst({
+      where: {
+        id,
+        OR: [
+          { userId },
+          { userProgress: { some: { userId } } },
+        ],
+      },
       include: {
         translation: true,
         tiers: {

@@ -96,15 +96,30 @@ export const GET = withAuth(async (request, { auth }) => {
     const page = await prisma.progressionExercise.findMany({
       where: exerciseCursor
         ? {
-            OR: [
-              { createdAt: { lt: exerciseCursor.createdAt } },
+            AND: [
               {
-                createdAt: exerciseCursor.createdAt,
-                id: { lt: exerciseCursor.id },
+                OR: [
+                  { userId },
+                  { userProgress: { some: { userId } } },
+                ],
+              },
+              {
+                OR: [
+                  { createdAt: { lt: exerciseCursor.createdAt } },
+                  {
+                    createdAt: exerciseCursor.createdAt,
+                    id: { lt: exerciseCursor.id },
+                  },
+                ],
               },
             ],
           }
-        : undefined,
+        : {
+            OR: [
+              { userId },
+              { userProgress: { some: { userId } } },
+            ],
+          },
       select: {
         id: true,
         name: true,

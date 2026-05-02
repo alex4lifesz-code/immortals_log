@@ -13,6 +13,8 @@ export const PUT = withAuth(async (request, { auth, params }) => {
       return ApiErrors.badRequest("currentLevel must be a positive number");
     }
 
+    const userId = auth.userId;
+
     // Verify the exercise exists in shared library
     const exercise = await prisma.progressionExercise.findFirst({
       where: { id },
@@ -21,7 +23,6 @@ export const PUT = withAuth(async (request, { auth, params }) => {
       return ApiErrors.notFound("Exercise not found");
     }
 
-    const userId = auth.userId;
     const progress = await prisma.userProgressionLevel.upsert({
       where: { userId_exerciseId: { userId, exerciseId: id } },
       update: { currentLevel },
