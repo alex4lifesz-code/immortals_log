@@ -52,7 +52,7 @@ function FloatingMobileSidebar() {
       return;
     }
 
-    router.push(path, { scroll: false });
+    router.push(path);
     setMobileSidebarOpen(false);
   }, [pathname, router, setMobileSidebarOpen]);
 

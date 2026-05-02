@@ -326,7 +326,6 @@ export default function HistoryPage() {
         date: getTodayDateKey(),
         entries: {
           [userId]: {
-            present: true,
             weight: effectiveWeight,
             comment: effectiveNote || null,
           },

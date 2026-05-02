@@ -165,7 +165,7 @@ function MobileNavBar({
       return;
     }
 
-    router.push(path, { scroll: false });
+    router.push(path);
   }, [pathname, router, setMobileSidebarOpen]);
 
   const handleMenuToggle = useCallback(() => {
