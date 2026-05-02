@@ -414,7 +414,7 @@ export default function DashboardHomePage() {
       "ying-yang-light": { active: "rgb(29 78 216 / 0.74)", inactive: "rgb(29 78 216 / 0.16)", border: "#1d4ed8", label: "#2563eb" },
       "phoenix-bloom": { active: "rgb(251 146 60 / 0.72)", inactive: "rgb(251 146 60 / 0.2)", border: "#fb923c", label: "#fdba74" },
       "storm-chains": { active: "rgb(34 211 238 / 0.72)", inactive: "rgb(34 211 238 / 0.2)", border: "#22d3ee", label: "#67e8f9" },
-      "obsidian-ember": { active: "rgb(248 113 113 / 0.72)", inactive: "rgb(248 113 113 / 0.2)", border: "#f87171", label: "#fca5a5" },
+      "obsidian-ember": { active: "rgb(110 224 144 / 0.72)", inactive: "rgb(110 224 144 / 0.2)", border: "#6ee090", label: "#9aeab4" },
       "mist-cultivator": { active: "rgb(129 140 248 / 0.72)", inactive: "rgb(129 140 248 / 0.2)", border: "#818cf8", label: "#a5b4fc" },
       "frost-sect": { active: "rgb(45 212 191 / 0.72)", inactive: "rgb(45 212 191 / 0.2)", border: "#2dd4bf", label: "#5eead4" },
       "heavenly-sword": { active: "rgb(250 204 21 / 0.72)", inactive: "rgb(250 204 21 / 0.2)", border: "#facc15", label: "#fde047" },

@@ -2624,6 +2624,11 @@ html.nyaa {
   --header-border: var(--nyaa-table-grid);
 }
 
+html.obsidian-ember {
+  --label-progression: #c87050;  /* burnt copper — warm, distinct from ember red + gold */
+  --label-variant: #5ab8c8;      /* cool teal-steel — distinct from mountain-blue-glow */
+}
+
 /* =====================================================================
  * LIGHT VARIANTS for non-discord themes
  * Each block overrides only canvas/text/glow vars; accent vars cascade
