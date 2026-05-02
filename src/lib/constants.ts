@@ -84,14 +84,150 @@ export const DAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"] as const;
 
 export type DayOfWeek = (typeof DAYS_OF_WEEK)[number];
 
+export type DayAssignmentDetail = {
+  progression?: string;
+  variant?: string;
+};
+
+type DayAssignmentPayload = {
+  days: number[];
+  details?: Record<string, DayAssignmentDetail[]>;
+};
+
+function normalizeDayList(days: number[]): number[] {
+  return Array.from(new Set(days.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))).sort((a, b) => a - b);
+}
+
+function sanitizeDayAssignmentDetail(rawDetail: unknown): DayAssignmentDetail | null {
+  if (!rawDetail || typeof rawDetail !== "object") return null;
+  const detail = rawDetail as { progression?: unknown; variant?: unknown };
+  const progression = typeof detail.progression === "string" ? detail.progression.trim() : "";
+  const variant = typeof detail.variant === "string" ? detail.variant.trim() : "";
+  if (!progression && !variant) return null;
+  return {
+    progression: progression || undefined,
+    variant: variant || undefined,
+  };
+}
+
+function normalizeDetailList(rawDetail: unknown): DayAssignmentDetail[] {
+  const rawList = Array.isArray(rawDetail) ? rawDetail : [rawDetail];
+  const seen = new Set<string>();
+  const result: DayAssignmentDetail[] = [];
+
+  for (const entry of rawList) {
+    const detail = sanitizeDayAssignmentDetail(entry);
+    if (!detail) continue;
+    const key = `${detail.progression || ""}::${detail.variant || ""}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(detail);
+  }
+
+  return result;
+}
+
+export function parseDayAssignmentPayload(assignedDays: string): DayAssignmentPayload {
+  if (!assignedDays || assignedDays.trim() === "") {
+    return { days: [] };
+  }
+
+  const trimmed = assignedDays.trim();
+
+  if (trimmed.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(trimmed) as { days?: unknown; details?: unknown };
+      const days = Array.isArray(parsed.days)
+        ? normalizeDayList(parsed.days.filter((d): d is number => typeof d === "number"))
+        : [];
+
+      const details: Record<string, DayAssignmentDetail[]> = {};
+      if (parsed.details && typeof parsed.details === "object") {
+        for (const [dayKey, rawDetail] of Object.entries(parsed.details as Record<string, unknown>)) {
+          const day = Number.parseInt(dayKey, 10);
+          if (!Number.isInteger(day) || day < 0 || day > 6) continue;
+          if (!days.includes(day)) continue;
+          const list = normalizeDetailList(rawDetail);
+          if (list.length > 0) {
+            details[String(day)] = list;
+          }
+        }
+      }
+
+      return {
+        days,
+        details: Object.keys(details).length > 0 ? details : undefined,
+      };
+    } catch {
+      return { days: [] };
+    }
+  }
+
+  return {
+    days: normalizeDayList(
+      trimmed
+        .split(",")
+        .map((d) => Number.parseInt(d.trim(), 10))
+        .filter((d) => !Number.isNaN(d)),
+    ),
+  };
+}
+
 // Utility functions for day assignments
 export function parseDayAssignments(assignedDays: string): number[] {
-  if (!assignedDays || assignedDays.trim() === "") return [];
-  return assignedDays.split(",").map(d => parseInt(d.trim())).filter(d => !isNaN(d));
+  return parseDayAssignmentPayload(assignedDays).days;
 }
 
 export function serializeDayAssignments(days: number[]): string {
-  return days.filter(d => d >= 0 && d <= 6).sort().join(",");
+  return normalizeDayList(days).join(",");
+}
+
+export function parseDayAssignmentDetails(assignedDays: string): Record<number, DayAssignmentDetail> {
+  const listMap = parseDayAssignmentDetailsList(assignedDays);
+  const map: Record<number, DayAssignmentDetail> = {};
+  for (const [dayKey, list] of Object.entries(listMap)) {
+    if (list.length === 0) continue;
+    map[Number(dayKey)] = list[0];
+  }
+  return map;
+}
+
+export function parseDayAssignmentDetailsList(assignedDays: string): Record<number, DayAssignmentDetail[]> {
+  const payload = parseDayAssignmentPayload(assignedDays);
+  const map: Record<number, DayAssignmentDetail[]> = {};
+
+  for (const day of payload.days) {
+    const details = payload.details?.[String(day)];
+    if (!details || details.length === 0) continue;
+    map[day] = details;
+  }
+
+  return map;
+}
+
+export function serializeDayAssignmentPayload(
+  days: number[],
+  details?: Record<number, DayAssignmentDetail | DayAssignmentDetail[]>,
+): string {
+  const normalizedDays = normalizeDayList(days);
+  const detailEntries: Array<[string, DayAssignmentDetail[]]> = [];
+
+  if (details) {
+    for (const day of normalizedDays) {
+      const normalizedDetails = normalizeDetailList(details[day]);
+      if (normalizedDetails.length === 0) continue;
+      detailEntries.push([String(day), normalizedDetails]);
+    }
+  }
+
+  if (detailEntries.length === 0) {
+    return serializeDayAssignments(normalizedDays);
+  }
+
+  return JSON.stringify({
+    days: normalizedDays,
+    details: Object.fromEntries(detailEntries),
+  });
 }
 
 export function isDayAssigned(assignedDays: string, dayIndex: number): boolean {
@@ -100,12 +236,17 @@ export function isDayAssigned(assignedDays: string, dayIndex: number): boolean {
 }
 
 export function toggleDayAssignment(assignedDays: string, dayIndex: number): string {
-  const assignedDayNumbers = parseDayAssignments(assignedDays);
+  const payload = parseDayAssignmentPayload(assignedDays);
+  const assignedDayNumbers = payload.days;
+  const detailMap = parseDayAssignmentDetails(assignedDays);
+
   if (assignedDayNumbers.includes(dayIndex)) {
-    return serializeDayAssignments(assignedDayNumbers.filter(d => d !== dayIndex));
-  } else {
-    return serializeDayAssignments([...assignedDayNumbers, dayIndex]);
+    const nextDays = assignedDayNumbers.filter((d) => d !== dayIndex);
+    delete detailMap[dayIndex];
+    return serializeDayAssignmentPayload(nextDays, detailMap);
   }
+
+  return serializeDayAssignmentPayload([...assignedDayNumbers, dayIndex], detailMap);
 }
 
 export function formatAssignedDays(assignedDays: string): string {

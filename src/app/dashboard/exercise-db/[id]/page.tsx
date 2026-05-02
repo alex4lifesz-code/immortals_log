@@ -323,7 +323,7 @@ export default function ExerciseDetailPage() {
   }, [exercise, name, category, exerciseType, muscleGroups, progression, variations]);
 
   const saveReady = name.trim().length >= 2 && muscleGroups.length > 0 && progression.length > 0;
-  const shellMinHeight = "calc(var(--app-viewport-height) - 0.5rem)";
+  const shellMinHeight = "calc(100dvh - 0.5rem)";
   const panelShellStyle = { minHeight: "430px", height: "430px" };
   const activePanelIndex = EDITOR_PANELS.findIndex((panel) => panel.id === activePanel);
 

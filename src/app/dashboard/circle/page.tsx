@@ -23,13 +23,19 @@ interface FeedLog {
   exerciseName: string;
   level: number;
   progressionName?: string;
+  variant?: string | null;
   createdAt: string;
-  reps1?: number;
-  reps2?: number;
-  reps3?: number;
-  weight1?: number;
-  weight2?: number;
-  weight3?: number;
+  reps1?: number | null;
+  reps2?: number | null;
+  reps3?: number | null;
+  reps?: number | null;
+  weight1?: number | null;
+  weight2?: number | null;
+  weight3?: number | null;
+  holdTime?: number | null;
+  holdTime2?: number | null;
+  holdTime3?: number | null;
+  dynamicSetRows?: Array<{ weight: string; reps: string }> | null;
   completed: boolean;
 }
 
@@ -95,6 +101,33 @@ function formatRelative(dateLike: string | null | undefined): string {
   return new Date(ts).toLocaleDateString();
 }
 
+const THEME_STYLE_LABELS: Record<string, string> = {
+  discord: "Discord theme",
+  forest: "Forest",
+  "ink-dragon": "Ink Dragon",
+  "evolved-ink-dragon": "Evolved Ink Dragon",
+  "lemon-dragon": "Lemon Dragon",
+  "ying-yang": "Ying Yang",
+  "ying-yang-light": "Ying Yang Light",
+  "ying-yang-magenta": "Ying Yang Magenta",
+  "phoenix-bloom": "Phoenix Bloom",
+  "storm-chains": "Storm Chains",
+  "obsidian-ember": "Obsidian Ember",
+  "mist-cultivator": "Mist Cultivator",
+  "frost-sect": "Frost Sect",
+  "heavenly-sword": "Heavenly Sword",
+};
+
+function formatThemeStyle(themeStyle: string | null | undefined): string {
+  if (!themeStyle) return "Theme unknown";
+  return THEME_STYLE_LABELS[themeStyle] || themeStyle;
+}
+
+function getThemePalette(themeStyle: string | null | undefined): string[] {
+  const key = themeStyle && THEME_STYLE_LABELS[themeStyle] ? themeStyle : "discord";
+  return [1, 2, 3, 4].map((index) => `var(--theme-preview-${key}-${index})`);
+}
+
 // ── Shared styles ──────────────────────────────────────────────────
 
 const tileStyle = {
@@ -107,12 +140,81 @@ const microTileStyle = {
   border: "1px solid color-mix(in srgb, var(--ink-light) 24%, transparent)",
 };
 
+function formatRelativeRecentDate(
+  dateLike: string,
+  dateFormat: "dd-mm-yyyy" | "dd-mmm-yyyy" | "dd-mm-yy" | "dd-mmm-yy" = "dd-mmm-yyyy",
+  timeZone?: string,
+): string {
+  void dateFormat;
+  void timeZone;
+  const timestamp = new Date(dateLike).getTime();
+  if (!Number.isFinite(timestamp)) return "";
+
+  const diffMs = Date.now() - timestamp;
+  if (diffMs < 0) {
+    return "just now";
+  }
+
+  const minuteMs = 60 * 1000;
+  const hourMs = 60 * minuteMs;
+  const dayMs = 24 * hourMs;
+
+  if (diffMs < hourMs) {
+    const mins = Math.max(1, Math.floor(diffMs / minuteMs));
+    return `${mins}m ago`;
+  }
+
+  if (diffMs < dayMs) {
+    const hours = Math.max(1, Math.floor(diffMs / hourMs));
+    return `${hours}h ago`;
+  }
+
+  const days = Math.max(1, Math.floor(diffMs / dayMs));
+  return `${days} day${days === 1 ? "" : "s"} ago`;
+}
+
+// ── Feed helpers ──────────────────────────────────────────────────
+
+function getFeedSetChips(log: FeedLog): string[] {
+  const hasHold = log.holdTime != null || log.holdTime2 != null || log.holdTime3 != null;
+  const chips: string[] = [];
+
+  if (hasHold) {
+    const times = [log.holdTime, log.holdTime2, log.holdTime3];
+    const repsArr = [log.reps1, log.reps2, log.reps3];
+    for (let i = 0; i < 3; i++) {
+      const t = times[i]; const r = repsArr[i];
+      if (t == null && r == null) continue;
+      chips.push(t != null ? `${t}s${r != null ? ` × ${r}` : ""}` : `${r} reps`);
+    }
+  } else {
+    const weights = [log.weight1, log.weight2, log.weight3];
+    const repsArr = [log.reps1, log.reps2, log.reps3];
+    for (let i = 0; i < 3; i++) {
+      const w = weights[i]; const r = repsArr[i];
+      if (w == null && r == null) continue;
+      chips.push(w != null && w > 0 ? `${w}kg × ${r ?? "-"}` : r != null ? `${r} reps` : "-");
+    }
+  }
+
+  const dynamic = Array.isArray(log.dynamicSetRows) ? log.dynamicSetRows : [];
+  for (const row of dynamic) {
+    if (row.weight !== "-" || row.reps !== "-") {
+      chips.push(row.reps !== "-" ? `${row.weight} × ${row.reps}` : row.weight);
+    }
+  }
+
+  if (chips.length === 0 && log.reps != null) chips.push(`${log.reps} reps`);
+  return chips;
+}
+
 // ── Feed tab ───────────────────────────────────────────────────────
 
 function FeedTab({ userId }: { userId: string }) {
   const { settings } = useDisplaySettings();
   const [loading, setLoading] = useState(true);
   const [logs, setLogs] = useState<FeedLog[]>([]);
+  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -129,12 +231,18 @@ function FeedTab({ userId }: { userId: string }) {
           id: string;
           createdAt: string;
           level: number;
-          reps1?: number;
-          reps2?: number;
-          reps3?: number;
-          weight1?: number;
-          weight2?: number;
-          weight3?: number;
+          variant?: string | null;
+          reps1?: number | null;
+          reps2?: number | null;
+          reps3?: number | null;
+          reps?: number | null;
+          weight1?: number | null;
+          weight2?: number | null;
+          weight3?: number | null;
+          holdTime?: number | null;
+          holdTime2?: number | null;
+          holdTime3?: number | null;
+          dynamicSetRows?: Array<{ weight: string; reps: string }> | null;
           completed?: boolean;
         }>;
       }>;
@@ -158,13 +266,19 @@ function FeedTab({ userId }: { userId: string }) {
                 progressionName:
                   exercise.tiers?.find((t) => t.level === log.level)?.name ??
                   `Progression ${log.level}`,
+                variant: log.variant,
                 createdAt: log.createdAt,
                 reps1: log.reps1,
                 reps2: log.reps2,
                 reps3: log.reps3,
+                reps: log.reps,
                 weight1: log.weight1,
                 weight2: log.weight2,
                 weight3: log.weight3,
+                holdTime: log.holdTime,
+                holdTime2: log.holdTime2,
+                holdTime3: log.holdTime3,
+                dynamicSetRows: log.dynamicSetRows,
                 completed: log.completed || false,
               });
             }
@@ -184,8 +298,7 @@ function FeedTab({ userId }: { userId: string }) {
       });
 
     return () => {
-      cancelled = true;
-    };
+      cancelled = true; };
   }, [userId]);
 
   if (loading) {
@@ -219,95 +332,145 @@ function FeedTab({ userId }: { userId: string }) {
     <div className="space-y-4">
       {Object.entries(grouped)
         .slice(0, 14)
-        .map(([day, dayLogs], groupIndex) => (
-          <div key={day}>
-            {/* Date separator with visual weight */}
-            <div className={`flex items-center gap-2 ${groupIndex === 0 ? "mb-2" : "mb-2 mt-6"}`}>
-              <div
-                className="h-px flex-1"
-                style={{
-                  background:
-                    "color-mix(in srgb, var(--ink-light) 55%, transparent)",
-                }}
-              />
-              <p
-                className="shrink-0 text-[9px] font-semibold uppercase tracking-[0.12em]"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                {formatDateWithPreference(
-                  new Date(`${day}T00:00:00`),
-                  settings.dateFormat || "dd-mmm-yyyy"
-                )}
-              </p>
-              <div
-                className="h-px flex-1"
-                style={{
-                  background:
-                    "color-mix(in srgb, var(--ink-light) 55%, transparent)",
-                }}
-              />
-            </div>
-            <div className="space-y-2">
-              {dayLogs.map((log) => {
-                const sets = (
-                  [
-                    [log.reps1, log.weight1],
-                    [log.reps2, log.weight2],
-                    [log.reps3, log.weight3],
-                  ] as Array<[number | undefined, number | undefined]>
-                ).filter(([r]) => r != null && r > 0);
+        .map(([day, dayLogs], groupIndex) => {
+          // Group by user + exercise within the day
+          const exerciseGroups: Record<string, { exerciseName: string; userName: string; userId: string; logs: FeedLog[] }> = {};
+          for (const log of dayLogs) {
+            const key = `${log.userId}::${log.exerciseName}`;
+            if (!exerciseGroups[key]) {
+              exerciseGroups[key] = { exerciseName: log.exerciseName, userName: log.userName, userId: log.userId, logs: [] };
+            }
+            exerciseGroups[key].logs.push(log);
+          }
 
-                return (
-                  <article
-                    key={log.id}
-                    className="rounded-lg px-3 py-2.5 border"
-                    style={tileStyle}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-[color:var(--text-primary)]">
-                          {log.exerciseName}
-                        </p>
-                        <p className="text-[11px] text-[color:var(--text-secondary)]">
-                          {log.progressionName} · {log.userName}
-                        </p>
-                      </div>
-                      {log.completed && (
-                        <span
-                          className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold text-[color:var(--forest)]"
-                          style={{
-                            backgroundColor:
-                              "color-mix(in srgb, var(--forest) 14%, transparent)",
-                            border:
-                              "1px solid color-mix(in srgb, var(--forest) 34%, transparent)",
-                          }}
+          return (
+            <div key={day}>
+              <div className={`flex items-center gap-2 ${groupIndex === 0 ? "mb-2" : "mb-2 mt-6"}`}>
+                <div className="h-px flex-1" style={{ background: "color-mix(in srgb, var(--ink-light) 55%, transparent)" }} />
+                <p className="shrink-0 text-[9px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--text-secondary)" }}>
+                  {formatDateWithPreference(new Date(`${day}T00:00:00`), settings.dateFormat || "dd-mmm-yyyy")}
+                </p>
+                <div className="h-px flex-1" style={{ background: "color-mix(in srgb, var(--ink-light) 55%, transparent)" }} />
+              </div>
+
+              <div className="space-y-1">
+                {Object.entries(exerciseGroups).map(([groupKey, group]) => {
+                  const hasMultiple = group.logs.length > 1;
+                  const isExpanded = expandedKeys.has(groupKey);
+                  const visibleLogs = isExpanded ? group.logs : [group.logs[0]];
+                  const latestLog = group.logs[0];
+                  const toggleExpanded = () => {
+                    if (!hasMultiple) return;
+                    setExpandedKeys((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(groupKey)) next.delete(groupKey);
+                      else next.add(groupKey);
+                      return next;
+                    });
+                  };
+                  const relativeDate = latestLog
+                    ? formatRelativeRecentDate(
+                        latestLog.createdAt,
+                        settings.dateFormat || "dd-mmm-yyyy",
+                        settings.timeZone,
+                      )
+                    : "";
+
+                  return (
+                    <div key={groupKey}>
+                      {/* Exercise header — train-style row */}
+                      <article
+                        className="mx-1 my-0.5 rounded-md px-3 py-2.5"
+                        style={{
+                          border: "1px solid color-mix(in srgb, var(--ink-light) 40%, transparent)",
+                          backgroundColor: "color-mix(in srgb, var(--ink-mid) 48%, var(--ink-deep))",
+                          cursor: hasMultiple ? "pointer" : "default",
+                        }}
+                        role={hasMultiple ? "button" : undefined}
+                        tabIndex={hasMultiple ? 0 : undefined}
+                        onClick={hasMultiple ? toggleExpanded : undefined}
+                        onKeyDown={hasMultiple ? (event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            toggleExpanded();
+                          }
+                        } : undefined}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="min-w-0 text-sm font-semibold leading-tight" style={{ color: "var(--text-primary)" }}>
+                            {group.exerciseName}
+                            {hasMultiple ? (
+                              <sup className="ml-0.5 text-[12px] font-bold leading-none" style={{ color: "var(--accent)" }}>
+                                {group.logs.length}
+                              </sup>
+                            ) : null}
+                          </p>
+                          <p className="shrink-0 text-[11px]" style={{ color: "var(--text-muted)" }}>
+                            {group.userName}
+                          </p>
+                        </div>
+                        <div className="mt-0.5 flex items-center justify-between gap-2">
+                          <p className="min-w-0 truncate text-[11px] italic" style={{ color: "var(--text-muted)" }}>
+                            {`${group.logs[0].variant ? `${group.logs[0].variant} ` : ""}${group.logs[0].progressionName} ${group.exerciseName}`}
+                          </p>
+                          <p className="shrink-0 text-[10px]" style={{ color: "var(--text-muted)" }}>
+                            {relativeDate}
+                          </p>
+                        </div>
+                        <div
+                          className="mt-1 w-full text-left"
+                          aria-label={hasMultiple ? (isExpanded ? "Collapse sets" : "Expand sets") : "Set values"}
                         >
-                          ✓
-                        </span>
-                      )}
+                          <div className="space-y-1">
+                            {visibleLogs.map((log, logIndex) => {
+                              const chips = getFeedSetChips(log);
+                              const setupLabel = `${log.variant ? `${log.variant} · ` : ""}${log.progressionName || `Progression ${log.level}`}`;
+                              return (
+                                <div key={`${groupKey}-log-${log.id || logIndex}`} className="flex flex-wrap items-center gap-1">
+                                  {isExpanded ? (
+                                    <span
+                                      className="rounded px-1.5 py-0.5 text-[9px]"
+                                      style={{
+                                        backgroundColor: "color-mix(in srgb, var(--ink-light) 10%, transparent)",
+                                        color: "var(--text-secondary)",
+                                      }}
+                                    >
+                                      {setupLabel}
+                                    </span>
+                                  ) : null}
+                                  {isExpanded ? (
+                                    <span className="rounded px-1.5 py-0.5 text-[9px]" style={{ backgroundColor: "color-mix(in srgb, var(--ink-light) 10%, transparent)", color: "var(--text-muted)" }}>
+                                      {formatRelativeRecentDate(log.createdAt, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone)}
+                                    </span>
+                                  ) : null}
+                                  {chips.length > 0 ? chips.map((chip, chipIndex) => (
+                                    <span
+                                      key={`${groupKey}-log-${log.id || logIndex}-chip-${chipIndex}`}
+                                      className="rounded px-1.5 py-0.5 text-[10px]"
+                                      style={{
+                                        backgroundColor: "color-mix(in srgb, var(--ink-light) 14%, transparent)",
+                                        border: "1px solid color-mix(in srgb, var(--ink-light) 26%, transparent)",
+                                        color: "var(--mist-light)",
+                                      }}
+                                    >
+                                      {chip}
+                                    </span>
+                                  )) : (
+                                    <span className="text-[10px]" style={{ color: "var(--mist-light)" }}>No sets recorded</span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </article>
                     </div>
-                    {sets.length > 0 && (
-                      <div className="mt-1.5 flex flex-wrap gap-1.5">
-                        {sets.map(([reps, weight], i) => (
-                          <span
-                            key={i}
-                            className="rounded px-1.5 py-0.5 text-[10px] text-[color:var(--mist-light)]"
-                            style={{
-                              backgroundColor:
-                                "color-mix(in srgb, var(--ink-light) 12%, transparent)",
-                            }}
-                          >
-                            {weight ? `${weight}kg × ${reps}` : `${reps} reps`}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </article>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
     </div>
   );
 }
@@ -521,6 +684,11 @@ function MembersTab({ userId: _userId }: { userId: string }) {
           {sorted.map((friend) => {
             const stats = friendStatsMap.get(friend.id);
             const expanded = expandedIds.has(friend.id);
+            const lastActivityText = friend.lastActivityAt
+              ? `${friend.lastActivityLabel || "Active"} · ${formatRelative(friend.lastActivityAt)}`
+              : stats?.lastSeenAt
+                ? formatRelative(stats.lastSeenAt)
+                : "No activity";
             return (
               <article
                 key={friend.id}
@@ -556,9 +724,7 @@ function MembersTab({ userId: _userId }: { userId: string }) {
                         "1px solid color-mix(in srgb, var(--accent) 34%, transparent)",
                     }}
                   >
-                    {stats?.lastSeenAt
-                      ? formatRelative(stats.lastSeenAt)
-                      : "No activity"}
+                    {lastActivityText}
                   </span>
                 </button>
 
@@ -605,17 +771,33 @@ function MembersTab({ userId: _userId }: { userId: string }) {
                             : "-"}
                         </p>
                       </div>
+                      <div className="rounded-md px-2 py-1.5" style={microTileStyle}>
+                        <p className="text-[10px] uppercase tracking-[0.08em] text-[color:var(--text-muted)]">
+                          Theme
+                        </p>
+                        <p className="mt-0.5 text-[12px] font-semibold text-[color:var(--text-primary)]">
+                          {formatThemeStyle(friend.themeStyle)}
+                        </p>
+                        <div className="mt-1.5 flex items-center gap-1.5">
+                          {getThemePalette(friend.themeStyle).map((color, index) => (
+                            <span
+                              key={`${friend.id}-theme-swatch-${index}`}
+                              className="h-2.5 w-2.5 rounded-full"
+                              style={{
+                                backgroundColor: color,
+                                border: "1px solid color-mix(in srgb, var(--ink-light) 38%, transparent)",
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </div>
                     </div>
                     <div className="rounded-md px-2 py-1.5" style={microTileStyle}>
                       <p className="text-[10px] uppercase tracking-[0.08em] text-[color:var(--text-muted)]">
                         Last activity
                       </p>
                       <p className="mt-0.5 text-[12px] font-semibold text-[color:var(--text-primary)]">
-                        {friend.lastActivityAt
-                          ? `${friend.lastActivityLabel || "Active"} · ${formatRelative(friend.lastActivityAt)}`
-                          : stats?.lastSeenAt
-                            ? formatRelative(stats.lastSeenAt)
-                            : "No activity"}
+                        {lastActivityText}
                       </p>
                     </div>
                     <button
@@ -836,6 +1018,7 @@ export default function CirclePage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+  const [isFriendRailDrawerOpen, setIsFriendRailDrawerOpen] = useState(false);
 
   const tab = (searchParams.get("tab") as Tab) || "feed";
 
@@ -852,12 +1035,8 @@ export default function CirclePage() {
     { id: "requests", label: "Requests" },
   ];
 
-  const isFriendRailDrawerOpen = Boolean(
-    searchParams.get("friendDrawerId") || searchParams.get("friendView") || searchParams.get("targetUserId")
-  );
-
   const shellMinHeight =
-    "calc(var(--app-viewport-height) - var(--mobile-nav-offset) - 0.5rem)";
+    "calc(100dvh - var(--mobile-nav-offset) - 0.5rem)";
 
   const sectionShellStyle = {
     borderColor: "color-mix(in srgb, var(--ink-light) 56%, transparent)",
@@ -870,12 +1049,15 @@ export default function CirclePage() {
     <PageLayout
       title="Circle"
       subtitle="Your cultivation circle"
-      mobileContentPaddingClass="p-0 pb-0"
+      mobileContentPaddingClass="p-0 pt-4 pb-0"
       mobileScrollContainerEnabled={false}
     >
       <div className="flex min-h-0" style={{ minHeight: shellMinHeight }}>
         <div className="flex shrink-0">
-          <DiscordFriendsRail incomingFriendRequestCount={incomingFriendRequestCount} />
+          <DiscordFriendsRail
+            incomingFriendRequestCount={incomingFriendRequestCount}
+            onDrawerOpenChange={setIsFriendRailDrawerOpen}
+          />
         </div>
         <div className="flex min-w-0 flex-1 flex-col px-0" style={{ minHeight: shellMinHeight }}>
           {!isFriendRailDrawerOpen ? (

@@ -216,7 +216,7 @@ export default function ManageFriendsPage() {
     backgroundColor: "color-mix(in srgb, var(--ink-mid) 48%, var(--ink-deep))",
   };
 
-  const shellMinHeight = "calc(var(--app-viewport-height) - var(--mobile-nav-offset) - 0.5rem)";
+  const shellMinHeight = "calc(100dvh - var(--mobile-nav-offset) - 0.5rem)";
 
   return (
     <PageLayout

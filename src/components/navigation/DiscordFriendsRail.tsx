@@ -2,7 +2,7 @@
 
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { DASHBOARD_ROUTES } from "@/lib/navigation";
 import { api } from "@/lib/api-client";
 import { useIsMobile } from "@/context/AppContext";
@@ -112,10 +112,17 @@ function getWorkoutMetricRows(log: ProgressionLog): Array<{ weight: string; reps
   return rows.length > 0 ? rows : [{ weight: "-", reps: "-" }];
 }
 
-function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriendRequestCount?: number }) {
+type FriendViewMode = "" | "history" | "chart" | "checkin" | "chat";
+
+function DiscordFriendsRail({
+  incomingFriendRequestCount = 0,
+  onDrawerOpenChange,
+}: {
+  incomingFriendRequestCount?: number;
+  onDrawerOpenChange?: (open: boolean) => void;
+}) {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const isMobile = useIsMobile();
   const { user } = useAuth();
   const { settings } = useDisplaySettings();
@@ -123,11 +130,9 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
   const timeZone = settings.timeZone;
 
   const isActive = pathname === DASHBOARD_ROUTES.circle || pathname?.startsWith(`${DASHBOARD_ROUTES.circle}/`);
-  const drawerFriendId = searchParams.get("friendDrawerId") || "";
-  const rawFriendView = searchParams.get("friendView") || "";
-  const selectedFriendExerciseId = searchParams.get("friendExerciseId") || "";
-  const friendViewMode = rawFriendView === "history" || rawFriendView === "chart" || rawFriendView === "checkin" || rawFriendView === "chat" ? rawFriendView : "";
-  const targetViewUserId = searchParams.get("targetUserId") || "";
+  const [drawerFriendId, setDrawerFriendId] = useState("");
+  const [friendViewMode, setFriendViewMode] = useState<FriendViewMode>("");
+  const [selectedFriendExerciseId, setSelectedFriendExerciseId] = useState("");
   const [friends, setFriends] = useState<Array<{
     id: string;
     name: string;
@@ -238,46 +243,20 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
       .map((friend) => ({ ...friend, isMe: false }));
   }, [friends, user?.id]);
 
-  const setDrawerQueryState = (
+  const setDrawerState = (
     friendId: string | null,
-    options: { view?: "history" | "chart" | "checkin" | "chat" | null; exerciseId?: string | null; mode?: "push" | "replace" } = {},
+    options: { view?: FriendViewMode | null; exerciseId?: string | null } = {},
   ) => {
-    const { view = null, exerciseId = null, mode = "replace" } = options;
-    const params = new URLSearchParams(searchParams.toString());
-    if (friendId) {
-      params.set("friendDrawerId", friendId);
-    } else {
-      params.delete("friendDrawerId");
-    }
-
-    if (view) {
-      params.set("friendView", view);
-    } else {
-      params.delete("friendView");
-    }
-
-    if (exerciseId) {
-      params.set("friendExerciseId", exerciseId);
-    } else {
-      params.delete("friendExerciseId");
-    }
-
-    params.delete("targetUserId");
-
-    const next = params.toString();
-    const href = next ? `${pathname}?${next}` : pathname;
-
-    if (mode === "push") {
-      router.push(href, { scroll: false });
-    } else {
-      router.replace(href, { scroll: false });
-    }
+    const { view = null, exerciseId = null } = options;
+    setDrawerFriendId(friendId || "");
+    setFriendViewMode(view || "");
+    setSelectedFriendExerciseId(exerciseId || "");
   };
 
   const closeFriendPanels = (resetTrainView = true) => {
     setFriendActionsOpen(false);
     setActiveFriend(null);
-    setDrawerQueryState(null, { mode: "replace" });
+    setDrawerState(null);
     if (resetTrainView && typeof window !== "undefined") {
       window.dispatchEvent(new Event("train-reset-view"));
     }
@@ -324,8 +303,8 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
         lastActivityLabel: "lastActivityLabel" in matchedFriend ? matchedFriend.lastActivityLabel : undefined,
       };
     });
-    setFriendActionsOpen(!friendViewMode && !targetViewUserId);
-  }, [drawerFriendId, friendViewMode, railUsers, targetViewUserId]);
+    setFriendActionsOpen(!friendViewMode);
+  }, [drawerFriendId, friendViewMode, railUsers]);
 
   useEffect(() => {
     if (friendViewMode !== "history" || !activeFriend?.id) {
@@ -504,8 +483,12 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
   }, [selectedFriendExerciseId]);
 
   const selectedRailFriendId = drawerFriendId || activeFriend?.id || "";
-  const hasFriendDrawerOpen = Boolean(selectedRailFriendId && (friendActionsOpen || friendViewMode || targetViewUserId));
+  const hasFriendDrawerOpen = Boolean(friendActionsOpen || friendViewMode || drawerFriendId || activeFriend?.id);
   const isFriendsHomeActive = isActive && !hasFriendDrawerOpen;
+
+  useEffect(() => {
+    onDrawerOpenChange?.(hasFriendDrawerOpen);
+  }, [hasFriendDrawerOpen, onDrawerOpenChange]);
 
   const selectedActivityMeta = useMemo(() => {
     const latestKnownActivity = [activeFriend?.lastActivityAt, activeFriend?.lastWorkoutAt, activeFriend?.lastCheckInAt]
@@ -583,7 +566,7 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
               style={{
                 borderColor: isFriendsHomeActive
                   ? "color-mix(in srgb, var(--accent) 62%, transparent)"
-                  : "color-mix(in srgb, var(--sidebar-canvas-border) 92%, transparent)",
+                  : "transparent",
                 backgroundColor: isFriendsHomeActive
                   ? "var(--jade)"
                   : "color-mix(in srgb, var(--surface-hover) 92%, var(--surface))",
@@ -651,7 +634,7 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                       checkInCount: "checkInCount" in friend ? friend.checkInCount : undefined,
                     });
                     setFriendActionsOpen(true);
-                    setDrawerQueryState(friend.id, { mode: "push" });
+                    setDrawerState(friend.id);
                   }}
                   className="group relative flex h-12 w-12 items-center justify-center text-center transition-all duration-150 md:h-14 md:w-14"
                   style={{
@@ -677,7 +660,7 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                       fontSize: "10px",
                       borderColor: isSelected
                         ? "color-mix(in srgb, var(--accent) 72%, transparent)"
-                        : "color-mix(in srgb, var(--sidebar-canvas-border) 88%, transparent)",
+                        : "transparent",
                       backgroundColor: isSelected
                         ? "color-mix(in srgb, var(--accent) 30%, var(--surface))"
                         : "color-mix(in srgb, var(--surface-hover) 92%, var(--surface))",
@@ -717,10 +700,9 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                 animate={{ x: "0%" }}
                 exit={{ x: "100%" }}
                 transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-                className="fixed inset-y-0 right-0 z-[71] border-l overflow-hidden safe-area-top safe-area-bottom safe-area-right"
+                className="fixed inset-y-0 right-0 z-[71] overflow-hidden safe-area-top safe-area-bottom safe-area-right"
                 style={{
                   left: `${railWidthPx}px`,
-                  borderLeftColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
                   backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))",
                 }}
               >
@@ -775,13 +757,13 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                           role="button"
                           tabIndex={0}
                           onClick={() => {
-                            setDrawerQueryState(activeFriend.id, { view: item.id as "history" | "chart" | "checkin" | "chat", mode: "push" });
+                            setDrawerState(activeFriend.id, { view: item.id as FriendViewMode });
                             setFriendActionsOpen(false);
                           }}
                           onKeyDown={(event) => {
                             if (event.key === "Enter" || event.key === " ") {
                               event.preventDefault();
-                              setDrawerQueryState(activeFriend.id, { view: item.id as "history" | "chart" | "checkin" | "chat", mode: "push" });
+                              setDrawerState(activeFriend.id, { view: item.id as FriendViewMode });
                               setFriendActionsOpen(false);
                             }
                           }}
@@ -832,7 +814,7 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                           <div className="flex items-center gap-2 min-w-0">
                             <button
                               type="button"
-                              onClick={() => setDrawerQueryState(activeFriend.id, { mode: "replace" })}
+                              onClick={() => setDrawerState(activeFriend.id)}
                               className="inline-flex h-9 w-9 items-center justify-center rounded-md"
                               style={{ color: "var(--mist-light)", backgroundColor: "transparent" }}
                               aria-label="Back to friend drawer"
@@ -926,7 +908,7 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                             <button
                               key={`friend-history-row-${row.exerciseId}`}
                               type="button"
-                              onClick={() => setDrawerQueryState(activeFriend.id, { view: "history", exerciseId: row.exerciseId, mode: "push" })}
+                              onClick={() => setDrawerState(activeFriend.id, { view: "history", exerciseId: row.exerciseId })}
                               className="mx-1 my-0.5 block w-[calc(100%-0.5rem)] rounded-md border-0 bg-transparent px-3 py-2.5 text-left"
                             >
                               <div className="flex items-start justify-between gap-2">
@@ -1116,7 +1098,7 @@ function DiscordFriendsRail({ incomingFriendRequestCount = 0 }: { incomingFriend
                         <div className="flex items-start gap-2">
                           <button
                             type="button"
-                            onClick={() => setDrawerQueryState(activeFriend.id, { view: "history", exerciseId: null, mode: "replace" })}
+                            onClick={() => setDrawerState(activeFriend.id, { view: "history" })}
                             className="inline-flex h-9 w-9 items-center justify-center rounded-md"
                             style={{ color: "var(--mist-light)", backgroundColor: "transparent" }}
                             aria-label="Back to friend history"

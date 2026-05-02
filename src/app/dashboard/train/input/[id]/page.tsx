@@ -162,6 +162,12 @@ export default function TrainInputCanvasPage() {
   const prefillProgression = searchParams.get("prefillProgression") || "";
   const prefillVariant = searchParams.get("prefillVariant") || "";
   const prefillCustomExercise = searchParams.get("custom") === "1";
+  const assignedDayParam = searchParams.get("assignedDay");
+  const assignedDayIndex = assignedDayParam !== null && assignedDayParam !== "" ? Number(assignedDayParam) : null;
+  const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const;
+  const assignedDayName = assignedDayIndex != null && assignedDayIndex >= 0 && assignedDayIndex <= 6 ? DAY_NAMES[assignedDayIndex] : null;
+  // True when tapped from the day drawer (has a pinned progression assignment)
+  const isDayAssignment = Boolean(prefillProgression && (prefillExerciseId || prefillExerciseName));
 
   const [exercises, setExercises] = useState<ProgressionExercise[]>([]);
   const [loading, setLoading] = useState(true);
@@ -189,6 +195,7 @@ export default function TrainInputCanvasPage() {
   const [highlightedField, setHighlightedField] = useState<string | null>(null);
   const [confirmedPanels, setConfirmedPanels] = useState<SessionPanelId[]>([]);
   const previousTimedUnitRef = useRef<TimedUnit>(timedUnit);
+  const prefillStepperInitializedRef = useRef(false);
 
   useEffect(() => {
     setWeightUnit(settings.defaultWeightUnit === "lbs" ? "lbs" : "kg");
@@ -274,15 +281,18 @@ export default function TrainInputCanvasPage() {
       if (typeof draft.searchTerm === "string") setSearchTerm(draft.searchTerm);
       if (typeof draft.selectedExerciseId === "string") setSelectedExerciseId(draft.selectedExerciseId);
       if (typeof draft.customExerciseName === "string") setCustomExerciseName(draft.customExerciseName);
-      if (typeof draft.selectedLevel === "string") setSelectedLevel(draft.selectedLevel);
-      if (typeof draft.selectedVariant === "string") setSelectedVariant(draft.selectedVariant);
-      if (typeof draft.modifierKg === "number" && Number.isFinite(draft.modifierKg)) setModifierKg(draft.modifierKg);
-      if (typeof draft.trainingDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(draft.trainingDate)) setTrainingDate(draft.trainingDate);
-      if (typeof draft.notes === "string") setNotes(draft.notes);
       // When the user just picked a fresh exercise via the + flow (URL carries prefill params),
       // ignore any persisted sets/activePanel/confirmedPanels — always restart the stepper at
       // "exercise" with empty inputs so prior values render only as placeholder hints.
+      // Also skip restoring selectedLevel/selectedVariant so the prefill params always win.
       const arrivedFromPicker = Boolean(prefillExerciseId || prefillExerciseName || prefillCustomExercise);
+      if (!arrivedFromPicker) {
+        if (typeof draft.selectedLevel === "string") setSelectedLevel(draft.selectedLevel);
+        if (typeof draft.selectedVariant === "string") setSelectedVariant(draft.selectedVariant);
+      }
+      if (typeof draft.modifierKg === "number" && Number.isFinite(draft.modifierKg)) setModifierKg(draft.modifierKg);
+      if (typeof draft.trainingDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(draft.trainingDate)) setTrainingDate(draft.trainingDate);
+      if (typeof draft.notes === "string") setNotes(draft.notes);
       if (!arrivedFromPicker) {
         if (Array.isArray(draft.sets) && draft.sets.length) {
           const restored = draft.sets
@@ -607,6 +617,25 @@ export default function TrainInputCanvasPage() {
     });
   }, [exercises, prefillCustomExercise, prefillExerciseId, prefillExerciseName, prefillProgression, prefillVariant, selectedExercise]);
 
+  useEffect(() => {
+    if (prefillStepperInitializedRef.current) return;
+    if (editLogId) return;
+    if (prefillCustomExercise) return;
+    if (!prefillExerciseId && !prefillExerciseName) return;
+    if (!selectedExerciseId) return;
+    if (!selectedLevel) return;
+
+    setConfirmedPanels((prev) => {
+      const next = new Set<SessionPanelId>(prev);
+      next.add("exercise");
+      next.add("details");
+      return Array.from(next);
+    });
+
+    setActivePanel((prev) => (prev === "exercise" ? "format" : prev));
+    prefillStepperInitializedRef.current = true;
+  }, [editLogId, prefillCustomExercise, prefillExerciseId, prefillExerciseName, selectedExerciseId, selectedLevel]);
+
   const addSetRow = () => {
     setSets((prev) => {
       const nextSet = createSetRow(prev.length + 1);
@@ -848,7 +877,7 @@ export default function TrainInputCanvasPage() {
     }
   }, [clearDraft, deleting, editLogId, isEditingExistingLog, returnHref, router, saving]);
 
-  const shellMinHeight = "calc(var(--app-viewport-height) - 0.5rem)";
+  const shellMinHeight = "calc(100dvh - 0.5rem)";
   const selectedExerciseMeta = inputMode === "custom"
     ? "We'll save this as a custom exercise so you can keep using it."
     : selectedExercise
@@ -963,10 +992,12 @@ export default function TrainInputCanvasPage() {
       && currentEditSnapshot
       && currentEditSnapshot !== initialEditSnapshot,
   );
-  const editorPageTitle = isEditingExistingLog ? "Edit Workout" : "Log a Workout";
+  const editorPageTitle = isEditingExistingLog ? "Edit Workout" : isDayAssignment ? `Log a Workout (${assignedDayName ?? "Day"})` : "Log a Workout";
   const editorPageDescription = isEditingExistingLog
     ? "Update or delete this workout."
-    : "Track your sets and reps.";
+    : isDayAssignment
+      ? `Assigned: ${prefillVariant ? `${prefillVariant} ` : ""}${selectedExercise?.tiers.find((t) => String(t.level) === selectedLevel)?.name || prefillProgression} ${prefillExerciseName}`
+      : "Track your sets and reps.";
   const isFocusedField = (field: string) => highlightedField === field;
   const getFieldHighlightStyle = (field: string) => (isFocusedField(field)
     ? {
@@ -1352,7 +1383,7 @@ export default function TrainInputCanvasPage() {
                       <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">
                         <div>
                           <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Exercise setup</p>
-                          <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">Choose progression and variant</p>
+                          <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">{isDayAssignment ? "Progression and variant are locked to your day assignment" : "Choose progression and variant"}</p>
                         </div>
 
                         <div className="mt-4 grid gap-3 lg:grid-cols-2">
@@ -1361,9 +1392,9 @@ export default function TrainInputCanvasPage() {
                             <select
                               value={selectedLevel}
                               onChange={(event) => setSelectedLevel(event.target.value)}
-                              disabled={inputMode !== "existing" || !selectedExercise}
+                              disabled={isDayAssignment || inputMode !== "existing" || !selectedExercise}
                               className="h-10 w-full rounded-md border px-3 text-sm font-semibold outline-none"
-                              style={{ borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--col-reps)", opacity: inputMode !== "existing" || !selectedExercise ? 0.6 : 1 }}
+                              style={{ borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--col-reps)", opacity: isDayAssignment || inputMode !== "existing" || !selectedExercise ? 0.6 : 1, cursor: isDayAssignment ? "not-allowed" : undefined }}
                             >
                               {(selectedExercise?.tiers.length ? selectedExercise.tiers : [{ level: 1, name: "Progression 1" }]).map((tier) => (
                                 <option key={`${tier.level}-${tier.name}`} value={String(tier.level)}>
@@ -1378,9 +1409,9 @@ export default function TrainInputCanvasPage() {
                             <select
                               value={selectedVariant}
                               onChange={(event) => setSelectedVariant(event.target.value)}
-                              disabled={inputMode !== "existing" || !selectedExercise}
+                              disabled={isDayAssignment || inputMode !== "existing" || !selectedExercise}
                               className="h-10 w-full rounded-md border px-3 text-sm font-semibold outline-none"
-                              style={{ borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--col-weight)", opacity: inputMode !== "existing" || !selectedExercise ? 0.6 : 1 }}
+                              style={{ borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--col-weight)", opacity: isDayAssignment || inputMode !== "existing" || !selectedExercise ? 0.6 : 1, cursor: isDayAssignment ? "not-allowed" : undefined }}
                             >
                               <option value="">Default</option>
                               {(selectedExercise?.variations || []).map((variation) => (

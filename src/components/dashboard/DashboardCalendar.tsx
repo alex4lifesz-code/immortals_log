@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import GlowButton from "@/components/ui/GlowButton";
 import { useIsMobile } from "@/context/AppContext";
 import type { CalendarWeekStartOption } from "@/context/DisplaySettingsContext";
@@ -415,6 +415,59 @@ export function Calendar({
     ? ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const navButtonClass = "theme-control-btn rounded-md border px-2.5 py-1 text-xs transition-colors";
+  const touchStartXRef = useRef<number | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
+  const touchCurrentXRef = useRef<number | null>(null);
+  const touchCurrentYRef = useRef<number | null>(null);
+
+  const goToPreviousMonth = () => {
+    const previousMonth = currentMonthNumber === 1 ? 12 : currentMonthNumber - 1;
+    const previousYear = currentMonthNumber === 1 ? currentYear - 1 : currentYear;
+    setCurrentMonth(createCalendarMonthAnchor(previousYear, previousMonth));
+  };
+
+  const goToNextMonth = () => {
+    const nextMonth = currentMonthNumber === 12 ? 1 : currentMonthNumber + 1;
+    const nextYear = currentMonthNumber === 12 ? currentYear + 1 : currentYear;
+    setCurrentMonth(createCalendarMonthAnchor(nextYear, nextMonth));
+  };
+
+  const onCalendarTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    touchStartXRef.current = event.touches[0]?.clientX ?? null;
+    touchStartYRef.current = event.touches[0]?.clientY ?? null;
+    touchCurrentXRef.current = touchStartXRef.current;
+    touchCurrentYRef.current = touchStartYRef.current;
+  };
+
+  const onCalendarTouchMove = (event: React.TouchEvent<HTMLDivElement>) => {
+    touchCurrentXRef.current = event.touches[0]?.clientX ?? null;
+    touchCurrentYRef.current = event.touches[0]?.clientY ?? null;
+  };
+
+  const onCalendarTouchEnd = () => {
+    const startX = touchStartXRef.current;
+    const startY = touchStartYRef.current;
+    const endX = touchCurrentXRef.current;
+    const endY = touchCurrentYRef.current;
+
+    touchStartXRef.current = null;
+    touchStartYRef.current = null;
+    touchCurrentXRef.current = null;
+    touchCurrentYRef.current = null;
+
+    if (startX == null || startY == null || endX == null || endY == null) return;
+
+    const deltaX = endX - startX;
+    const deltaY = endY - startY;
+    const isHorizontalSwipe = Math.abs(deltaX) > 48 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2;
+    if (!isHorizontalSwipe) return;
+
+    if (deltaX < 0) {
+      goToNextMonth();
+      return;
+    }
+    goToPreviousMonth();
+  };
 
   for (let i = 0; i < leadingBlankDays; i++) {
     days.push(null);
@@ -433,6 +486,9 @@ export function Calendar({
         backgroundColor: "color-mix(in srgb, var(--surface) 96%, transparent)",
         boxShadow: "0 1px 0 color-mix(in srgb, var(--text-primary) 3%, transparent) inset",
       }}
+      onTouchStart={onCalendarTouchStart}
+      onTouchMove={onCalendarTouchMove}
+      onTouchEnd={onCalendarTouchEnd}
     >
       <div className={`flex items-center justify-between gap-3 border-b ${compactMode ? "pb-2" : "pb-3"}`} style={{ borderBottomColor: "color-mix(in srgb, var(--border) 94%, transparent)" }}>
         <div className="min-w-0">
@@ -444,11 +500,7 @@ export function Calendar({
         <div className="ml-auto flex gap-1.5">
           <button
             type="button"
-            onClick={() => {
-              const previousMonth = currentMonthNumber === 1 ? 12 : currentMonthNumber - 1;
-              const previousYear = currentMonthNumber === 1 ? currentYear - 1 : currentYear;
-              setCurrentMonth(createCalendarMonthAnchor(previousYear, previousMonth));
-            }}
+            onClick={goToPreviousMonth}
             className={navButtonClass}
             aria-label="Previous month"
           >
@@ -456,11 +508,7 @@ export function Calendar({
           </button>
           <button
             type="button"
-            onClick={() => {
-              const nextMonth = currentMonthNumber === 12 ? 1 : currentMonthNumber + 1;
-              const nextYear = currentMonthNumber === 12 ? currentYear + 1 : currentYear;
-              setCurrentMonth(createCalendarMonthAnchor(nextYear, nextMonth));
-            }}
+            onClick={goToNextMonth}
             className={navButtonClass}
             aria-label="Next month"
           >

@@ -1,20 +1,26 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { motion, AnimatePresence, Reorder, useDragControls } from "framer-motion";
+import { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import ExerciseImageBox from "@/components/exercise/ExerciseImageBox";
-import { getDifficultyColorClass, getDifficultyGlowStyle } from "@/lib/difficulty-styles";
-import { getTypeColor } from "@/lib/constants";
+import SearchField from "@/components/ui/SearchField";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
-import { getExerciseDisplayName, getExerciseSearchText, matchesLooseSearch, getTypeDisplayName, getDifficultyDisplayName, getDifficultyColorKey, getTypeColorKey } from "@/lib/exercise-name";
 import {
-  DAYS_OF_WEEK,
   DAY_ABBREVIATIONS,
   DAY_LETTERS,
+  DAYS_OF_WEEK,
+  isDayAssigned,
+  parseDayAssignmentDetailsList,
   parseDayAssignments,
-  toggleDayAssignment,
-  isDayAssigned
+  serializeDayAssignmentPayload,
 } from "@/lib/constants";
+import {
+  getDifficultyDisplayName,
+  getExerciseDisplayName,
+  getExerciseSearchText,
+  getTypeDisplayName,
+  matchesLooseSearch,
+} from "@/lib/exercise-name";
 
 interface Exercise {
   id: string;
@@ -27,6 +33,8 @@ interface Exercise {
   targetGroup?: string;
   assignedDays?: string;
   story?: string;
+  tiers?: Array<{ level: number; name: string }>;
+  variations?: Array<{ id: string; name: string }>;
 }
 
 interface ExerciseManagementDrawerProps {
@@ -34,230 +42,320 @@ interface ExerciseManagementDrawerProps {
   onClose: () => void;
   exercises: Exercise[];
   onUpdateDayAssignments: (exerciseId: string, assignedDays: string) => Promise<void>;
-  onReorderExercises?: (orderedIds: string[]) => void;
   selectedDayFilter?: number | null;
 }
 
-// --- Technique Row (redesigned: no lore, tips top-right, CultivateOS dark theme) ---
-
-interface TechniqueRowProps {
+function ExerciseAllocationRow({
+  exercise,
+  focusedDay,
+  expanded,
+  onToggleExpand,
+  onApplyAssignmentPayload,
+  isUpdating,
+}: {
   exercise: Exercise;
-  onUpdateDayAssignments: (exerciseId: string, assignedDays: string) => Promise<void>;
-  focusedDay?: number | null;
-  isCompact?: boolean;
-}
-
-function TechniqueRow({ exercise, onUpdateDayAssignments, focusedDay, isCompact = false }: TechniqueRowProps) {
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [showTip, setShowTip] = useState(false);
+  focusedDay: number | null;
+  expanded: boolean;
+  onToggleExpand: () => void;
+  onApplyAssignmentPayload: (exerciseId: string, assignedDaysPayload: string) => Promise<void>;
+  isUpdating: boolean;
+}) {
   const { settings } = useDisplaySettings();
   const displayName = getExerciseDisplayName(exercise, settings.terminologyMode, settings.showExerciseForeignLanguage);
-  const difficultyColorClass = getDifficultyColorClass(getDifficultyColorKey(exercise));
-  const typeColor = getTypeColor(getTypeColorKey(exercise));
-  const glowStyle = getDifficultyGlowStyle(getDifficultyColorKey(exercise));
+  const [selectedProgression, setSelectedProgression] = useState("");
+  const [selectedVariant, setSelectedVariant] = useState("");
+  const [selectedDay, setSelectedDay] = useState<string>(focusedDay == null ? "" : String(focusedDay));
+  const assigned = parseDayAssignments(exercise.assignedDays || "");
+  const isAllocated = assigned.length > 0;
+  const assignmentDetails = useMemo(() => parseDayAssignmentDetailsList(exercise.assignedDays || ""), [exercise.assignedDays]);
 
-  const handleDayToggle = async (dayIndex: number) => {
-    setIsUpdating(true);
-    try {
-      const newAssignments = toggleDayAssignment(exercise.assignedDays || "", dayIndex);
-      await onUpdateDayAssignments(exercise.id, newAssignments);
-    } catch (error) {
-      console.error("Failed to update day assignments:", error);
-    } finally {
-      setIsUpdating(false);
+  useEffect(() => {
+    if (focusedDay != null) {
+      setSelectedDay(String(focusedDay));
     }
+  }, [focusedDay]);
+
+  const progressionOptions = useMemo(() => {
+    const tiers = Array.isArray(exercise.tiers) ? exercise.tiers : [];
+    if (tiers.length === 0) {
+      return [{ value: "1", label: "Progression 1" }];
+    }
+
+    return [...tiers]
+      .sort((a, b) => a.level - b.level)
+      .map((tier) => ({ value: String(tier.level), label: tier.name || `Progression ${tier.level}` }));
+  }, [exercise.tiers]);
+
+  const variantOptions = useMemo(() => {
+    const variations = Array.isArray(exercise.variations) ? exercise.variations : [];
+    return variations.map((variation) => ({ value: variation.name, label: variation.name }));
+  }, [exercise.variations]);
+
+  const resolveProgressionOption = (rawProgression?: string) => {
+    if (!rawProgression) return null;
+    return progressionOptions.find((option) => option.value === rawProgression || option.label === rawProgression) || null;
   };
 
-  const assignedDayNumbers = parseDayAssignments(exercise.assignedDays || "");
+  const getProgressionValue = (rawProgression?: string) => {
+    const matched = resolveProgressionOption(rawProgression);
+    return matched?.value || (rawProgression || "");
+  };
 
-  return (
-    <div
-      className={`relative border border-ink-light rounded-lg bg-ink-dark hover:bg-ink-dark/80 transition-all duration-200 group ${isCompact ? 'p-2.5' : 'p-4'}`}
-      style={glowStyle as React.CSSProperties}
-    >
-      {/* Drag handle indicator */}
-      <div className="absolute left-1.5 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-40 transition-opacity pointer-events-none">
-        <svg className="w-4 h-4 text-mist-dark" viewBox="0 0 24 24" fill="currentColor">
-          <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" />
-          <circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" />
-          <circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" />
-        </svg>
-      </div>
+  const getProgressionLabel = (rawProgression?: string) => {
+    const matched = resolveProgressionOption(rawProgression);
+    return matched?.label || (rawProgression || "");
+  };
 
-      {/* Tips icon — top right corner */}
-      {exercise.story && (
-        <div className="absolute top-2 right-2 z-10">
-          <button
-            onClick={(e) => { e.stopPropagation(); setShowTip(!showTip); }}
-            className="p-1 rounded text-mist-dark hover:text-jade-glow hover:bg-jade-deep/20 transition-all duration-200"
-            title="View tips"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </button>
-          <AnimatePresence>
-            {showTip && (
-              <motion.div
-                initial={{ opacity: 0, y: -4, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -4, scale: 0.95 }}
-                className="absolute right-0 top-full mt-1 w-56 p-2.5 bg-ink-deep border border-ink-light rounded-lg shadow-xl z-20"
-              >
-                <p className="text-[11px] text-mist-light leading-relaxed">{exercise.story}</p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      )}
-
-      {/* Main Content */}
-      <div className={`flex gap-2 ${isCompact ? 'space-y-1.5' : 'space-y-3'} pl-4`}>
-        <ExerciseImageBox className={isCompact ? "h-9 w-9 mt-0.5" : "h-11 w-11 mt-0.5"} compact={isCompact} />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between pr-8">
-            <div className={`flex-1 ${isCompact ? 'space-y-0.5' : 'space-y-1.5'}`}>
-            <h4 className={`${isCompact ? 'text-xs' : 'text-sm'} font-semibold ${difficultyColorClass} group-hover:brightness-110 transition-all duration-200`}>
-              {displayName}
-            </h4>
-            
-            {/* Realm + Path badges (realm first, then path) */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className={`inline-flex items-center px-1.5 py-0.5 rounded ${isCompact ? 'text-[9px]' : 'text-[10px]'} font-medium ${difficultyColorClass} border border-current/20`}>
-                {getDifficultyDisplayName(exercise, settings.terminologyMode)}
-              </span>
-              <span className={`inline-flex items-center px-1.5 py-0.5 rounded ${isCompact ? 'text-[9px]' : 'text-[10px]'} font-medium ${typeColor} border border-current/20 opacity-80`}>
-                {getTypeDisplayName(exercise, settings.terminologyMode)}
-              </span>
-              {exercise.targetGroup && (
-                <span className={`${isCompact ? 'text-[9px]' : 'text-[10px]'} text-mist-dark`}>
-                  {exercise.targetGroup}
-                </span>
-              )}
-            </div>
-          </div>
-          
-            {isUpdating && (
-              <div className="text-xs text-jade-glow flex items-center gap-1.5">
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                  className="w-3 h-3 border-2 border-jade-glow border-t-transparent rounded-full"
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Day Assignment Controls */}
-          <div className={`${isCompact ? 'space-y-1' : 'space-y-2'}`}>
-            {!isCompact && (
-              <p className="text-[10px] font-semibold text-mist-dark uppercase tracking-wider">
-                Training Days
-              </p>
-            )}
-            <div className="flex gap-1.5">
-              {DAYS_OF_WEEK.map((day, index) => {
-                const isAssigned = isDayAssigned(exercise.assignedDays || "", index);
-                const isFocused = focusedDay === index;
-
-                return (
-                  <button
-                    key={day}
-                    onClick={(e) => { e.stopPropagation(); handleDayToggle(index); }}
-                    disabled={isUpdating}
-                    className={`
-                    ${isCompact ? 'text-[10px] px-1.5 py-1' : 'text-xs px-2 py-1.5'} rounded transition-all duration-200 font-medium
-                    border disabled:opacity-50 disabled:cursor-not-allowed
-                    ${isAssigned
-                        ? 'bg-jade-deep/60 text-jade-glow border-jade-glow/40 shadow-[0_0_6px_color-mix(in_srgb,var(--accent)_20%,transparent)]'
-                        : 'bg-ink-deep text-mist-dark border-ink-light hover:border-jade/30 hover:text-mist-light'
-                      }
-                    ${isFocused ? 'ring-1 ring-jade-glow/50' : ''}
-                  `}
-                  >
-                    {DAY_LETTERS[index]}
-                  </button>
-                );
-              })}
-            </div>
-            {assignedDayNumbers.length > 0 && !isCompact && (
-              <div className="text-[11px] text-jade-light/70">
-                {assignedDayNumbers.map(d => DAY_ABBREVIATIONS[d]).join(", ")}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
+  const selectedDayNumber = selectedDay === "" ? null : Number(selectedDay);
+  const selectedAssignmentsForDay = selectedDayNumber == null ? [] : (assignmentDetails[selectedDayNumber] || []);
+  const selectedProgressionValue = selectedProgression || "";
+  const selectedCombinationAssigned = selectedAssignmentsForDay.some(
+    (entry) => getProgressionValue(entry.progression) === selectedProgressionValue && (entry.variant || "") === (selectedVariant || ""),
   );
-}
 
-// --- Main Drawer ---
-
-// Long-press gated Reorder.Item wrapper
-function LongPressReorderItem({
-  value,
-  children,
-}: {
-  value: string;
-  children: React.ReactNode;
-}) {
-  const controls = useDragControls();
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [dragEnabled, setDragEnabled] = useState(false);
-
-  const clearTimer = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
+  useEffect(() => {
+    if (selectedDayNumber == null) {
+      setSelectedProgression("");
+      setSelectedVariant("");
+      return;
     }
-  }, []);
 
-  const handlePointerDown = useCallback((e: React.PointerEvent) => {
-    clearTimer();
-    timerRef.current = setTimeout(() => {
-      setDragEnabled(true);
-      controls.start(e.nativeEvent);
-    }, 400);
-  }, [controls, clearTimer]);
+    const detail = assignmentDetails[selectedDayNumber];
+    if (!detail || detail.length === 0) {
+      setSelectedProgression("");
+      setSelectedVariant("");
+      return;
+    }
 
-  const handlePointerUp = useCallback(() => {
-    clearTimer();
-    setDragEnabled(false);
-  }, [clearTimer]);
+    const firstDetail = detail[0];
+
+    if (firstDetail.progression) {
+      const matched = progressionOptions.find((option) => option.label === firstDetail.progression || option.value === firstDetail.progression);
+      setSelectedProgression(matched?.value || "");
+    } else {
+      setSelectedProgression("");
+    }
+
+    if (typeof firstDetail.variant === "string" && firstDetail.variant.length > 0) {
+      setSelectedVariant(firstDetail.variant);
+    } else {
+      setSelectedVariant("");
+    }
+  }, [assignmentDetails, progressionOptions, selectedDayNumber]);
+
+  const handleApply = async () => {
+    if (selectedDayNumber == null) return;
+    const shouldAssign = !selectedCombinationAssigned;
+
+    const progressionLabel = progressionOptions.find((option) => option.value === selectedProgression)?.label || undefined;
+    const selectedProgressionForCompare = selectedProgression || "";
+    const selectedEntry = {
+      progression: progressionLabel,
+      variant: selectedVariant || undefined,
+    };
+
+    if (!shouldAssign) {
+      const confirmed = window.confirm(
+        `Remove ${displayName} (${selectedVariant || "Default"}${progressionLabel ? `, ${progressionLabel}` : ""}) from ${DAYS_OF_WEEK[selectedDayNumber]}?`,
+      );
+      if (!confirmed) return;
+    }
+
+    const days = new Set(parseDayAssignments(exercise.assignedDays || ""));
+    const details = parseDayAssignmentDetailsList(exercise.assignedDays || "");
+    const dayEntries = [...(details[selectedDayNumber] || [])];
+
+    if (shouldAssign) {
+      days.add(selectedDayNumber);
+      dayEntries.push(selectedEntry);
+      details[selectedDayNumber] = dayEntries;
+    } else {
+      const nextEntries = dayEntries.filter(
+        (entry) => !(getProgressionValue(entry.progression) === selectedProgressionForCompare && (entry.variant || "") === (selectedEntry.variant || "")),
+      );
+
+      if (nextEntries.length === 0) {
+        days.delete(selectedDayNumber);
+        delete details[selectedDayNumber];
+      } else {
+        details[selectedDayNumber] = nextEntries;
+      }
+    }
+
+    const payload = serializeDayAssignmentPayload(Array.from(days), details);
+    await onApplyAssignmentPayload(exercise.id, payload);
+  };
 
   return (
-    <Reorder.Item
-      value={value}
-      dragListener={false}
-      dragControls={controls}
-      className={dragEnabled ? "cursor-grabbing" : "cursor-default"}
-      animate={dragEnabled ? {
-        scale: 1.02,
-        boxShadow: "0 0 12px color-mix(in srgb, var(--accent) 30%, transparent), 0 0 4px color-mix(in srgb, var(--accent) 15%, transparent)",
-      } : {
-        scale: 1,
-        boxShadow: "0 0 0 transparent",
-      }}
-      whileDrag={{
-        scale: 1.04,
-        boxShadow: "0 8px 30px color-mix(in srgb, black 40%, transparent), 0 0 15px color-mix(in srgb, var(--accent) 30%, transparent)",
-        zIndex: 50,
-      }}
-      transition={{ duration: 0.2 }}
-      onDragEnd={() => setDragEnabled(false)}
+    <article
+      className="mx-1 my-0.5 rounded-md px-3 py-2.5"
+      style={{ borderTop: "none" }}
     >
-      <div
-        onPointerDown={handlePointerDown}
-        onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerUp}
-        onPointerCancel={handlePointerUp}
-        style={{ touchAction: dragEnabled ? "none" : "auto" }}
-        className={dragEnabled ? "ring-1 ring-jade-glow/40 rounded-lg" : ""}
+      <button
+        type="button"
+        onClick={onToggleExpand}
+        className="flex w-full items-center justify-between gap-2 text-left"
+        style={{ color: isAllocated ? "var(--jade-light)" : "var(--text-primary)" }}
+        aria-expanded={expanded}
       >
-        {children}
-      </div>
-    </Reorder.Item>
+        <span className="truncate text-sm font-semibold leading-tight">{displayName}</span>
+        <svg
+          className={`h-4 w-4 shrink-0 transition-transform ${expanded ? "rotate-180" : "rotate-0"}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          strokeWidth={2}
+          aria-hidden
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      <AnimatePresence initial={false}>
+        {expanded ? (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="mt-2 space-y-2">
+              <div>
+                <label className="mb-1 block text-[10px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>
+                  Progression
+                </label>
+                <select
+                  value={selectedProgression}
+                  onChange={(event) => setSelectedProgression(event.target.value)}
+                  className="h-9 w-full rounded-md border px-2 text-xs outline-none"
+                  style={{
+                    borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                    backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
+                    color: "var(--cloud-white)",
+                  }}
+                >
+                  <option value="">Choose progression</option>
+                  {progressionOptions.map((option) => (
+                    <option key={`${exercise.id}-progression-${option.value}`} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-[10px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>
+                  Variant
+                </label>
+                <select
+                  value={selectedVariant}
+                  onChange={(event) => setSelectedVariant(event.target.value)}
+                  className="h-9 w-full rounded-md border px-2 text-xs outline-none"
+                  style={{
+                    borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                    backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
+                    color: "var(--cloud-white)",
+                  }}
+                >
+                  <option value="">Choose variant</option>
+                  {variantOptions.map((variant) => (
+                    <option key={`${exercise.id}-variant-${variant.value || "default"}`} value={variant.value}>
+                      {variant.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-[10px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>
+                  Training day
+                </label>
+                <select
+                  value={selectedDay}
+                  onChange={(event) => setSelectedDay(event.target.value)}
+                  className="h-9 w-full rounded-md border px-2 text-xs outline-none"
+                  style={{
+                    borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                    backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
+                    color: "var(--cloud-white)",
+                  }}
+                >
+                  <option value="">Choose a day</option>
+                  {DAYS_OF_WEEK.map((day, dayIndex) => {
+                    const isAssignedToDay = assigned.includes(dayIndex);
+                    return (
+                      <option key={`${exercise.id}-day-${day}`} value={dayIndex}>
+                        {`${day}${isAssignedToDay ? " (assigned)" : ""}`}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              <div className="flex items-center justify-between gap-2">
+                <p className="min-w-0 text-[10px]" style={{ color: "var(--text-muted)" }}>
+                  Assigned: {assigned.length > 0 ? assigned.map((index) => DAY_ABBREVIATIONS[index]).join(", ") : "None"}
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => void handleApply()}
+                  disabled={isUpdating || selectedDayNumber == null}
+                  className="inline-flex h-9 shrink-0 items-center justify-center rounded-md border px-3 text-xs font-semibold transition-colors disabled:opacity-60"
+                  style={{
+                    borderColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
+                    backgroundColor: selectedCombinationAssigned
+                      ? "color-mix(in srgb, var(--danger) 22%, var(--ink-deep))"
+                      : "color-mix(in srgb, var(--accent) 24%, var(--ink-deep))",
+                    color: "var(--cloud-white)",
+                  }}
+                >
+                  {isUpdating ? "Saving..." : selectedCombinationAssigned ? "Remove" : "Add"}
+                </button>
+              </div>
+
+              {selectedDayNumber != null && selectedAssignmentsForDay.length > 0 ? (
+                <div className="rounded-md border px-2 py-1.5" style={{ borderColor: "color-mix(in srgb, var(--ink-light) 60%, transparent)" }}>
+                  <p className="mb-1 text-[10px]" style={{ color: "var(--text-muted)" }}>
+                    Assigned setups for {DAYS_OF_WEEK[selectedDayNumber]}:
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedAssignmentsForDay.map((entry, index) => {
+                      const progressionLabel = getProgressionLabel(entry.progression);
+                      const label = `${entry.variant || "Default"}${progressionLabel ? ` • ${progressionLabel}` : ""}`;
+                      const isActive = getProgressionValue(entry.progression) === selectedProgressionValue
+                        && (entry.variant || "") === (selectedVariant || "");
+                      return (
+                        <button
+                          key={`${exercise.id}-assigned-entry-${selectedDayNumber}-${index}`}
+                          type="button"
+                          onClick={() => {
+                            const matched = resolveProgressionOption(entry.progression);
+                            setSelectedProgression(matched?.value || "");
+                            setSelectedVariant(entry.variant || "");
+                          }}
+                          className="inline-flex items-center rounded-md border px-2 py-1 text-[10px] font-medium"
+                          style={{
+                            borderColor: isActive
+                              ? "color-mix(in srgb, var(--accent) 55%, transparent)"
+                              : "color-mix(in srgb, var(--ink-light) 62%, transparent)",
+                            backgroundColor: isActive
+                              ? "color-mix(in srgb, var(--accent) 20%, var(--ink-deep))"
+                              : "color-mix(in srgb, var(--ink-mid) 86%, var(--ink-deep))",
+                            color: isActive ? "var(--cloud-white)" : "var(--text-muted)",
+                          }}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+    </article>
   );
 }
 
@@ -266,402 +364,396 @@ export default function ExerciseManagementDrawer({
   onClose,
   exercises,
   onUpdateDayAssignments,
-  onReorderExercises,
-  selectedDayFilter = null
+  selectedDayFilter: _selectedDayFilter = null,
 }: ExerciseManagementDrawerProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [dayFilter, setDayFilter] = useState<number | null>(selectedDayFilter);
-  const [pathFilter, setPathFilter] = useState("");
-  const [realmFilter, setRealmFilter] = useState(""); 
-  const [orderedIds, setOrderedIds] = useState<string[]>([]);
-  const [isCompactView, setIsCompactView] = useState(false);
+  const [dayFilter, setDayFilter] = useState<number | null>(null);
+  const [typeFilter, setTypeFilter] = useState("");
+  const [difficultyFilter, setDifficultyFilter] = useState("");
+  const [sortBy, setSortBy] = useState<"name-az" | "name-za" | "realm-az" | "path-az" | "custom">("name-az");
+  const [sortManuallySelected, setSortManuallySelected] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [expandedExerciseId, setExpandedExerciseId] = useState<string | null>(null);
+  const [updatingExerciseId, setUpdatingExerciseId] = useState<string | null>(null);
 
-  // Dynamic filter options derived from actual exercises data
-  const availableRealms = useMemo(() => {
-    const seen = new Set<string>();
-    for (const ex of exercises) {
-      const d = (ex.difficulty || "").trim();
-      if (d) seen.add(d);
-    }
-    return Array.from(seen).sort((a, b) => a.localeCompare(b));
-  }, [exercises]);
-
-  const availablePaths = useMemo(() => {
-    const seen = new Set<string>();
-    for (const ex of exercises) {
-      const t = (ex.type || "").trim();
-      if (t) seen.add(t);
-    }
-    return Array.from(seen).sort((a, b) => a.localeCompare(b));
-  }, [exercises]);
-
-  // Update day filter when selectedDayFilter prop changes
   useEffect(() => {
-    setDayFilter(selectedDayFilter);
-  }, [selectedDayFilter]);
+    if (!isOpen) return;
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
 
-  // Initialize ordered IDs from exercises
-  useEffect(() => {
-    setOrderedIds(exercises.map(e => e.id));
+    document.addEventListener("keydown", onEscape);
+    return () => document.removeEventListener("keydown", onEscape);
+  }, [isOpen, onClose]);
+
+  const availableTypes = useMemo(() => {
+    const set = new Set<string>();
+    for (const exercise of exercises) {
+      const value = (exercise.type || "").trim();
+      if (value) set.add(value);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [exercises]);
 
-  // Enhanced filter logic
-  const filteredExercises = exercises.filter((exercise) => {
-    const matchesSearch = matchesLooseSearch(getExerciseSearchText(exercise), searchTerm);
-    const matchesDay = dayFilter === null || isDayAssigned(exercise.assignedDays || "", dayFilter);
-    const matchesPath = !pathFilter || exercise.type === pathFilter;
-    const matchesRealm = !realmFilter || exercise.difficulty === realmFilter;
-    return matchesSearch && matchesDay && matchesPath && matchesRealm;
-  });
-
-  // Sort filtered exercises by drag order
-  const sortedFilteredExercises = [...filteredExercises].sort((a, b) => {
-    const indexA = orderedIds.indexOf(a.id);
-    const indexB = orderedIds.indexOf(b.id);
-    return indexA - indexB;
-  });
-
-  const handleReorder = (newOrder: string[]) => {
-    // Merge reordered subset back into full ordered IDs
-    const filteredIdSet = new Set(filteredExercises.map(e => e.id));
-    const result: string[] = [];
-    let reorderIdx = 0;
-
-    for (const id of orderedIds) {
-      if (filteredIdSet.has(id)) {
-        result.push(newOrder[reorderIdx]);
-        reorderIdx++;
-      } else {
-        result.push(id);
-      }
+  const availableDifficulties = useMemo(() => {
+    const set = new Set<string>();
+    for (const exercise of exercises) {
+      const value = (exercise.difficulty || "").trim();
+      if (value) set.add(value);
     }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [exercises]);
 
-    setOrderedIds(result);
-    onReorderExercises?.(result);
-  };
-
-  const clearAllFilters = () => {
-    setSearchTerm("");
-    setDayFilter(null);
-    setPathFilter("");
-    setRealmFilter("");
-  };
-
-  const hasActiveFilters = searchTerm || dayFilter !== null || pathFilter || realmFilter;
-
-  // Compute technique counts per day for badge display
   const dayCounts = useMemo(() => {
-    const counts: number[] = [0, 0, 0, 0, 0, 0, 0];
-    for (const ex of exercises) {
-      const days = parseDayAssignments(ex.assignedDays || "");
-      for (const d of days) {
-        if (d >= 0 && d <= 6) counts[d]++;
+    const counts = [0, 0, 0, 0, 0, 0, 0];
+    for (const exercise of exercises) {
+      const assigned = parseDayAssignments(exercise.assignedDays || "");
+      for (const day of assigned) {
+        if (day >= 0 && day <= 6) counts[day] += 1;
       }
     }
     return counts;
   }, [exercises]);
 
-  // Close on escape key
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen) onClose();
+  const filteredExercises = useMemo(() => {
+    return exercises.filter((exercise) => {
+      const matchesSearch = matchesLooseSearch(getExerciseSearchText(exercise), searchTerm);
+      const matchesDay = dayFilter == null || isDayAssigned(exercise.assignedDays || "", dayFilter);
+      const matchesType = !typeFilter || exercise.type === typeFilter;
+      const matchesDifficulty = !difficultyFilter || exercise.difficulty === difficultyFilter;
+      return matchesSearch && matchesDay && matchesType && matchesDifficulty;
+    });
+  }, [dayFilter, difficultyFilter, exercises, searchTerm, typeFilter]);
+
+  const sortedFilteredExercises = useMemo(() => {
+    const list = [...filteredExercises];
+
+    const compareAssignedFirst = (left: Exercise, right: Exercise): number => {
+      const leftAssigned = parseDayAssignments(left.assignedDays || "").length > 0;
+      const rightAssigned = parseDayAssignments(right.assignedDays || "").length > 0;
+      if (leftAssigned === rightAssigned) return 0;
+      return leftAssigned ? -1 : 1;
     };
-    if (isOpen) {
-      document.addEventListener("keydown", handleEscape);
-      document.body.style.overflow = "hidden";
+
+    if (!sortManuallySelected) {
+      return list.sort((left, right) => {
+        const assignedCompare = compareAssignedFirst(left, right);
+        if (assignedCompare !== 0) return assignedCompare;
+        return left.name.localeCompare(right.name);
+      });
     }
-    return () => {
-      document.removeEventListener("keydown", handleEscape);
-      document.body.style.overflow = "unset";
-    };
-  }, [isOpen, onClose]);
+
+    if (sortBy === "custom") {
+      return list.sort((left, right) => left.name.localeCompare(right.name));
+    }
+
+    if (sortBy === "name-za") {
+      return list.sort((left, right) => right.name.localeCompare(left.name));
+    }
+
+    if (sortBy === "realm-az") {
+      return list.sort((left, right) => {
+        const realmCompare = (left.difficulty || "").localeCompare(right.difficulty || "");
+        if (realmCompare !== 0) return realmCompare;
+        return left.name.localeCompare(right.name);
+      });
+    }
+
+    if (sortBy === "path-az") {
+      return list.sort((left, right) => {
+        const pathCompare = (left.type || "").localeCompare(right.type || "");
+        if (pathCompare !== 0) return pathCompare;
+        return left.name.localeCompare(right.name);
+      });
+    }
+
+    return list.sort((left, right) => left.name.localeCompare(right.name));
+  }, [filteredExercises, sortBy, sortManuallySelected]);
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setDayFilter(null);
+    setTypeFilter("");
+    setDifficultyFilter("");
+    setSortBy("name-az");
+    setSortManuallySelected(false);
+  };
+
+  const hasActiveFilters = Boolean(dayFilter != null || typeFilter || difficultyFilter || sortBy !== "name-az" || sortManuallySelected);
+
+  const handleApplyAssignmentPayload = async (exerciseId: string, assignedDaysPayload: string) => {
+    setUpdatingExerciseId(exerciseId);
+    try {
+      await onUpdateDayAssignments(exerciseId, assignedDaysPayload);
+    } finally {
+      setUpdatingExerciseId(null);
+    }
+  };
 
   return (
     <AnimatePresence>
-      {isOpen && (
+      {isOpen ? (
         <>
-          {/* Backdrop */}
           <motion.div
-            key="drawer-backdrop"
+            key="exercise-management-backdrop"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/70"
+            transition={{ duration: 0.18 }}
+            className="fixed inset-y-0 right-0 z-[200]"
+            style={{
+              left: "64px",
+              backgroundColor: "color-mix(in srgb, var(--void-black) 76%, transparent)",
+            }}
             onClick={onClose}
           />
-        
-          {/* Drawer panel — CultivateOS dark theme */}
-          <motion.div
-            key="drawer-panel"
+
+          <motion.aside
+            key="exercise-management-panel"
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 right-0 z-50 flex flex-col max-w-full w-full md:w-[61.8%] pt-[max(env(safe-area-inset-top,0px),12px)] pb-[max(env(safe-area-inset-bottom,0px),10px)] pr-[max(env(safe-area-inset-right,0px),0px)]"
+            transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+            className="fixed inset-y-0 right-0 z-[201] overflow-hidden border-l safe-area-top safe-area-bottom safe-area-right"
             style={{
-              background: "linear-gradient(180deg, color-mix(in srgb, var(--ink-deep) 95%, black) 0%, color-mix(in srgb, var(--ink-dark) 95%, black) 100%)",
-              borderLeft: "1px solid color-mix(in srgb, var(--accent) 15%, transparent)",
-              boxShadow: "-4px 0 30px color-mix(in srgb, black 50%, transparent), -2px 0 10px color-mix(in srgb, var(--accent) 8%, transparent)",
+              left: "64px",
+              borderLeftColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
+              backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))",
             }}
-            onClick={(e) => e.stopPropagation()}
           >
-            {/* Header — gradient treatment */}
-            <div
-              className="p-5 space-y-4 shrink-0"
-              style={{
-                background: "linear-gradient(180deg, color-mix(in srgb, var(--ink-mid) 90%, transparent) 0%, color-mix(in srgb, var(--ink-deep) 0%, transparent) 100%)",
-                borderBottom: "1px solid color-mix(in srgb, var(--accent) 12%, transparent)",
-              }}
-            >
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-jade-glow uppercase tracking-wider">
-                  Manage Techniques
-                </h2>
-                <div className="flex items-center gap-2">
-                  {/* Compact/Expanded toggle */}
-                  <button
-                    onClick={() => setIsCompactView(!isCompactView)}
-                    className={`px-2.5 py-1.5 rounded-lg text-[10px] font-semibold uppercase tracking-wider border transition-all duration-200 ${
-                      isCompactView
-                        ? "bg-jade-deep/30 border-jade-glow/40 text-jade-glow"
-                        : "border-ink-light text-mist-dark hover:text-mist-light hover:border-mist-dark"
-                    }`}
-                    title={isCompactView ? "Switch to expanded view" : "Switch to compact view"}
-                  >
-                    {isCompactView ? (
-                      <span className="flex items-center gap-1">
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                        </svg>
-                        Expand
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1">
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                        </svg>
-                        Compact
-                      </span>
-                    )}
-                  </button>
-                  <button
-                    onClick={onClose}
-                    className="text-mist-dark hover:text-cloud-white p-2 rounded-lg hover:bg-white/5 transition-all duration-200 hover:shadow-[0_0_8px_color-mix(in_srgb,var(--accent)_20%,transparent)]"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-
-              {/* Search — dark themed with icon prefix and glow focus */}
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder=""
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-ink-deep border border-ink-light rounded-lg pl-10 pr-8 py-2.5 text-sm text-cloud-white placeholder:text-mist-dark outline-none transition-all duration-200 focus:border-jade-glow/50 focus:shadow-[0_0_12px_color-mix(in_srgb,var(--accent)_15%,transparent)]"
-                />
-                <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-mist-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                  <circle cx="11" cy="11" r="7" />
-                  <path strokeLinecap="round" d="M16.5 16.5l4 4" />
-                </svg>
-                {searchTerm ? (
-                  <button
-                    type="button"
-                    onClick={() => setSearchTerm("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[13px] font-semibold leading-none text-mist-dark transition-colors hover:text-cloud-white"
-                    aria-label="Clear search"
-                  >
-                    x
-                  </button>
-                ) : null}
-              </div>
-
-              {/* Filter Controls — dynamic selects derived from actual exercise data */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <select
-                  value={realmFilter}
-                  onChange={(e) => setRealmFilter(e.target.value)}
-                  className="bg-ink-deep border border-ink-light rounded-lg px-3 py-2 text-xs text-cloud-white outline-none transition-all duration-200 focus:border-jade-glow/50 focus:shadow-[0_0_8px_color-mix(in_srgb,var(--accent)_15%,transparent)] cursor-pointer"
-                >
-                  <option value="">All Realms</option>
-                  {availableRealms.map((d) => (
-                    <option key={d} value={d}>{d}</option>
-                  ))}
-                </select>
-                
-                <select
-                  value={pathFilter}
-                  onChange={(e) => setPathFilter(e.target.value)}
-                  className="bg-ink-deep border border-ink-light rounded-lg px-3 py-2 text-xs text-cloud-white outline-none transition-all duration-200 focus:border-jade-glow/50 focus:shadow-[0_0_8px_color-mix(in_srgb,var(--accent)_15%,transparent)] cursor-pointer"
-                >
-                  <option value="">All Paths</option>
-                  {availablePaths.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Day of Week Filter — cohesive button group with count badges */}
-              <div className="flex items-center gap-2">
-                <div className="flex rounded-lg overflow-hidden border border-ink-light/40 flex-1">
-                  <button
-                    onClick={() => setDayFilter(null)}
-                    className={`
-                      px-3 py-1.5 text-xs font-semibold transition-all duration-200 relative border-r border-ink-light/30
-                      ${dayFilter === null 
-                        ? 'bg-jade-deep/60 text-jade-glow shadow-[inset_0_0_12px_color-mix(in_srgb,var(--accent)_15%,transparent)]' 
-                        : 'bg-ink-dark/60 text-mist-dark hover:text-mist-light hover:bg-ink-mid/40'
-                      }
-                    `}
-                  >
-                    All
-                    {dayFilter === null && <div className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-jade-glow rounded-full" />}
-                  </button>
-                  {DAYS_OF_WEEK.map((day, index) => {
-                    const count = dayCounts[index];
-                    const hasExercises = count > 0;
-                    return (
+            <div className="h-full overflow-hidden" style={{ backgroundColor: "color-mix(in srgb, var(--ink-mid) 20%, var(--ink-deep))" }}>
+              <div data-mobile-scroll-container="true" className="h-full overflow-y-auto scrollbar-hide" style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain" }}>
+                <div className="sticky top-0 z-20" style={{ backgroundColor: "color-mix(in srgb, var(--ink-deep) 94%, var(--ink-mid))" }}>
+                  <div className="px-3 pt-[calc(env(safe-area-inset-top,0px)+10px)] pb-2.5" style={{ backgroundColor: "color-mix(in srgb, var(--ink-deep) 94%, var(--ink-mid))" }}>
+                    <div className="flex items-center gap-2">
                       <button
-                        key={day}
-                        onClick={() => setDayFilter(index)}
-                        className={`
-                          flex-1 px-2 py-1.5 text-xs font-semibold transition-all duration-200 relative flex flex-col items-center gap-0.5
-                          ${index < DAYS_OF_WEEK.length - 1 ? 'border-r border-ink-light/30' : ''}
-                          ${dayFilter === index 
-                            ? 'bg-jade-deep/60 text-jade-glow shadow-[inset_0_0_12px_color-mix(in_srgb,var(--accent)_15%,transparent)]' 
-                            : hasExercises
-                              ? 'bg-ink-dark/60 text-jade-light/80 hover:text-jade-light hover:bg-ink-mid/40'
-                              : 'bg-ink-dark/60 text-mist-dark hover:text-mist-light hover:bg-ink-mid/40'
-                          }
-                        `}
+                        type="button"
+                        onClick={onClose}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-md"
+                        style={{ color: "var(--mist-light)", backgroundColor: "transparent" }}
+                        aria-label="Close day allocation drawer"
                       >
-                        <span>{DAY_ABBREVIATIONS[index]}</span>
-                        {hasExercises && (
-                          <span className={`
-                            text-[8px] leading-none rounded-full min-w-[14px] px-1 py-[1px] font-bold
-                            ${dayFilter === index
-                              ? 'bg-jade-glow/30 text-jade-light'
-                              : 'bg-ink-light/60 text-mist-light'
-                            }
-                          `}>
-                            {count}
-                          </span>
-                        )}
-                        {dayFilter === index && <div className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-jade-glow rounded-full" />}
+                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                        </svg>
                       </button>
-                    );
-                  })}
+                      <h2 className="truncate text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--mist-light)" }}>
+                        Edit Day Allocations
+                      </h2>
+                    </div>
+
+                    <div className="mt-2 flex items-center gap-2">
+                      <SearchField
+                        value={searchTerm}
+                        onChange={setSearchTerm}
+                        placeholder="Search exercises"
+                        aria-label="Search exercises"
+                        wrapperClassName="min-w-0 flex-1"
+                        className="h-8 min-w-0 text-sm"
+                        style={{
+                          borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                          backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
+                          color: "var(--cloud-white)",
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setFilterOpen(true)}
+                        className="theme-control-btn relative inline-flex h-8 w-8 items-center justify-center rounded-md border transition-colors"
+                        aria-label="Open allocation filters"
+                      >
+                        <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 5h18M6 12h12m-9 7h6" />
+                        </svg>
+                        {hasActiveFilters ? (
+                          <span className="absolute right-0.5 top-1 h-2 w-2 rounded-full" style={{ backgroundColor: "var(--accent)" }} />
+                        ) : null}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="h-px" style={{ backgroundColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)" }} />
                 </div>
-                
-                {hasActiveFilters && (
-                  <button
-                    onClick={clearAllFilters}
-                    className="px-3 py-1.5 text-xs rounded-md font-medium border border-crimson/30 text-crimson-light/70 hover:text-crimson-light hover:border-crimson/50 transition-all duration-200 shrink-0"
-                  >
-                    Clear
-                  </button>
+
+                <AnimatePresence>
+                  {filterOpen ? (
+                    <>
+                      <motion.div
+                        key="allocation-filter-backdrop"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                        className="fixed inset-0 z-[245]"
+                        style={{ backgroundColor: "color-mix(in srgb, var(--void-black) 72%, transparent)" }}
+                        onClick={() => setFilterOpen(false)}
+                      />
+                      <motion.aside
+                        key="allocation-filter-drawer"
+                        initial={{ x: "100%", opacity: 0.98 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        exit={{ x: "100%", opacity: 0.98 }}
+                        transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+                        className="fixed inset-y-0 right-0 z-[250] flex max-h-[100dvh] w-[min(22rem,92vw)] flex-col overflow-hidden border-l shadow-2xl safe-area-top safe-area-bottom safe-area-right"
+                        style={{
+                          borderColor: "color-mix(in srgb, var(--jade-glow) 18%, var(--ink-light))",
+                          background: "linear-gradient(180deg, color-mix(in srgb, var(--ink-dark) 98%, transparent) 0%, color-mix(in srgb, var(--ink-mid) 92%, transparent) 100%)",
+                          boxShadow: "0 18px 56px rgba(0, 0, 0, 0.45)",
+                        }}
+                      >
+                        <div className="shrink-0 border-b px-4 pb-3 pt-[max(env(safe-area-inset-top,0px),1rem)]" style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)" }}>
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">Filters</p>
+                              <h2 className="mt-1 text-base font-semibold text-[var(--text-primary)]">Refine Allocation Results</h2>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setFilterOpen(false)}
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-md border text-[var(--mist-mid)] transition hover:text-[var(--text-primary)]"
+                              style={{
+                                borderColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)",
+                                backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
+                              }}
+                              aria-label="Close allocation filters"
+                            >
+                              x
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4" style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: "contain" }}>
+                          <div className="space-y-4">
+                            <div>
+                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">Training day</label>
+                              <select
+                                value={dayFilter == null ? "all" : String(dayFilter)}
+                                onChange={(event) => setDayFilter(event.target.value === "all" ? null : Number(event.target.value))}
+                                className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
+                                style={{
+                                  borderColor: "var(--border)",
+                                  backgroundColor: "var(--void-black)",
+                                  color: "var(--text-primary)",
+                                }}
+                              >
+                                <option value="all">All training days</option>
+                                {DAYS_OF_WEEK.map((day, dayIndex) => (
+                                  <option key={`allocation-day-${day}`} value={dayIndex}>
+                                    {`${day} (${dayCounts[dayIndex]})`}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">Difficulty level</label>
+                              <select
+                                value={difficultyFilter}
+                                onChange={(event) => setDifficultyFilter(event.target.value)}
+                                className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
+                                style={{
+                                  borderColor: "var(--border)",
+                                  backgroundColor: "var(--void-black)",
+                                  color: "var(--text-primary)",
+                                }}
+                              >
+                                <option value="">All difficulty levels</option>
+                                {availableDifficulties.map((difficulty) => (
+                                  <option key={difficulty} value={difficulty}>{difficulty}</option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">Exercise type</label>
+                              <select
+                                value={typeFilter}
+                                onChange={(event) => setTypeFilter(event.target.value)}
+                                className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
+                                style={{
+                                  borderColor: "var(--border)",
+                                  backgroundColor: "var(--void-black)",
+                                  color: "var(--text-primary)",
+                                }}
+                              >
+                                <option value="">All exercise types</option>
+                                {availableTypes.map((type) => (
+                                  <option key={type} value={type}>{type}</option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">Sort order</label>
+                              <select
+                                value={sortBy}
+                                onChange={(event) => {
+                                  setSortManuallySelected(true);
+                                  setSortBy(event.target.value as "name-az" | "name-za" | "realm-az" | "path-az" | "custom");
+                                }}
+                                className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
+                                style={{
+                                  borderColor: "var(--border)",
+                                  backgroundColor: "var(--void-black)",
+                                  color: "var(--text-primary)",
+                                }}
+                              >
+                                <option value="name-az">Exercise name (A to Z)</option>
+                                <option value="name-za">Exercise name (Z to A)</option>
+                                <option value="realm-az">Difficulty level (A to Z)</option>
+                                <option value="path-az">Exercise type (A to Z)</option>
+                                <option value="custom">Manual order (drag and drop)</option>
+                              </select>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2 pt-1">
+                              <button
+                                type="button"
+                                onClick={clearFilters}
+                                className="h-11 rounded-xl border px-3 text-sm font-medium text-[var(--text-primary)] transition-colors"
+                                style={{ borderColor: "var(--border)", backgroundColor: "var(--void-black)" }}
+                              >
+                                Reset
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setFilterOpen(false)}
+                                className="h-11 rounded-xl border px-3 text-sm font-semibold text-[var(--void-black)] transition-colors"
+                                style={{ borderColor: "color-mix(in srgb, var(--forest) 42%, transparent)", backgroundColor: "var(--forest)" }}
+                              >
+                                Done
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.aside>
+                    </>
+                  ) : null}
+                </AnimatePresence>
+
+                {sortedFilteredExercises.length === 0 ? (
+                  <div className="px-3 py-4 text-center text-xs" style={{ color: "var(--text-muted)" }}>
+                    No exercises match your current filters.
+                  </div>
+                ) : (
+                  <div>
+                    {sortedFilteredExercises.map((exercise) => (
+                      <ExerciseAllocationRow
+                        key={exercise.id}
+                        exercise={exercise}
+                        focusedDay={dayFilter}
+                        expanded={expandedExerciseId === exercise.id}
+                        onToggleExpand={() => setExpandedExerciseId((prev) => (prev === exercise.id ? null : exercise.id))}
+                        isUpdating={updatingExerciseId === exercise.id}
+                        onApplyAssignmentPayload={handleApplyAssignmentPayload}
+                      />
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
-
-            {/* Content — scrollable with top shadow indicator */}
-            <div className="flex-1 overflow-y-auto" style={{ scrollBehavior: "smooth" }}>
-              <div className="relative">
-                {/* Top scroll shadow */}
-                <div className="sticky top-0 z-10 h-3 bg-gradient-to-b from-ink-deep/80 to-transparent pointer-events-none" />
-                
-                <div className="px-5 pb-5 space-y-3">
-                  {/* Info bar */}
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-mist-dark font-medium">
-                      {dayFilter !== null 
-                        ? `${DAYS_OF_WEEK[dayFilter]} Techniques`
-                        : `All Techniques`
-                      } — {sortedFilteredExercises.length} found
-                    </span>
-                    {dayFilter !== null && (
-                      <span className="text-jade-glow/80 bg-jade-deep/20 px-2 py-0.5 rounded text-[10px] font-medium border border-jade-glow/10">
-                        Editing {DAY_ABBREVIATIONS[dayFilter]} assignments
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Technique List — drag-reorderable */}
-                  {sortedFilteredExercises.length === 0 ? (
-                    <div className="text-center text-mist-dark py-16">
-                      {dayFilter !== null ? (
-                        <div className="space-y-3">
-                          <div className="text-4xl opacity-40">📋</div>
-                          <div>
-                            <p className="text-sm text-mist-light/60">No techniques assigned to {DAYS_OF_WEEK[dayFilter]}</p>
-                            <p className="text-xs mt-1 text-mist-dark">Select &ldquo;All&rdquo; and assign techniques to this day</p>
-                          </div>
-                        </div>
-                      ) : searchTerm ? (
-                        <div className="space-y-3">
-                          <div className="text-4xl opacity-40">🔍</div>
-                          <p className="text-sm text-mist-light/60">No techniques match your search</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          <div className="text-4xl opacity-40">📜</div>
-                          <p className="text-sm text-mist-light/60">No techniques available</p>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <Reorder.Group
-                      axis="y"
-                      values={sortedFilteredExercises.map(e => e.id)}
-                      onReorder={handleReorder}
-                      className={isCompactView ? "space-y-1.5" : "space-y-3"}
-                    >
-                      {sortedFilteredExercises.map((exercise) => (
-                        <LongPressReorderItem
-                          key={exercise.id}
-                          value={exercise.id}
-                        >
-                          <TechniqueRow
-                            exercise={exercise}
-                            onUpdateDayAssignments={onUpdateDayAssignments}
-                            focusedDay={dayFilter}
-                            isCompact={isCompactView}
-                          />
-                        </LongPressReorderItem>
-                      ))}
-                    </Reorder.Group>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div
-              className="px-5 py-3 shrink-0"
-              style={{
-                background: "linear-gradient(0deg, color-mix(in srgb, var(--ink-deep) 95%, black) 0%, color-mix(in srgb, var(--ink-deep) 80%, transparent) 100%)",
-                borderTop: "1px solid color-mix(in srgb, var(--accent) 10%, transparent)",
-              }}
-            >
-              <div className="flex items-center gap-4 text-[11px] text-mist-dark">
-                <span>
-                  <span className="text-jade-glow/60">↕</span> Hold &amp; drag to reorder
-                </span>
-                <span>
-                  <span className="text-jade-glow/60">ⓘ</span> Click info for tips
-                </span>
-                <span>
-                  <span className="text-jade-glow/60">◉</span> Toggle day letters
-                </span>
-              </div>
-            </div>
-          </motion.div>
+          </motion.aside>
         </>
-      )}
+      ) : null}
     </AnimatePresence>
   );
 }

@@ -35,6 +35,12 @@ type WeightTrend = {
   daysBetween: number;
 };
 
+type FriendWeekSection = {
+  userId: string;
+  name: string;
+  days: Array<{ key: string; label: string; active: boolean; isToday: boolean }>;
+};
+
 function shiftDateKey(dateKey: string, deltaDays: number): string {
   const [year, month, day] = dateKey.split("-").map(Number);
   const shifted = new Date(Date.UTC(year, (month || 1) - 1, (day || 1) + deltaDays));
@@ -90,6 +96,7 @@ export default function DashboardHomePage() {
   const [streak, setStreak] = useState<number | null>(null);
   const [latestWeight, setLatestWeight] = useState<number | null>(null);
   const [activeCheckinDates, setActiveCheckinDates] = useState<Set<string>>(new Set());
+  const [friendWeekSections, setFriendWeekSections] = useState<FriendWeekSection[]>([]);
   const [weightTrend, setWeightTrend] = useState<WeightTrend | null>(null);
   const [cultivationDay, setCultivationDay] = useState<number | null>(null);
   const [circlePreview, setCirclePreview] = useState<CirclePreviewItem[]>([]);
@@ -107,6 +114,7 @@ export default function DashboardHomePage() {
       setCultivationDay(null);
       setCirclePreview([]);
       setActiveCheckinDates(new Set());
+      setFriendWeekSections([]);
       return;
     }
     let cancelled = false;
@@ -120,12 +128,51 @@ export default function DashboardHomePage() {
         const users = Array.isArray(usersPayload?.users) ? usersPayload.users : [];
         const userById = new Map(users.map((entry) => [entry.id, entry]));
         const mine = raw.filter((c) => c.userId === user.id && c.present !== false);
+        const friendRows = users
+          .filter((entry) => entry.id && entry.id !== user.id)
+          .map((entry) => ({
+            userId: entry.id,
+            name: friendNameFallback(entry, entry.id),
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name));
+        const friendIds = new Set(friendRows.map((friend) => friend.userId));
+        const friendCheckinDatesByUser = new Map<string, Set<string>>();
+        for (const friend of friendRows) {
+          friendCheckinDatesByUser.set(friend.userId, new Set());
+        }
+        for (const entry of raw) {
+          if (!entry.userId || entry.userId === user.id || entry.present === false) continue;
+          if (!friendIds.has(entry.userId)) continue;
+          const key = normalizeDateOnlyKey(entry.date ?? null);
+          if (!key) continue;
+          const setForFriend = friendCheckinDatesByUser.get(entry.userId);
+          if (setForFriend) setForFriend.add(key);
+        }
         const mineDateKeys = mine
           .map((entry) => normalizeDateOnlyKey(entry.date ?? null))
           .filter((value): value is string => Boolean(value));
         setCheckInCount(mine.length);
         setStreak(computeStreak(raw, user.id, todayKey));
         setActiveCheckinDates(new Set(mineDateKeys));
+
+        const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
+        const weekStartsOn = resolveCalendarWeekStartsOn(settings.calendarWeekStart, settings.timeZone);
+        const todayDow = new Date(`${todayKey}T00:00:00Z`).getUTCDay();
+        const offset = (todayDow - weekStartsOn + 7) % 7;
+        const startKey = shiftDateKey(todayKey, -offset);
+        const sections = friendRows.map((friend) => {
+          const activeDates = friendCheckinDatesByUser.get(friend.userId) || new Set<string>();
+          return {
+            userId: friend.userId,
+            name: friend.name,
+            days: Array.from({ length: 7 }, (_, i) => {
+              const key = shiftDateKey(startKey, i);
+              const dow = new Date(key + "T00:00:00Z").getUTCDay();
+              return { key, label: DAY_LABELS[dow], active: activeDates.has(key), isToday: key === todayKey };
+            }),
+          };
+        });
+        setFriendWeekSections(sections);
 
         const earliest = [...mineDateKeys].sort()[0];
         if (earliest) {
@@ -190,10 +237,11 @@ export default function DashboardHomePage() {
           setCultivationDay(null);
           setCirclePreview([]);
           setActiveCheckinDates(new Set());
+          setFriendWeekSections([]);
         }
       });
     return () => { cancelled = true; };
-  }, [user?.id, todayKey]);
+  }, [settings.calendarWeekStart, settings.timeZone, todayKey, user?.id]);
 
   const weekDays = useMemo(() => {
     const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
@@ -347,7 +395,7 @@ export default function DashboardHomePage() {
         {/* This week */}
         <section className="rounded-xl border p-3" style={shellStyle}>
           <div className="mb-2.5 flex items-center justify-between">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>This week</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>Your week</p>
             <div className="flex items-center gap-2 text-[10px]" style={{ color: "var(--text-muted)" }}>
               <span className="flex items-center gap-1">
                 <span className="inline-block h-2 w-2 rounded-sm" style={{ backgroundColor: "color-mix(in srgb, var(--forest) 68%, transparent)" }} />
@@ -384,6 +432,55 @@ export default function DashboardHomePage() {
             ))}
           </div>
         </section>
+
+        {/* Friends this week */}
+        {friendWeekSections.length > 0 && (
+          <section className="space-y-2">
+            {friendWeekSections.map((friendSection) => (
+              <article key={friendSection.userId} className="rounded-xl border p-3" style={shellStyle}>
+                <div className="mb-2.5 flex items-center justify-between">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>
+                    {friendSection.name}
+                  </p>
+                  <div className="flex items-center gap-2 text-[10px]" style={{ color: "var(--text-muted)" }}>
+                    <span className="flex items-center gap-1">
+                      <span className="inline-block h-2 w-2 rounded-sm" style={{ backgroundColor: "color-mix(in srgb, var(--accent) 68%, transparent)" }} />
+                      Logged
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="inline-block h-2 w-2 rounded-sm border" style={{ borderColor: "var(--accent)" }} />
+                      Today
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-end gap-1.5">
+                  {friendSection.days.map(({ key, label, active, isToday }) => (
+                    <div key={key} className="flex flex-1 flex-col items-center gap-1">
+                      <div
+                        className="w-full rounded-md"
+                        style={{
+                          height: 28,
+                          backgroundColor: active
+                            ? "color-mix(in srgb, var(--accent) 68%, transparent)"
+                            : "color-mix(in srgb, var(--ink-light) 28%, transparent)",
+                          border: isToday
+                            ? `1.5px solid ${active ? "var(--accent)" : "var(--accent)"}`
+                            : "1px solid transparent",
+                        }}
+                      />
+                      <span
+                        className="text-[9px] font-medium"
+                        style={{ color: isToday ? "var(--accent)" : "var(--text-muted)" }}
+                      >
+                        {label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            ))}
+          </section>
+        )}
 
         {/* Circle */}
         <Link

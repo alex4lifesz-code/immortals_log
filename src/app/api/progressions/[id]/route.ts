@@ -153,6 +153,8 @@ export const PATCH = withAuth(async (request, { auth, params }) => {
           (day: unknown) => typeof day === "number" && day >= 0 && day <= 6
         );
         data.assignedDays = serializeDayAssignments(validDays);
+      } else if (typeof body.assignedDays === "string") {
+        data.assignedDays = body.assignedDays.trim().slice(0, 2000);
       }
     }
 

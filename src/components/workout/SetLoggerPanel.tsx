@@ -640,7 +640,7 @@ export function SetLoggerPanel({
           : `relative overflow-hidden rounded-lg border shadow-[var(--shadow-elev-1)] ${isCompact ? 'p-2' : 'p-3 sm:p-4'}`
         }
         style={{
-          height: isMobile ? "var(--app-viewport-height)" : undefined,
+          height: isMobile ? "100dvh" : undefined,
           background: "color-mix(in srgb, var(--ink-deep) 86%, transparent)",
           borderColor: `${diffStyle.glowColor}35`,
           boxShadow: isMobile

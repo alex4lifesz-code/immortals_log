@@ -15,12 +15,9 @@ function syncViewportSize() {
   if (typeof window === "undefined") return;
 
   const viewport = window.visualViewport;
-  const height = Math.max(1, Math.round(viewport?.height ?? window.innerHeight));
   const width = Math.max(1, Math.round(viewport?.width ?? window.innerWidth));
 
-  document.documentElement.style.setProperty("--app-viewport-height", `${height}px`);
   document.documentElement.style.setProperty("--app-viewport-width", `${width}px`);
-  document.body.style.minHeight = `${height}px`;
 }
 
 export default function SystemBarsManager() {

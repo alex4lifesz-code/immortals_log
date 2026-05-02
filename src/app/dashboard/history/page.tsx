@@ -6,7 +6,9 @@ import { AnimatePresence, motion } from "framer-motion";
 import PageLayout from "@/components/layout/PageLayout";
 import GlowCard from "@/components/ui/GlowCard";
 import SearchField from "@/components/ui/SearchField";
+import TrainDayRail from "@/components/navigation/TrainDayRail";
 import { MemoTrainingLogTable } from "@/components/workout/TrainingLogTable";
+import ExerciseManagementDrawer from "@/components/workout/ExerciseManagementDrawer";
 import { useAuth } from "@/context/AuthContext";
 import { useAppContext } from "@/context/AppContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
@@ -17,12 +19,31 @@ import { DASHBOARD_ROUTES } from "@/lib/navigation";
 import { isDeletedExerciseDescription } from "@/lib/pending-exercises";
 import { DEFAULT_USER_PHYSIQUE, loadUserPhysique } from "@/lib/user-physique";
 import { PROGRESSION_EXERCISES_UPDATED_EVENT } from "@/lib/progression-events";
-import { formatDateWithPreference } from "@/lib/constants";
+import { DAY_ABBREVIATIONS, formatDateWithPreference, parseDayAssignmentDetailsList, parseDayAssignments } from "@/lib/constants";
 import { formatSetValue, type TimedUnitPref, type WeightUnit } from "@/lib/unit-conversion";
 import type { UserPhysiqueSettings } from "@/lib/user-physique";
 import type { ProgressionExercise, ProgressionLog } from "../workout/types";
 
 type WorkoutMetricRow = { weight: string; reps: string };
+type TrainExerciseRow = {
+  rowKey: string;
+  exerciseId: string;
+  exerciseName: string;
+  date: string | null;
+  logId: string | null;
+  progression: string;
+  variant: string;
+  category: string;
+  isDeleted: boolean;
+  recent24hCount: number;
+  assignedDays: string;
+  assignedProgression?: string;
+  assignedVariant?: string;
+  assignedLevel?: number;
+  showAssignedContext?: boolean;
+  isCompleted?: boolean;
+  completionDate?: string | null;
+};
 
 function getWorkoutMetricRows(log: ProgressionLog, displayUnit: WeightUnit = "kg", timedUnit: TimedUnitPref = "seconds"): WorkoutMetricRow[] {
   const hasHold = log.holdTime != null || log.holdTime2 != null || log.holdTime3 != null;
@@ -116,6 +137,84 @@ function getRecentExerciseTextColor(dateLike: string | null | undefined, isSelec
   return defaultColor;
 }
 
+function TrainExerciseListRow({
+  row,
+  isSelected,
+  onActivate,
+  dateFormat,
+  timeZone,
+}: {
+  row: TrainExerciseRow;
+  isSelected: boolean;
+  onActivate: (row: TrainExerciseRow) => void;
+  dateFormat: "dd-mm-yyyy" | "dd-mmm-yyyy" | "dd-mm-yy" | "dd-mmm-yy";
+  timeZone?: string;
+}) {
+  return (
+    <article
+      className="mx-1 my-0.5 rounded-md px-3 py-2.5"
+      style={{
+        borderTop: "1px solid color-mix(in srgb, var(--ink-light) 72%, transparent)",
+        border: isSelected ? "1px solid color-mix(in srgb, var(--jade-glow) 62%, var(--ink-light))" : undefined,
+        backgroundColor: isSelected ? "color-mix(in srgb, var(--jade-glow) 14%, var(--ink-deep))" : "transparent",
+        boxShadow: isSelected ? "inset 0 0 0 1px color-mix(in srgb, var(--jade-glow) 20%, transparent), 0 0 14px color-mix(in srgb, var(--jade-glow) 24%, transparent)" : "none",
+        cursor: "pointer",
+      }}
+      role="button"
+      tabIndex={0}
+      onClick={() => onActivate(row)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onActivate(row);
+        }
+      }}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start gap-1.5">
+            <p
+              className="min-w-0 text-sm font-semibold leading-tight"
+              style={{ color: row.isDeleted ? "var(--crimson-light)" : getRecentExerciseTextColor(row.completionDate || row.date, isSelected) }}
+            >
+              {row.exerciseName}
+              {row.recent24hCount >= 2 ? (
+                <sup className="ml-0.5 text-[12px] font-bold leading-none" style={{ color: "var(--accent)" }}>
+                  {row.recent24hCount}
+                </sup>
+              ) : null}
+            </p>
+          </div>
+        </div>
+        <span
+          className="shrink-0 text-[11px]"
+          style={{ color: row.showAssignedContext && row.isCompleted ? "var(--jade-glow)" : "var(--text-muted)" }}
+        >
+          {row.showAssignedContext
+            ? (row.isCompleted && row.completionDate ? formatRelativeRecentDate(row.completionDate, dateFormat, timeZone) : "")
+            : (row.date ? formatRelativeRecentDate(row.date, dateFormat, timeZone) : "")}
+        </span>
+      </div>
+      {row.showAssignedContext ? (
+        <p className="mt-0.5 flex items-center gap-1 text-[11px] italic" style={{ color: row.isDeleted ? "var(--crimson-light)" : "var(--text-muted)" }}>
+          <span>{`Assigned: ${row.assignedVariant ? `${row.assignedVariant} ` : ""}${row.assignedProgression || row.progression} ${row.exerciseName}`}</span>
+          {row.isCompleted ? (
+            <span className="inline-flex shrink-0" style={{ color: "var(--jade-glow)" }} aria-label="Completed today">
+              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </span>
+          ) : null}
+        </p>
+      ) : (
+        <p className="mt-0.5 text-[11px] italic" style={{ color: row.isDeleted ? "var(--crimson-light)" : "var(--text-muted)" }}>
+          {`Recent: ${row.variant ? `${row.variant} ` : ""}${row.progression} ${row.exerciseName}`}
+        </p>
+      )}
+    </article>
+  );
+}
+
 export default function HistoryPage() {
   const { user } = useAuth();
   const { themeStyle } = useAppContext();
@@ -146,10 +245,25 @@ export default function HistoryPage() {
   const [mobileExerciseDrawerExerciseId, setMobileExerciseDrawerExerciseId] = useState<string | null>(null);
   const [mobileDrawerAnimReady, setMobileDrawerAnimReady] = useState(false);
   const [mobileLastSelectedExerciseId, setMobileLastSelectedExerciseId] = useState<string | null>(null);
+  const [dayDrawerLastSelectedRowKey, setDayDrawerLastSelectedRowKey] = useState<string | null>(null);
   const [mobileLogFabOpen, setMobileLogFabOpen] = useState(false);
+  const [mobileQuickCheckinOpen, setMobileQuickCheckinOpen] = useState(false);
+  const [mobileQuickCheckinWeight, setMobileQuickCheckinWeight] = useState("");
+  const [mobileQuickCheckinNote, setMobileQuickCheckinNote] = useState("");
+  const [mobileQuickCheckinLatestWeight, setMobileQuickCheckinLatestWeight] = useState<number | null>(null);
+  const [mobileQuickCheckinTodayWeight, setMobileQuickCheckinTodayWeight] = useState<number | null>(null);
+  const [mobileQuickCheckinTodayNote, setMobileQuickCheckinTodayNote] = useState("");
+  const [mobileQuickCheckinLoading, setMobileQuickCheckinLoading] = useState(false);
+  const [mobileQuickCheckinSaving, setMobileQuickCheckinSaving] = useState(false);
+  const [mobileQuickCheckinMessage, setMobileQuickCheckinMessage] = useState<string | null>(null);
   const [mobileLogFabSearchQuery, setMobileLogFabSearchQuery] = useState("");
   const [mobileLogFabCategory, setMobileLogFabCategory] = useState("all");
   const [mobileLogFabSort, setMobileLogFabSort] = useState<"recent" | "oldest" | "name-az" | "relevant">("recent");
+  const [trainDayFilter, setTrainDayFilter] = useState<number | null>(null);
+  const [trainDayDrawerOpen, setTrainDayDrawerOpen] = useState(false);
+  const [trainRailOverviewOpen, setTrainRailOverviewOpen] = useState(false);
+  const [exerciseManagementOpen, setExerciseManagementOpen] = useState(false);
+  const [hideEmptyTrainDays, setHideEmptyTrainDays] = useState(true);
   const mobileDrawerSearchInputRef = useRef<HTMLInputElement | null>(null);
   const mobileHistorySortPreferenceRef = useRef<"recent" | "oldest" | "name-az">("recent");
   const mobileLogFabSortPreferenceRef = useRef<"recent" | "oldest" | "name-az">("recent");
@@ -166,19 +280,124 @@ export default function HistoryPage() {
   const librarySheetRequested = searchParams.get("library") === "1" && !targetUserId && !searchParams.get("friendView");
 
   const setLibrarySheetOpen = useCallback((open: boolean) => {
-    const params = new URLSearchParams(searchParams.toString());
+    setMobileLogFabOpen(open);
     if (open) {
-      params.set("library", "1");
-    } else {
-      params.delete("library");
+      setMobileQuickCheckinOpen(false);
+    }
+  }, []);
+
+  const setQuickCheckinOpen = useCallback((open: boolean) => {
+    setMobileQuickCheckinOpen(open);
+    if (open) {
+      setMobileLogFabOpen(false);
+      setMobileQuickCheckinMessage(null);
+    }
+  }, []);
+
+  const getTodayDateKey = useCallback(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }, []);
+
+  const handleSaveQuickCheckin = useCallback(async () => {
+    if (!userId || mobileQuickCheckinSaving) return;
+
+    const weightLocked = mobileQuickCheckinTodayWeight != null;
+    const noteLocked = Boolean(mobileQuickCheckinTodayNote.trim());
+    if (weightLocked && noteLocked) {
+      setMobileQuickCheckinMessage("Already saved today");
+      return;
     }
 
-    const next = params.toString();
-    router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
-  }, [pathname, router, searchParams]);
+    const trimmedWeight = mobileQuickCheckinWeight.trim();
+    const trimmedNote = mobileQuickCheckinNote.trim();
+
+    const parsedWeight = trimmedWeight === "" ? null : Number.parseFloat(trimmedWeight);
+    const payloadWeight = parsedWeight != null && Number.isFinite(parsedWeight) && parsedWeight >= 0 ? parsedWeight : null;
+    const effectiveWeight = weightLocked ? mobileQuickCheckinTodayWeight : payloadWeight;
+    const effectiveNote = noteLocked ? mobileQuickCheckinTodayNote.trim() : trimmedNote;
+
+    try {
+      setMobileQuickCheckinSaving(true);
+      await api.post("/api/checkins", {
+        date: getTodayDateKey(),
+        entries: {
+          [userId]: {
+            present: true,
+            weight: effectiveWeight,
+            comment: effectiveNote || null,
+          },
+        },
+      });
+      setMobileQuickCheckinMessage("Saved");
+      setMobileQuickCheckinOpen(false);
+      setMobileQuickCheckinWeight("");
+      setMobileQuickCheckinNote("");
+    } catch {
+      setMobileQuickCheckinMessage("Unable to save");
+    } finally {
+      setMobileQuickCheckinSaving(false);
+    }
+  }, [getTodayDateKey, mobileQuickCheckinNote, mobileQuickCheckinSaving, mobileQuickCheckinTodayNote, mobileQuickCheckinTodayWeight, mobileQuickCheckinWeight, userId]);
 
   useEffect(() => {
-    setMobileLogFabOpen(librarySheetRequested);
+    if (!mobileQuickCheckinOpen || !userId) return;
+
+    let cancelled = false;
+    const loadQuickCheckinDefaults = async () => {
+      try {
+        setMobileQuickCheckinLoading(true);
+        const todayKey = getTodayDateKey();
+        const [latestWeightPayload, checkinsPayload] = await Promise.all([
+          api.get<{ weight: number | null; date: string | null }>("/api/checkins/latest-weight"),
+          api.get<{ checkins: Array<{ userId: string; date: string; weight?: number | null; comment?: string | null }> }>("/api/checkins"),
+        ]);
+
+        if (cancelled) return;
+
+        const latestWeight = typeof latestWeightPayload.weight === "number" ? latestWeightPayload.weight : null;
+        const todayEntry = (checkinsPayload.checkins || []).find((entry) => {
+          if (!entry || entry.userId !== userId || !entry.date) return false;
+          const entryKey = String(entry.date).slice(0, 10);
+          return entryKey === todayKey;
+        });
+
+        const todayWeight = todayEntry && typeof todayEntry.weight === "number" ? todayEntry.weight : null;
+        const todayNote = todayEntry?.comment ? String(todayEntry.comment) : "";
+
+        setMobileQuickCheckinLatestWeight(latestWeight);
+        setMobileQuickCheckinTodayWeight(todayWeight);
+        setMobileQuickCheckinTodayNote(todayNote);
+        setMobileQuickCheckinWeight(todayWeight != null ? String(todayWeight) : "");
+        setMobileQuickCheckinNote(todayNote);
+      } catch {
+        if (!cancelled) {
+          setMobileQuickCheckinLatestWeight(null);
+          setMobileQuickCheckinTodayWeight(null);
+          setMobileQuickCheckinTodayNote("");
+          setMobileQuickCheckinWeight("");
+          setMobileQuickCheckinNote("");
+        }
+      } finally {
+        if (!cancelled) {
+          setMobileQuickCheckinLoading(false);
+        }
+      }
+    };
+
+    void loadQuickCheckinDefaults();
+    return () => {
+      cancelled = true;
+    };
+  }, [getTodayDateKey, mobileQuickCheckinOpen, userId]);
+
+  useEffect(() => {
+    if (librarySheetRequested) {
+      setMobileLogFabOpen(true);
+    }
   }, [librarySheetRequested]);
 
   useEffect(() => {
@@ -334,6 +553,154 @@ export default function HistoryPage() {
     : "Review your training logs and cultivation entries";
   const isFriendTrainOverlay = Boolean(targetUserId);
   const friendRailWidthPx = 64;
+  const trainRailWidthPx = 64;
+
+  const dayAssignmentSummary = useMemo(() => {
+    const rowsByDay: TrainExerciseRow[][] = Array.from({ length: 7 }, () => []);
+    const assignedCounts = [0, 0, 0, 0, 0, 0, 0];
+    const remainingCounts = [0, 0, 0, 0, 0, 0, 0];
+    const dayMs = 24 * 60 * 60 * 1000;
+    const now = Date.now();
+
+    for (const exercise of exercises) {
+      const deletedExercise = isDeletedExerciseDescription(exercise.story);
+      const exerciseName = deletedExercise ? getDeletedExerciseLabel(exercise) : exercise.name;
+      const category = (exercise.category || "Uncategorized").trim() || "Uncategorized";
+      const logs = [...(exercise.userProgress?.[0]?.logs ?? [])].sort(compareLogRecency);
+      const latestLog = logs[0] ?? null;
+      const assignmentDetailsByDay = parseDayAssignmentDetailsList(exercise.assignedDays || "");
+
+      for (const day of parseDayAssignments(exercise.assignedDays || "")) {
+        if (day < 0 || day > 6) continue;
+
+        const details = assignmentDetailsByDay[day];
+        const normalizedDetails = details && details.length > 0 ? details : [undefined];
+        const matchesAssignedSetup = (log: ProgressionLog, assignedLevel?: number, assignedVariant?: string) => {
+          if (assignedLevel != null && log.level !== assignedLevel) return false;
+          if (assignedVariant && (log.variant || "").trim().toLowerCase() !== assignedVariant.toLowerCase()) return false;
+          return true;
+        };
+
+        // Track which recent logs (past 24 h) have already been claimed by a sibling row
+        // so one log cannot tick multiple assigned setups.
+        const recentLogs = logs.filter((log) => {
+          const ts = new Date(log.createdAt).getTime();
+          return Number.isFinite(ts) && now - ts <= dayMs;
+        });
+        const remainingRecentLogs = [...recentLogs];
+
+        const allocatedRecentLogByIndex = new Map<number, ProgressionLog>();
+        const candidateOrder = normalizedDetails
+          .map((detail, index) => {
+            const assignedTier = detail?.progression
+              ? exercise.tiers.find((tier) => String(tier.level) === detail.progression || tier.name === detail.progression)
+              : undefined;
+            const assignedVariant = detail?.variant?.trim() || undefined;
+
+            return {
+              index,
+              assignedLevel: assignedTier?.level,
+              assignedVariant,
+              specificity: (assignedVariant ? 2 : 0) + (assignedTier?.level != null ? 1 : 0),
+            };
+          })
+          .sort((left, right) => {
+            if (right.specificity !== left.specificity) return right.specificity - left.specificity;
+            return left.index - right.index;
+          });
+
+        for (const candidate of candidateOrder) {
+          const matchIndex = remainingRecentLogs.findIndex((log) =>
+            matchesAssignedSetup(log, candidate.assignedLevel, candidate.assignedVariant),
+          );
+          if (matchIndex === -1) continue;
+          const [matchedLog] = remainingRecentLogs.splice(matchIndex, 1);
+          if (matchedLog) {
+            allocatedRecentLogByIndex.set(candidate.index, matchedLog);
+          }
+        }
+
+        normalizedDetails.forEach((detail, index) => {
+          const assignedTier = detail?.progression
+            ? exercise.tiers.find((tier) => String(tier.level) === detail.progression || tier.name === detail.progression)
+            : undefined;
+          const assignedProgression = assignedTier?.name || detail?.progression;
+          const assignedLevel = assignedTier?.level;
+          const assignedVariant = detail?.variant?.trim() || undefined;
+
+          const matchingLogs = logs.filter((log) => matchesAssignedSetup(log, assignedLevel, assignedVariant));
+          const latestMatchingLog = matchingLogs[0] ?? null;
+          const doneLog = allocatedRecentLogByIndex.get(index) ?? null;
+          const referenceLog = latestMatchingLog ?? latestLog;
+          const progression = assignedProgression
+            || (referenceLog ? exercise.tiers.find((tier) => tier.level === referenceLog.level)?.name : undefined)
+            || `Progression ${exercise.userProgress?.[0]?.currentLevel ?? exercise.tiers[0]?.level ?? 1}`;
+          const variant = assignedVariant || latestMatchingLog?.variant?.trim() || "";
+          const recent24hCount = matchingLogs.reduce((count, log) => {
+            const ts = new Date(log.createdAt).getTime();
+            return Number.isFinite(ts) && now - ts <= dayMs ? count + 1 : count;
+          }, 0);
+
+          const row: TrainExerciseRow = {
+            rowKey: `${exercise.id}:${day}:${assignedProgression || "base"}:${assignedVariant || "base"}:${index}`,
+            exerciseId: exercise.id,
+            exerciseName,
+            date: referenceLog?.createdAt ?? null,
+            logId: referenceLog?.id ?? null,
+            progression,
+            variant,
+            category,
+            isDeleted: deletedExercise,
+            recent24hCount,
+            assignedDays: exercise.assignedDays || "",
+            assignedProgression,
+            assignedVariant,
+            assignedLevel,
+            showAssignedContext: true,
+            isCompleted: Boolean(doneLog),
+            completionDate: doneLog?.createdAt ?? null,
+          };
+
+          rowsByDay[day].push(row);
+          assignedCounts[day] += 1;
+          if (!doneLog) {
+            remainingCounts[day] += 1;
+          }
+        });
+      }
+    }
+
+    for (const rows of rowsByDay) {
+      rows.sort((left, right) => {
+        if (Boolean(left.isCompleted) !== Boolean(right.isCompleted)) {
+          return left.isCompleted ? 1 : -1;
+        }
+
+        const leftTime = new Date(left.completionDate || left.date || 0).getTime();
+        const rightTime = new Date(right.completionDate || right.date || 0).getTime();
+        if (rightTime !== leftTime) return rightTime - leftTime;
+
+        const nameCompare = left.exerciseName.localeCompare(right.exerciseName);
+        if (nameCompare !== 0) return nameCompare;
+
+        return left.rowKey.localeCompare(right.rowKey);
+      });
+    }
+
+    return { rowsByDay, assignedCounts, remainingCounts };
+  }, [exercises]);
+
+  const handleUpdateDayAssignments = useCallback(async (exerciseId: string, assignedDays: string) => {
+    await api.patch(`/api/progressions/${exerciseId}`, { assignedDays });
+
+    setExercises((prev) =>
+      prev.map((exercise) =>
+        exercise.id === exerciseId
+          ? { ...exercise, assignedDays }
+          : exercise
+      )
+    );
+  }, []);
 
   const handleUserScopeChange = (nextUserId: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -346,18 +713,22 @@ export default function HistoryPage() {
     router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
   };
 
+  const handleOpenTrainOverview = useCallback(() => {
+    setTrainRailOverviewOpen(true);
+    setTrainDayDrawerOpen(false);
+    setTrainDayFilter(null);
+    setExerciseManagementOpen(false);
+  }, []);
+
+  const handleSelectTrainDay = useCallback((dayIndex: number | null) => {
+    setTrainDayFilter(dayIndex);
+    setTrainRailOverviewOpen(false);
+    setTrainDayDrawerOpen(dayIndex != null);
+    setExerciseManagementOpen(false);
+  }, []);
+
   const mobileExerciseRows = useMemo(() => {
-    const rows: Array<{
-      exerciseId: string;
-      exerciseName: string;
-      date: string;
-      logId: string;
-      progression: string;
-      variant: string;
-      category: string;
-      isDeleted: boolean;
-      recent24hCount: number;
-    }> = [];
+    const rows: TrainExerciseRow[] = [];
 
     const now = Date.now();
     const dayMs = 24 * 60 * 60 * 1000;
@@ -377,6 +748,7 @@ export default function HistoryPage() {
       }, 0);
 
       rows.push({
+        rowKey: `history-${exercise.id}`,
         exerciseId: exercise.id,
         exerciseName: deletedExercise ? getDeletedExerciseLabel(exercise) : exercise.name,
         date: latestLog.createdAt,
@@ -386,13 +758,14 @@ export default function HistoryPage() {
         category: (exercise.category || "Uncategorized").trim() || "Uncategorized",
         isDeleted: deletedExercise,
         recent24hCount,
+        assignedDays: exercise.assignedDays || "",
       });
     }
 
     rows.sort((a, b) => {
-      const timeDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+      const timeDiff = new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
       if (timeDiff !== 0) return timeDiff;
-      return b.logId.localeCompare(a.logId);
+      return (b.logId || "").localeCompare(a.logId || "");
     });
     return rows;
   }, [exercises]);
@@ -411,12 +784,13 @@ export default function HistoryPage() {
     const filtered = mobileExerciseRows.filter((row) => {
       const matchesQuery = !query || `${row.exerciseName} ${row.progression} ${row.variant} ${row.category}`.toLowerCase().includes(query);
       const matchesCategory = mobileHistoryCategory === "all" || row.category === mobileHistoryCategory;
+      const rowTimestamp = row.date ? new Date(row.date).getTime() : Number.NEGATIVE_INFINITY;
 
       let matchesRecency = true;
       if (mobileHistoryRecency === "7d") {
-        matchesRecency = now - new Date(row.date).getTime() <= 7 * dayMs;
+        matchesRecency = Number.isFinite(rowTimestamp) && now - rowTimestamp <= 7 * dayMs;
       } else if (mobileHistoryRecency === "30d") {
-        matchesRecency = now - new Date(row.date).getTime() <= 30 * dayMs;
+        matchesRecency = Number.isFinite(rowTimestamp) && now - rowTimestamp <= 30 * dayMs;
       }
 
       return matchesQuery && matchesCategory && matchesRecency;
@@ -440,11 +814,11 @@ export default function HistoryPage() {
 
     const sorted = [...filtered];
     if (mobileHistorySort === "oldest") {
-      sorted.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      sorted.sort((a, b) => new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime());
     } else if (mobileHistorySort === "name-az") {
       sorted.sort((a, b) => a.exerciseName.localeCompare(b.exerciseName));
     } else {
-      sorted.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      sorted.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
     }
 
     return sorted;
@@ -553,6 +927,14 @@ export default function HistoryPage() {
     }
     return sorted;
   }, [mobileLogFabRows, mobileLogFabCategory, mobileLogFabSearchQuery, mobileLogFabSort]);
+
+  const dayExerciseCounts = dayAssignmentSummary.remainingCounts;
+  const dayAssignmentCounts = dayAssignmentSummary.assignedCounts;
+
+  const selectedDayExerciseRows = useMemo(() => {
+    if (trainDayFilter == null) return [];
+    return dayAssignmentSummary.rowsByDay[trainDayFilter] || [];
+  }, [dayAssignmentSummary.rowsByDay, trainDayFilter]);
 
   const selectedMobileExercise = useMemo(() => {
     if (!mobileExerciseDrawerExerciseId) return null;
@@ -667,6 +1049,10 @@ export default function HistoryPage() {
       setMobileLogFabSearchQuery("");
       setMobileLogFabCategory("all");
       setMobileLogFabSort("recent");
+      setTrainDayDrawerOpen(false);
+      setTrainDayFilter(null);
+      setTrainRailOverviewOpen(false);
+      setExerciseManagementOpen(false);
 
       if (targetUserId || searchParams.get("friendView") || searchParams.get("library") === "1") {
         router.replace(DASHBOARD_ROUTES.workoutHistory, { scroll: false });
@@ -679,12 +1065,21 @@ export default function HistoryPage() {
     };
   }, [router, searchParams, targetUserId]);
 
+  useEffect(() => {
+    if (isFriendTrainOverlay) {
+      setTrainRailOverviewOpen(false);
+      setExerciseManagementOpen(false);
+      setTrainDayFilter(null);
+      setTrainDayDrawerOpen(false);
+    }
+  }, [isFriendTrainOverlay]);
+
   return (
     <>
       <PageLayout
         title={trainPageTitle}
         subtitle={isFriendTrainOverlay ? undefined : subtitle}
-        mobileContentPaddingClass={isFriendTrainOverlay ? "p-0 pb-0" : "px-2 pt-4 pb-0"}
+        mobileContentPaddingClass={isFriendTrainOverlay ? "p-0 pb-0" : "p-0 pt-4 pb-0"}
         mobileScrollContainerEnabled={!isFriendTrainOverlay}
       >
       <div className={`nyaa-history-page px-0 ${isFriendTrainOverlay ? "space-y-0" : "space-y-4"}`}>
@@ -694,13 +1089,29 @@ export default function HistoryPage() {
           </GlowCard>
         ) : (
           <>
+            <div className="flex min-h-0">
+              {!isFriendTrainOverlay && (
+                <div className="flex shrink-0">
+                  <TrainDayRail
+                    selectedDayFilter={trainDayFilter}
+                    dayExerciseCounts={dayExerciseCounts}
+                    dayAssignmentCounts={dayAssignmentCounts}
+                    hideEmptyDays={hideEmptyTrainDays}
+                    calendarWeekStart={settings.calendarWeekStart}
+                    timeZone={settings.timeZone}
+                    overviewOpen={trainRailOverviewOpen}
+                    onOpenOverview={handleOpenTrainOverview}
+                    onSelectDay={handleSelectTrainDay}
+                  />
+                </div>
+              )}
             <motion.section
                   key={isFriendTrainOverlay ? `friend-train-${targetUserId}` : "self-train"}
                   initial={isFriendTrainOverlay ? { x: "100%" } : false}
                   animate={isFriendTrainOverlay ? { x: "0%" } : { x: 0 }}
                   transition={isFriendTrainOverlay ? { duration: 0.24, ease: [0.22, 1, 0.36, 1] } : undefined}
-                  className={isFriendTrainOverlay ? "fixed inset-y-0 right-0 z-[71] border-l overflow-hidden safe-area-top safe-area-bottom safe-area-right" : "flex h-[calc(var(--app-viewport-height)-2rem)] min-h-[calc(var(--app-viewport-height)-2rem)] flex-col"}
-                  style={isFriendTrainOverlay ? { left: `${friendRailWidthPx}px`, borderLeftColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)", backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))", minHeight: "var(--app-viewport-height)" } : undefined}
+                  className={isFriendTrainOverlay ? "fixed inset-y-0 right-0 z-[71] border-l overflow-hidden safe-area-top safe-area-bottom safe-area-right" : "flex min-w-0 flex-1 h-[calc(100dvh-2rem)] min-h-[calc(100dvh-2rem)] flex-col"}
+                  style={isFriendTrainOverlay ? { left: `${friendRailWidthPx}px`, borderLeftColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)", backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))", minHeight: "100dvh" } : undefined}
                 >
                   <div
                     className={`border overflow-hidden flex min-h-0 flex-1 flex-col ${isFriendTrainOverlay ? "rounded-none h-full" : "rounded-tl-2xl"}`}
@@ -711,7 +1122,7 @@ export default function HistoryPage() {
                   >
                     <div
                       data-mobile-scroll-container={isFriendTrainOverlay ? "true" : undefined}
-                      className={`${isFriendTrainOverlay ? "h-app safe-area-top safe-area-bottom overflow-y-auto scrollbar-hide" : "flex min-h-0 flex-1 flex-col overflow-hidden"}`}
+                      className={`${isFriendTrainOverlay ? "h-[100dvh] safe-area-top safe-area-bottom overflow-y-auto scrollbar-hide" : "flex min-h-0 flex-1 flex-col overflow-hidden"}`}
                       style={isFriendTrainOverlay ? { WebkitOverflowScrolling: "touch", overscrollBehaviorY: "auto", touchAction: "pan-y" } : undefined}
                     >
                       <div className={`sticky top-0 z-20 shrink-0 ${isFriendTrainOverlay ? "safe-area-top" : ""}`} style={{ backgroundColor: "color-mix(in srgb, var(--ink-deep) 94%, var(--ink-mid))" }}>
@@ -786,7 +1197,7 @@ export default function HistoryPage() {
 
                       {friendView === "history" ? (
                       <div
-                        data-mobile-scroll-container={isFriendTrainOverlay ? "true" : "true"}
+                        data-mobile-scroll-container="true"
                         className={isFriendTrainOverlay ? "flex-1 pb-[calc(var(--mobile-nav-offset)+0.5rem)]" : "min-h-0 flex-1 overflow-y-auto scrollbar-hide pb-[calc(var(--mobile-nav-offset)+0.75rem)]"}
                         style={isFriendTrainOverlay ? undefined : { WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain", touchAction: "pan-y" }}
                       >
@@ -803,50 +1214,17 @@ export default function HistoryPage() {
                           filteredMobileExerciseRows.map((row) => {
                             const isPreviouslySelected = row.exerciseId === mobileLastSelectedExerciseId;
                             return (
-                            <article
+                            <TrainExerciseListRow
                               key={`mobile-train-row-${row.exerciseId}`}
-                              className="mx-1 my-0.5 rounded-md px-3 py-2.5"
-                              style={{
-                                borderTop: "1px solid color-mix(in srgb, var(--ink-light) 72%, transparent)",
-                                border: isPreviouslySelected ? "1px solid color-mix(in srgb, var(--jade-glow) 62%, var(--ink-light))" : undefined,
-                                backgroundColor: isPreviouslySelected ? "color-mix(in srgb, var(--jade-glow) 14%, var(--ink-deep))" : "transparent",
-                                boxShadow: isPreviouslySelected ? "inset 0 0 0 1px color-mix(in srgb, var(--jade-glow) 20%, transparent), 0 0 14px color-mix(in srgb, var(--jade-glow) 24%, transparent)" : "none",
-                                cursor: "pointer",
+                              row={row}
+                              isSelected={isPreviouslySelected}
+                              dateFormat={settings.dateFormat || "dd-mmm-yyyy"}
+                              timeZone={settings.timeZone}
+                              onActivate={(selectedRow) => {
+                                setMobileLastSelectedExerciseId(selectedRow.exerciseId);
+                                setMobileExerciseDrawerExerciseId(selectedRow.exerciseId);
                               }}
-                              role="button"
-                              tabIndex={0}
-                              onClick={() => {
-                                setMobileLastSelectedExerciseId(row.exerciseId);
-                                setMobileExerciseDrawerExerciseId(row.exerciseId);
-                              }}
-                              onKeyDown={(event) => {
-                                if (event.key === "Enter" || event.key === " ") {
-                                  event.preventDefault();
-                                  setMobileLastSelectedExerciseId(row.exerciseId);
-                                  setMobileExerciseDrawerExerciseId(row.exerciseId);
-                                }
-                              }}
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <p
-                                  className="text-sm font-semibold leading-tight"
-                                  style={{ color: row.isDeleted ? "var(--crimson-light)" : getRecentExerciseTextColor(row.date, isPreviouslySelected) }}
-                                >
-                                  {row.exerciseName}
-                                  {row.recent24hCount >= 2 ? (
-                                    <sup className="ml-0.5 text-[12px] font-bold leading-none" style={{ color: "var(--accent)" }}>
-                                      {row.recent24hCount}
-                                    </sup>
-                                  ) : null}
-                                </p>
-                                  <span className="shrink-0 text-[11px]" style={{ color: "var(--text-muted)" }}>
-                                    {formatRelativeRecentDate(row.date, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone)}
-                                  </span>
-                              </div>
-                              <p className="mt-0.5 text-[11px] italic" style={{ color: row.isDeleted ? "var(--crimson-light)" : "var(--text-muted)" }}>
-                                {`Recent: ${row.variant ? `${row.variant} ` : ""}${row.progression} ${row.exerciseName}`}
-                              </p>
-                            </article>
+                            />
                             );
                           })
                         )}
@@ -866,10 +1244,253 @@ export default function HistoryPage() {
                     </div>
                   </div>
               </motion.section>
+            </div>
           </>
         )}
       </div>
       </PageLayout>
+
+      <AnimatePresence>
+        {!isFriendTrainOverlay && trainRailOverviewOpen ? (
+          <>
+            <motion.div
+              key="train-day-rail-overview-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              className="fixed inset-y-0 right-0 z-[180]"
+              style={{
+                left: `${trainRailWidthPx}px`,
+                backgroundColor: "color-mix(in srgb, var(--void-black) 76%, transparent)",
+              }}
+              onClick={() => setTrainRailOverviewOpen(false)}
+            />
+
+            <motion.aside
+              key="train-day-rail-overview-panel"
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+              className="fixed inset-y-0 right-0 z-[181] overflow-hidden border-l safe-area-top safe-area-bottom safe-area-right"
+              style={{
+                left: `${trainRailWidthPx}px`,
+                borderLeftColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
+                backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))",
+              }}
+            >
+              <div className="h-full overflow-hidden">
+                <div
+                  data-mobile-scroll-container="true"
+                  className="h-full overflow-y-auto scrollbar-hide"
+                  style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain" }}
+                >
+                  <div className="sticky top-0 z-20" style={{ backgroundColor: "color-mix(in srgb, var(--ink-deep) 94%, var(--ink-mid))" }}>
+                    <div className="px-3 pt-[calc(env(safe-area-inset-top,0px)+10px)] pb-2.5" style={{ backgroundColor: "color-mix(in srgb, var(--ink-deep) 94%, var(--ink-mid))" }}>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setTrainRailOverviewOpen(false)}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-md"
+                          style={{ color: "var(--mist-light)", backgroundColor: "transparent" }}
+                          aria-label="Close day overview"
+                        >
+                          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                          </svg>
+                        </button>
+                        <h2 className="truncate text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--mist-light)" }}>
+                          Manage Training Days
+                        </h2>
+                      </div>
+                    </div>
+                    <div className="h-px" style={{ backgroundColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)" }} />
+                  </div>
+
+                  <div>
+                    <article
+                      className="mx-1 my-0.5 rounded-md px-3 py-2.5"
+                      style={{ cursor: "pointer" }}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => {
+                        setExerciseManagementOpen(true);
+                        setTrainRailOverviewOpen(false);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          setExerciseManagementOpen(true);
+                          setTrainRailOverviewOpen(false);
+                        }
+                      }}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-semibold leading-tight" style={{ color: "var(--text-primary)" }}>
+                          Manage day allocations
+                        </p>
+                      </div>
+                      <p className="mt-0.5 text-[11px] italic" style={{ color: "var(--text-muted)" }}>
+                        Assign exercises to specific training days.
+                      </p>
+                    </article>
+
+                    <article className="mx-1 my-0.5 rounded-md px-3 py-2.5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold leading-tight" style={{ color: "var(--text-primary)" }}>
+                            Show empty days
+                          </p>
+                          <p className="mt-0.5 text-[11px] italic" style={{ color: "var(--text-muted)" }}>
+                            Toggle on to show days without assigned exercises in the day rail.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={!hideEmptyTrainDays}
+                          aria-label="Toggle empty day visibility"
+                          onClick={() => setHideEmptyTrainDays((prev) => !prev)}
+                          className="relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors"
+                          style={{
+                            borderColor: !hideEmptyTrainDays
+                              ? "color-mix(in srgb, var(--accent) 62%, transparent)"
+                              : "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                            backgroundColor: !hideEmptyTrainDays
+                              ? "color-mix(in srgb, var(--accent) 26%, var(--ink-deep))"
+                              : "color-mix(in srgb, var(--ink-mid) 86%, var(--ink-deep))",
+                          }}
+                        >
+                          <span
+                            className="absolute h-4 w-4 rounded-full transition-transform"
+                            style={{
+                              transform: !hideEmptyTrainDays ? "translateX(21px)" : "translateX(3px)",
+                              backgroundColor: !hideEmptyTrainDays ? "var(--accent)" : "var(--mist-mid)",
+                            }}
+                          />
+                        </button>
+                      </div>
+                    </article>
+                  </div>
+                </div>
+              </div>
+            </motion.aside>
+          </>
+        ) : null}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {!isFriendTrainOverlay && trainDayDrawerOpen && trainDayFilter != null ? (
+          <>
+            <motion.div
+              key="train-day-drawer-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              className="fixed inset-y-0 right-0 z-[190]"
+              style={{
+                left: `${trainRailWidthPx}px`,
+                backgroundColor: "color-mix(in srgb, var(--void-black) 76%, transparent)",
+              }}
+              onClick={() => {
+                setTrainDayDrawerOpen(false);
+                setTrainDayFilter(null);
+              }}
+            />
+
+            <motion.aside
+              key="train-day-drawer-panel"
+              initial={{ x: "100%" }}
+              animate={{ x: "0%" }}
+              exit={{ x: "100%" }}
+              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+              className="fixed inset-y-0 right-0 z-[191] overflow-hidden safe-area-top safe-area-bottom safe-area-right"
+              style={{
+                left: `${trainRailWidthPx}px`,
+                backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))",
+              }}
+            >
+              <div
+                className="h-full overflow-hidden"
+                style={{
+                  backgroundColor: "color-mix(in srgb, var(--ink-mid) 20%, var(--ink-deep))",
+                }}
+              >
+                <div
+                  data-mobile-scroll-container="true"
+                  className="h-full overflow-y-auto scrollbar-hide pb-[calc(var(--mobile-nav-offset)+max(env(safe-area-inset-bottom,0px),12px))]"
+                  style={{ overscrollBehavior: "contain" }}
+                >
+                  <div className="sticky top-0 z-20" style={{ backgroundColor: "color-mix(in srgb, var(--ink-deep) 94%, var(--ink-mid))" }}>
+                    <div className="px-3 pt-[calc(env(safe-area-inset-top,0px)+10px)] pb-2.5" style={{ backgroundColor: "color-mix(in srgb, var(--ink-deep) 94%, var(--ink-mid))" }}>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTrainDayDrawerOpen(false);
+                            setTrainDayFilter(null);
+                          }}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-md"
+                          style={{ color: "var(--mist-light)", backgroundColor: "transparent" }}
+                          aria-label="Close day exercises"
+                        >
+                          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                          </svg>
+                        </button>
+                        <h2 className="truncate text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--mist-light)" }}>
+                          {`${DAY_ABBREVIATIONS[trainDayFilter]} Exercises`}
+                        </h2>
+                      </div>
+                    </div>
+                    <div className="h-px" style={{ backgroundColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)" }} />
+                  </div>
+
+                  {selectedDayExerciseRows.length === 0 ? (
+                    <div className="px-3 py-4 text-center text-xs" style={{ color: "var(--text-muted)" }}>
+                      {`No exercises assigned to ${DAY_ABBREVIATIONS[trainDayFilter]}.`}
+                    </div>
+                  ) : (
+                    selectedDayExerciseRows.map((row) => {
+                      const isPreviouslySelected = row.rowKey === dayDrawerLastSelectedRowKey;
+                      return (
+                        <TrainExerciseListRow
+                          key={`day-drawer-row-${row.rowKey}`}
+                          row={row}
+                          isSelected={isPreviouslySelected}
+                          dateFormat={settings.dateFormat || "dd-mmm-yyyy"}
+                          timeZone={settings.timeZone}
+                          onActivate={(selectedRow) => {
+                            const progressionParam = selectedRow.assignedLevel != null
+                              ? String(selectedRow.assignedLevel)
+                              : (selectedRow.assignedProgression || selectedRow.progression);
+                            const variant = selectedRow.assignedVariant || selectedRow.variant || "";
+                            const pathId = `${selectedRow.exerciseId}-quick`;
+                            const href = `/dashboard/train/input/${encodeURIComponent(pathId)}?prefillExerciseId=${encodeURIComponent(selectedRow.exerciseId)}&prefillExercise=${encodeURIComponent(selectedRow.exerciseName)}&prefillProgression=${encodeURIComponent(progressionParam)}&prefillVariant=${encodeURIComponent(variant)}&assignedDay=${encodeURIComponent(trainDayFilter ?? "")}`;
+                            setDayDrawerLastSelectedRowKey(selectedRow.rowKey);
+                            setTrainDayDrawerOpen(false);
+                            router.push(href);
+                          }}
+                        />
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            </motion.aside>
+          </>
+        ) : null}
+      </AnimatePresence>
+
+      <ExerciseManagementDrawer
+        isOpen={!isFriendTrainOverlay && exerciseManagementOpen}
+        onClose={() => setExerciseManagementOpen(false)}
+        exercises={exercises}
+        onUpdateDayAssignments={handleUpdateDayAssignments}
+        selectedDayFilter={trainDayFilter}
+      />
 
       <AnimatePresence>
         {friendView === "history" && mobileHistoryFilterOpen ? (
@@ -1015,8 +1636,11 @@ export default function HistoryPage() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-              className="fixed inset-0 z-[236]"
-              style={{ backgroundColor: "color-mix(in srgb, var(--void-black) 74%, transparent)" }}
+              className="fixed inset-y-0 right-0 z-[236]"
+              style={{
+                left: `${trainRailWidthPx}px`,
+                backgroundColor: "color-mix(in srgb, var(--void-black) 74%, transparent)",
+              }}
               onClick={() => setLibrarySheetOpen(false)}
             />
             <motion.aside
@@ -1025,8 +1649,9 @@ export default function HistoryPage() {
               animate={{ y: "0%" }}
               exit={{ y: "100%" }}
               transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-              className="fixed inset-x-0 bottom-0 z-[238] rounded-t-3xl border-t border-x overflow-hidden safe-area-left safe-area-right safe-area-top safe-area-bottom"
+              className="fixed bottom-0 right-0 z-[238] rounded-t-3xl border-t border-x overflow-hidden safe-area-left safe-area-right safe-area-top safe-area-bottom"
               style={{
+                left: `${trainRailWidthPx}px`,
                 top: "max(env(safe-area-inset-top,0px),0.5rem)",
                 borderColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
                 backgroundColor: "color-mix(in srgb, var(--ink-deep) 97%, var(--ink-mid))",
@@ -1662,29 +2287,219 @@ export default function HistoryPage() {
         ) : null}
       </AnimatePresence>
 
-      {!mobileExerciseDrawerExerciseId && !mobileLogFabOpen ? (
+      <AnimatePresence>
+        {mobileQuickCheckinOpen ? (
+          <>
+            <motion.div
+              key="train-quick-checkin-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+              className="fixed inset-0 z-[236]"
+              style={{ backgroundColor: "color-mix(in srgb, var(--void-black) 72%, transparent)" }}
+              onClick={() => setQuickCheckinOpen(false)}
+            />
+            <motion.div
+              key="train-quick-checkin-panel-wrap"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              className="fixed inset-0 z-[238] flex items-center justify-center px-3"
+            >
+              <motion.section
+                initial={{ x: -120, opacity: 0, scale: 0.98 }}
+                animate={{ x: 0, opacity: 1, scale: 1 }}
+                exit={{ x: -120, opacity: 0, scale: 0.98 }}
+                transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+                className="w-full max-w-sm rounded-2xl border p-3"
+                style={{
+                  borderColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
+                  backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))",
+                }}
+              >
+                {mobileQuickCheckinLoading ? (
+                  <div className="mb-2 text-[11px]" style={{ color: "var(--text-muted)" }}>
+                    Loading latest check-in data...
+                  </div>
+                ) : null}
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--mist-light)" }}>
+                    Quick Weight / Note
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setQuickCheckinOpen(false)}
+                    className="h-8 w-8 rounded-md border text-sm"
+                    style={{
+                      borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                      color: "var(--mist-light)",
+                      backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
+                    }}
+                    aria-label="Close quick check-in drawer"
+                  >
+                    x
+                  </button>
+                </div>
+
+                <div className="mt-3 space-y-2">
+                  <label className="block">
+                    <span className="mb-1 block text-[10px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>
+                      Weight ({weightUnit})
+                    </span>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      step="0.1"
+                      value={mobileQuickCheckinWeight}
+                      onChange={(event) => setMobileQuickCheckinWeight(event.target.value)}
+                      placeholder={
+                        mobileQuickCheckinLatestWeight != null
+                          ? String(mobileQuickCheckinLatestWeight)
+                          : (weightUnit === "lbs" ? "e.g. 165" : "e.g. 75")
+                      }
+                      disabled={mobileQuickCheckinTodayWeight != null}
+                      className="h-10 w-full rounded-md border px-3 text-sm outline-none"
+                      style={{
+                        borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
+                        color: "var(--cloud-white)",
+                        opacity: mobileQuickCheckinTodayWeight != null ? 0.7 : 1,
+                      }}
+                    />
+                    {mobileQuickCheckinTodayWeight != null ? (
+                      <span className="mt-1 block text-[10px]" style={{ color: "var(--text-muted)" }}>
+                        Weight already recorded today
+                      </span>
+                    ) : null}
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-1 block text-[10px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>
+                      Note
+                    </span>
+                    <textarea
+                      value={mobileQuickCheckinNote}
+                      onChange={(event) => setMobileQuickCheckinNote(event.target.value)}
+                      placeholder="How are you feeling today?"
+                      rows={4}
+                      disabled={Boolean(mobileQuickCheckinTodayNote.trim())}
+                      className="w-full rounded-md border px-3 py-2 text-sm outline-none"
+                      style={{
+                        borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
+                        color: "var(--cloud-white)",
+                        opacity: mobileQuickCheckinTodayNote.trim() ? 0.7 : 1,
+                      }}
+                    />
+                    {mobileQuickCheckinTodayNote.trim() ? (
+                      <span className="mt-1 block text-[10px]" style={{ color: "var(--text-muted)" }}>
+                        Note already recorded today
+                      </span>
+                    ) : null}
+                  </label>
+                </div>
+
+                {mobileQuickCheckinMessage ? (
+                  <p className="mt-2 text-[11px]" style={{ color: mobileQuickCheckinMessage === "Saved" ? "var(--jade-glow)" : "var(--danger)" }}>
+                    {mobileQuickCheckinMessage}
+                  </p>
+                ) : null}
+
+                <div className="mt-3 flex items-center justify-end gap-2">
+                  {(mobileQuickCheckinTodayWeight != null || Boolean(mobileQuickCheckinTodayNote.trim())) ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQuickCheckinOpen(false);
+                        router.push(DASHBOARD_ROUTES.checkIn);
+                      }}
+                      className="mr-auto h-9 rounded-md border px-3 text-sm"
+                      style={{
+                        borderColor: "color-mix(in srgb, var(--accent) 46%, transparent)",
+                        color: "var(--mist-light)",
+                        backgroundColor: "color-mix(in srgb, var(--accent) 16%, var(--ink-deep))",
+                      }}
+                    >
+                      Go to Check-In
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => setQuickCheckinOpen(false)}
+                    className="h-9 rounded-md border px-3 text-sm"
+                    style={{
+                      borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                      color: "var(--mist-light)",
+                      backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleSaveQuickCheckin()}
+                    disabled={mobileQuickCheckinSaving || (mobileQuickCheckinTodayWeight != null && Boolean(mobileQuickCheckinTodayNote.trim()))}
+                    className="h-9 rounded-md border px-3 text-sm font-semibold"
+                    style={{
+                      borderColor: "color-mix(in srgb, var(--forest) 42%, transparent)",
+                      color: "var(--void-black)",
+                      backgroundColor: "var(--forest)",
+                      opacity: mobileQuickCheckinSaving || (mobileQuickCheckinTodayWeight != null && Boolean(mobileQuickCheckinTodayNote.trim())) ? 0.7 : 1,
+                    }}
+                  >
+                    {mobileQuickCheckinSaving ? "Saving..." : "Save"}
+                  </button>
+                </div>
+              </motion.section>
+            </motion.div>
+          </>
+        ) : null}
+      </AnimatePresence>
+
+      {!mobileExerciseDrawerExerciseId && !mobileLogFabOpen && !mobileQuickCheckinOpen && !exerciseManagementOpen ? (
         <motion.button
           key="train-log-fab"
           type="button"
           onClick={() => setLibrarySheetOpen(true)}
+          drag
+          dragMomentum={false}
+          dragElastic={0.16}
+          dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+          onDragEnd={(_, info) => {
+            const x = info.offset.x;
+            const y = info.offset.y;
+
+            // Slide up to open workout logger
+            if (y <= -56 && Math.abs(y) >= Math.abs(x)) {
+              setLibrarySheetOpen(true);
+              return;
+            }
+
+            // Slide left to open quick weight/note drawer
+            if (x <= -56 && Math.abs(x) >= Math.abs(y)) {
+              setQuickCheckinOpen(true);
+              return;
+            }
+          }}
           initial={{ opacity: 0, y: 18, scale: 0.92 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 18, scale: 0.92 }}
           transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-          className="fixed left-1/2 z-[210] -translate-x-1/2 inline-flex h-12 items-center gap-2 rounded-full border px-5 text-sm font-semibold"
+          className="fixed right-4 z-[210] inline-flex h-14 w-14 items-center justify-center rounded-full border text-3xl font-semibold leading-none"
           style={{
             bottom: "calc(var(--mobile-nav-offset, calc(env(safe-area-inset-bottom,0px) + 4.85rem)) + 0.5rem)",
             borderColor: "color-mix(in srgb, var(--accent) 48%, transparent)",
             backgroundColor: "var(--accent)",
             color: "var(--cloud-white)",
-            boxShadow: "0 6px 20px color-mix(in srgb, var(--accent) 35%, transparent)",
+            boxShadow: "0 10px 28px color-mix(in srgb, var(--accent) 35%, transparent)",
           }}
-          aria-label="Log workout"
+          aria-label="Slide up for workout log or left for quick weight and note"
+          title="Slide up: workout log, slide left: quick weight/note"
         >
-          <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
-          </svg>
-          Log workout
+          <span aria-hidden="true">+</span>
         </motion.button>
       ) : null}
     </>

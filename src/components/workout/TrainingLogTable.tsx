@@ -5099,7 +5099,7 @@ function TrainingLogTable({
               left: exerciseDropdownRect.left,
               width: exerciseDropdownRect.width,
               maxWidth: "calc(100vw - 1rem)",
-              maxHeight: "min(14rem, calc(var(--app-viewport-height) - 1rem))",
+              maxHeight: "min(14rem, calc(100dvh - 1rem))",
               overscrollBehavior: "contain",
               backgroundColor: "var(--surface)",
               borderColor: "var(--border)",
