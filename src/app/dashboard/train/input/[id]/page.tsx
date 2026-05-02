@@ -287,12 +287,18 @@ export default function TrainInputCanvasPage() {
       // "exercise" with empty inputs so prior values render only as placeholder hints.
       // Also skip restoring selectedLevel/selectedVariant so the prefill params always win.
       const arrivedFromPicker = Boolean(prefillExerciseId || prefillExerciseName || prefillCustomExercise);
+      if (arrivedFromPicker) {
+        // Freshly picked workout logs should always default to today's local date.
+        setTrainingDate(getTodayInputValue(settings.timeZone));
+      }
       if (!arrivedFromPicker) {
         if (typeof draft.selectedLevel === "string") setSelectedLevel(draft.selectedLevel);
         if (typeof draft.selectedVariant === "string") setSelectedVariant(draft.selectedVariant);
       }
       if (typeof draft.modifierKg === "number" && Number.isFinite(draft.modifierKg)) setModifierKg(draft.modifierKg);
-      if (typeof draft.trainingDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(draft.trainingDate)) setTrainingDate(draft.trainingDate);
+      if (!arrivedFromPicker && typeof draft.trainingDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(draft.trainingDate)) {
+        setTrainingDate(draft.trainingDate);
+      }
       if (typeof draft.notes === "string") setNotes(draft.notes);
       if (!arrivedFromPicker) {
         if (Array.isArray(draft.sets) && draft.sets.length) {
