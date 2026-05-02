@@ -1020,13 +1020,13 @@ export default function HistoryPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const isOpen = Boolean(mobileExerciseDrawerExerciseId);
+    const isOpen = Boolean(mobileExerciseDrawerExerciseId || mobileLogFabOpen);
     window.dispatchEvent(new CustomEvent("train-exercise-history-visibility", { detail: { open: isOpen } }));
 
     return () => {
       window.dispatchEvent(new CustomEvent("train-exercise-history-visibility", { detail: { open: false } }));
     };
-  }, [mobileExerciseDrawerExerciseId]);
+  }, [mobileExerciseDrawerExerciseId, mobileLogFabOpen]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1098,6 +1098,7 @@ export default function HistoryPage() {
                     dayExerciseCounts={dayExerciseCounts}
                     dayAssignmentCounts={dayAssignmentCounts}
                     hideEmptyDays={hideEmptyTrainDays}
+                    highContrastMonochrome={themeStyle === "ying-yang"}
                     calendarWeekStart={settings.calendarWeekStart}
                     timeZone={settings.timeZone}
                     overviewOpen={trainRailOverviewOpen}
@@ -2492,9 +2493,11 @@ export default function HistoryPage() {
           className="fixed right-4 z-[210] inline-flex h-14 w-14 items-center justify-center rounded-full border text-3xl font-semibold leading-none"
           style={{
             bottom: "calc(var(--mobile-nav-offset, calc(env(safe-area-inset-bottom,0px) + 4.85rem)) + 0.5rem)",
-            borderColor: "color-mix(in srgb, var(--accent) 48%, transparent)",
+            borderColor: themeStyle === "ying-yang"
+              ? "color-mix(in srgb, var(--void-black) 42%, var(--accent))"
+              : "color-mix(in srgb, var(--accent) 48%, transparent)",
             backgroundColor: "var(--accent)",
-            color: "var(--cloud-white)",
+            color: themeStyle === "ying-yang" ? "var(--void-black)" : "var(--cloud-white)",
             boxShadow: "0 10px 28px color-mix(in srgb, var(--accent) 35%, transparent)",
           }}
           aria-label="Slide up for workout log or left for quick weight and note"

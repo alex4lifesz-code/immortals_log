@@ -26,6 +26,7 @@ interface Exercise {
   id: string;
   name: string;
   wuxiaName?: string;
+  category?: string;
   difficulty: string;
   wuxiaDifficulty?: string;
   type: string;
@@ -369,7 +370,7 @@ export default function ExerciseManagementDrawer({
   const [searchTerm, setSearchTerm] = useState("");
   const [dayFilter, setDayFilter] = useState<number | null>(null);
   const [typeFilter, setTypeFilter] = useState("");
-  const [difficultyFilter, setDifficultyFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
   const [sortBy, setSortBy] = useState<"name-az" | "name-za" | "realm-az" | "path-az" | "custom">("name-az");
   const [sortManuallySelected, setSortManuallySelected] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -395,10 +396,10 @@ export default function ExerciseManagementDrawer({
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [exercises]);
 
-  const availableDifficulties = useMemo(() => {
+  const availableCategories = useMemo(() => {
     const set = new Set<string>();
     for (const exercise of exercises) {
-      const value = (exercise.difficulty || "").trim();
+      const value = (exercise.category || exercise.targetGroup || "").trim();
       if (value) set.add(value);
     }
     return Array.from(set).sort((a, b) => a.localeCompare(b));
@@ -420,10 +421,11 @@ export default function ExerciseManagementDrawer({
       const matchesSearch = matchesLooseSearch(getExerciseSearchText(exercise), searchTerm);
       const matchesDay = dayFilter == null || isDayAssigned(exercise.assignedDays || "", dayFilter);
       const matchesType = !typeFilter || exercise.type === typeFilter;
-      const matchesDifficulty = !difficultyFilter || exercise.difficulty === difficultyFilter;
-      return matchesSearch && matchesDay && matchesType && matchesDifficulty;
+      const categoryValue = (exercise.category || exercise.targetGroup || "").trim();
+      const matchesCategory = !categoryFilter || categoryValue === categoryFilter;
+      return matchesSearch && matchesDay && matchesType && matchesCategory;
     });
-  }, [dayFilter, difficultyFilter, exercises, searchTerm, typeFilter]);
+  }, [categoryFilter, dayFilter, exercises, searchTerm, typeFilter]);
 
   const sortedFilteredExercises = useMemo(() => {
     const list = [...filteredExercises];
@@ -474,12 +476,12 @@ export default function ExerciseManagementDrawer({
     setSearchTerm("");
     setDayFilter(null);
     setTypeFilter("");
-    setDifficultyFilter("");
+    setCategoryFilter("");
     setSortBy("name-az");
     setSortManuallySelected(false);
   };
 
-  const hasActiveFilters = Boolean(dayFilter != null || typeFilter || difficultyFilter || sortBy !== "name-az" || sortManuallySelected);
+  const hasActiveFilters = Boolean(dayFilter != null || typeFilter || categoryFilter || sortBy !== "name-az" || sortManuallySelected);
 
   const handleApplyAssignmentPayload = async (exerciseId: string, assignedDaysPayload: string) => {
     setUpdatingExerciseId(exerciseId);
@@ -645,10 +647,10 @@ export default function ExerciseManagementDrawer({
                             </div>
 
                             <div>
-                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">Difficulty level</label>
+                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">Exercise category</label>
                               <select
-                                value={difficultyFilter}
-                                onChange={(event) => setDifficultyFilter(event.target.value)}
+                                value={categoryFilter}
+                                onChange={(event) => setCategoryFilter(event.target.value)}
                                 className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
                                 style={{
                                   borderColor: "var(--border)",
@@ -656,9 +658,9 @@ export default function ExerciseManagementDrawer({
                                   color: "var(--text-primary)",
                                 }}
                               >
-                                <option value="">All difficulty levels</option>
-                                {availableDifficulties.map((difficulty) => (
-                                  <option key={difficulty} value={difficulty}>{difficulty}</option>
+                                <option value="">All categories</option>
+                                {availableCategories.map((category) => (
+                                  <option key={category} value={category}>{category}</option>
                                 ))}
                               </select>
                             </div>

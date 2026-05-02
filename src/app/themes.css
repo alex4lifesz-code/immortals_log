@@ -3100,37 +3100,37 @@ html.lemon-dragon [class*="hover\\:text-[#8ea1ff]"]:hover { color: var(--accent)
  * only graphite shades carry depth. Danger reads as inverted white.
  * ===================================================================== */
 html.ying-yang {
-  /* Canvas — flat charcoal tiers (lifted off pure black for less harsh edges) */
-  --void-black: #050505;
-  --ink-deep: #0d0d0d;
-  --ink-dark: #161616;
-  --ink-mid: #1e1e1e;
-  --ink-light: #2a2a2a;
+  /* Canvas — strict charcoal staircase with clear separation per surface level */
+  --void-black: #030303;
+  --ink-deep: #0b0b0b;
+  --ink-dark: #131313;
+  --ink-mid: #1c1c1c;
+  --ink-light: #292929;
 
-  /* Text — graphite to bone */
-  --mist-dark: #707070;
-  --mist-mid: #8c8c8c;
-  --mist-light: #b4b4b4;
-  --mist-pale: #d4d4d4;
-  --cloud-white: #ededed;
+  /* Text — tuned for legibility on near-black backgrounds */
+  --mist-dark: #a6a6a6;
+  --mist-mid: #b8b8b8;
+  --mist-light: #cdcdcd;
+  --mist-pale: #e3e3e3;
+  --cloud-white: #f5f5f5;
   --pure-white: #ffffff;
 
   /* Accent #1 — Soft white (primary) — pulled back from pure white for flatter look */
-  --jade-deep: #262626;
-  --jade: #b8b8b8;
+  --jade-deep: #202020;
+  --jade: #bfbfbf;
   --jade-glow: #ededed;
-  --jade-light: #f6f6f6;
+  --jade-light: #fafafa;
 
   /* Accent #2 — Bone grey (used for "reps" / secondary metric) */
-  --gold-dim: #494949;
-  --gold: #9c9c9c;
-  --gold-glow: #c8c8c8;
+  --gold-dim: #3e3e3e;
+  --gold: #9a9a9a;
+  --gold-glow: #c6c6c6;
 
   /* Accent #3 — Danger reads as silver halo */
-  --crimson-deep: #1c1c1c;
-  --crimson: #a8a8a8;
-  --crimson-glow: #e8e8e8;
-  --crimson-light: #f0f0f0;
+  --crimson-deep: #222222;
+  --crimson: #b0b0b0;
+  --crimson-glow: #e6e6e6;
+  --crimson-light: #f3f3f3;
 
   /* Accent #4 — Slate grey */
   --mountain-blue: #3a3a3a;
@@ -3169,16 +3169,16 @@ html.ying-yang {
   --background: var(--void-black);
   --foreground: var(--cloud-white);
   --surface: var(--ink-deep);
-  --surface-hover: var(--ink-mid);
+  --surface-hover: var(--ink-light);
   --border: var(--ink-light);
-  --border-glow: var(--mist-pale);
+  --border-glow: var(--mist-light);
   --text-primary: var(--cloud-white);
   --text-secondary: var(--mist-light);
   --text-muted: var(--mist-dark);
   --accent: var(--cloud-white);
   --accent-hover: var(--pure-white);
-  --danger: var(--mist-pale);
-  --danger-hover: var(--cloud-white);
+  --danger: var(--cloud-white);
+  --danger-hover: var(--pure-white);
 
   /* All glows neutralized for a strictly flat aesthetic */
   --glow-jade: none;
@@ -3196,11 +3196,16 @@ html.ying-yang {
 
   --chart-primary: var(--pure-white);
   --chart-primary-rgb: 255 255 255;
-  --chart-secondary: var(--gold);
+  --chart-secondary: var(--mist-light);
   --chart-grid: color-mix(in srgb, var(--pure-white) 10%, transparent);
   --chart-bg: color-mix(in srgb, var(--void-black) 55%, transparent);
-  --timed-color: var(--mountain-blue-glow);
+  --timed-color: var(--mist-light);
   --nyaa-table-head-bg: color-mix(in srgb, var(--surface) 84%, var(--border));
+  --nyaa-table-head-text: var(--text-primary);
+  --nyaa-table-grid: color-mix(in srgb, var(--border) 86%, var(--text-muted));
+  --nyaa-table-row-text: var(--text-primary);
+  --nyaa-table-row-odd: var(--surface);
+  --nyaa-table-row-even: color-mix(in srgb, var(--surface) 94%, var(--border));
   --nyaa-table-row-hover: color-mix(in srgb, var(--surface) 80%, var(--pure-white));
   --system-bar-fallback: var(--void-black);
 }

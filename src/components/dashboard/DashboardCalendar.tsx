@@ -274,12 +274,13 @@ export function DashboardSidebar({
 function CalendarDay({ dayNumber, checkedInUsers, isToday, isPast, hasNote, hasFutureNote, compact, onClick }: { dayNumber: number; checkedInUsers: { id: string; name: string; color: string; isCurrentUser: boolean }[]; isToday: boolean; isPast?: boolean; hasNote?: boolean; hasFutureNote?: boolean; compact: boolean; onClick?: () => void }) {
   const hasCheckIns = checkedInUsers.length > 0;
   const hasCurrentUserCheckIn = checkedInUsers.some((entry) => entry.isCurrentUser);
+  const isElapsedDay = Boolean(isPast && !isToday);
   const friendDots = checkedInUsers.filter((entry) => !entry.isCurrentUser);
   const visibleDots = friendDots.slice(0, compact ? 3 : 4);
   const extraCount = friendDots.length - visibleDots.length;
 
   // Prioritize meaningful status over time-based dimming.
-  const dayStyle = isToday && hasCurrentUserCheckIn
+  const baseDayStyle = isToday && hasCurrentUserCheckIn
     ? {
         borderColor: "color-mix(in srgb, var(--accent) 90%, var(--border))",
         backgroundColor: "color-mix(in srgb, var(--accent) 30%, var(--surface-hover))",
@@ -311,6 +312,14 @@ function CalendarDay({ dayNumber, checkedInUsers, isToday, isPast, hasNote, hasF
               backgroundColor: "color-mix(in srgb, var(--surface-hover) 62%, var(--surface))",
             };
 
+  const dayStyle = isElapsedDay
+    ? {
+        ...baseDayStyle,
+        borderStyle: "dashed" as const,
+        backgroundImage: "repeating-linear-gradient(-45deg, color-mix(in srgb, var(--text-muted) 12%, transparent) 0px, color-mix(in srgb, var(--text-muted) 12%, transparent) 4px, transparent 4px, transparent 8px)",
+      }
+    : baseDayStyle;
+
   const dayNumberColor = isToday || hasCurrentUserCheckIn
     ? "var(--text-primary)"
     : isPast
@@ -329,6 +338,15 @@ function CalendarDay({ dayNumber, checkedInUsers, isToday, isPast, hasNote, hasF
       <div className="flex h-full flex-col justify-between p-1.5">
         <div className="flex items-start justify-between gap-1">
           <span className={`${compact ? "text-xs" : "text-sm"} font-semibold`} style={{ color: dayNumberColor }}>{dayNumber}</span>
+          {isElapsedDay ? (
+            compact ? (
+              <span className="text-[9px] leading-none" style={{ color: "var(--text-muted)" }} title="Elapsed">⌛</span>
+            ) : (
+              <span className="rounded px-1 py-0.5 text-[8px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)", backgroundColor: "color-mix(in srgb, var(--text-muted) 14%, transparent)" }}>
+                Elapsed
+              </span>
+            )
+          ) : null}
         </div>
 
         <div className="flex items-end justify-between gap-1">
@@ -607,6 +625,10 @@ export function Calendar({
       )}
 
       <div className={`flex flex-wrap border-t pt-3 ${compactMode ? "gap-2 text-[10px]" : "gap-3 text-xs"}`} style={{ borderTopColor: "color-mix(in srgb, var(--border) 94%, transparent)" }}>
+        <div className="flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
+          <div className="h-2.5 w-2.5 rounded-sm border" style={{ borderStyle: "dashed", borderColor: "color-mix(in srgb, var(--text-muted) 72%, var(--border))", backgroundColor: "color-mix(in srgb, var(--text-muted) 8%, var(--surface))" }} />
+          <span>{t("Elapsed", "normal")}</span>
+        </div>
         <div className="flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
           <div className="h-2.5 w-2.5 rounded-sm border" style={{ borderColor: "color-mix(in srgb, var(--accent) 86%, var(--border))", backgroundColor: "color-mix(in srgb, var(--accent) 22%, var(--surface-hover))" }} />
           <span>{t("Today", "normal")}</span>

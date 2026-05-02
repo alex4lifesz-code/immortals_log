@@ -7,6 +7,8 @@ import { useAuth } from "@/context/AuthContext";
 import {
   useDisplaySettings,
   type CalendarWeekStartOption,
+  type CheckInCalendarScopeOption,
+  type CheckInHistoryViewMode,
   type DateFormatOption,
   type WeightUnitPref,
   type TimedUnitPref,
@@ -156,6 +158,36 @@ export default function SettingsPage() {
                 Timed entries in history and logs will be shown in this unit.
               </p>
             </div>
+          </div>
+        </SectionCard>
+
+        {/* ── Check-In ─────────────────────────────────────── */}
+        <SectionCard
+          eyebrow="Check-In"
+          title="History defaults"
+          description="These controls were moved here to keep Check-In history clean."
+          badge="Personal"
+        >
+          <div className="grid gap-3 lg:grid-cols-2">
+            <SettingsSelectField
+              label="Default history view"
+              value={settings.checkInHistoryView}
+              onChange={(value) => updateSettings({ checkInHistoryView: value as CheckInHistoryViewMode })}
+              options={[
+                { value: "compact", label: "Compact", desc: "Dense rows for quick scanning" },
+                { value: "detailed", label: "Detailed", desc: "Expanded row details" },
+              ]}
+            />
+            <SettingsSelectField
+              label="Default scope"
+              value={settings.checkInCalendarScope}
+              onChange={(value) => updateSettings({ checkInCalendarScope: value as CheckInCalendarScopeOption })}
+              options={[
+                { value: "all", label: "All", desc: "Your entries and your friends" },
+                { value: "mine", label: "Mine", desc: "Only your personal entries" },
+                { value: "friends", label: "Friends", desc: "Only friends' entries" },
+              ]}
+            />
           </div>
         </SectionCard>
 

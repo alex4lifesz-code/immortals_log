@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import PageLayout from "@/components/layout/PageLayout";
+import { useAppContext } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { useIncomingFriendRequestsCount } from "@/hooks/useIncomingFriendRequestsCount";
@@ -88,6 +89,7 @@ function friendNameFallback(entry: PublicUser | undefined, userId: string): stri
 }
 
 export default function DashboardHomePage() {
+  const { themeStyle } = useAppContext();
   const { user } = useAuth();
   const { settings } = useDisplaySettings();
   const weightUnit = settings.defaultWeightUnit ?? "kg";
@@ -310,6 +312,23 @@ export default function DashboardHomePage() {
     backgroundColor: "color-mix(in srgb, var(--ink-mid) 62%, var(--ink-deep))",
   };
 
+  const yourWeekPalette = useMemo(() => {
+    const paletteByTheme: Record<string, { active: string; inactive: string; border: string; label: string }> = {
+      discord: { active: "rgb(232 121 249 / 0.72)", inactive: "rgb(232 121 249 / 0.2)", border: "#e879f9", label: "#f0abfc" },
+      forest: { active: "rgb(56 189 248 / 0.72)", inactive: "rgb(56 189 248 / 0.2)", border: "#38bdf8", label: "#7dd3fc" },
+      "ink-dragon": { active: "rgb(250 204 21 / 0.72)", inactive: "rgb(250 204 21 / 0.2)", border: "#facc15", label: "#fde047" },
+      "ying-yang": { active: "rgb(56 189 248 / 0.76)", inactive: "rgb(56 189 248 / 0.2)", border: "#38bdf8", label: "#7dd3fc" },
+      "ying-yang-light": { active: "rgb(29 78 216 / 0.74)", inactive: "rgb(29 78 216 / 0.16)", border: "#1d4ed8", label: "#2563eb" },
+      "phoenix-bloom": { active: "rgb(251 146 60 / 0.72)", inactive: "rgb(251 146 60 / 0.2)", border: "#fb923c", label: "#fdba74" },
+      "storm-chains": { active: "rgb(34 211 238 / 0.72)", inactive: "rgb(34 211 238 / 0.2)", border: "#22d3ee", label: "#67e8f9" },
+      "obsidian-ember": { active: "rgb(248 113 113 / 0.72)", inactive: "rgb(248 113 113 / 0.2)", border: "#f87171", label: "#fca5a5" },
+      "mist-cultivator": { active: "rgb(129 140 248 / 0.72)", inactive: "rgb(129 140 248 / 0.2)", border: "#818cf8", label: "#a5b4fc" },
+      "frost-sect": { active: "rgb(45 212 191 / 0.72)", inactive: "rgb(45 212 191 / 0.2)", border: "#2dd4bf", label: "#5eead4" },
+      "heavenly-sword": { active: "rgb(250 204 21 / 0.72)", inactive: "rgb(250 204 21 / 0.2)", border: "#facc15", label: "#fde047" },
+    };
+    return paletteByTheme[themeStyle] ?? paletteByTheme.discord;
+  }, [themeStyle]);
+
   return (
     <PageLayout
       title="Home"
@@ -398,11 +417,11 @@ export default function DashboardHomePage() {
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>Your week</p>
             <div className="flex items-center gap-2 text-[10px]" style={{ color: "var(--text-muted)" }}>
               <span className="flex items-center gap-1">
-                <span className="inline-block h-2 w-2 rounded-sm" style={{ backgroundColor: "color-mix(in srgb, var(--forest) 68%, transparent)" }} />
+                <span className="inline-block h-2 w-2 rounded-sm" style={{ backgroundColor: yourWeekPalette.active }} />
                 Logged
               </span>
               <span className="flex items-center gap-1">
-                <span className="inline-block h-2 w-2 rounded-sm border" style={{ borderColor: "var(--accent)" }} />
+                <span className="inline-block h-2 w-2 rounded-sm border" style={{ borderColor: yourWeekPalette.border }} />
                 Today
               </span>
             </div>
@@ -415,16 +434,16 @@ export default function DashboardHomePage() {
                   style={{
                     height: 28,
                     backgroundColor: active
-                      ? "color-mix(in srgb, var(--forest) 68%, transparent)"
-                      : "color-mix(in srgb, var(--ink-light) 28%, transparent)",
+                      ? yourWeekPalette.active
+                      : yourWeekPalette.inactive,
                     border: isToday
-                      ? `1.5px solid ${active ? "var(--forest)" : "var(--accent)"}`
+                      ? `1.5px solid ${yourWeekPalette.border}`
                       : "1px solid transparent",
                   }}
                 />
                 <span
                   className="text-[9px] font-medium"
-                  style={{ color: isToday ? "var(--accent)" : "var(--text-muted)" }}
+                  style={{ color: isToday ? yourWeekPalette.label : "var(--text-muted)" }}
                 >
                   {label}
                 </span>
@@ -444,7 +463,7 @@ export default function DashboardHomePage() {
                   </p>
                   <div className="flex items-center gap-2 text-[10px]" style={{ color: "var(--text-muted)" }}>
                     <span className="flex items-center gap-1">
-                      <span className="inline-block h-2 w-2 rounded-sm" style={{ backgroundColor: "color-mix(in srgb, var(--accent) 68%, transparent)" }} />
+                      <span className="inline-block h-2 w-2 rounded-sm" style={{ backgroundColor: "color-mix(in srgb, var(--accent) 72%, transparent)" }} />
                       Logged
                     </span>
                     <span className="flex items-center gap-1">
@@ -461,10 +480,10 @@ export default function DashboardHomePage() {
                         style={{
                           height: 28,
                           backgroundColor: active
-                            ? "color-mix(in srgb, var(--accent) 68%, transparent)"
-                            : "color-mix(in srgb, var(--ink-light) 28%, transparent)",
+                            ? "color-mix(in srgb, var(--accent) 72%, transparent)"
+                            : "color-mix(in srgb, var(--accent) 18%, transparent)",
                           border: isToday
-                            ? `1.5px solid ${active ? "var(--accent)" : "var(--accent)"}`
+                            ? "1.5px solid var(--accent)"
                             : "1px solid transparent",
                         }}
                       />

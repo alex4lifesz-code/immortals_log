@@ -29,6 +29,10 @@ export type RecentSessionsCompactMode = "auto" | "compact" | "full";
 
 export type PopupLoggerStyle = "classic" | "minimal" | "compact";
 
+export type CheckInHistoryViewMode = "detailed" | "compact";
+
+export type CheckInCalendarScopeOption = "all" | "mine" | "friends";
+
 export type UnifiedVisibleColumnKey =
   | "date"
   | "category"
@@ -81,6 +85,10 @@ export interface DisplaySettings {
   languageMode: LanguageMode;
   // Show opposite-language exercise name alongside primary name
   showExerciseForeignLanguage: boolean;
+  // Check-In history rendering mode
+  checkInHistoryView: CheckInHistoryViewMode;
+  // Check-In scope filter
+  checkInCalendarScope: CheckInCalendarScopeOption;
 }
 
 function getBrowserTimeZone(): string {
@@ -101,6 +109,8 @@ const DEFAULT_SETTINGS: DisplaySettings = {
     defaultTimedUnit: "seconds",
   languageMode: "english",
   showExerciseForeignLanguage: true,
+    checkInHistoryView: "compact",
+    checkInCalendarScope: "all",
 };
 
 export const DISPLAY_SETTINGS_STORAGE_KEY = "cultivateos-display-settings";

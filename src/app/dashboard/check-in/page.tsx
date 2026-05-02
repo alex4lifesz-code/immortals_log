@@ -12,10 +12,6 @@ import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { createCalendarMonthAnchor, formatDateWithPreference } from "@/lib/constants";
 import { t } from "@/lib/terminology";
-import {
-  getDetailLabelVisibility,
-  type CheckInHistoryViewMode,
-} from "@/lib/checkin-history-view";
 import { syncWeightFromLatestCheckin } from "@/lib/user-physique";
 import { api } from "@/lib/api-client";
 import {
@@ -135,36 +131,11 @@ export default function DaoHallPage() {
   }, []);
 
   // Sect Register filter and inline edit state
-  const [calendarScope, setCalendarScope] = useState<"all" | "mine" | "friends">(() => {
-    if (typeof window === "undefined") return "mine";
-    const saved = localStorage.getItem("check-in-calendar-scope") ?? localStorage.getItem("dao-hall-calendar-scope");
-    if (saved === "all") return "all";
-    if (saved === "community") return "all";
-    if (saved === "friends") return "friends";
-    return "mine";
-  });
-  const [historyViewMode, setHistoryViewMode] = useState<CheckInHistoryViewMode>(() => {
-    if (typeof window === "undefined") return "detailed";
-    try {
-      const saved = localStorage.getItem("check-in-history-view") ?? localStorage.getItem("dao-hall-history-view");
-      return saved === "compact" ? "compact" : "detailed";
-    } catch {
-      return "detailed";
-    }
-  });
+  const calendarScope = settings.checkInCalendarScope;
+  const historyViewMode = settings.checkInHistoryView;
   const [isSectEditMode, setIsSectEditMode] = useState(false);
   const [sectEditData, setSectEditData] = useState<Record<string, Record<string, { weight: string; comment: string }>>>({});
   const [deletingRowDate, setDeletingRowDate] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    localStorage.setItem("check-in-calendar-scope", calendarScope);
-  }, [calendarScope]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    localStorage.setItem("check-in-history-view", historyViewMode);
-  }, [historyViewMode]);
 
   useEffect(() => {
     if (!checkInTogglePulse) return;
@@ -653,7 +624,7 @@ export default function DaoHallPage() {
       return {
         date,
         mine,
-        mineWeight: mine.weight ? `${mine.weight} kg` : "-",
+        mineWeight: mine.weight ? `${mine.weight} kg` : "",
         presentCount,
         everyoneDetails,
       };
@@ -911,16 +882,6 @@ export default function DaoHallPage() {
   const shouldShowCheckInFab = !checkInModal && !showWeightPrompt && !(hasTodayCheckIn && hasTodayWeight);
   const checkInFabMode: "checkin" | "weight" = hasTodayCheckIn ? "weight" : "checkin";
 
-  const navButtonClass = "rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-[border-color,background-color,color]";
-  const navButtonStyle = (active: boolean) => ({
-    minWidth: "fit-content" as const,
-    borderColor: active ? "var(--accent)" : "var(--border)",
-    backgroundColor: active
-      ? "color-mix(in srgb, var(--accent) 18%, var(--surface))"
-      : "var(--surface-hover)",
-    color: active ? "var(--accent)" : "var(--text-secondary)",
-    boxShadow: "none" as const,
-  });
   const historySurfaceClass = "rounded-xl border";
   const historySurfaceStyle = {
     borderColor: "color-mix(in srgb, var(--ink-light) 60%, transparent)",
@@ -1018,44 +979,6 @@ export default function DaoHallPage() {
                   </span>
                 </h3>
 
-                <div className="-mx-0.5 overflow-x-auto scrollbar-hide lg:ml-auto lg:overflow-visible">
-                  <div className="flex min-w-max items-center gap-2">
-                    {([
-                      { id: "detailed", label: "Detailed" },
-                      { id: "compact", label: "Compact" },
-                    ] as const).map((option) => {
-                      const active = historyViewMode === option.id;
-                      return (
-                        <button
-                          key={option.id}
-                          type="button"
-                          onClick={() => setHistoryViewMode(option.id)}
-                          className={navButtonClass}
-                          style={navButtonStyle(active)}
-                          aria-pressed={active}
-                        >
-                          {t(option.label, "normal")}
-                        </button>
-                      );
-                    })}
-                    <span className="mx-1 h-4 w-px" style={{ backgroundColor: "color-mix(in srgb, var(--ink-light) 40%, transparent)" }} aria-hidden="true" />
-                    {(["all", "mine", "friends"] as const).map((scope) => {
-                      const active = calendarScope === scope;
-                      return (
-                        <button
-                          key={scope}
-                          type="button"
-                          onClick={() => setCalendarScope(scope)}
-                          className={navButtonClass}
-                          style={navButtonStyle(active)}
-                          aria-pressed={active}
-                        >
-                          {t(scope === "all" ? "All" : scope === "mine" ? "Mine" : "Friends", "normal")}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
               </div>
 
               {renderedCheckInRows.length === 0 ? (
@@ -1071,17 +994,17 @@ export default function DaoHallPage() {
                   <p className="mt-1 text-[10px] text-[color:var(--text-muted)]">{t("Start checking in to build your history timeline", "normal")}</p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {visibleRenderedCheckInRows.map(({ date, mine, mineWeight, presentCount, everyoneDetails }) => {
                       const hasCheckin = calendarScope === "mine" ? hasCheckInContent(mine) : everyoneDetails.length > 0 || presentCount > 0;
 
                       return (
                         <article
                           key={date}
-                          className="cursor-pointer rounded-lg border px-3 py-2.5 transition-colors"
+                          className="mx-1 my-1.5 cursor-pointer rounded-md border px-3 py-2.5 transition-colors"
                           style={{
-                            borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)",
-                            backgroundColor: "color-mix(in srgb, var(--ink-deep) 92%, var(--ink-mid))",
+                            borderColor: "color-mix(in srgb, var(--ink-light) 40%, transparent)",
+                            backgroundColor: "color-mix(in srgb, var(--ink-mid) 48%, var(--ink-deep))",
                           }}
                           role="button"
                           tabIndex={0}
@@ -1114,8 +1037,8 @@ export default function DaoHallPage() {
                             {calendarScope === "mine" ? (
                               historyViewMode === "compact" ? (
                                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                                  <span className="shrink-0 text-[11px] font-semibold" style={{ color: hasCheckin ? "var(--jade-light)" : "var(--cloud-white)" }}>
-                                    {formatDateWithPreference(date, dateFormat)}
+                                  <span className="shrink-0 text-[10px]" style={{ color: "var(--text-muted)" }}>
+                                    {formatRelativeRecentDate(date, dateFormat, settings.timeZone)}
                                   </span>
                                   <span className="truncate" style={{ color: "var(--cloud-white)" }}>{t("You", "normal")}</span>
                                   <span
@@ -1136,13 +1059,13 @@ export default function DaoHallPage() {
                                   </span>
                                   <span
                                     className="shrink-0 truncate min-w-[4.5rem]"
-                                    aria-hidden={!(mineWeight && mineWeight !== "-")}
+                                    aria-hidden={!mineWeight}
                                     style={{
                                       color: "var(--mountain-blue-glow)",
-                                      visibility: mineWeight && mineWeight !== "-" ? "visible" : "hidden",
+                                      visibility: mineWeight ? "visible" : "hidden",
                                     }}
                                   >
-                                    {mineWeight && mineWeight !== "-" ? mineWeight : "000.0 kg"}
+                                    {mineWeight || ""}
                                   </span>
                                   {mine.comment?.trim() ? (
                                     <span className="min-w-0 flex-1 truncate" style={{ color: "var(--text-secondary)" }}>
@@ -1154,22 +1077,19 @@ export default function DaoHallPage() {
                                 <>
                                   <div className="grid grid-cols-2 gap-x-3">
                                     <div className="min-w-0 truncate">
-                                      <span style={{ color: "var(--text-muted)" }}>{t("Status:", "normal")}</span>{" "}
                                       <span style={{ color: mine.present ? "var(--forest)" : "var(--gold-glow)" }}>
                                         {mine.present ? t("In", "normal") : t("Rest", "normal")}
                                       </span>
                                     </div>
                                     <div className="min-w-0 truncate">
-                                      <span style={{ color: "var(--text-muted)" }}>{t("Weight:", "normal")}</span>{" "}
-                                      <span style={{ color: mineWeight === "-" ? "var(--gold-glow)" : "var(--mountain-blue-glow)" }}>
-                                        {mineWeight === "-" ? "-" : mineWeight}
+                                      <span style={{ color: mineWeight ? "var(--mountain-blue-glow)" : "var(--text-secondary)" }}>
+                                        {mineWeight}
                                       </span>
                                     </div>
                                   </div>
                                   <div className="grid grid-cols-1 gap-x-3">
                                     <div className="min-w-0 truncate">
-                                      <span style={{ color: "var(--text-muted)" }}>{t("Notes:", "normal")}</span>{" "}
-                                      <span style={{ color: "var(--text-secondary)" }}>{mine.comment?.trim() || "-"}</span>
+                                      <span style={{ color: "var(--text-secondary)" }}>{mine.comment?.trim() || ""}</span>
                                     </div>
                                   </div>
                                 </>
@@ -1191,14 +1111,14 @@ export default function DaoHallPage() {
                                       {historyViewMode === "compact" ? (
                                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                                           <span
-                                            className="shrink-0 text-[11px] font-semibold"
+                                            className="shrink-0 text-[10px]"
                                             aria-hidden={detailIndex !== 0}
                                             style={{
-                                              color: hasCheckin ? "var(--jade-light)" : "var(--cloud-white)",
+                                              color: "var(--text-muted)",
                                               visibility: detailIndex === 0 ? "visible" : "hidden",
                                             }}
                                           >
-                                            {formatDateWithPreference(date, dateFormat)}
+                                            {formatRelativeRecentDate(date, dateFormat, settings.timeZone)}
                                           </span>
                                           <span className="min-w-0 truncate" style={{ color: c }}>{detail.name}</span>
                                           <span
@@ -1235,24 +1155,20 @@ export default function DaoHallPage() {
                                         <>
                                           <div className="grid grid-cols-2 gap-x-3">
                                             <div className="min-w-0 truncate">
-                                              <span style={{ color: "var(--text-muted)" }}>{t("Name:", "normal")}</span>{" "}
                                               <span style={{ color: c }}>{detail.name}</span>
                                             </div>
                                             <div className="min-w-0 grid grid-cols-2 gap-x-3">
                                               <span className="truncate" style={{ color: detail.weight ? "var(--mountain-blue-glow)" : "var(--gold-glow)" }}>
-                                                <span style={{ color: "var(--text-muted)" }}>{t("Weight:", "normal")}</span>{" "}
-                                                {detail.weight ? `${detail.weight} kg` : "-"}
+                                                {detail.weight ? `${detail.weight} kg` : ""}
                                               </span>
                                               <span className="truncate" style={{ color: detail.present ? "var(--forest)" : "var(--text-secondary)" }}>
-                                                <span style={{ color: "var(--text-muted)" }}>{t("Status:", "normal")}</span>{" "}
                                                 {detail.present ? t("In", "normal") : t("Rest", "normal")}
                                               </span>
                                             </div>
                                           </div>
                                           <div className="grid grid-cols-1 gap-x-3">
                                             <div className="min-w-0 truncate">
-                                              <span style={{ color: "var(--text-muted)" }}>{t("Notes:", "normal")}</span>{" "}
-                                              <span style={{ color: "var(--text-secondary)" }}>{detail.comment || "-"}</span>
+                                              <span style={{ color: "var(--text-secondary)" }}>{detail.comment || ""}</span>
                                             </div>
                                           </div>
                                         </>

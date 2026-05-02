@@ -55,8 +55,7 @@ function resolveAppearance(mode: ThemeModePreference, style: ThemeStyle): ThemeM
 
 // Themes that have a paired light/dark counterpart. The user's selected style
 // stays in state, but the style class actually applied to <html> swaps when
-// the resolved appearance changes (so light mode on a "dark" style flips to
-// its light sibling and vice versa).
+// the resolved appearance changes.
 const THEME_STYLE_PAIRS: Partial<Record<ThemeStyle, { dark: ThemeStyle; light: ThemeStyle }>> = {
   "ying-yang": { dark: "ying-yang", light: "ying-yang-light" },
   "ying-yang-light": { dark: "ying-yang", light: "ying-yang-light" },

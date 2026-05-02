@@ -15,6 +15,7 @@ type TrainDayRailProps = {
   dayExerciseCounts: number[];
   dayAssignmentCounts?: number[];
   hideEmptyDays?: boolean;
+  highContrastMonochrome?: boolean;
   calendarWeekStart?: CalendarWeekStartOption;
   timeZone?: string;
   onSelectDay: (dayIndex: number | null) => void;
@@ -27,6 +28,7 @@ function TrainDayRail({
   dayExerciseCounts,
   dayAssignmentCounts,
   hideEmptyDays = false,
+  highContrastMonochrome = false,
   calendarWeekStart = "sunday",
   timeZone,
   onSelectDay,
@@ -79,7 +81,9 @@ function TrainDayRail({
               backgroundColor: isOverviewActive
                 ? "var(--jade)"
                 : "color-mix(in srgb, var(--surface-hover) 92%, var(--surface))",
-              color: isOverviewActive ? "var(--pure-white)" : "var(--mist-light)",
+              color: isOverviewActive
+                ? (highContrastMonochrome ? "var(--void-black)" : "var(--pure-white)")
+                : "var(--mist-light)",
               boxShadow: isOverviewActive
                 ? "0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent), 0 10px 22px color-mix(in srgb, var(--accent) 28%, transparent)"
                 : "none",
@@ -134,14 +138,18 @@ function TrainDayRail({
                 <span
                   className="relative mx-auto flex h-10 w-10 items-center justify-center rounded-full border font-semibold transition-all duration-150 md:h-11 md:w-11"
                   style={{
-                    color: "var(--cloud-white)",
+                    color: isSelected
+                      ? (highContrastMonochrome ? "var(--void-black)" : "var(--cloud-white)")
+                      : "var(--cloud-white)",
                     fontSize: "10px",
                     transform: count > 0 ? "translateX(-1px)" : "translateX(0)",
                     borderColor: isSelected
                       ? "color-mix(in srgb, var(--accent) 72%, transparent)"
                       : "transparent",
                     backgroundColor: isSelected
-                      ? "color-mix(in srgb, var(--accent) 30%, var(--surface))"
+                      ? (highContrastMonochrome
+                        ? "color-mix(in srgb, var(--surface) 76%, var(--accent))"
+                        : "color-mix(in srgb, var(--accent) 30%, var(--surface))")
                       : "color-mix(in srgb, var(--surface-hover) 92%, var(--surface))",
                     boxShadow: isSelected
                       ? "0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent)"
@@ -153,8 +161,11 @@ function TrainDayRail({
                     <span
                       className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-bold"
                       style={{
-                        backgroundColor: "var(--danger)",
-                        color: "var(--pure-white)",
+                        backgroundColor: highContrastMonochrome ? "var(--cloud-white)" : "var(--danger)",
+                        color: highContrastMonochrome ? "var(--void-black)" : "var(--pure-white)",
+                        border: highContrastMonochrome
+                          ? "1px solid color-mix(in srgb, var(--void-black) 32%, transparent)"
+                          : "none",
                       }}
                     >
                       {count > 99 ? "99+" : count}
