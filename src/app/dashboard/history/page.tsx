@@ -620,7 +620,9 @@ export default function HistoryPage() {
     const now = Date.now();
 
     for (const exercise of exercises) {
-      if ((exercise.userProgress?.length ?? 0) === 0) continue;
+      const hasProgress = (exercise.userProgress?.length ?? 0) > 0;
+      const hasDayAssignment = parseDayAssignments(exercise.assignedDays || "").length > 0;
+      if (!hasProgress && !hasDayAssignment) continue;
       const deletedExercise = isDeletedExerciseDescription(exercise.story);
       const exerciseName = deletedExercise ? getDeletedExerciseLabel(exercise) : exercise.name;
       const category = (exercise.category || "Uncategorized").trim() || "Uncategorized";
@@ -749,15 +751,28 @@ export default function HistoryPage() {
   }, [exercises]);
 
   const handleUpdateDayAssignments = useCallback(async (exerciseId: string, assignedDays: string) => {
-    await api.patch(`/api/progressions/${exerciseId}`, { assignedDays });
+    const response = await api.patch<{ exercise?: ProgressionExercise }>(`/api/progressions/${exerciseId}`, { assignedDays });
+    const returnedExercise = response.exercise;
 
-    setExercises((prev) =>
-      prev.map((exercise) =>
-        exercise.id === exerciseId
-          ? { ...exercise, assignedDays }
-          : exercise
-      )
-    );
+    setExercises((prev) => {
+      const index = prev.findIndex((exercise) => exercise.id === exerciseId);
+      if (index === -1) return prev;
+
+      const next = [...prev];
+
+      if (!returnedExercise) {
+        next[index] = { ...next[index], assignedDays };
+        return next;
+      }
+
+      const duplicateIndex = next.findIndex((exercise) => exercise.id === returnedExercise.id);
+      if (duplicateIndex !== -1 && duplicateIndex !== index) {
+        next.splice(duplicateIndex, 1);
+      }
+
+      next[index] = returnedExercise;
+      return next;
+    });
   }, []);
 
   const handleUserScopeChange = (nextUserId: string) => {

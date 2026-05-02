@@ -116,31 +116,23 @@ function ExerciseAllocationRow({
 
   useEffect(() => {
     if (selectedDayNumber == null) {
-      setSelectedProgression("");
-      setSelectedVariant("");
       return;
     }
 
     const detail = assignmentDetails[selectedDayNumber];
     if (!detail || detail.length === 0) {
-      setSelectedProgression("");
-      setSelectedVariant("");
       return;
     }
 
     const firstDetail = detail[0];
 
-    if (firstDetail.progression) {
+    if (firstDetail.progression && !selectedProgression) {
       const matched = progressionOptions.find((option) => option.label === firstDetail.progression || option.value === firstDetail.progression);
       setSelectedProgression(matched?.value || "");
-    } else {
-      setSelectedProgression("");
     }
 
-    if (typeof firstDetail.variant === "string" && firstDetail.variant.length > 0) {
+    if (typeof firstDetail.variant === "string" && firstDetail.variant.length > 0 && !selectedVariant) {
       setSelectedVariant(firstDetail.variant);
-    } else {
-      setSelectedVariant("");
     }
   }, [assignmentDetails, progressionOptions, selectedDayNumber]);
 
@@ -236,7 +228,7 @@ function ExerciseAllocationRow({
                     color: "var(--cloud-white)",
                   }}
                 >
-                  <option value="">Choose progression</option>
+                  <option value=""></option>
                   {progressionOptions.map((option) => (
                     <option key={`${exercise.id}-progression-${option.value}`} value={option.value}>{option.label}</option>
                   ))}
@@ -257,7 +249,7 @@ function ExerciseAllocationRow({
                     color: "var(--cloud-white)",
                   }}
                 >
-                  <option value="">Choose variant</option>
+                  <option value=""></option>
                   {variantOptions.map((variant) => (
                     <option key={`${exercise.id}-variant-${variant.value || "default"}`} value={variant.value}>
                       {variant.label}
@@ -280,7 +272,7 @@ function ExerciseAllocationRow({
                     color: "var(--cloud-white)",
                   }}
                 >
-                  <option value="">Choose a day</option>
+                  <option value=""></option>
                   {DAYS_OF_WEEK.map((day, dayIndex) => {
                     const isAssignedToDay = assigned.includes(dayIndex);
                     return (
@@ -292,15 +284,11 @@ function ExerciseAllocationRow({
                 </select>
               </div>
 
-              <div className="flex items-center justify-between gap-2">
-                <p className="min-w-0 text-[10px]" style={{ color: "var(--text-muted)" }}>
-                  Assigned: {assigned.length > 0 ? assigned.map((index) => DAY_ABBREVIATIONS[index]).join(", ") : "None"}
-                </p>
-
+              <div className="flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => void handleApply()}
-                  disabled={isUpdating || selectedDayNumber == null}
+                  disabled={isUpdating || selectedDayNumber == null || (!selectedProgression && !selectedVariant)}
                   className="inline-flex h-9 shrink-0 items-center justify-center rounded-md border px-3 text-xs font-semibold transition-colors disabled:opacity-60"
                   style={{
                     borderColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
@@ -314,44 +302,43 @@ function ExerciseAllocationRow({
                 </button>
               </div>
 
-              {selectedDayNumber != null && selectedAssignmentsForDay.length > 0 ? (
-                <div className="rounded-md border px-2 py-1.5" style={{ borderColor: "color-mix(in srgb, var(--ink-light) 60%, transparent)" }}>
-                  <p className="mb-1 text-[10px]" style={{ color: "var(--text-muted)" }}>
-                    Assigned setups for {DAYS_OF_WEEK[selectedDayNumber]}:
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {selectedAssignmentsForDay.map((entry, index) => {
-                      const progressionLabel = getProgressionLabel(entry.progression);
-                      const label = `${entry.variant || "Default"}${progressionLabel ? ` • ${progressionLabel}` : ""}`;
-                      const isActive = getProgressionValue(entry.progression) === selectedProgressionValue
-                        && (entry.variant || "") === (selectedVariant || "");
-                      return (
-                        <button
-                          key={`${exercise.id}-assigned-entry-${selectedDayNumber}-${index}`}
-                          type="button"
-                          onClick={() => {
-                            const matched = resolveProgressionOption(entry.progression);
-                            setSelectedProgression(matched?.value || "");
-                            setSelectedVariant(entry.variant || "");
-                          }}
-                          className="inline-flex items-center rounded-md border px-2 py-1 text-[10px] font-medium"
-                          style={{
-                            borderColor: isActive
-                              ? "color-mix(in srgb, var(--accent) 55%, transparent)"
-                              : "color-mix(in srgb, var(--ink-light) 62%, transparent)",
-                            backgroundColor: isActive
-                              ? "color-mix(in srgb, var(--accent) 20%, var(--ink-deep))"
-                              : "color-mix(in srgb, var(--ink-mid) 86%, var(--ink-deep))",
-                            color: isActive ? "var(--cloud-white)" : "var(--text-muted)",
-                          }}
-                        >
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : null}
+              <div className="rounded-md border px-2 py-1.5" style={{ borderColor: "color-mix(in srgb, var(--ink-light) 60%, transparent)" }}>
+                {selectedDayNumber != null && selectedAssignmentsForDay.length > 0 ? (
+                  <>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedAssignmentsForDay.map((entry, index) => {
+                        const progressionLabel = getProgressionLabel(entry.progression);
+                        const label = `${entry.variant || "Default"}${progressionLabel ? ` • ${progressionLabel}` : ""}`;
+                        const isActive = getProgressionValue(entry.progression) === selectedProgressionValue
+                          && (entry.variant || "") === (selectedVariant || "");
+                        return (
+                          <button
+                            key={`${exercise.id}-assigned-entry-${selectedDayNumber}-${index}`}
+                            type="button"
+                            onClick={() => {
+                              const matched = resolveProgressionOption(entry.progression);
+                              setSelectedProgression(matched?.value || "");
+                              setSelectedVariant(entry.variant || "");
+                            }}
+                            className="inline-flex items-center rounded-md border px-2 py-1 text-[10px] font-medium"
+                            style={{
+                              borderColor: isActive
+                                ? "color-mix(in srgb, var(--accent) 55%, transparent)"
+                                : "color-mix(in srgb, var(--ink-light) 62%, transparent)",
+                              backgroundColor: isActive
+                                ? "color-mix(in srgb, var(--accent) 20%, var(--ink-deep))"
+                                : "color-mix(in srgb, var(--ink-mid) 86%, var(--ink-deep))",
+                              color: isActive ? "var(--cloud-white)" : "var(--text-muted)",
+                            }}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                ) : null}
+              </div>
             </div>
           </motion.div>
         ) : null}
@@ -368,6 +355,7 @@ export default function ExerciseManagementDrawer({
   selectedDayFilter: _selectedDayFilter = null,
 }: ExerciseManagementDrawerProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [showAssignedOnly, setShowAssignedOnly] = useState(false);
   const [dayFilter, setDayFilter] = useState<number | null>(null);
   const [typeFilter, setTypeFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
@@ -419,13 +407,14 @@ export default function ExerciseManagementDrawer({
   const filteredExercises = useMemo(() => {
     return exercises.filter((exercise) => {
       const matchesSearch = matchesLooseSearch(getExerciseSearchText(exercise), searchTerm);
+      const matchesAssignedOnly = !showAssignedOnly || parseDayAssignments(exercise.assignedDays || "").length > 0;
       const matchesDay = dayFilter == null || isDayAssigned(exercise.assignedDays || "", dayFilter);
       const matchesType = !typeFilter || exercise.type === typeFilter;
       const categoryValue = (exercise.category || exercise.targetGroup || "").trim();
       const matchesCategory = !categoryFilter || categoryValue === categoryFilter;
-      return matchesSearch && matchesDay && matchesType && matchesCategory;
+      return matchesSearch && matchesAssignedOnly && matchesDay && matchesType && matchesCategory;
     });
-  }, [categoryFilter, dayFilter, exercises, searchTerm, typeFilter]);
+  }, [categoryFilter, dayFilter, exercises, searchTerm, showAssignedOnly, typeFilter]);
 
   const sortedFilteredExercises = useMemo(() => {
     const list = [...filteredExercises];
@@ -474,6 +463,7 @@ export default function ExerciseManagementDrawer({
 
   const clearFilters = () => {
     setSearchTerm("");
+    setShowAssignedOnly(false);
     setDayFilter(null);
     setTypeFilter("");
     setCategoryFilter("");
@@ -481,7 +471,7 @@ export default function ExerciseManagementDrawer({
     setSortManuallySelected(false);
   };
 
-  const hasActiveFilters = Boolean(dayFilter != null || typeFilter || categoryFilter || sortBy !== "name-az" || sortManuallySelected);
+  const hasActiveFilters = Boolean(showAssignedOnly || dayFilter != null || typeFilter || categoryFilter || sortBy !== "name-az" || sortManuallySelected);
 
   const handleApplyAssignmentPayload = async (exerciseId: string, assignedDaysPayload: string) => {
     setUpdatingExerciseId(exerciseId);
@@ -570,6 +560,46 @@ export default function ExerciseManagementDrawer({
                         {hasActiveFilters ? (
                           <span className="absolute right-0.5 top-1 h-2 w-2 rounded-full" style={{ backgroundColor: "var(--accent)" }} />
                         ) : null}
+                      </button>
+                    </div>
+
+                    <div className="mt-2 flex items-center gap-2">
+                      <select
+                        value={categoryFilter}
+                        onChange={(e) => setCategoryFilter(e.target.value)}
+                        className="h-8 rounded-md border px-2 text-[11px] outline-none"
+                        style={{
+                          borderColor: categoryFilter
+                            ? "color-mix(in srgb, var(--accent) 62%, transparent)"
+                            : "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                          backgroundColor: categoryFilter
+                            ? "color-mix(in srgb, var(--accent) 22%, var(--ink-deep))"
+                            : "color-mix(in srgb, var(--ink-mid) 86%, var(--ink-deep))",
+                          color: categoryFilter ? "var(--cloud-white)" : "var(--text-secondary)",
+                        }}
+                      >
+                        <option value="">All categories</option>
+                        {availableCategories.map((cat) => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        aria-pressed={showAssignedOnly}
+                        aria-label="Toggle show assigned exercises only"
+                        onClick={() => setShowAssignedOnly((prev) => !prev)}
+                        className="inline-flex h-8 items-center rounded-md border px-3 text-[11px] font-medium transition-colors"
+                        style={{
+                          borderColor: showAssignedOnly
+                            ? "color-mix(in srgb, var(--accent) 62%, transparent)"
+                            : "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                          backgroundColor: showAssignedOnly
+                            ? "color-mix(in srgb, var(--accent) 22%, var(--ink-deep))"
+                            : "color-mix(in srgb, var(--ink-mid) 86%, var(--ink-deep))",
+                          color: showAssignedOnly ? "var(--cloud-white)" : "var(--text-secondary)",
+                        }}
+                      >
+                        {showAssignedOnly ? "Show assigned exercises only" : "Show all exercises"}
                       </button>
                     </div>
                   </div>

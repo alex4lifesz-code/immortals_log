@@ -5,6 +5,17 @@ import { withAuth } from "@/lib/auth/middleware";
 import { canViewUserData } from "@/lib/friends";
 import { resolveVietnameseValue } from "@/lib/auto-vietnamese";
 
+function normalizeAssignedDaysInput(input: unknown): string | null {
+  if (Array.isArray(input)) {
+    const validDays = input.filter((day: unknown) => typeof day === "number" && day >= 0 && day <= 6);
+    return serializeDayAssignments(validDays);
+  }
+  if (typeof input === "string") {
+    return input.trim().slice(0, 2000);
+  }
+  return null;
+}
+
 // GET /api/progressions/[id] — get a shared progression exercise with selected user's progress
 export const GET = withAuth(async (request, { auth, params }) => {
   try {
@@ -94,6 +105,197 @@ export const PATCH = withAuth(async (request, { auth, params }) => {
       return ApiErrors.notFound("Exercise not found");
     }
 
+    const isOwnerOrAdmin = existing.userId === auth.userId || auth.role === "admin";
+    const requestedKeys = Object.keys(body).filter((key) => body[key] !== undefined);
+    const onlyAssignedDaysRequested = requestedKeys.length > 0 && requestedKeys.every((key) => key === "assignedDays");
+
+    // Shared library exercises are visible to everyone. Keep day allocations user-scoped
+    // by forking the exercise for this user when they only update assigned days.
+    if (!isOwnerOrAdmin) {
+      if (!onlyAssignedDaysRequested) {
+        return ApiErrors.forbidden("You can only update your own progression exercises");
+      }
+
+      const normalizedAssignedDays = normalizeAssignedDaysInput(body.assignedDays);
+      if (normalizedAssignedDays == null) {
+        return ApiErrors.badRequest("Invalid assigned days payload");
+      }
+
+      const forkedExerciseId = await prisma.$transaction(async (tx) => {
+        const source = await tx.progressionExercise.findUnique({
+          where: { id },
+          include: {
+            tiers: { orderBy: { level: "asc" } },
+            variations: true,
+            modifiers: true,
+            translation: true,
+          },
+        });
+
+        if (!source) {
+          throw new Error("Source exercise not found during fork");
+        }
+
+        const forked = await tx.progressionExercise.create({
+          data: {
+            name: source.name,
+            wuxiaName: source.wuxiaName,
+            difficulty: source.difficulty,
+            wuxiaDifficulty: source.wuxiaDifficulty,
+            type: source.type,
+            wuxiaType: source.wuxiaType,
+            story: source.story,
+            tips: source.tips,
+            category: source.category,
+            equipmentType: source.equipmentType,
+            bodyweight: source.bodyweight,
+            weighted: source.weighted,
+            rings: source.rings,
+            primaryMuscles: source.primaryMuscles,
+            secondaryMuscles: source.secondaryMuscles,
+            prerequisites: source.prerequisites,
+            cues: source.cues,
+            commonMistakes: source.commonMistakes,
+            breathing: source.breathing,
+            safetyConsiderations: source.safetyConsiderations,
+            competitionStandards: source.competitionStandards,
+            progression: source.progression,
+            assignedDays: normalizedAssignedDays,
+            userId: auth.userId,
+          },
+        });
+
+        if (source.translation) {
+          await tx.progressionExerciseTranslation.create({
+            data: {
+              id: forked.id,
+              englishName: source.translation.englishName,
+              vietnameseName: source.translation.vietnameseName,
+              englishStory: source.translation.englishStory,
+              vietnameseStory: source.translation.vietnameseStory,
+              englishDifficulty: source.translation.englishDifficulty,
+              vietnameseDifficulty: source.translation.vietnameseDifficulty,
+              englishType: source.translation.englishType,
+              vietnameseType: source.translation.vietnameseType,
+            },
+          });
+        }
+
+        if (source.tiers.length > 0) {
+          for (const tier of source.tiers) {
+            const createdTier = await tx.progressionTier.create({
+              data: {
+                exerciseId: forked.id,
+                level: tier.level,
+                name: tier.name,
+                wuxiaName: tier.wuxiaName,
+                difficulty: tier.difficulty,
+                wuxiaDifficulty: tier.wuxiaDifficulty,
+                wuxiaType: tier.wuxiaType,
+                description: tier.description,
+                targetHold: tier.targetHold,
+                targetReps: tier.targetReps,
+                targetRepsText: tier.targetRepsText,
+              },
+            });
+
+            const tierTranslation = await tx.progressionTierTranslation.findUnique({ where: { id: tier.id } });
+            if (tierTranslation) {
+              await tx.progressionTierTranslation.create({
+                data: {
+                  id: createdTier.id,
+                  englishName: tierTranslation.englishName,
+                  vietnameseName: tierTranslation.vietnameseName,
+                  englishDescription: tierTranslation.englishDescription,
+                  vietnameseDescription: tierTranslation.vietnameseDescription,
+                  englishDifficulty: tierTranslation.englishDifficulty,
+                  vietnameseDifficulty: tierTranslation.vietnameseDifficulty,
+                },
+              });
+            }
+          }
+        }
+
+        if (source.variations.length > 0) {
+          for (const variation of source.variations) {
+            const createdVariation = await tx.progressionVariation.create({
+              data: {
+                exerciseId: forked.id,
+                name: variation.name,
+                wuxiaName: variation.wuxiaName,
+                difficulty: variation.difficulty,
+                wuxiaDifficulty: variation.wuxiaDifficulty,
+                wuxiaType: variation.wuxiaType,
+                description: variation.description,
+              },
+            });
+
+            const variationTranslation = await tx.progressionVariationTranslation.findUnique({ where: { id: variation.id } });
+            if (variationTranslation) {
+              await tx.progressionVariationTranslation.create({
+                data: {
+                  id: createdVariation.id,
+                  englishName: variationTranslation.englishName,
+                  vietnameseName: variationTranslation.vietnameseName,
+                  englishDescription: variationTranslation.englishDescription,
+                  vietnameseDescription: variationTranslation.vietnameseDescription,
+                  englishDifficulty: variationTranslation.englishDifficulty,
+                  vietnameseDifficulty: variationTranslation.vietnameseDifficulty,
+                },
+              });
+            }
+          }
+        }
+
+        if (source.modifiers.length > 0) {
+          await tx.progressionModifier.createMany({
+            data: source.modifiers.map((modifier) => ({
+              exerciseId: forked.id,
+              type: modifier.type,
+              available: modifier.available,
+              difficultyMod: modifier.difficultyMod,
+              notes: modifier.notes,
+              method: modifier.method,
+              difficultyIncrease: modifier.difficultyIncrease,
+            })),
+          });
+        }
+
+        await tx.userProgressionLevel.updateMany({
+          where: {
+            userId: auth.userId,
+            exerciseId: source.id,
+          },
+          data: {
+            exerciseId: forked.id,
+          },
+        });
+
+        return forked.id;
+      });
+
+      const forked = await prisma.progressionExercise.findUnique({
+        where: { id: forkedExerciseId },
+        include: {
+          tiers: {
+            orderBy: { level: "asc" },
+          },
+          variations: true,
+          modifiers: true,
+          userProgress: {
+            where: { userId: auth.userId },
+            include: { logs: { orderBy: { createdAt: "desc" } } },
+          },
+        },
+      });
+
+      if (!forked) {
+        return ApiErrors.notFound("Exercise not found");
+      }
+
+      return apiSuccess({ exercise: forked });
+    }
+
     const data: Record<string, unknown> = {};
 
     // Simple string fields
@@ -126,14 +328,11 @@ export const PATCH = withAuth(async (request, { auth, params }) => {
 
     // AssignedDays
     if (body.assignedDays !== undefined) {
-      if (Array.isArray(body.assignedDays)) {
-        const validDays = body.assignedDays.filter(
-          (day: unknown) => typeof day === "number" && day >= 0 && day <= 6
-        );
-        data.assignedDays = serializeDayAssignments(validDays);
-      } else if (typeof body.assignedDays === "string") {
-        data.assignedDays = body.assignedDays.trim().slice(0, 2000);
+      const normalizedAssignedDays = normalizeAssignedDaysInput(body.assignedDays);
+      if (normalizedAssignedDays == null) {
+        return ApiErrors.badRequest("Invalid assigned days payload");
       }
+      data.assignedDays = normalizedAssignedDays;
     }
 
     // Duplicate name check

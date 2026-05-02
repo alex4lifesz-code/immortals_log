@@ -182,8 +182,8 @@ export const PATCH = withAuth(async (req, { auth, params }) => {
       });
     }
 
-    // Sync name changes to matching ProgressionExercise
-    if (data.name || data.wuxiaName !== undefined) {
+    // Sync name/assignedDays changes to matching ProgressionExercise
+    if (data.name || data.wuxiaName !== undefined || data.assignedDays !== undefined) {
       const oldName = existing.name.toLowerCase();
       const allProgs = await prisma.progressionExercise.findMany({
         select: { id: true, name: true },
@@ -196,6 +196,8 @@ export const PATCH = withAuth(async (req, { auth, params }) => {
         if (data.name) progUpdate.name = data.name;
         if (data.wuxiaName !== undefined)
           progUpdate.wuxiaName = data.wuxiaName || "";
+        if (data.assignedDays !== undefined)
+          progUpdate.assignedDays = data.assignedDays;
         if (Object.keys(progUpdate).length > 0) {
           await prisma.progressionExercise.update({
             where: { id: prog.id },

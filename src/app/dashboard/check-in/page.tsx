@@ -49,35 +49,8 @@ function formatRelativeRecentDate(
   dateFormat: "dd-mm-yyyy" | "dd-mmm-yyyy" | "dd-mm-yy" | "dd-mmm-yy" = "dd-mmm-yyyy",
   timeZone?: string,
 ): string {
-  const timestamp = new Date(dateLike).getTime();
-  if (!Number.isFinite(timestamp)) return "";
-
-  const diffMs = Date.now() - timestamp;
-  if (diffMs < 0) {
-    return formatDateWithPreference(new Date(timestamp), dateFormat, timeZone);
-  }
-
-  const minuteMs = 60 * 1000;
-  const hourMs = 60 * minuteMs;
-  const dayMs = 24 * hourMs;
-  const fourteenDaysMs = 14 * dayMs;
-
-  if (diffMs < hourMs) {
-    const mins = Math.max(1, Math.floor(diffMs / minuteMs));
-    return `${mins}m ago`;
-  }
-
-  if (diffMs < dayMs) {
-    const hours = Math.max(1, Math.floor(diffMs / hourMs));
-    return `${hours}h ago`;
-  }
-
-  if (diffMs < fourteenDaysMs) {
-    const days = Math.max(1, Math.floor(diffMs / dayMs));
-    return `${days} day${days === 1 ? "" : "s"} ago`;
-  }
-
-  return formatDateWithPreference(new Date(timestamp), dateFormat, timeZone);
+  if (!dateLike) return "";
+  return formatDateWithPreference(dateLike, dateFormat, timeZone);
 }
 
 export default function DaoHallPage() {
@@ -183,7 +156,7 @@ export default function DaoHallPage() {
     }
   }, [broadcastNotesUpdated]);
 
-  const handleDayClick = (dateStr: string) => {
+  const openEditDay = (dateStr: string) => {
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
       const [year, month] = dateStr.split("-").map((value) => Number.parseInt(value, 10));
       setCurrentMonth(createCalendarMonthAnchor(year, month));
@@ -196,6 +169,10 @@ export default function DaoHallPage() {
       entries[u.id] = existingRow?.entries[u.id] || { present: false, weight: "", comment: "" };
     }
     setCheckInModal({ date: dateStr, entries });
+  };
+
+  const handleDayClick = (dateStr: string) => {
+    setHistoryDayChoice(dateStr);
   };
 
   const updateCheckInModalEntry = (userId: string, field: "present" | "weight" | "comment", value: string | boolean) => {
@@ -1492,7 +1469,7 @@ export default function DaoHallPage() {
                 onClick={() => {
                   const date = historyDayChoice;
                   setHistoryDayChoice(null);
-                  handleDayClick(date);
+                  openEditDay(date);
                 }}
               >
                 {t("Edit", "normal")}
@@ -1521,6 +1498,7 @@ export default function DaoHallPage() {
             }))
             .filter((r) => r.present || r.weight?.trim() || r.comment?.trim())
             .sort((a, b) => a.name.localeCompare(b.name));
+          const recordDateLabel = formatDateWithPreference(viewDayDate, dateFormat);
 
           return (
             <div className="max-h-[70vh] overflow-y-auto pr-1">
@@ -1532,8 +1510,6 @@ export default function DaoHallPage() {
                 <div
                   className="space-y-3 rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] p-4 text-[13px] leading-relaxed"
                   style={{
-                    backgroundImage:
-                      "repeating-linear-gradient(to bottom, transparent 0, transparent 1.55rem, color-mix(in srgb, var(--border) 60%, transparent) 1.55rem, color-mix(in srgb, var(--border) 60%, transparent) calc(1.55rem + 1px))",
                     fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
                   }}
                 >
@@ -1543,33 +1519,37 @@ export default function DaoHallPage() {
                         <span className="text-[12px] font-semibold" style={{ color: rec.color }}>
                           {rec.name}
                         </span>
-                        <span
-                          className="inline-flex items-center gap-1 rounded-full border px-2 py-[1px] text-[10px] uppercase tracking-wide"
-                          style={{
-                            borderColor: rec.present ? "color-mix(in srgb, var(--forest) 50%, transparent)" : "color-mix(in srgb, var(--gold-glow) 50%, transparent)",
-                            color: rec.present ? "var(--forest)" : "var(--gold-glow)",
-                            backgroundColor: rec.present
-                              ? "color-mix(in srgb, var(--forest) 12%, transparent)"
-                              : "color-mix(in srgb, var(--gold-glow) 12%, transparent)",
-                          }}
-                        >
-                          {rec.present ? t("Checked in", "normal") : t("Rest", "normal")}
-                        </span>
-                        {rec.weight?.trim() ? (
-                          <span className="text-[11px]" style={{ color: "var(--mountain-blue-glow)" }}>
-                            {rec.weight} kg
+                        <span className="inline-flex items-center gap-1 text-[11px]" aria-label={t("Entry details", "normal")}>
+                          <span
+                            title={rec.present ? t("Checked in", "normal") : t("Not checked in", "normal")}
+                            style={{ color: rec.present ? "var(--forest)" : "var(--text-muted)", opacity: rec.present ? 1 : 0.55 }}
+                          >
+                            ✓
                           </span>
-                        ) : null}
+                          <span
+                            title={rec.weight?.trim() ? t("Weight recorded", "normal") : t("No weight", "normal")}
+                            style={{ color: rec.weight?.trim() ? "var(--mountain-blue-glow)" : "var(--text-muted)", opacity: rec.weight?.trim() ? 1 : 0.55 }}
+                          >
+                            ⚖
+                          </span>
+                          <span
+                            title={rec.comment?.trim() ? t("Note recorded", "normal") : t("No note", "normal")}
+                            style={{ color: rec.comment?.trim() ? "var(--text-primary)" : "var(--text-muted)", opacity: rec.comment?.trim() ? 1 : 0.55 }}
+                          >
+                            ✎
+                          </span>
+                        </span>
+                        <span className="text-[11px]" style={{ color: "var(--mountain-blue-glow)" }}>
+                          {recordDateLabel}
+                        </span>
                       </header>
-                      {rec.comment?.trim() ? (
-                        <p className="whitespace-pre-wrap text-[12px]" style={{ color: "var(--text-primary)" }}>
-                          {rec.comment.trim()}
-                        </p>
-                      ) : (
-                        <p className="text-[11px] italic" style={{ color: "var(--text-muted)" }}>
-                          {t("No note recorded.", "normal")}
-                        </p>
-                      )}
+                      <div className="space-y-0.5 text-[11px]">
+                        {rec.comment?.trim() ? (
+                          <p className="italic" style={{ color: "var(--text-primary)" }}>
+                            {rec.comment}
+                          </p>
+                        ) : null}
+                      </div>
                     </article>
                   ))}
                 </div>
@@ -1583,7 +1563,7 @@ export default function DaoHallPage() {
                   onClick={() => {
                     const date = viewDayDate;
                     setViewDayDate(null);
-                    handleDayClick(date);
+                    openEditDay(date);
                   }}
                 >
                   {t("Edit", "normal")}

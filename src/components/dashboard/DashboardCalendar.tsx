@@ -161,6 +161,7 @@ function CalendarDay({ dayNumber, checkedInUsers, hasCurrentUserWeight, isToday,
   const friendDots = checkedInUsers.filter((entry) => !entry.isCurrentUser);
   const visibleDots = friendDots.slice(0, compact ? 3 : 4);
   const extraCount = friendDots.length - visibleDots.length;
+  const neutralDayBackground = "color-mix(in srgb, var(--surface-hover) 62%, var(--surface))";
 
   // Prioritize meaningful status over time-based dimming.
   const baseDayStyle = isToday && hasCurrentUserCheckIn
@@ -183,7 +184,7 @@ function CalendarDay({ dayNumber, checkedInUsers, hasCurrentUserWeight, isToday,
       : hasCheckIns
         ? {
             borderColor: "color-mix(in srgb, var(--border) 88%, transparent)",
-            backgroundColor: "color-mix(in srgb, var(--surface-hover) 86%, var(--surface))",
+            backgroundColor: neutralDayBackground,
           }
         : hasFutureNote
           ? {
@@ -192,16 +193,16 @@ function CalendarDay({ dayNumber, checkedInUsers, hasCurrentUserWeight, isToday,
             }
           : {
               borderColor: "color-mix(in srgb, var(--border) 94%, transparent)",
-              backgroundColor: "color-mix(in srgb, var(--surface-hover) 62%, var(--surface))",
+              backgroundColor: neutralDayBackground,
             };
 
   const dayStyle = isElapsedDay
     ? {
         ...baseDayStyle,
         borderStyle: "dashed" as const,
-        borderColor: "color-mix(in srgb, var(--gold) 44%, var(--border))",
-        backgroundImage: "repeating-linear-gradient(-45deg, color-mix(in srgb, var(--gold) 16%, transparent) 0px, color-mix(in srgb, var(--gold) 16%, transparent) 4px, transparent 4px, transparent 8px)",
-        boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--gold) 10%, transparent)",
+        backgroundColor: neutralDayBackground,
+        backgroundImage: "repeating-linear-gradient(-45deg, color-mix(in srgb, var(--border) 18%, transparent) 0px, color-mix(in srgb, var(--border) 18%, transparent) 4px, transparent 4px, transparent 8px)",
+        boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--border) 16%, transparent)",
       }
     : isUserPastCheckInDay
       ? {
@@ -240,7 +241,7 @@ function CalendarDay({ dayNumber, checkedInUsers, hasCurrentUserWeight, isToday,
       <div className="flex h-full flex-col justify-between p-1.5">
         <div className="flex items-start justify-between gap-1">
           <span className={`${compact ? "text-xs" : "text-sm"} font-semibold`} style={{ color: dayNumberColor }}>{dayNumber}</span>
-          <div className="flex flex-col items-end gap-0.5">
+          <div className="flex items-center gap-1">
             {hasCurrentUserWeight ? (
               <span
                 className="inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full border px-1 text-[8px] font-semibold leading-none"
@@ -252,6 +253,19 @@ function CalendarDay({ dayNumber, checkedInUsers, hasCurrentUserWeight, isToday,
                 }}
               >
                 W
+              </span>
+            ) : null}
+            {hasCurrentUserCheckIn ? (
+              <span
+                className="inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full border px-1 text-[8px] font-semibold leading-none"
+                title="Workout recorded"
+                style={{
+                  borderColor: "color-mix(in srgb, var(--cultivator-self) 56%, var(--border))",
+                  backgroundColor: "color-mix(in srgb, var(--cultivator-self) 16%, var(--surface))",
+                  color: "var(--cultivator-self)",
+                }}
+              >
+                ✓
               </span>
             ) : null}
           </div>
@@ -549,10 +563,6 @@ export function Calendar({
 
       <div className={`flex flex-wrap border-t pt-3 ${compactMode ? "gap-2 text-[10px]" : "gap-3 text-xs"}`} style={{ borderTopColor: "color-mix(in srgb, var(--border) 94%, transparent)" }}>
         <div className="flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
-          <div className="h-2.5 w-2.5 rounded-sm border" style={{ borderStyle: "dashed", borderColor: "color-mix(in srgb, var(--gold) 48%, var(--border))", backgroundColor: "color-mix(in srgb, var(--gold) 12%, var(--surface))" }} />
-          <span>{t("Elapsed", "normal")}</span>
-        </div>
-        <div className="flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
           <div className="h-2.5 w-2.5 rounded-sm border" style={{ borderColor: "color-mix(in srgb, var(--accent) 86%, var(--border))", backgroundColor: "color-mix(in srgb, var(--accent) 22%, var(--surface-hover))" }} />
           <span>{t("Today", "normal")}</span>
         </div>
@@ -582,6 +592,19 @@ export function Calendar({
             W
           </div>
           <span>{t("Weight", "normal")}</span>
+        </div>
+        <div className="flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
+          <div
+            className="inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full border px-1 text-[8px] font-semibold leading-none"
+            style={{
+              borderColor: "color-mix(in srgb, var(--cultivator-self) 56%, var(--border))",
+              backgroundColor: "color-mix(in srgb, var(--cultivator-self) 16%, var(--surface))",
+              color: "var(--cultivator-self)",
+            }}
+          >
+            ✓
+          </div>
+          <span>{t("Workout", "normal")}</span>
         </div>
         <div className="flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
           <div className="h-2.5 w-2.5 rounded-sm border" style={{ borderColor: "color-mix(in srgb, var(--cultivator-self) 62%, var(--border))", backgroundColor: "color-mix(in srgb, var(--cultivator-self) 12%, var(--surface))" }} />

@@ -211,7 +211,7 @@
     --cultivator-rose: color-mix(in srgb, var(--crimson) 60%, var(--mountain-blue-glow));
     /* Friends — use the active theme accent */
     --cultivator-friend: var(--accent);
-    /* Self — warm gold, complementary to the cool accent */
+    /* Self — yellow for personal check-ins and badges */
     --cultivator-self: var(--gold-glow);
     --system-bar-fallback: #0d0f14;
 

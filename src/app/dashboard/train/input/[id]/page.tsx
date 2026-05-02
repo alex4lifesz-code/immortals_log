@@ -8,7 +8,13 @@ import GlowButton from "@/components/ui/GlowButton";
 import GlowCard from "@/components/ui/GlowCard";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
-import { buildIsoAtUserDateTime, getTodayInTimeZone } from "@/lib/constants";
+import {
+  buildIsoAtUserDateTime,
+  getTodayInTimeZone,
+  parseDayAssignmentDetailsList,
+  parseDayAssignments,
+  serializeDayAssignmentPayload,
+} from "@/lib/constants";
 import { PROGRESSION_EXERCISES_UPDATED_EVENT } from "@/lib/progression-events";
 import { api, ApiRequestError } from "@/lib/api-client";
 import { kgToLbs, lbsToKg, type TimedUnitPref } from "@/lib/unit-conversion";
@@ -173,6 +179,7 @@ export default function TrainInputCanvasPage() {
   const [exercises, setExercises] = useState<ProgressionExercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [removingFromDay, setRemovingFromDay] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [editLogHydrated, setEditLogHydrated] = useState(!editLogId);
   const [initialEditSnapshot, setInitialEditSnapshot] = useState<string | null>(null);
@@ -568,6 +575,78 @@ export default function TrainInputCanvasPage() {
     () => exercises.find((exercise) => exercise.id === selectedExerciseId) || null,
     [exercises, selectedExerciseId],
   );
+
+  const canQuickRemoveFromAssignedDay = Boolean(
+    !isEditingExistingLog
+      && isDayAssignment
+      && assignedDayIndex != null
+      && assignedDayIndex >= 0
+      && assignedDayIndex <= 6
+      && selectedExercise,
+  );
+
+  const handleQuickRemoveFromAssignedDay = useCallback(async () => {
+    if (!canQuickRemoveFromAssignedDay || !selectedExercise || assignedDayIndex == null) return;
+    if (saving || deleting || removingFromDay) return;
+
+    const existingAssignedDays = parseDayAssignments(selectedExercise.assignedDays || "");
+    if (!existingAssignedDays.includes(assignedDayIndex)) {
+      setMessage({ type: "success", text: `${selectedExercise.name} is not assigned to ${assignedDayName || "this day"}.` });
+      return;
+    }
+
+    const confirmed = window.confirm(`Remove ${selectedExercise.name} from ${assignedDayName || "this day"}?`);
+    if (!confirmed) return;
+
+    const days = new Set(existingAssignedDays);
+    const details = parseDayAssignmentDetailsList(selectedExercise.assignedDays || "");
+    days.delete(assignedDayIndex);
+    delete details[assignedDayIndex];
+
+    const payload = serializeDayAssignmentPayload(Array.from(days), details);
+
+    setRemovingFromDay(true);
+    setMessage(null);
+    try {
+      const response = await api.patch<{ exercise?: ProgressionExercise }>(
+        `/api/progressions/${selectedExercise.id}`,
+        { assignedDays: payload },
+      );
+
+      const returnedExercise = response.exercise;
+      if (returnedExercise) {
+        setExercises((prev) => {
+          const index = prev.findIndex((exercise) => exercise.id === selectedExercise.id);
+          if (index === -1) return prev;
+
+          const next = [...prev];
+          const duplicateIndex = next.findIndex((exercise) => exercise.id === returnedExercise.id);
+          if (duplicateIndex !== -1 && duplicateIndex !== index) {
+            next.splice(duplicateIndex, 1);
+          }
+          next[index] = returnedExercise;
+          return next;
+        });
+        setSelectedExerciseId(returnedExercise.id);
+      }
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event(PROGRESSION_EXERCISES_UPDATED_EVENT));
+      }
+
+      setMessage({ type: "success", text: `Removed from ${assignedDayName || "day"}.` });
+      if (typeof window !== "undefined" && window.history.length > 1) {
+        router.back();
+      } else {
+        router.push(returnHref);
+      }
+    } catch (error) {
+      console.error("Failed to remove day assignment:", error);
+      setMessage({ type: "error", text: "Failed to remove from day. Please try again." });
+    } finally {
+      setRemovingFromDay(false);
+    }
+  }, [assignedDayIndex, assignedDayName, canQuickRemoveFromAssignedDay, deleting, removingFromDay, returnHref, router, saving, selectedExercise]);
 
   const filteredExercises = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
@@ -1178,36 +1257,56 @@ export default function TrainInputCanvasPage() {
                   </div>
                 </div>
 
-                {isEditingExistingLog ? (
+                {isEditingExistingLog || canQuickRemoveFromAssignedDay ? (
                   <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => void handleDeleteLoggedSession()}
-                      disabled={saving || deleting}
-                      className="rounded-md border px-2.5 py-1 text-[11px] font-semibold transition-colors"
-                      style={{
-                        borderColor: "color-mix(in srgb, var(--danger) 46%, transparent)",
-                        backgroundColor: "color-mix(in srgb, var(--danger) 10%, transparent)",
-                        color: "var(--danger-hover)",
-                        opacity: saving || deleting ? 0.7 : 1,
-                      }}
-                    >
-                      {deleting ? "Deleting..." : "Delete"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void handleCloseOrApply()}
-                      disabled={saving || deleting}
-                      className="rounded-md border px-2.5 py-1 text-[11px] font-semibold transition-colors"
-                      style={{
-                        borderColor: hasPendingEditChanges ? "color-mix(in srgb, var(--forest) 48%, transparent)" : "color-mix(in srgb, var(--ink-light) 55%, transparent)",
-                        backgroundColor: hasPendingEditChanges ? "color-mix(in srgb, var(--forest) 12%, transparent)" : "color-mix(in srgb, var(--surface-hover) 36%, transparent)",
-                        color: hasPendingEditChanges ? "var(--cloud-white)" : "var(--text-primary)",
-                        opacity: saving || deleting ? 0.7 : 1,
-                      }}
-                    >
-                      {saving ? "Applying..." : hasPendingEditChanges ? "Apply Changes" : "Close"}
-                    </button>
+                    {canQuickRemoveFromAssignedDay ? (
+                      <button
+                        type="button"
+                        onClick={() => void handleQuickRemoveFromAssignedDay()}
+                        disabled={saving || deleting || removingFromDay}
+                        className="rounded-md border px-2.5 py-1 text-[11px] font-semibold transition-colors"
+                        style={{
+                          borderColor: "color-mix(in srgb, var(--danger) 46%, transparent)",
+                          backgroundColor: "color-mix(in srgb, var(--danger) 10%, transparent)",
+                          color: "var(--danger-hover)",
+                          opacity: saving || deleting || removingFromDay ? 0.7 : 1,
+                        }}
+                      >
+                        {removingFromDay ? "Removing..." : "Remove from day"}
+                      </button>
+                    ) : null}
+                    {isEditingExistingLog ? (
+                      <button
+                        type="button"
+                        onClick={() => void handleDeleteLoggedSession()}
+                        disabled={saving || deleting}
+                        className="rounded-md border px-2.5 py-1 text-[11px] font-semibold transition-colors"
+                        style={{
+                          borderColor: "color-mix(in srgb, var(--danger) 46%, transparent)",
+                          backgroundColor: "color-mix(in srgb, var(--danger) 10%, transparent)",
+                          color: "var(--danger-hover)",
+                          opacity: saving || deleting ? 0.7 : 1,
+                        }}
+                      >
+                        {deleting ? "Deleting..." : "Delete"}
+                      </button>
+                    ) : null}
+                    {isEditingExistingLog ? (
+                      <button
+                        type="button"
+                        onClick={() => void handleCloseOrApply()}
+                        disabled={saving || deleting}
+                        className="rounded-md border px-2.5 py-1 text-[11px] font-semibold transition-colors"
+                        style={{
+                          borderColor: hasPendingEditChanges ? "color-mix(in srgb, var(--forest) 48%, transparent)" : "color-mix(in srgb, var(--ink-light) 55%, transparent)",
+                          backgroundColor: hasPendingEditChanges ? "color-mix(in srgb, var(--forest) 12%, transparent)" : "color-mix(in srgb, var(--surface-hover) 36%, transparent)",
+                          color: hasPendingEditChanges ? "var(--cloud-white)" : "var(--text-primary)",
+                          opacity: saving || deleting ? 0.7 : 1,
+                        }}
+                      >
+                        {saving ? "Applying..." : hasPendingEditChanges ? "Apply Changes" : "Close"}
+                      </button>
+                    ) : null}
                   </div>
                 ) : null}
               </div>
