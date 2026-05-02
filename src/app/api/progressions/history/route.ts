@@ -2,6 +2,7 @@ import { apiSuccess, ApiErrors } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 import { canViewUserData } from "@/lib/friends";
+import { ensureAppExerciseLibraryOwner } from "@/lib/exercise-library-owner";
 
 function resolveLogLimit(raw: string | null): number {
   if (raw === null || raw === "") return 200;
@@ -14,12 +15,12 @@ function resolveLogLimit(raw: string | null): number {
 }
 
 function resolveExerciseLimit(raw: string | null): number {
-  if (raw === null || raw === "") return 300;
+  if (raw === null || raw === "") return 5000;
   const parsed = Number(raw);
-  if (!Number.isFinite(parsed)) return 300;
+  if (!Number.isFinite(parsed)) return 5000;
   const intParsed = Math.trunc(parsed);
   if (intParsed < 1) return 1;
-  if (intParsed > 500) return 500;
+  if (intParsed > 5000) return 5000;
   return intParsed;
 }
 
@@ -79,6 +80,7 @@ export const GET = withAuth(async (request, { auth }) => {
     const exerciseLimit = resolveExerciseLimit(searchParams.get("exerciseLimit"));
     const exerciseCursor = decodeExerciseCursor(searchParams.get("cursor"));
     const targetUserId = searchParams.get("targetUserId");
+    const libraryOwnerId = await ensureAppExerciseLibraryOwner();
     let userId = auth.userId;
 
     if (targetUserId) {
@@ -99,6 +101,7 @@ export const GET = withAuth(async (request, { auth }) => {
             AND: [
               {
                 OR: [
+                  { userId: libraryOwnerId },
                   { userId },
                   { userProgress: { some: { userId } } },
                 ],
@@ -116,6 +119,7 @@ export const GET = withAuth(async (request, { auth }) => {
           }
         : {
             OR: [
+              { userId: libraryOwnerId },
               { userId },
               { userProgress: { some: { userId } } },
             ],

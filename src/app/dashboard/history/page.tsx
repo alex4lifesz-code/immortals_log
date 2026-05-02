@@ -485,7 +485,7 @@ export default function HistoryPage() {
   const fetchExercises = useCallback(async () => {
     if (!userId) return;
     try {
-      const params = new URLSearchParams({ logLimit: "200" });
+      const params = new URLSearchParams({ logLimit: "200", exerciseLimit: "5000" });
       if (targetUserId) params.set("targetUserId", targetUserId);
       const data = await api.get<{ exercises: ProgressionExercise[] }>(`/api/progressions/history?${params.toString()}`);
       setExercises(data.exercises || []);
@@ -715,11 +715,12 @@ export default function HistoryPage() {
   };
 
   const handleOpenTrainOverview = useCallback(() => {
+    setLibrarySheetOpen(false);
     setTrainRailOverviewOpen(true);
     setTrainDayDrawerOpen(false);
     setTrainDayFilter(null);
     setExerciseManagementOpen(false);
-  }, []);
+  }, [setLibrarySheetOpen]);
 
   const handleSelectTrainDay = useCallback((dayIndex: number | null) => {
     setTrainDayFilter(dayIndex);

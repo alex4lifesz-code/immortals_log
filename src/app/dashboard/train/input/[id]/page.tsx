@@ -539,7 +539,7 @@ export default function TrainInputCanvasPage() {
 
     setLoading(true);
     try {
-      const data = await api.get<{ exercises: ProgressionExercise[] }>("/api/progressions/history?logLimit=200");
+      const data = await api.get<{ exercises: ProgressionExercise[] }>("/api/progressions/history?logLimit=200&exerciseLimit=5000");
       setExercises(data.exercises || []);
     } catch (error) {
       console.error("Failed to load train input exercises:", error);

@@ -96,17 +96,6 @@ export function TrainingGroundsSidebar({
   const glowIntensity = DISPLAY_DEFAULTS.glowIntensityProgressionSidebar;
   const loreVisible = DISPLAY_DEFAULTS.progressionSidebarLoreVisible;
 
-  const hiddenSidebarExerciseNames = useMemo(
-    () =>
-      new Set([
-        "dumbbell bicep curl",
-        "leg curl",
-        "leg extension",
-        "seated cable row",
-      ]),
-    []
-  );
-
   const showIllumination = displayMode !== "name-only";
   const showRealm = displayMode === "name-illumination-realm" || displayMode === "name-illumination-realm-path";
   const showPath = displayMode === "name-illumination-realm-path";
@@ -191,10 +180,6 @@ export function TrainingGroundsSidebar({
         const derived = exerciseDerived.get(e.id);
         if (!derived) return false;
 
-        if (hiddenSidebarExerciseNames.has(String(e.name || "").trim().toLowerCase())) {
-          return false;
-        }
-
         if (disciplineFilter === "gym" && !derived.isGym) return false;
         if (disciplineFilter === "calisthenics" && derived.isGym) return false;
         if (disciplineFilter === "recent" && derived.logCount === 0) return false;
@@ -217,7 +202,6 @@ export function TrainingGroundsSidebar({
       filterCategory,
       filterEquipment,
       filterType,
-      hiddenSidebarExerciseNames,
       searchQuery,
       selectedDayFilter,
     ]
