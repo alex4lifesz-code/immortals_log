@@ -6,6 +6,7 @@ import PageLayout from "@/components/layout/PageLayout";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { api } from "@/lib/api-client";
+import { translateEnglishToLanguage } from "@/lib/language";
 import { DASHBOARD_ROUTES } from "@/lib/navigation";
 import { kgToLbs } from "@/lib/unit-conversion";
 import {
@@ -25,6 +26,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const { user } = useAuth();
   const { settings } = useDisplaySettings();
+  const lt = (text: string) => translateEnglishToLanguage(text, settings.languageMode);
   const weightUnit = settings.defaultWeightUnit ?? "kg";
   const [latestCheckinWeight, setLatestCheckinWeight] = useState<{ weight: number; date: string | null } | null>(null);
   const [weightTrendLabel, setWeightTrendLabel] = useState<string | null>(null);
@@ -130,9 +132,9 @@ export default function ProfilePage() {
   }, [latestCheckinWeight, weightUnit]);
 
   const pageItems = [
-    { id: "progress", label: "Progress", path: DASHBOARD_ROUTES.rankUp, icon: "✅" },
-    { id: "exercises", label: "Exercise Library", path: "/dashboard/train?library=1", icon: "📚" },
-    { id: "settings", label: "Settings", path: DASHBOARD_ROUTES.settings, icon: "⚙️" },
+    { id: "progress", label: lt("Progress"), path: DASHBOARD_ROUTES.rankUp, icon: "✅" },
+    { id: "exercises", label: lt("Exercise Library"), path: "/dashboard/train?library=1", icon: "📚" },
+    { id: "settings", label: lt("Settings"), path: DASHBOARD_ROUTES.settings, icon: "⚙️" },
   ] as const;
 
   const adminItems = user?.role === "admin"
@@ -158,14 +160,14 @@ export default function ProfilePage() {
 
   return (
     <PageLayout
-      title="Me"
+      title={lt("Me")}
       mobileContentPaddingClass="px-2 pt-4 pb-24"
     >
       <div className="space-y-3 px-0 py-0 sm:py-1">
         <section className="rounded-xl border p-3.5" style={sectionShellStyle}>
           <div className="mb-3 flex items-start justify-between gap-3 border-b pb-3" style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)" }}>
             <div>
-              <h2 className="mt-1 text-[18px] font-semibold" style={{ color: "var(--text-primary)" }}>Profile & preferences</h2>
+              <h2 className="mt-1 text-[18px] font-semibold" style={{ color: "var(--text-primary)" }}>{lt("Profile & preferences")}</h2>
             </div>
           </div>
 
@@ -194,11 +196,11 @@ export default function ProfilePage() {
 
               <div className="grid grid-cols-3 gap-2">
                 <div className="rounded-md border px-2.5 py-2" style={flatTileStyle}>
-                  <p className="text-[10px] uppercase tracking-[0.1em]" style={{ color: "var(--text-muted)" }}>Weight</p>
+                  <p className="text-[10px] uppercase tracking-[0.1em]" style={{ color: "var(--text-muted)" }}>{lt("Weight")}</p>
                   <p className="mt-1 text-[12px] font-semibold" style={{ color: "var(--text-primary)" }}>{displayWeight || "--"}</p>
                 </div>
                 <div className="rounded-md border px-2.5 py-2" style={flatTileStyle}>
-                  <p className="text-[10px] uppercase tracking-[0.1em]" style={{ color: "var(--text-muted)" }}>Trend</p>
+                  <p className="text-[10px] uppercase tracking-[0.1em]" style={{ color: "var(--text-muted)" }}>{lt("Trend")}</p>
                   <p
                     className="mt-1 text-[12px] font-semibold"
                     style={{
@@ -214,7 +216,7 @@ export default function ProfilePage() {
                   </p>
                 </div>
                 <div className="rounded-md border px-2.5 py-2" style={flatTileStyle}>
-                  <p className="text-[10px] uppercase tracking-[0.1em]" style={{ color: "var(--text-muted)" }}>Check-ins</p>
+                  <p className="text-[10px] uppercase tracking-[0.1em]" style={{ color: "var(--text-muted)" }}>{lt("Check-ins")}</p>
                   <p className="mt-1 text-[12px] font-semibold" style={{ color: "var(--text-primary)" }}>{checkInTotalCount ?? 0}</p>
                 </div>
               </div>
@@ -224,7 +226,7 @@ export default function ProfilePage() {
 
         <section className="rounded-xl border p-3.5" style={sectionShellStyle}>
           <div className="mb-2 border-b pb-2" style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)" }}>
-            <h3 className="mt-1 text-[15px] font-semibold" style={{ color: "var(--text-primary)" }}>Pages</h3>
+            <h3 className="mt-1 text-[15px] font-semibold" style={{ color: "var(--text-primary)" }}>{lt("Pages")}</h3>
           </div>
           <div className="grid grid-cols-1 gap-2">
             {pageItems.map((item) => {

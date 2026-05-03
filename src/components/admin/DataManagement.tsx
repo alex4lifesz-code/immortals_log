@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import GlowButton from "@/components/ui/GlowButton";
 import GlowCard, { GlowModal } from "@/components/ui/GlowCard";
 import { useAuth } from "@/context/AuthContext";
+import { useDisplaySettings } from "@/context/DisplaySettingsContext";
+import { translateEnglishToLanguage } from "@/lib/language";
 
 interface UserOption {
   id: string;
@@ -33,6 +35,8 @@ const BACKUP_FEATURES = [
 
 export default function DataManagement() {
   const { user } = useAuth();
+  const { settings } = useDisplaySettings();
+  const lt = (text: string) => translateEnglishToLanguage(text, settings.languageMode);
   const [allUsers, setAllUsers] = useState<UserOption[]>([]);
   const [selectedUserId, setSelectedUserId] = useState("");
   const [replaceExisting, setReplaceExisting] = useState(false);
@@ -84,11 +88,11 @@ export default function DataManagement() {
 
   const handleExport = async () => {
     if (!targetUserId) {
-      setExportStatus({ type: "error", message: "Select a user before exporting." });
+      setExportStatus({ type: "error", message: lt("Select a user before exporting.") });
       return;
     }
 
-    setExportStatus({ type: "loading", message: "Preparing backup package..." });
+    setExportStatus({ type: "loading", message: lt("Preparing backup package...") });
 
     try {
       const res = await fetch(`/api/admin/backup-studio/export?targetUserId=${encodeURIComponent(targetUserId)}`, {
@@ -97,7 +101,7 @@ export default function DataManagement() {
 
       if (!res.ok) {
         const payload = await res.json().catch(() => null);
-        const message = payload?.error?.message || payload?.error || "Export failed";
+        const message = payload?.error?.message || payload?.error || lt("Export failed");
         setExportStatus({ type: "error", message });
         return;
       }
@@ -123,7 +127,7 @@ export default function DataManagement() {
     } catch (error) {
       setExportStatus({
         type: "error",
-        message: error instanceof Error ? error.message : "Export failed",
+        message: error instanceof Error ? error.message : lt("Export failed"),
       });
     }
   };
@@ -134,11 +138,11 @@ export default function DataManagement() {
 
     if (!file) return;
     if (!targetUserId) {
-      setImportStatus({ type: "error", message: "Select a user before importing." });
+      setImportStatus({ type: "error", message: lt("Select a user before importing.") });
       return;
     }
 
-    setImportStatus({ type: "loading", message: "Reading backup file..." });
+    setImportStatus({ type: "loading", message: lt("Reading backup file...") });
 
     try {
       const text = await file.text();
@@ -157,7 +161,7 @@ export default function DataManagement() {
 
       const payload = await res.json().catch(() => null);
       if (!res.ok) {
-        const message = payload?.error?.message || payload?.error || "Import failed";
+        const message = payload?.error?.message || payload?.error || lt("Import failed");
         setImportStatus({ type: "error", message });
         return;
       }
@@ -168,20 +172,20 @@ export default function DataManagement() {
     } catch (error) {
       setImportStatus({
         type: "error",
-        message: error instanceof Error ? error.message : "Import failed",
+        message: error instanceof Error ? error.message : lt("Import failed"),
       });
     }
   };
 
   const handlePurge = async () => {
     if (!targetUserId) {
-      setPurgeStatus({ type: "error", message: "Select a user before purging." });
+      setPurgeStatus({ type: "error", message: lt("Select a user before purging.") });
       setShowPurgeConfirm(false);
       return;
     }
 
     setShowPurgeConfirm(false);
-    setPurgeStatus({ type: "loading", message: "Purging user backup data..." });
+    setPurgeStatus({ type: "loading", message: lt("Purging user backup data...") });
 
     try {
       const res = await fetch("/api/admin/backup-studio/import", {
@@ -196,7 +200,7 @@ export default function DataManagement() {
 
       const payload = await res.json().catch(() => null);
       if (!res.ok) {
-        const message = payload?.error?.message || payload?.error || "Purge failed";
+        const message = payload?.error?.message || payload?.error || lt("Purge failed");
         setPurgeStatus({ type: "error", message });
         return;
       }
@@ -207,13 +211,13 @@ export default function DataManagement() {
     } catch (error) {
       setPurgeStatus({
         type: "error",
-        message: error instanceof Error ? error.message : "Purge failed",
+        message: error instanceof Error ? error.message : lt("Purge failed"),
       });
     }
   };
 
   const handleLibraryExport = async () => {
-    setLibraryExportStatus({ type: "loading", message: "Preparing exercise library export..." });
+    setLibraryExportStatus({ type: "loading", message: lt("Preparing exercise library export...") });
 
     try {
       const res = await fetch("/api/exercise-library/studio", {
@@ -222,7 +226,7 @@ export default function DataManagement() {
 
       if (!res.ok) {
         const payload = await res.json().catch(() => null);
-        const message = payload?.error?.message || payload?.error || "Exercise library export failed";
+        const message = payload?.error?.message || payload?.error || lt("Exercise library export failed");
         setLibraryExportStatus({ type: "error", message });
         return;
       }
@@ -243,7 +247,7 @@ export default function DataManagement() {
     } catch (error) {
       setLibraryExportStatus({
         type: "error",
-        message: error instanceof Error ? error.message : "Exercise library export failed",
+        message: error instanceof Error ? error.message : lt("Exercise library export failed"),
       });
     }
   };
@@ -254,7 +258,7 @@ export default function DataManagement() {
 
     if (!file) return;
 
-    setLibraryImportStatus({ type: "loading", message: "Reading exercise library file..." });
+    setLibraryImportStatus({ type: "loading", message: lt("Reading exercise library file...") });
 
     try {
       const text = await file.text();
@@ -272,7 +276,7 @@ export default function DataManagement() {
 
       const payload = await res.json().catch(() => null);
       if (!res.ok) {
-        const message = payload?.error?.message || payload?.error || "Exercise library import failed";
+        const message = payload?.error?.message || payload?.error || lt("Exercise library import failed");
         setLibraryImportStatus({ type: "error", message });
         return;
       }
@@ -282,19 +286,19 @@ export default function DataManagement() {
     } catch (error) {
       setLibraryImportStatus({
         type: "error",
-        message: error instanceof Error ? error.message : "Exercise library import failed",
+        message: error instanceof Error ? error.message : lt("Exercise library import failed"),
       });
     }
   };
 
   const handleLibraryPurge = async () => {
     const confirmed = typeof window !== "undefined"
-      ? window.confirm("Purge the shared Application Exercise Library? This clears the deployed library canvas and preserves user history for later restore.")
+      ? window.confirm(lt("Purge the shared Application Exercise Library? This clears the deployed library canvas and preserves user history for later restore."))
       : true;
 
     if (!confirmed) return;
 
-    setLibraryPurgeStatus({ type: "loading", message: "Purging Application Exercise Library..." });
+    setLibraryPurgeStatus({ type: "loading", message: lt("Purging Application Exercise Library...") });
 
     try {
       const res = await fetch("/api/exercise-library/studio", {
@@ -306,7 +310,7 @@ export default function DataManagement() {
 
       const payload = await res.json().catch(() => null);
       if (!res.ok) {
-        const message = payload?.error?.message || payload?.error || "Exercise DB purge failed";
+        const message = payload?.error?.message || payload?.error || lt("Exercise DB purge failed");
         setLibraryPurgeStatus({ type: "error", message });
         return;
       }
@@ -316,7 +320,7 @@ export default function DataManagement() {
     } catch (error) {
       setLibraryPurgeStatus({
         type: "error",
-        message: error instanceof Error ? error.message : "Exercise DB purge failed",
+        message: error instanceof Error ? error.message : lt("Exercise DB purge failed"),
       });
     }
   };

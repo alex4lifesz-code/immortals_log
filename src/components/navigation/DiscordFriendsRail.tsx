@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { usePathname, useRouter } from "next/navigation";
 import { DASHBOARD_ROUTES } from "@/lib/navigation";
@@ -9,6 +9,7 @@ import { useIsMobile } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { formatDateLocal, formatDateWithPreference } from "@/lib/constants";
+import { translateEnglishToLanguage } from "@/lib/language";
 import type { ProgressionExercise, ProgressionLog } from "@/app/dashboard/workout/types";
 
 interface FriendsPayload {
@@ -126,6 +127,7 @@ function DiscordFriendsRail({
   const isMobile = useIsMobile();
   const { user } = useAuth();
   const { settings } = useDisplaySettings();
+  const lt = useCallback((text: string) => translateEnglishToLanguage(text, settings.languageMode), [settings.languageMode]);
   const dateFormat = settings.dateFormat || "dd-mmm-yyyy";
   const timeZone = settings.timeZone;
 
@@ -219,7 +221,7 @@ function DiscordFriendsRail({
               .filter((friend) => typeof friend?.id === "string")
               .map((friend) => ({
                 id: friend.id,
-                name: (friend.name || friend.username || "Friend").trim() || "Friend",
+                name: (friend.name || friend.username || lt("Friend")).trim() || lt("Friend"),
                 username: (friend.username || "").trim() || undefined,
                 createdAt: friend.createdAt ? new Date(friend.createdAt).toISOString() : undefined,
                 updatedAt: friend.updatedAt ? new Date(friend.updatedAt).toISOString() : undefined,
@@ -243,7 +245,7 @@ function DiscordFriendsRail({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [lt]);
 
   const selectableFriends = useMemo(
     () => friends.filter((friend) => friend.id !== user?.id),
@@ -607,45 +609,45 @@ function DiscordFriendsRail({
       : "-";
 
     if (friendViewMode === "history") {
-      return { label: "Last History", value: activeFriend?.lastWorkoutAt ? formatRelativeRecentDate(activeFriend.lastWorkoutAt, dateFormat, timeZone) : navigationValue };
+      return { label: lt("Last History"), value: activeFriend?.lastWorkoutAt ? formatRelativeRecentDate(activeFriend.lastWorkoutAt, dateFormat, timeZone) : navigationValue };
     }
     if (friendViewMode === "chart") {
-      return { label: "Last Chart", value: activeFriend?.lastWorkoutAt ? formatRelativeRecentDate(activeFriend.lastWorkoutAt, dateFormat, timeZone) : navigationValue };
+      return { label: lt("Last Chart"), value: activeFriend?.lastWorkoutAt ? formatRelativeRecentDate(activeFriend.lastWorkoutAt, dateFormat, timeZone) : navigationValue };
     }
     if (friendViewMode === "checkin") {
-      return { label: "Last Check-In", value: activeFriend?.lastCheckInAt ? formatRelativeRecentDate(activeFriend.lastCheckInAt, dateFormat, timeZone) : navigationValue };
+      return { label: lt("Last Check-In"), value: activeFriend?.lastCheckInAt ? formatRelativeRecentDate(activeFriend.lastCheckInAt, dateFormat, timeZone) : navigationValue };
     }
     if (friendViewMode === "chat") {
-      return { label: "Last Chat", value: navigationValue };
+      return { label: lt("Last Chat"), value: navigationValue };
     }
 
-    return { label: "Last Activity", value: latestKnownActivity ? (activeFriend?.lastActivityAt === latestKnownActivity ? navigationValue : formatRelativeRecentDate(latestKnownActivity, dateFormat, timeZone)) : "-" };
-  }, [activeFriend?.lastActivityAt, activeFriend?.lastActivityLabel, activeFriend?.lastCheckInAt, activeFriend?.lastWorkoutAt, dateFormat, friendViewMode, timeZone]);
+    return { label: lt("Last Activity"), value: latestKnownActivity ? (activeFriend?.lastActivityAt === latestKnownActivity ? navigationValue : formatRelativeRecentDate(latestKnownActivity, dateFormat, timeZone)) : "-" };
+  }, [activeFriend?.lastActivityAt, activeFriend?.lastActivityLabel, activeFriend?.lastCheckInAt, activeFriend?.lastWorkoutAt, dateFormat, friendViewMode, lt, timeZone]);
 
   const friendActionItems = useMemo(() => ([
     {
       id: "history" as const,
-      label: "History",
-      hint: activeFriend?.lastWorkoutAt ? `Last workout ${formatRelativeRecentDate(activeFriend.lastWorkoutAt, dateFormat, timeZone)}` : "No workout history yet",
+      label: lt("History"),
+      hint: activeFriend?.lastWorkoutAt ? `${lt("Last workout")} ${formatRelativeRecentDate(activeFriend.lastWorkoutAt, dateFormat, timeZone)}` : lt("No workout history yet"),
     },
     {
       id: "chart" as const,
-      label: "Chart",
-      hint: activeFriend?.lastWorkoutAt ? `Uses workout data from ${formatRelativeRecentDate(activeFriend.lastWorkoutAt, dateFormat, timeZone)}` : "No chart data yet",
+      label: lt("Chart"),
+      hint: activeFriend?.lastWorkoutAt ? `${lt("Uses workout data from")} ${formatRelativeRecentDate(activeFriend.lastWorkoutAt, dateFormat, timeZone)}` : lt("No chart data yet"),
     },
     {
       id: "checkin" as const,
-      label: "Check-In",
-      hint: activeFriend?.lastCheckInAt ? `Last check-in ${formatRelativeRecentDate(activeFriend.lastCheckInAt, dateFormat, timeZone)}` : "No check-ins yet",
+      label: lt("Check-In"),
+      hint: activeFriend?.lastCheckInAt ? `${lt("Last check-in")} ${formatRelativeRecentDate(activeFriend.lastCheckInAt, dateFormat, timeZone)}` : lt("No check-ins yet"),
     },
     {
       id: "chat" as const,
-      label: "Chat",
+      label: lt("Chat"),
       hint: activeFriend?.lastActivityAt
-        ? `${activeFriend?.lastActivityLabel || "Last seen"} • ${formatRelativeRecentDate(activeFriend.lastActivityAt, dateFormat, timeZone)}`
-        : "Coming soon",
+        ? `${activeFriend?.lastActivityLabel || lt("Last seen")} • ${formatRelativeRecentDate(activeFriend.lastActivityAt, dateFormat, timeZone)}`
+        : lt("Coming soon"),
     },
-  ]), [activeFriend?.lastActivityAt, activeFriend?.lastActivityLabel, activeFriend?.lastCheckInAt, activeFriend?.lastWorkoutAt, dateFormat, timeZone]);
+  ]), [activeFriend?.lastActivityAt, activeFriend?.lastActivityLabel, activeFriend?.lastCheckInAt, activeFriend?.lastWorkoutAt, dateFormat, lt, timeZone]);
 
   return (
     <>
@@ -667,7 +669,7 @@ function DiscordFriendsRail({
                 router.push("/dashboard/circle?tab=members");
               }}
               aria-current={isFriendsHomeActive ? "page" : undefined}
-              aria-label="Circle members"
+              aria-label={lt("Circle members")}
               className="relative mx-auto flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-2xl border transition-colors duration-150"
               style={{
                 borderColor: isFriendsHomeActive
@@ -681,7 +683,7 @@ function DiscordFriendsRail({
                   ? "0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent), 0 10px 22px color-mix(in srgb, var(--accent) 28%, transparent)"
                   : "none",
               }}
-              title="Circle members"
+              title={lt("Circle members")}
             >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.9}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M16 11a4 4 0 100-8 4 4 0 000 8M8 12a4 4 0 100-8 4 4 0 000 8" />
@@ -749,7 +751,7 @@ function DiscordFriendsRail({
                     boxShadow: "none",
                   }}
                   title={friend.name}
-                  aria-label={`Open ${friend.name} actions`}
+                  aria-label={lt("Open friend actions")}
                   aria-pressed={isSelected}
                 >
                   {isSelected && (
@@ -836,14 +838,14 @@ function DiscordFriendsRail({
                               color: "var(--mist-light)",
                               backgroundColor: "transparent",
                             }}
-                            aria-label="Back from friend drawer"
+                            aria-label={lt("Back from friend drawer")}
                           >
                             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                             </svg>
                           </button>
                           <h2 className="truncate text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--mist-light)" }}>
-                            {`Your Friend ${activeFriend.name}`}
+                            {`${lt("Your Friend")} ${activeFriend.name}`}
                           </h2>
                         </div>
                       </div>
@@ -855,31 +857,31 @@ function DiscordFriendsRail({
                         className="mx-1 my-0.5 rounded-md px-3 py-2.5"
                       >
                         <p className="text-[11px] font-semibold uppercase tracking-[0.1em]" style={{ color: "var(--text-secondary)" }}>
-                          Friend Overview
+                          {lt("Friend Overview")}
                         </p>
                         <div className="mt-1.5 grid grid-cols-2 gap-2">
                           <div>
-                            <p className="text-[9px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>Sessions</p>
+                            <p className="text-[9px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>{lt("Sessions")}</p>
                             <p className="text-xs font-semibold" style={{ color: "var(--text-primary)" }}>{activeFriend.sessionCount ?? 0}</p>
                           </div>
                           <div>
-                            <p className="text-[9px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>Check-Ins</p>
+                            <p className="text-[9px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>{lt("Check-ins")}</p>
                             <p className="text-xs font-semibold" style={{ color: "var(--text-primary)" }}>{activeFriend.checkInCount ?? 0}</p>
                           </div>
                           <div>
-                            <p className="text-[9px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>Weight</p>
+                            <p className="text-[9px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>{lt("Weight")}</p>
                             <p className="text-xs font-semibold" style={{ color: "var(--text-primary)" }}>
                               {friendOverviewStats.latestWeight != null ? `${friendOverviewStats.latestWeight} kg` : "-"}
                             </p>
                           </div>
                           <div>
-                            <p className="text-[9px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>Today</p>
+                            <p className="text-[9px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>{lt("Today")}</p>
                             <p className="text-xs font-semibold" style={{ color: friendOverviewStats.todayCheckedIn ? "var(--forest)" : "var(--text-primary)" }}>
                               {friendOverviewStats.todayCheckedIn
                                 ? friendOverviewStats.todayWeight != null
-                                  ? `Checked in • ${friendOverviewStats.todayWeight} kg`
-                                  : "Checked in"
-                                : "No check-in"}
+                                  ? `${lt("Checked in")} • ${friendOverviewStats.todayWeight} kg`
+                                  : lt("Checked in")
+                                : lt("No check-in")}
                             </p>
                           </div>
                         </div>
@@ -960,14 +962,16 @@ function DiscordFriendsRail({
                               onClick={() => setDrawerState(activeFriend.id)}
                               className="inline-flex h-9 w-9 items-center justify-center rounded-md"
                               style={{ color: "var(--mist-light)", backgroundColor: "transparent" }}
-                              aria-label="Back to friend drawer"
+                              aria-label={lt("Back to friend drawer")}
                             >
                               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                               </svg>
                             </button>
                             <h2 className="truncate text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--mist-light)" }}>
-                              {`${toPossessive(activeFriend.name)} ${friendViewMode === "history" ? "History" : friendViewMode === "chart" ? "Chart" : friendViewMode === "chat" ? "Chat" : "Check-in"}`}
+                              {settings.languageMode === "vietnamese"
+                                ? `${activeFriend.name} ${friendViewMode === "history" ? lt("History") : friendViewMode === "chart" ? lt("Chart") : friendViewMode === "chat" ? lt("Chat") : lt("Check-In")}`
+                                : `${toPossessive(activeFriend.name)} ${friendViewMode === "history" ? lt("History") : friendViewMode === "chart" ? lt("Chart") : friendViewMode === "chat" ? lt("Chat") : lt("Check-In")}`}
                             </h2>
                           </div>
 
@@ -978,7 +982,7 @@ function DiscordFriendsRail({
                                 onClick={() => setFriendHistorySearchOpen((prev) => !prev)}
                                 className="inline-flex h-8 items-center justify-center transition-colors"
                                 style={{ color: "var(--text-secondary)" }}
-                                aria-label={friendHistorySearchOpen ? "Close exercise search" : "Open exercise search"}
+                                aria-label={friendHistorySearchOpen ? lt("Close exercise search") : lt("Open exercise search")}
                                 aria-expanded={friendHistorySearchOpen}
                               >
                                 <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -990,7 +994,7 @@ function DiscordFriendsRail({
                                 onClick={() => setFriendHistoryFilterOpen(true)}
                                 className="relative inline-flex h-8 items-center justify-center transition-colors"
                                 style={{ color: "var(--text-secondary)" }}
-                                aria-label="Open exercise filters"
+                                aria-label={lt("Open exercise filters")}
                               >
                                 <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 5h18M6 12h12m-9 7h6" />
@@ -1018,7 +1022,7 @@ function DiscordFriendsRail({
                                 type="text"
                                 value={friendHistorySearchQuery}
                                 onChange={(event) => setFriendHistorySearchQuery(event.target.value)}
-                                placeholder="Search exercises"
+                                placeholder={lt("Search exercises")}
                                 className="mt-2 h-8 w-full rounded-md border px-2.5 text-sm outline-none"
                                 style={{
                                   borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
@@ -1035,11 +1039,11 @@ function DiscordFriendsRail({
                     {friendViewMode === "history" ? (
                       friendHistoryLoading ? (
                         <div className="px-3 py-4 text-center text-xs" style={{ color: "var(--text-muted)" }}>
-                          Loading history...
+                          {lt("Loading history...")}
                         </div>
                       ) : friendHistoryRows.length === 0 ? (
                         <div className="px-3 py-4 text-center text-xs" style={{ color: "var(--text-muted)" }}>
-                          No exercises logged yet.
+                          {lt("No exercises logged yet.")}
                         </div>
                       ) : filteredFriendHistoryRows.length === 0 ? (
                         <div className="px-3 py-4 text-center text-xs" style={{ color: "var(--text-muted)" }}>
@@ -1069,7 +1073,7 @@ function DiscordFriendsRail({
                               </div>
                               <div className="mt-0.5 flex items-start justify-between gap-2">
                                 <p className="min-w-0 text-[11px] italic" style={{ color: "var(--text-muted)" }}>
-                                  {`Recent: ${row.variant ? `${row.variant} ` : ""}${row.progression} ${row.exerciseName}`}
+                                  {`${lt("Recent")}: ${row.variant ? `${row.variant} ` : ""}${row.progression} ${row.exerciseName}`}
                                 </p>
                                 <span className="shrink-0 text-[12px]" style={{ color: "var(--mist-light)" }}>
                                   ›
@@ -1089,10 +1093,10 @@ function DiscordFriendsRail({
                           }}
                         >
                           <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                            {friendViewMode === "chart" ? "Chart" : friendViewMode === "chat" ? "Chat" : "Check-in"} coming soon
+                            {friendViewMode === "chart" ? lt("Chart") : friendViewMode === "chat" ? lt("Chat") : lt("Check-In")} {lt("coming soon")}
                           </p>
                           <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
-                            This now opens as a dedicated drawer instead of switching the page.
+                            {lt("This now opens as a dedicated drawer instead of switching the page.")}
                           </p>
                         </div>
                       </div>
@@ -1124,7 +1128,7 @@ function DiscordFriendsRail({
                               <div className="border-b px-3 py-2.5" style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)" }}>
                                 <div className="flex items-center justify-between gap-2">
                                   <h2 className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--mist-light)" }}>
-                                    Exercise Filters
+                                    {lt("Exercise Filters")}
                                   </h2>
                                   <button
                                     type="button"
@@ -1135,7 +1139,7 @@ function DiscordFriendsRail({
                                       color: "var(--mist-light)",
                                       backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
                                     }}
-                                    aria-label="Close exercise filters"
+                                    aria-label={lt("Close exercise filters")}
                                   >
                                     x
                                   </button>
@@ -1144,7 +1148,7 @@ function DiscordFriendsRail({
 
                               <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 space-y-3">
                                 <div>
-                                  <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Sort</label>
+                                  <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">{lt("Sort")}</label>
                                   <select
                                     value={friendHistorySort}
                                     onChange={(event) => setFriendHistorySort(event.target.value as "recent" | "oldest" | "name-az")}
@@ -1155,14 +1159,14 @@ function DiscordFriendsRail({
                                       color: "var(--cloud-white)",
                                     }}
                                   >
-                                    <option value="recent">Recent first</option>
-                                    <option value="oldest">Oldest first</option>
-                                    <option value="name-az">Name A-Z</option>
+                                    <option value="recent">{lt("Recent first")}</option>
+                                    <option value="oldest">{lt("Oldest first")}</option>
+                                    <option value="name-az">{lt("Name A-Z")}</option>
                                   </select>
                                 </div>
 
                                 <div>
-                                  <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Updated</label>
+                                  <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">{lt("Updated")}</label>
                                   <select
                                     value={friendHistoryRecency}
                                     onChange={(event) => setFriendHistoryRecency(event.target.value as "all" | "7d" | "30d")}
@@ -1173,9 +1177,9 @@ function DiscordFriendsRail({
                                       color: "var(--cloud-white)",
                                     }}
                                   >
-                                    <option value="all">All time</option>
-                                    <option value="7d">Last 7 days</option>
-                                    <option value="30d">Last 30 days</option>
+                                    <option value="all">{lt("All time")}</option>
+                                    <option value="7d">{lt("Last 7 days")}</option>
+                                    <option value="30d">{lt("Last 30 days")}</option>
                                   </select>
                                 </div>
                               </div>
@@ -1195,7 +1199,7 @@ function DiscordFriendsRail({
                                     color: "var(--mist-light)",
                                   }}
                                 >
-                                  Clear filters
+                                  {lt("Clear filters")}
                                 </button>
                               </div>
                             </div>
@@ -1244,7 +1248,7 @@ function DiscordFriendsRail({
                             onClick={() => setDrawerState(activeFriend.id, { view: "history" })}
                             className="inline-flex h-9 w-9 items-center justify-center rounded-md"
                             style={{ color: "var(--mist-light)", backgroundColor: "transparent" }}
-                            aria-label="Back to friend history"
+                            aria-label={lt("Back to friend history")}
                           >
                             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -1252,10 +1256,10 @@ function DiscordFriendsRail({
                           </button>
                           <div className="min-w-0">
                             <h3 className="truncate text-sm font-semibold" style={{ color: getRecentExerciseTextColor(selectedFriendExerciseLogs[0]?.createdAt, true) }}>
-                              {selectedFriendExercise.name || "Exercise"}
+                              {selectedFriendExercise.name || lt("Exercise")}
                             </h3>
                             <p className="mt-0.5 text-[9px] uppercase tracking-[0.1em]" style={{ color: "var(--mist-light)" }}>
-                              Workout History
+                              {lt("Workout History")}
                             </p>
                           </div>
                         </div>
@@ -1264,7 +1268,7 @@ function DiscordFriendsRail({
                             type="button"
                             onClick={() => setFriendExerciseSearchOpen((prev) => !prev)}
                             className="inline-flex h-8 items-center justify-center text-[#b5bac1] transition-colors hover:text-[#f2f3f5]"
-                            aria-label={friendExerciseSearchOpen ? "Close log search" : "Open log search"}
+                            aria-label={friendExerciseSearchOpen ? lt("Close log search") : lt("Open log search")}
                             aria-expanded={friendExerciseSearchOpen}
                           >
                             <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -1275,7 +1279,7 @@ function DiscordFriendsRail({
                             type="button"
                             onClick={() => setFriendExerciseFilterOpen(true)}
                             className="relative inline-flex h-8 items-center justify-center text-[#b5bac1] transition-colors hover:text-[#f2f3f5]"
-                            aria-label="Open log filters"
+                            aria-label={lt("Open log filters")}
                           >
                             <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M3 5h18M6 12h12m-9 7h6" />
@@ -1302,7 +1306,7 @@ function DiscordFriendsRail({
                               type="text"
                               value={friendExerciseSearchQuery}
                               onChange={(event) => setFriendExerciseSearchQuery(event.target.value)}
-                              placeholder="Search logs"
+                              placeholder={lt("Search logs")}
                               className="mt-2 h-8 w-full rounded-md border px-2.5 text-sm outline-none"
                               style={{
                                 borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
@@ -1341,7 +1345,7 @@ function DiscordFriendsRail({
                               <div className="border-b px-3 py-2.5" style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)" }}>
                                 <div className="flex items-center justify-between gap-2">
                                   <h2 className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--mist-light)" }}>
-                                    Log Filters
+                                    {lt("Log Filters")}
                                   </h2>
                                   <button
                                     type="button"
@@ -1352,7 +1356,7 @@ function DiscordFriendsRail({
                                       color: "var(--mist-light)",
                                       backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
                                     }}
-                                    aria-label="Close log filters"
+                                    aria-label={lt("Close log filters")}
                                   >
                                     x
                                   </button>
@@ -1361,7 +1365,7 @@ function DiscordFriendsRail({
 
                               <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 space-y-3">
                                 <div>
-                                  <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Progression</label>
+                                  <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">{lt("Progression")}</label>
                                   <select
                                     value={friendExerciseProgressionFilter}
                                     onChange={(event) => setFriendExerciseProgressionFilter(event.target.value)}
@@ -1372,7 +1376,7 @@ function DiscordFriendsRail({
                                       color: "var(--cloud-white)",
                                     }}
                                   >
-                                    <option value="all">All progressions</option>
+                                    <option value="all">{lt("All progressions")}</option>
                                     {friendExerciseProgressionOptions.map((progressionName) => (
                                       <option key={`friend-progression-${progressionName}`} value={progressionName}>{progressionName}</option>
                                     ))}
@@ -1380,7 +1384,7 @@ function DiscordFriendsRail({
                                 </div>
 
                                 <div>
-                                  <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Variation</label>
+                                  <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">{lt("Variation")}</label>
                                   <select
                                     value={friendExerciseVariantFilter}
                                     onChange={(event) => setFriendExerciseVariantFilter(event.target.value)}
@@ -1391,15 +1395,15 @@ function DiscordFriendsRail({
                                       color: "var(--cloud-white)",
                                     }}
                                   >
-                                    <option value="all">All variations</option>
+                                    <option value="all">{lt("All variations")}</option>
                                     {friendExerciseVariantOptions.map((variant) => (
-                                      <option key={`friend-variant-${variant}`} value={variant}>{variant === "-" ? "No variation" : variant}</option>
+                                      <option key={`friend-variant-${variant}`} value={variant}>{variant === "-" ? lt("No variation") : variant}</option>
                                     ))}
                                   </select>
                                 </div>
 
                                 <div>
-                                  <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Weight</label>
+                                  <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">{lt("Weight")}</label>
                                   <select
                                     value={friendExerciseWeightFilter}
                                     onChange={(event) => setFriendExerciseWeightFilter(event.target.value as "all" | "weighted" | "bodyweight")}
@@ -1410,14 +1414,14 @@ function DiscordFriendsRail({
                                       color: "var(--cloud-white)",
                                     }}
                                   >
-                                    <option value="all">All loads</option>
-                                    <option value="weighted">Weighted</option>
-                                    <option value="bodyweight">Bodyweight</option>
+                                    <option value="all">{lt("All loads")}</option>
+                                    <option value="weighted">{lt("Weighted")}</option>
+                                    <option value="bodyweight">{lt("Bodyweight")}</option>
                                   </select>
                                 </div>
 
                                 <div>
-                                  <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Reps</label>
+                                  <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">{lt("Reps")}</label>
                                   <select
                                     value={friendExerciseRepsFilter}
                                     onChange={(event) => setFriendExerciseRepsFilter(event.target.value as "all" | "1-5" | "6-10" | "11+")}
@@ -1428,15 +1432,15 @@ function DiscordFriendsRail({
                                       color: "var(--cloud-white)",
                                     }}
                                   >
-                                    <option value="all">All rep ranges</option>
-                                    <option value="1-5">1–5 reps</option>
-                                    <option value="6-10">6–10 reps</option>
-                                    <option value="11+">11+ reps</option>
+                                    <option value="all">{lt("All rep ranges")}</option>
+                                    <option value="1-5">{lt("1–5 reps")}</option>
+                                    <option value="6-10">{lt("6–10 reps")}</option>
+                                    <option value="11+">{lt("11+ reps")}</option>
                                   </select>
                                 </div>
 
                                 <div>
-                                  <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">Sort</label>
+                                  <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">{lt("Sort")}</label>
                                   <select
                                     value={friendExerciseSort}
                                     onChange={(event) => setFriendExerciseSort(event.target.value as "recent" | "oldest" | "progression-asc" | "progression-desc")}
@@ -1447,10 +1451,10 @@ function DiscordFriendsRail({
                                       color: "var(--cloud-white)",
                                     }}
                                   >
-                                    <option value="recent">Recent first</option>
-                                    <option value="oldest">Oldest first</option>
-                                    <option value="progression-asc">Progression ascending</option>
-                                    <option value="progression-desc">Progression descending</option>
+                                    <option value="recent">{lt("Recent first")}</option>
+                                    <option value="oldest">{lt("Oldest first")}</option>
+                                    <option value="progression-asc">{lt("Progression ascending")}</option>
+                                    <option value="progression-desc">{lt("Progression descending")}</option>
                                   </select>
                                 </div>
                               </div>
@@ -1473,7 +1477,7 @@ function DiscordFriendsRail({
                                     color: "var(--mist-light)",
                                   }}
                                 >
-                                  Clear filters
+                                  {lt("Clear filters")}
                                 </button>
                               </div>
                             </div>
@@ -1494,15 +1498,15 @@ function DiscordFriendsRail({
                       ) : (
                         <>
                           {filteredSelectedFriendExerciseLogs.map((log) => {
-                            const tierName = selectedFriendExercise.tiers.find((tier) => tier.level === log.level)?.name ?? `Progression ${log.level}`;
+                            const tierName = selectedFriendExercise.tiers.find((tier) => tier.level === log.level)?.name ?? `${lt("Progression")} ${log.level}`;
                             const variationValue = log.variant?.trim() || "-";
                             const modValue = log.modifier?.trim() || "-";
                             const notesValue = log.notes?.trim() || "-";
                             const alignedMetricRows = getWorkoutMetricRows(log);
                             const leftDetailRows = [
-                              { label: "Variation:", value: variationValue, valueColor: "var(--mountain-blue-glow)" },
-                              { label: "Mod:", value: modValue, valueColor: "var(--gold-glow)" },
-                              { label: "Notes:", value: notesValue, valueColor: "var(--text-secondary)" },
+                              { label: `${lt("Variation")}:`, value: variationValue, valueColor: "var(--mountain-blue-glow)" },
+                              { label: `${lt("Mod")}:`, value: modValue, valueColor: "var(--gold-glow)" },
+                              { label: `${lt("Notes")}:`, value: notesValue, valueColor: "var(--text-secondary)" },
                             ];
                             const alignedDetailRowCount = Math.max(leftDetailRows.length, alignedMetricRows.length);
 
@@ -1539,14 +1543,14 @@ function DiscordFriendsRail({
                                         <div className="min-w-0 grid grid-cols-2 gap-x-3">
                                           {metric.weight !== "-" ? (
                                             <span className="truncate" style={{ color: "var(--mountain-blue-glow)" }}>
-                                              <span style={{ color: "var(--text-muted)" }}>Weight:</span> {metric.weight}
+                                              <span style={{ color: "var(--text-muted)" }}>{lt("Weight")}: </span>{metric.weight}
                                             </span>
                                           ) : (
                                             <span aria-hidden="true" />
                                           )}
                                           {metric.reps !== "-" ? (
                                             <span className="truncate" style={{ color: "var(--forest)" }}>
-                                              <span style={{ color: "var(--text-muted)" }}>Reps:</span> {metric.reps}
+                                              <span style={{ color: "var(--text-muted)" }}>{lt("Reps")}: </span>{metric.reps}
                                             </span>
                                           ) : (
                                             <span aria-hidden="true" />

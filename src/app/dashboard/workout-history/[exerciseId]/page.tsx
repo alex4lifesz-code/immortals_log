@@ -9,6 +9,7 @@ import { MemoTrainingLogTable } from "@/components/workout/TrainingLogTable";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { api } from "@/lib/api-client";
+import { translateEnglishToLanguage } from "@/lib/language";
 import { DASHBOARD_ROUTES } from "@/lib/navigation";
 import { getExerciseDisplayName } from "@/lib/exercise-name";
 import { DEFAULT_USER_PHYSIQUE, loadUserPhysique } from "@/lib/user-physique";
@@ -30,6 +31,7 @@ export default function WorkoutHistoryDetailPage() {
   const fromHistoryPage = source === "history";
   const fromExercisesPage = source === "exercises";
   const { settings } = useDisplaySettings();
+  const lt = (text: string) => translateEnglishToLanguage(text, settings.languageMode);
   const displayTerminologyMode = !settings.showExerciseForeignLanguage && settings.languageMode === "english"
     ? "normal"
     : settings.terminologyMode;
@@ -107,9 +109,9 @@ export default function WorkoutHistoryDetailPage() {
   }, [exercise, filteredLogs, selectedTierLevel]);
 
   const displayName = useMemo(() => {
-    if (!exercise) return "Workout";
+    if (!exercise) return lt("Workout");
     return stripBwPercentHint(getExerciseDisplayName(exercise, displayTerminologyMode, settings.showExerciseForeignLanguage));
-  }, [displayTerminologyMode, exercise, settings.showExerciseForeignLanguage]);
+  }, [displayTerminologyMode, exercise, lt, settings.showExerciseForeignLanguage]);
 
   const totalLogs = filteredLogs.length;
   const completedLogs = useMemo(() => {
@@ -139,9 +141,9 @@ export default function WorkoutHistoryDetailPage() {
   }, [exercise, currentLevel]);
 
   const categoryLabel = useMemo(() => {
-    if (!exercise) return "Other";
+    if (!exercise) return lt("Other");
     return getExerciseCategoryLabel(exercise);
-  }, [exercise]);
+  }, [exercise, lt]);
 
   const categoryColor = useMemo(() => {
     if (categoryLabel === "GYM") return "var(--category-gym)";
@@ -180,9 +182,9 @@ export default function WorkoutHistoryDetailPage() {
   }, [filteredLogs]);
 
   const lastLoggedDisplay = useMemo(() => {
-    if (!lastLogDate) return "No logs yet";
+    if (!lastLogDate) return lt("No logs yet");
     return formatDateTimeWithPreference(lastLogDate, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone);
-  }, [lastLogDate, settings.dateFormat, settings.timeZone]);
+  }, [lastLogDate, lt, settings.dateFormat, settings.timeZone]);
 
   const backHref = useMemo(() => {
     const base = fromExercisesPage
@@ -198,23 +200,23 @@ export default function WorkoutHistoryDetailPage() {
     return `${base}?${params.toString()}`;
   }, [fromExercisesPage, fromHistoryPage, targetUserId]);
 
-  const backLabel = fromExercisesPage ? "Back to Exercise Library" : fromHistoryPage ? "Back to History" : "Back to Train";
+  const backLabel = fromExercisesPage ? lt("Back to Exercise Library") : fromHistoryPage ? lt("Back to History") : lt("Back to Train");
 
   return (
     <PageLayout
-      title={`${displayName} History`}
-      subtitle="Compact training record for this workout"
+      title={`${displayName} ${lt("History")}`}
+      subtitle={lt("Compact training record for this workout")}
       mobileContentPaddingClass="p-2 pb-24"
     >
       <div className="nyaa-history-page space-y-2 px-0 py-2 sm:py-3">
 
         {loading ? (
           <div className="rounded-lg border p-6 text-center text-sm" style={{ borderColor: "var(--border)", color: "var(--text-muted)", background: "var(--surface)" }}>
-            Loading workout history...
+            {lt("Loading workout history...")}
           </div>
         ) : !exercise ? (
           <div className="rounded-lg border p-5 text-center text-xs" style={{ borderColor: "var(--danger)", color: "var(--danger)", backgroundColor: "color-mix(in srgb, var(--danger) 6%, transparent)" }}>
-            Workout not found.
+            {lt("Workout not found.")}
           </div>
         ) : (
           <>
@@ -227,7 +229,7 @@ export default function WorkoutHistoryDetailPage() {
                   color: "var(--text-secondary)",
                 }}
               >
-                You are currently viewing this user&apos;s filtered history for this exercise.
+                {lt("You are currently viewing this user's filtered history for this exercise.")}
               </div>
             )}
 
@@ -248,7 +250,7 @@ export default function WorkoutHistoryDetailPage() {
                       {backLabel}
                     </Link>
                     <p className="truncate text-xs font-bold" style={{ color: "var(--text-primary)" }}>{displayName}</p>
-                    <p className="text-[11px]" style={{ color: "var(--text-secondary)" }}>Exercise snapshot</p>
+                    <p className="text-[11px]" style={{ color: "var(--text-secondary)" }}>{lt("Exercise snapshot")}</p>
                   </div>
                   <span
                     className="shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-semibold"
@@ -266,53 +268,53 @@ export default function WorkoutHistoryDetailPage() {
               <table className="w-full text-[11px] border-collapse" style={{ backgroundColor: "var(--surface)" }}>
                 <tbody>
                   <tr>
-                    <td className="theme-snapshot-label px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)", width: "30%" }}>Current Progression:</td>
+                    <td className="theme-snapshot-label px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)", width: "30%" }}>{lt("Current Progression")}:</td>
                     <td className="theme-snapshot-accent px-2 py-1.5 border-b border-r" style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)" }}>
-                      {currentTier?.tierName || "Unassigned progression"}
+                      {currentTier?.tierName || lt("Unassigned progression")}
                     </td>
-                    <td className="theme-snapshot-label px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)", width: "15%" }}>Last Logged:</td>
+                    <td className="theme-snapshot-label px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)", width: "15%" }}>{lt("Last Logged")}:</td>
                     <td className="theme-snapshot-value px-2 py-1.5 border-b" style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)" }}>
                       {lastLoggedDisplay}
                     </td>
                   </tr>
                   <tr>
-                    <td className="theme-snapshot-label px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)" }}>Total Logs:</td>
+                    <td className="theme-snapshot-label px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)" }}>{lt("Total Logs")}:</td>
                     <td className="theme-snapshot-accent px-2 py-1.5 border-b border-r" style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)" }}>
                       {totalLogs}
                     </td>
-                    <td className="theme-snapshot-label px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)" }}>Completion:</td>
+                    <td className="theme-snapshot-label px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)" }}>{lt("Completion")}:</td>
                     <td className="theme-snapshot-warning px-2 py-1.5 border-b" style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)" }}>
                       {completionRate}%
                     </td>
                   </tr>
                   <tr>
-                    <td className="theme-snapshot-label px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)" }}>Average Weight:</td>
+                    <td className="theme-snapshot-label px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)" }}>{lt("Average Weight")}:</td>
                     <td className="theme-snapshot-success px-2 py-1.5 border-b border-r" style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)" }}>
                       {averageWeightDisplay}
                     </td>
-                    <td className="theme-snapshot-label px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)" }}>Average Reps:</td>
+                    <td className="theme-snapshot-label px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)" }}>{lt("Average Reps")}:</td>
                     <td className="px-2 py-1.5 border-b" style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)", color: "var(--difficulty-pink)" }}>
                       {averageRepsDisplay}
                     </td>
                   </tr>
                   <tr>
-                    <td className="theme-snapshot-label px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)" }}>Difficulty / Equipment:</td>
+                    <td className="theme-snapshot-label px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)" }}>{lt("Difficulty / Equipment")}:</td>
                     <td className="theme-snapshot-value px-2 py-1.5 border-b border-r" style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)" }}>
-                      {exercise.difficulty || "-"} / {exercise.equipmentType || "Bodyweight"}
+                      {exercise.difficulty || "-"} / {exercise.equipmentType || lt("Bodyweight")}
                     </td>
-                    <td className="theme-snapshot-label px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)" }}>Activity:</td>
+                    <td className="theme-snapshot-label px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)" }}>{lt("Activity")}:</td>
                     <td className="theme-snapshot-value px-2 py-1.5 border-b" style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)" }}>
                       {logsLast7Days} (7d) • {logsLast30Days} (30d)
                     </td>
                   </tr>
                   <tr>
-                    <td className="theme-snapshot-label px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)" }}>Primary Muscles:</td>
+                    <td className="theme-snapshot-label px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)" }}>{lt("Primary Muscles")}:</td>
                     <td className="theme-snapshot-value px-2 py-1.5 border-b" colSpan={3} style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)" }}>
                       {exercise.primaryMuscles || "-"}
                     </td>
                   </tr>
                   <tr>
-                    <td className="theme-snapshot-label px-2 py-1.5 font-semibold border-r whitespace-nowrap" style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)" }}>Assigned Days:</td>
+                    <td className="theme-snapshot-label px-2 py-1.5 font-semibold border-r whitespace-nowrap" style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)" }}>{lt("Assigned Days")}:</td>
                     <td className="theme-snapshot-value px-2 py-1.5" colSpan={3}>
                       {exercise.assignedDays || "-"}
                     </td>
@@ -330,7 +332,7 @@ export default function WorkoutHistoryDetailPage() {
             <div className="nyaa-history-table-shell">
               {selectedTierLevel != null ? (
                 <div className="mb-2 border px-2 py-1 text-[11px]" style={{ borderColor: "var(--border)", backgroundColor: "color-mix(in srgb, var(--accent) 8%, var(--surface))", color: "var(--text-secondary)" }}>
-                  Filtered to progression: <span style={{ color: "var(--accent)" }}>{selectedTierName || `Level ${selectedTierLevel}`}</span>
+                  {lt("Filtered to progression")}: <span style={{ color: "var(--accent)" }}>{selectedTierName || `${lt("Level")} ${selectedTierLevel}`}</span>
                 </div>
               ) : null}
               <MemoTrainingLogTable
@@ -339,7 +341,7 @@ export default function WorkoutHistoryDetailPage() {
                 onRefresh={fetchExercise}
                 userId={userId}
                 historyTargetUserId={targetUserId || undefined}
-                trainingLogTitleOverride={`Training Log - ${displayName}`}
+                trainingLogTitleOverride={`${lt("Training Log")} - ${displayName}`}
                 disableExerciseLinks
                 hideInputSection
               />

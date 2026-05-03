@@ -17,6 +17,7 @@ import {
 } from "@/lib/constants";
 import { PROGRESSION_EXERCISES_UPDATED_EVENT } from "@/lib/progression-events";
 import { api, ApiRequestError } from "@/lib/api-client";
+import { translateEnglishToLanguage } from "@/lib/language";
 import { kgToLbs, lbsToKg, type TimedUnitPref } from "@/lib/unit-conversion";
 import type { ProgressionExercise, ProgressionLog } from "@/app/dashboard/workout/types";
 
@@ -153,6 +154,7 @@ function buildEditSnapshot(input: {
 export default function TrainInputCanvasPage() {
   const { user } = useAuth();
   const { settings } = useDisplaySettings();
+  const lt = (text: string) => translateEnglishToLanguage(text, settings.languageMode);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -521,7 +523,7 @@ export default function TrainInputCanvasPage() {
       } catch (error) {
         console.error("Failed to load existing training log:", error);
         if (!cancelled) {
-          setMessage({ type: "error", text: "Failed to load this logged session." });
+          setMessage({ type: "error", text: lt("Failed to load this logged session.") });
         }
       } finally {
         if (!cancelled) {
@@ -591,11 +593,11 @@ export default function TrainInputCanvasPage() {
 
     const existingAssignedDays = parseDayAssignments(selectedExercise.assignedDays || "");
     if (!existingAssignedDays.includes(assignedDayIndex)) {
-      setMessage({ type: "success", text: `${selectedExercise.name} is not assigned to ${assignedDayName || "this day"}.` });
+      setMessage({ type: "success", text: `${selectedExercise.name} ${lt("is not assigned to")} ${assignedDayName || lt("this day")}.` });
       return;
     }
 
-    const confirmed = window.confirm(`Remove ${selectedExercise.name} from ${assignedDayName || "this day"}?`);
+    const confirmed = window.confirm(`${lt("Remove")} ${selectedExercise.name} ${lt("from")} ${assignedDayName || lt("this day")}?`);
     if (!confirmed) return;
 
     const days = new Set(existingAssignedDays);
@@ -634,7 +636,7 @@ export default function TrainInputCanvasPage() {
         window.dispatchEvent(new Event(PROGRESSION_EXERCISES_UPDATED_EVENT));
       }
 
-      setMessage({ type: "success", text: `Removed from ${assignedDayName || "day"}.` });
+      setMessage({ type: "success", text: `${lt("Removed from")} ${assignedDayName || lt("day")}.` });
       if (typeof window !== "undefined" && window.history.length > 1) {
         router.back();
       } else {
@@ -642,7 +644,7 @@ export default function TrainInputCanvasPage() {
       }
     } catch (error) {
       console.error("Failed to remove day assignment:", error);
-      setMessage({ type: "error", text: "Failed to remove from day. Please try again." });
+      setMessage({ type: "error", text: lt("Failed to remove from day. Please try again.") });
     } finally {
       setRemovingFromDay(false);
     }
@@ -802,7 +804,7 @@ export default function TrainInputCanvasPage() {
     if (parsedSets.length === 0) {
       setActivePanel("session");
       setHighlightedSetId(sets[0]?.id ?? null);
-      setMessage({ type: "error", text: "Enter at least one set before saving." });
+      setMessage({ type: "error", text: lt("Enter at least one set before saving.") });
       return;
     }
 
@@ -833,7 +835,7 @@ export default function TrainInputCanvasPage() {
       if (inputMode === "custom") {
         const nextExerciseName = customExerciseName.trim();
         if (nextExerciseName.length < 2) {
-          setMessage({ type: "error", text: "Enter a custom exercise name first." });
+          setMessage({ type: "error", text: lt("Enter a custom exercise name first.") });
           setSaving(false);
           return;
         }
@@ -856,7 +858,7 @@ export default function TrainInputCanvasPage() {
         targetLevel = 1;
         targetVariant = null;
       } else if (!targetExerciseId) {
-        setMessage({ type: "error", text: "Select an exercise before saving." });
+        setMessage({ type: "error", text: lt("Select an exercise before saving.") });
         setSaving(false);
         return;
       }
@@ -925,7 +927,7 @@ export default function TrainInputCanvasPage() {
       console.error("Failed to save training log:", error);
       setMessage({
         type: "error",
-        text: error instanceof ApiRequestError ? error.message : `Failed to ${isEditingExistingLog ? "update" : "save"} training log.`,
+        text: error instanceof ApiRequestError ? error.message : `${lt("Failed to")} ${isEditingExistingLog ? lt("update") : lt("save")} ${lt("training log")}.`,
       });
     } finally {
       setSaving(false);
@@ -934,7 +936,7 @@ export default function TrainInputCanvasPage() {
 
   const handleDeleteLoggedSession = useCallback(async () => {
     if (!isEditingExistingLog || !editLogId || saving || deleting) return;
-    if (typeof window !== "undefined" && !window.confirm("Delete this logged session? This action cannot be undone.")) return;
+    if (typeof window !== "undefined" && !window.confirm(lt("Delete this logged session? This action cannot be undone."))) return;
 
     setDeleting(true);
     setMessage(null);
@@ -957,7 +959,7 @@ export default function TrainInputCanvasPage() {
       console.error("Failed to delete training log:", error);
       setMessage({
         type: "error",
-        text: error instanceof ApiRequestError ? error.message : "Failed to delete this logged session.",
+        text: error instanceof ApiRequestError ? error.message : lt("Failed to delete this logged session."),
       });
     } finally {
       setDeleting(false);
@@ -966,11 +968,11 @@ export default function TrainInputCanvasPage() {
 
   const shellMinHeight = "calc(100dvh - 0.5rem)";
   const selectedExerciseMeta = inputMode === "custom"
-    ? "We'll save this as a custom exercise so you can keep using it."
+    ? lt("We'll save this as a custom exercise so you can keep using it.")
     : selectedExercise
-      ? `${selectedExercise.category || "Training"} • ${selectedExercise.tiers.length} progression tiers`
-      : "Choose an exercise from the previous screen.";
-  const setValuePlaceholder = valueMode === "timed" ? "time" : weightUnit;
+      ? `${selectedExercise.category || lt("Training")} • ${selectedExercise.tiers.length} ${lt("progression tiers")}`
+      : lt("Choose an exercise from the previous screen.");
+  const setValuePlaceholder = valueMode === "timed" ? lt("time") : weightUnit;
 
   const recentLogPlaceholders = useMemo<Array<{ value: string; reps: string }>>(() => {
     if (!selectedExercise) return [];
@@ -1038,11 +1040,11 @@ export default function TrainInputCanvasPage() {
   const activePanelIndex = SESSION_PANELS.findIndex((panel) => panel.id === activePanel);
   const completedPanelCount = SESSION_PANELS.filter((panel) => completionByPanel[panel.id]).length;
   const selectedExerciseLabel = inputMode === "custom"
-    ? customExerciseName.trim() || "Custom exercise"
-    : selectedExercise?.name || "No exercise selected";
+    ? customExerciseName.trim() || lt("Custom exercise")
+    : selectedExercise?.name || lt("No exercise selected");
   const selectedProgressionLabel = inputMode === "custom"
-    ? "Progression 1"
-    : selectedExercise?.tiers.find((tier) => String(tier.level) === selectedLevel)?.name || `Progression ${selectedLevel || "1"}`;
+    ? `${lt("Progression")} 1`
+    : selectedExercise?.tiers.find((tier) => String(tier.level) === selectedLevel)?.name || `${lt("Progression")} ${selectedLevel || "1"}`;
   const reviewSetPreview = sets.flatMap((set, index) => {
     const value = set.value.trim();
     const reps = set.reps.trim();
@@ -1050,10 +1052,10 @@ export default function TrainInputCanvasPage() {
     if (!value && !reps) return [];
 
     const summary = valueMode === "timed"
-      ? `${value || "0"} ${timedUnit === "minutes" ? "min" : "sec"} • ${reps || "0"} reps`
-      : `${value || "0"} ${weightUnit} • ${reps || "0"} reps`;
+      ? `${value || "0"} ${timedUnit === "minutes" ? lt("min") : lt("sec")} • ${reps || "0"} ${lt("reps")}`
+      : `${value || "0"} ${weightUnit} • ${reps || "0"} ${lt("reps")}`;
 
-    return [{ label: `Set ${index + 1}`, summary }];
+    return [{ label: `${lt("Set")} ${index + 1}`, summary }];
   });
   const currentEditSnapshot = useMemo(() => {
     if (!isEditingExistingLog) return null;
@@ -1079,12 +1081,12 @@ export default function TrainInputCanvasPage() {
       && currentEditSnapshot
       && currentEditSnapshot !== initialEditSnapshot,
   );
-  const editorPageTitle = isEditingExistingLog ? "Edit Workout" : isDayAssignment ? `Log a Workout (${assignedDayName ?? "Day"})` : "Log a Workout";
+  const editorPageTitle = isEditingExistingLog ? lt("Edit Workout") : isDayAssignment ? `${lt("Log a Workout")} (${assignedDayName ?? lt("Day")})` : lt("Log a Workout");
   const editorPageDescription = isEditingExistingLog
-    ? "Update or delete this workout."
+    ? lt("Update or delete this workout.")
     : isDayAssignment
-      ? `Assigned: ${prefillVariant ? `${prefillVariant} ` : ""}${selectedExercise?.tiers.find((t) => String(t.level) === selectedLevel)?.name || prefillProgression} ${prefillExerciseName}`
-      : "Track your sets and reps.";
+      ? `${lt("Assigned")}: ${prefillVariant ? `${prefillVariant} ` : ""}${selectedExercise?.tiers.find((t) => String(t.level) === selectedLevel)?.name || prefillProgression} ${prefillExerciseName}`
+      : lt("Track your sets and reps.");
   const isFocusedField = (field: string) => highlightedField === field;
   const getFieldHighlightStyle = (field: string) => (isFocusedField(field)
     ? {
@@ -1158,7 +1160,7 @@ export default function TrainInputCanvasPage() {
             color: "var(--mist-light)",
           }}
         >
-          ← Back
+          ← {lt("Back")}
         </GlowButton>
 
         {mode === "save" ? (
@@ -1176,7 +1178,7 @@ export default function TrainInputCanvasPage() {
                   color: "var(--danger-hover)",
                 }}
               >
-                {deleting ? "Deleting..." : "Delete"}
+                {deleting ? lt("Deleting...") : lt("Delete")}
               </GlowButton>
             ) : null}
             <GlowButton
@@ -1191,7 +1193,7 @@ export default function TrainInputCanvasPage() {
                 color: "var(--text-primary)",
               }}
             >
-              {saving ? "Saving..." : isEditingExistingLog ? "Update" : "Save"}
+              {saving ? lt("Saving...") : isEditingExistingLog ? lt("Update") : lt("Save")}
             </GlowButton>
           </div>
         ) : (
@@ -1206,7 +1208,7 @@ export default function TrainInputCanvasPage() {
               color: "var(--text-primary)",
             }}
           >
-            Next →
+            {lt("Next")} →
           </GlowButton>
         )}
       </div>
@@ -1220,7 +1222,7 @@ export default function TrainInputCanvasPage() {
     >
       {loading || !editLogHydrated ? (
         <GlowCard glow="jade" hoverable={false}>
-          <p className="py-4 text-center text-sm text-mist-dark">Loading...</p>
+          <p className="py-4 text-center text-sm text-mist-dark">{lt("Loading...")}</p>
         </GlowCard>
       ) : (
         <div className="flex flex-col px-0" style={{ minHeight: shellMinHeight }}>
@@ -1245,7 +1247,7 @@ export default function TrainInputCanvasPage() {
                     href={returnHref}
                     className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md transition-colors"
                     style={{ color: "var(--mist-light)", backgroundColor: "transparent" }}
-                    aria-label={isEditingExistingLog ? "Back to workout history" : "Back to train"}
+                    aria-label={isEditingExistingLog ? lt("Back to workout history") : lt("Back to train")}
                   >
                     <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -1272,7 +1274,7 @@ export default function TrainInputCanvasPage() {
                           opacity: saving || deleting || removingFromDay ? 0.7 : 1,
                         }}
                       >
-                        {removingFromDay ? "Removing..." : "Remove from day"}
+                        {removingFromDay ? lt("Removing...") : lt("Remove from day")}
                       </button>
                     ) : null}
                     {isEditingExistingLog ? (
@@ -1288,7 +1290,7 @@ export default function TrainInputCanvasPage() {
                           opacity: saving || deleting ? 0.7 : 1,
                         }}
                       >
-                        {deleting ? "Deleting..." : "Delete"}
+                        {deleting ? lt("Deleting...") : lt("Delete")}
                       </button>
                     ) : null}
                     {isEditingExistingLog ? (
@@ -1304,7 +1306,7 @@ export default function TrainInputCanvasPage() {
                           opacity: saving || deleting ? 0.7 : 1,
                         }}
                       >
-                        {saving ? "Applying..." : hasPendingEditChanges ? "Apply Changes" : "Close"}
+                        {saving ? lt("Applying...") : hasPendingEditChanges ? lt("Apply Changes") : lt("Close")}
                       </button>
                     ) : null}
                   </div>
@@ -1333,7 +1335,7 @@ export default function TrainInputCanvasPage() {
               <div className="flex min-h-0 flex-1 flex-row gap-2 sm:gap-3 overflow-hidden">
                 <aside className="w-[56px] shrink-0 sm:w-[60px]">
                   <div className="flex h-full min-h-0 flex-col items-center py-1">
-                    <p className="mb-2 text-[9px] uppercase tracking-[0.14em] text-[color:var(--text-muted)]">Steps</p>
+                    <p className="mb-2 text-[9px] uppercase tracking-[0.14em] text-[color:var(--text-muted)]">{lt("Steps")}</p>
 
                     <div className="flex min-h-0 flex-1 flex-col items-center gap-2 overflow-y-auto">
                       {SESSION_PANELS.map((panel, index) => {
@@ -1388,8 +1390,8 @@ export default function TrainInputCanvasPage() {
                         backgroundColor: "transparent",
                         color: "var(--text-muted)",
                       }}
-                      aria-label="Reset session"
-                      title="Reset session"
+                      aria-label={lt("Reset session")}
+                      title={lt("Reset session")}
                     >
                       <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.9}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5" />
@@ -1405,7 +1407,7 @@ export default function TrainInputCanvasPage() {
                     <section className="flex flex-col overflow-hidden px-1 py-1" style={panelShellStyle}>
                       <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">
                         <div id="editor-field-session-date" className="rounded-lg px-1 py-1" style={getFieldHighlightStyle("session-date")}>
-                          <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Session date</label>
+                          <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Session date")}</label>
                           <input
                             type="date"
                             value={trainingDate}
@@ -1418,7 +1420,7 @@ export default function TrainInputCanvasPage() {
                         {inputMode !== "custom" ? (
                           <>
                             <div className="mt-3 min-w-0">
-                              <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Selected exercise</p>
+                              <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Selected exercise")}</p>
                             </div>
 
                             <div
@@ -1440,7 +1442,7 @@ export default function TrainInputCanvasPage() {
                                   className="mt-1 h-10 w-full rounded-md border px-3 text-sm outline-none"
                                   style={{ borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--text-primary)" }}
                                 >
-                                  <option value="" disabled>Select a parent exercise</option>
+                                  <option value="" disabled>{lt("Select a parent exercise")}</option>
                                   {exercises
                                     .slice()
                                     .sort((a, b) => a.name.localeCompare(b.name))
@@ -1455,7 +1457,7 @@ export default function TrainInputCanvasPage() {
                                   className="mt-1 text-base font-semibold"
                                   style={{ color: selectedExercise?.name || customExerciseName ? "var(--accent)" : "var(--text-muted)" }}
                                 >
-                                  {selectedExercise?.name || customExerciseName || "No exercise selected"}
+                                  {selectedExercise?.name || customExerciseName || lt("No exercise selected")}
                                 </p>
                               )}
                               <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">{selectedExerciseMeta}</p>
@@ -1465,13 +1467,13 @@ export default function TrainInputCanvasPage() {
 
                         {inputMode === "custom" ? (
                           <div className="mt-3">
-                            <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Custom exercise name</label>
+                            <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Custom exercise name")}</label>
                             <div className="rounded-xl border px-3 py-3" style={{ borderColor: "color-mix(in srgb, var(--forest) 46%, transparent)", backgroundColor: "color-mix(in srgb, var(--forest) 10%, transparent)" }}>
                               <input
                                 type="text"
                                 value={customExerciseName}
                                 onChange={(event) => setCustomExerciseName(event.target.value)}
-                                placeholder="Type the exercise name you want"
+                                placeholder={lt("Type the exercise name you want")}
                                 className="h-10 w-full rounded-md border px-3 text-sm outline-none"
                                 style={{ borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--text-primary)" }}
                               />
@@ -1490,12 +1492,12 @@ export default function TrainInputCanvasPage() {
                     <section className="flex flex-col overflow-hidden px-1 py-1" style={panelShellStyle}>
                       <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">
                         <div>
-                          <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Exercise setup{isDayAssignment ? <span className="normal-case tracking-normal"> — locked to assignment</span> : null}</p>
+                          <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Exercise setup")}{isDayAssignment ? <span className="normal-case tracking-normal"> {lt("— locked to assignment")}</span> : null}</p>
                         </div>
 
                         <div className="mt-4 grid gap-3 lg:grid-cols-2">
                           <div id="editor-field-progression" className="rounded-lg px-1 py-1" style={getFieldHighlightStyle("progression")}>
-                            <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Progression</label>
+                            <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Progression")}</label>
                             <select
                               value={selectedLevel}
                               onChange={(event) => setSelectedLevel(event.target.value)}
@@ -1503,7 +1505,7 @@ export default function TrainInputCanvasPage() {
                               className="h-10 w-full rounded-md border px-3 text-sm font-semibold outline-none"
                               style={{ borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--label-progression)", opacity: isDayAssignment || inputMode !== "existing" || !selectedExercise ? 0.6 : 1, cursor: isDayAssignment ? "not-allowed" : undefined }}
                             >
-                              {(selectedExercise?.tiers.length ? selectedExercise.tiers : [{ level: 1, name: "Progression 1" }]).map((tier) => (
+                              {(selectedExercise?.tiers.length ? selectedExercise.tiers : [{ level: 1, name: `${lt("Progression")} 1` }]).map((tier) => (
                                 <option key={`${tier.level}-${tier.name}`} value={String(tier.level)}>
                                   {tier.name}
                                 </option>
@@ -1512,7 +1514,7 @@ export default function TrainInputCanvasPage() {
                           </div>
 
                           <div id="editor-field-variation" className="rounded-lg px-1 py-1" style={getFieldHighlightStyle("variation")}>
-                            <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Variant</label>
+                            <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Variant")}</label>
                             <select
                               value={selectedVariant}
                               onChange={(event) => setSelectedVariant(event.target.value)}
@@ -1520,7 +1522,7 @@ export default function TrainInputCanvasPage() {
                               className="h-10 w-full rounded-md border px-3 text-sm font-semibold outline-none"
                               style={{ borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--label-variant)", opacity: isDayAssignment || inputMode !== "existing" || !selectedExercise ? 0.6 : 1, cursor: isDayAssignment ? "not-allowed" : undefined }}
                             >
-                              <option value="">Default</option>
+                              <option value="">{lt("Default")}</option>
                               {(selectedExercise?.variations || []).map((variation) => (
                                 <option key={variation.id} value={variation.name}>
                                   {variation.name}
@@ -1538,7 +1540,7 @@ export default function TrainInputCanvasPage() {
                     <section className="flex flex-col overflow-hidden px-1 py-1" style={panelShellStyle}>
                       <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">
                         <div>
-                          <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Session format</p>
+                          <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Session format")}</p>
                         </div>
 
                         <div className="mt-4 grid gap-3 lg:grid-cols-2">
@@ -1565,8 +1567,8 @@ export default function TrainInputCanvasPage() {
                                 </svg>
                               </span>
                               <span className="min-w-0">
-                                <span className="block text-sm font-semibold">Weight</span>
-                                <span className="mt-0.5 block text-[10px] text-[color:var(--text-muted)]">Load and reps</span>
+                                <span className="block text-sm font-semibold">{lt("Weight")}</span>
+                                <span className="mt-0.5 block text-[10px] text-[color:var(--text-muted)]">{lt("Load and reps")}</span>
                               </span>
                             </div>
                           </button>
@@ -1594,8 +1596,8 @@ export default function TrainInputCanvasPage() {
                                 </svg>
                               </span>
                               <span className="min-w-0">
-                                <span className="block text-sm font-semibold">Timed</span>
-                                <span className="mt-0.5 block text-[10px] text-[color:var(--text-muted)]">Seconds and holds</span>
+                                <span className="block text-sm font-semibold">{lt("Timed")}</span>
+                                <span className="mt-0.5 block text-[10px] text-[color:var(--text-muted)]">{lt("Seconds and holds")}</span>
                               </span>
                             </div>
                           </button>
@@ -1603,7 +1605,7 @@ export default function TrainInputCanvasPage() {
 
                         {valueMode === "timed" ? (
                           <div className="mt-3 max-w-[320px]">
-                            <p className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Input unit</p>
+                            <p className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Input unit")}</p>
                             <div className="grid grid-cols-2 gap-2">
                               <button
                                 type="button"
@@ -1616,7 +1618,7 @@ export default function TrainInputCanvasPage() {
                                   boxShadow: "none",
                                 }}
                               >
-                                Seconds (s)
+                                {lt("Seconds")} (s)
                               </button>
                               <button
                                 type="button"
@@ -1629,13 +1631,13 @@ export default function TrainInputCanvasPage() {
                                   boxShadow: "none",
                                 }}
                               >
-                                Minutes (m)
+                                {lt("Minutes")} (m)
                               </button>
                             </div>
                           </div>
                         ) : (
                           <div className="mt-3 max-w-[320px]">
-                            <p className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Input unit</p>
+                            <p className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Input unit")}</p>
                             <div className="grid grid-cols-2 gap-2">
                               <button
                                 type="button"
@@ -1648,7 +1650,7 @@ export default function TrainInputCanvasPage() {
                                   boxShadow: "none",
                                 }}
                               >
-                                Kilograms (kg)
+                                {lt("Kilograms")} (kg)
                               </button>
                               <button
                                 type="button"
@@ -1661,7 +1663,7 @@ export default function TrainInputCanvasPage() {
                                   boxShadow: "none",
                                 }}
                               >
-                                Pounds (lbs)
+                                {lt("Pounds")} (lbs)
                               </button>
                             </div>
                           </div>
@@ -1688,7 +1690,7 @@ export default function TrainInputCanvasPage() {
                             >
                               <div className="flex items-start justify-between gap-2">
                                 <div className="min-w-0">
-                                  <p className="text-[10px] uppercase tracking-[0.08em] text-[color:var(--text-muted)]">Modifier</p>
+                                  <p className="text-[10px] uppercase tracking-[0.08em] text-[color:var(--text-muted)]">{lt("Modifier")}</p>
                                 </div>
                                 <div className="flex shrink-0 items-center gap-1.5">
                                   <span
@@ -1699,7 +1701,7 @@ export default function TrainInputCanvasPage() {
                                       color: modifierKg === 0 ? "var(--text-muted)" : "var(--danger-hover)",
                                     }}
                                   >
-                                    {modifierKg === 0 ? "None" : formatSignedModifierKg(modifierKg)}
+                                    {modifierKg === 0 ? lt("None") : formatSignedModifierKg(modifierKg)}
                                   </span>
                                   {modifierKg !== 0 ? (
                                     <button
@@ -1708,7 +1710,7 @@ export default function TrainInputCanvasPage() {
                                       className="rounded-full border px-2.5 py-1 text-[10px] font-semibold"
                                       style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface-hover) 72%, var(--surface))", color: "var(--text-secondary)" }}
                                     >
-                                      Reset
+                                      {lt("Reset")}
                                     </button>
                                   ) : null}
                                 </div>
@@ -1723,7 +1725,7 @@ export default function TrainInputCanvasPage() {
                                   value={modifierKg}
                                   onChange={(event) => setModifierKg(Number(event.target.value))}
                                   className="h-1.5 w-full cursor-pointer accent-[var(--jade-glow)]"
-                                  aria-label="Weight modifier slider"
+                                  aria-label={lt("Weight modifier slider")}
                                 />
                                 <div className="mt-2 flex items-center justify-between text-[9px] text-[color:var(--text-muted)]">
                                   <span>-50kg</span>
@@ -1736,7 +1738,7 @@ export default function TrainInputCanvasPage() {
 
                           <div className="rounded-xl border px-3 py-3" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface-hover) 62%, var(--surface))" }}>
                             <div>
-                              <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Sets</p>
+                              <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Sets")}</p>
                             </div>
 
                             <div className="mt-3 space-y-2.5">
@@ -1775,17 +1777,17 @@ export default function TrainInputCanvasPage() {
                                           className="rounded-full px-2.5 py-1 text-[10px] font-semibold text-[color:var(--text-primary)]"
                                           style={{ backgroundColor: "color-mix(in srgb, var(--accent) 12%, transparent)", border: "1px solid color-mix(in srgb, var(--accent) 24%, transparent)" }}
                                         >
-                                          Set {index + 1}
+                                          {lt("Set")} {index + 1}
                                         </span>
                                         {hasSummaryValues ? (
                                           <span className="truncate text-[10px]">
                                             <span style={{ color: "var(--col-weight)" }}>{summaryValueLabel}</span>
                                             <span style={{ color: "var(--text-muted)" }}> {summaryValueUnit} · </span>
                                             <span style={{ color: "var(--col-reps)" }}>{summaryRepsLabel}</span>
-                                            <span style={{ color: "var(--text-muted)" }}> reps</span>
+                                            <span style={{ color: "var(--text-muted)" }}> {lt("reps")}</span>
                                           </span>
                                         ) : (
-                                          <span className="truncate text-[10px] text-[color:var(--text-muted)]">Tap to continue this set</span>
+                                          <span className="truncate text-[10px] text-[color:var(--text-muted)]">{lt("Tap to continue this set")}</span>
                                         )}
                                       </button>
 
@@ -1811,7 +1813,7 @@ export default function TrainInputCanvasPage() {
                                                       boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--cloud-white) 3%, transparent)",
                                                     }}
                                                   >
-                                                    Remove
+                                                    {lt("Remove")}
                                                   </button>
                                                 ) : null}
                                                 <GlowButton
@@ -1831,7 +1833,7 @@ export default function TrainInputCanvasPage() {
                                                       : { boxShadow: "0 0 0 1px color-mix(in srgb, var(--accent) 14%, transparent) inset" }
                                                   }
                                                 >
-                                                  + Add Set
+                                                  + {lt("Add Set")}
                                                 </GlowButton>
                                               </>
                                             );
@@ -1852,7 +1854,7 @@ export default function TrainInputCanvasPage() {
                                               boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--cloud-white) 3%, transparent)",
                                             }}
                                           >
-                                            Remove
+                                            {lt("Remove")}
                                           </button>
                                         )}
                                       </div>
@@ -1862,7 +1864,7 @@ export default function TrainInputCanvasPage() {
                                       <div className="mt-3 grid grid-cols-2 gap-2">
                                         <label className="block">
                                           <span className="mb-1 block text-[10px] uppercase tracking-[0.08em] text-[color:var(--text-muted)]">
-                                            {valueMode === "timed" ? (timedUnit === "minutes" ? "Minutes" : "Seconds") : "Weight"}
+                                            {valueMode === "timed" ? (timedUnit === "minutes" ? lt("Minutes") : lt("Seconds")) : lt("Weight")}
                                           </span>
                                           <input
                                             type="number"
@@ -1876,14 +1878,14 @@ export default function TrainInputCanvasPage() {
                                           />
                                         </label>
                                         <label className="block">
-                                          <span className="mb-1 block text-[10px] uppercase tracking-[0.08em] text-[color:var(--text-muted)]">Reps</span>
+                                          <span className="mb-1 block text-[10px] uppercase tracking-[0.08em] text-[color:var(--text-muted)]">{lt("Reps")}</span>
                                           <input
                                             type="number"
                                             min="0"
                                             step="1"
                                             value={set.reps}
                                             onChange={(event) => updateSetRow(set.id, "reps", event.target.value)}
-                                            placeholder={placeholderForSetIndex(index, "reps", "reps")}
+                                            placeholder={placeholderForSetIndex(index, "reps", lt("reps"))}
                                             className="h-11 w-full rounded-xl border px-3 text-sm font-semibold outline-none placeholder:font-normal placeholder:italic placeholder:opacity-40"
                                             style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--col-reps)" }}
                                           />
@@ -1911,14 +1913,14 @@ export default function TrainInputCanvasPage() {
                         style={getFieldHighlightStyle("notes")}
                       >
                         <div className="shrink-0">
-                          <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Notes</p>
+                          <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Notes")}</p>
                         </div>
 
                         <textarea
                           value={notes}
                           onChange={(event) => setNotes(event.target.value)}
                           rows={8}
-                          placeholder="Anything important from this session..."
+                          placeholder={lt("Anything important from this session...")}
                           className="mt-3 min-h-[220px] flex-1 w-full resize-none rounded-lg border px-3 py-2.5 text-sm text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)]"
                           style={{
                             borderColor: "color-mix(in srgb, var(--ink-light) 52%, transparent)",
@@ -1943,46 +1945,46 @@ export default function TrainInputCanvasPage() {
                           }}
                         >
                           <div className="flex items-baseline justify-between gap-2">
-                            <p className="text-[10px] uppercase tracking-[0.12em] text-[color:var(--text-muted)]">Review</p>
+                            <p className="text-[10px] uppercase tracking-[0.12em] text-[color:var(--text-muted)]">{lt("Review")}</p>
 
                           </div>
 
                           <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5">
                             <div>
-                              <dt className="text-[9px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Exercise</dt>
+                              <dt className="text-[9px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Exercise")}</dt>
                               <dd className="text-[12px] font-semibold truncate" style={{ color: "var(--accent)" }}>{selectedExerciseLabel}</dd>
                             </div>
                             <div>
-                              <dt className="text-[9px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Progression</dt>
+                              <dt className="text-[9px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Progression")}</dt>
                               <dd className="text-[12px] font-semibold truncate" style={{ color: "var(--label-progression)" }}>{selectedProgressionLabel}</dd>
                             </div>
                             <div>
-                              <dt className="text-[9px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Variation</dt>
-                              <dd className="text-[12px] font-semibold truncate" style={{ color: "var(--label-variant)" }}>{selectedVariant || "Default"}</dd>
+                              <dt className="text-[9px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Variation")}</dt>
+                              <dd className="text-[12px] font-semibold truncate" style={{ color: "var(--label-variant)" }}>{selectedVariant || lt("Default")}</dd>
                             </div>
                             <div>
-                              <dt className="text-[9px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Date</dt>
+                              <dt className="text-[9px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Date")}</dt>
                               <dd className="text-[12px] font-semibold" style={{ color: "var(--text-primary)" }}>{trainingDate}</dd>
                             </div>
                             <div>
-                              <dt className="text-[9px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Format</dt>
+                              <dt className="text-[9px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Format")}</dt>
                               <dd className="text-[12px] font-semibold" style={{ color: "var(--accent)" }}>
-                                {valueMode === "timed" ? "Timed" : `Weight · ${weightUnit}`}
+                                {valueMode === "timed" ? lt("Timed") : `${lt("Weight")} · ${weightUnit}`}
                               </dd>
                             </div>
                             <div>
-                              <dt className="text-[9px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Modifier</dt>
+                              <dt className="text-[9px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Modifier")}</dt>
                               <dd
                                 className="text-[12px] font-semibold"
                                 style={{ color: valueMode === "weight" && modifierKg !== 0 ? "var(--danger-hover)" : "var(--text-muted)" }}
                               >
-                                {valueMode === "weight" && modifierKg !== 0 ? formatSignedModifierKg(modifierKg) : "—"}
+                                {valueMode === "weight" && modifierKg !== 0 ? formatSignedModifierKg(modifierKg) : lt("—")}
                               </dd>
                             </div>
                           </dl>
 
                           <div className="mt-3 border-t pt-2" style={{ borderColor: "color-mix(in srgb, var(--border) 56%, transparent)" }}>
-                            <p className="text-[9px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Working sets</p>
+                            <p className="text-[9px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Working sets")}</p>
                             <ul className="mt-1">
                               {reviewSetPreview.length ? reviewSetPreview.map((set) => (
                                 <li key={set.label} className="flex items-baseline justify-between gap-2 py-1 text-[11px]">
@@ -1990,18 +1992,18 @@ export default function TrainInputCanvasPage() {
                                   <span className="truncate" style={{ color: "var(--col-weight)" }}>{set.summary}</span>
                                 </li>
                               )) : (
-                                <li className="py-1 text-[11px] text-[color:var(--text-secondary)]">No sets added yet.</li>
+                                <li className="py-1 text-[11px] text-[color:var(--text-secondary)]">{lt("No sets added yet.")}</li>
                               )}
                             </ul>
                           </div>
 
                           <div className="mt-3 border-t pt-2" style={{ borderColor: "color-mix(in srgb, var(--border) 56%, transparent)" }}>
-                            <p className="text-[9px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">Session notes</p>
+                            <p className="text-[9px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Session notes")}</p>
                             <p
                               className="mt-1 text-[11px] leading-5"
                               style={{ color: notes.trim() ? "var(--text-primary)" : "var(--text-muted)" }}
                             >
-                              {notes.trim() || "No notes added for this session."}
+                              {notes.trim() || lt("No notes added for this session.")}
                             </p>
                           </div>
                         </div>

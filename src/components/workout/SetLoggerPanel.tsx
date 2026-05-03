@@ -28,6 +28,7 @@ import { getDifficultyColorClass, getDifficultyGlowStyleScaled } from "@/lib/dif
 import { getExerciseDisplayName, getTypeDisplayName, getDifficultyDisplayName, getTypeColorKey } from "@/lib/exercise-name";
 import type { UserPhysiqueSettings } from "@/lib/user-physique";
 import { useLatestCheckinWeight } from "@/hooks/useLatestCheckinWeight";
+import { translateEnglishToLanguage } from "@/lib/language";
 
 type MobilePickerField = "modifier" | "band" | "variation";
 
@@ -133,6 +134,16 @@ export function SetLoggerPanel({
   const showBodyweightQuickFill = supportsBodyweightQuickFill(exercise);
   const canUseBwQuickFill = !showHold && showBodyweightQuickFill;
   const latestCheckInWeightKg = useLatestCheckinWeight(userId, canUseBwQuickFill);
+  const lt = useCallback(
+    (text: string) => translateEnglishToLanguage(text, settings.languageMode),
+    [settings.languageMode],
+  );
+  const noAddedWeightLabel = lt("No added weight");
+  const noResistanceBandLabel = lt("No resistance band");
+  const noVariationLabel = lt("No variation");
+  const notesLabel = lt("Notes");
+  const notesPlaceholder = lt("Session notes, cues, or pain markers...");
+  const shortNotesPlaceholder = lt("Notes...");
   const availableVariationOptions = useMemo(() => {
     const options = new Set<string>();
 
@@ -159,43 +170,43 @@ export function SetLoggerPanel({
   }, [exercise, exercise.variations, exercise.userProgress, selectedVariation]);
 
   const selectedModifierLabel = useMemo(() => {
-    if (!selectedModifierKg) return "No added weight";
+    if (!selectedModifierKg) return noAddedWeightLabel;
     const parsed = Number(selectedModifierKg);
     return Number.isFinite(parsed) ? formatModifierWeightLabel(parsed) : selectedModifierKg;
-  }, [selectedModifierKg]);
+  }, [noAddedWeightLabel, selectedModifierKg]);
 
   const selectedBandLabel = useMemo(() => {
-    if (!selectedResistanceBand) return "No resistance band";
+    if (!selectedResistanceBand) return noResistanceBandLabel;
     const parsed = Number(selectedResistanceBand);
     return Number.isFinite(parsed)
       ? `Resistance band ${formatResistanceBandLabel(parsed)}`
       : selectedResistanceBand;
-  }, [selectedResistanceBand]);
+  }, [noResistanceBandLabel, selectedResistanceBand]);
 
-  const selectedVariationLabel = useMemo(() => selectedVariation || "No variation", [selectedVariation]);
+  const selectedVariationLabel = useMemo(() => selectedVariation || noVariationLabel, [noVariationLabel, selectedVariation]);
 
   const mobilePickerOptions = useMemo(() => {
     if (!mobilePicker) return [] as Array<{ value: string; label: string }>;
 
     if (mobilePicker.field === "modifier") {
       return [
-        { value: "", label: "No added weight" },
+        { value: "", label: noAddedWeightLabel },
         ...MODIFIER_WEIGHT_OPTIONS.map((kg) => ({ value: String(kg), label: formatModifierWeightLabel(kg) })),
       ];
     }
 
     if (mobilePicker.field === "band") {
       return [
-        { value: "", label: "No resistance band" },
+        { value: "", label: noResistanceBandLabel },
         ...RESISTANCE_BAND_OPTIONS.map((kg) => ({ value: String(kg), label: `Resistance band ${formatResistanceBandLabel(kg)}` })),
       ];
     }
 
     return [
-      { value: "", label: "No variation" },
+      { value: "", label: noVariationLabel },
       ...availableVariationOptions.map((variationName) => ({ value: variationName, label: variationName })),
     ];
-  }, [mobilePicker, availableVariationOptions]);
+  }, [mobilePicker, availableVariationOptions, noAddedWeightLabel, noResistanceBandLabel, noVariationLabel]);
 
   const mobilePickerCurrentValue = useMemo(() => {
     if (!mobilePicker) return "";
@@ -722,7 +733,7 @@ export function SetLoggerPanel({
                             onChange={(e) => { setSelectedModifierKg(e.target.value); setAutoPopulated(prev => ({ ...prev, modifierKg: false })); }}
                             className={`w-full border border-ink-light/20 bg-ink-dark text-gold outline-none focus:border-gold/40 transition-colors cursor-pointer ${isMobile ? "rounded-xl px-3 py-3 text-sm" : "rounded-lg px-2.5 py-2 text-xs"}`}
                           >
-                            <option value="">No added weight</option>
+                            <option value="">{noAddedWeightLabel}</option>
                             {MODIFIER_WEIGHT_OPTIONS.map((kg) => (
                               <option key={kg} value={String(kg)}>
                                 {formatModifierWeightLabel(kg)}
@@ -752,7 +763,7 @@ export function SetLoggerPanel({
                             onChange={(e) => { setSelectedResistanceBand(e.target.value); setAutoPopulated(prev => ({ ...prev, band: false })); }}
                             className={`w-full border border-ink-light/20 bg-ink-dark text-mountain-blue-glow outline-none focus:border-mountain-blue-glow/40 transition-colors cursor-pointer ${isMobile ? "rounded-xl px-3 py-3 text-sm" : "rounded-lg px-2.5 py-2 text-xs"}`}
                           >
-                            <option value="">No resistance band</option>
+                            <option value="">{noResistanceBandLabel}</option>
                             {RESISTANCE_BAND_OPTIONS.map((kg) => (
                               <option key={kg} value={String(kg)}>
                                 Resistance band {formatResistanceBandLabel(kg)}
@@ -784,7 +795,7 @@ export function SetLoggerPanel({
                         onChange={(e) => { setSelectedVariation(e.target.value); setAutoPopulated(prev => ({ ...prev, variation: false })); }}
                         className={`w-full border border-ink-light/20 bg-ink-dark text-crimson-light outline-none focus:border-crimson/40 transition-colors cursor-pointer ${isMobile ? "rounded-xl px-3 py-3 text-sm" : "rounded-lg px-2.5 py-2 text-xs"}`}
                       >
-                        <option value="">No variation</option>
+                        <option value="">{noVariationLabel}</option>
                         {availableVariationOptions.map((variationName) => (
                           <option key={variationName} value={variationName}>
                             {variationName}
@@ -1071,11 +1082,11 @@ export function SetLoggerPanel({
               }}
             >
               <label className="block space-y-1">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-mist-mid">Notes</span>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-mist-mid">{notesLabel}</span>
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Session notes, cues, or pain markers..."
+                  placeholder={notesPlaceholder}
                   rows={isMobile ? 3 : 2}
                   className={`w-full border border-ink-light/20 bg-ink-dark text-cloud-white outline-none transition-all duration-200 placeholder:text-mist-dark/40 focus:border-mist-mid/30 focus:bg-ink-mid/30 ${isMobile ? "rounded-xl px-3 py-3 text-sm" : "rounded-lg px-2.5 py-2 text-xs"}`}
                 />
@@ -1257,7 +1268,7 @@ export function SetLoggerPanel({
               </div>
             )}
 
-            <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes..."
+            <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={shortNotesPlaceholder}
               className="w-full rounded-lg px-2.5 py-2 text-xs outline-none bg-ink-dark border border-ink-light/20 text-cloud-white placeholder:text-mist-dark/40 focus:border-mist-mid/30" />
 
             <div className="flex gap-2">
@@ -1356,7 +1367,7 @@ export function SetLoggerPanel({
                       onChange={(e) => { setSelectedModifierKg(e.target.value); setAutoPopulated(prev => ({ ...prev, modifierKg: false })); }}
                       className="bg-ink-dark border border-ink-light/20 rounded px-2 py-1 text-xs text-gold outline-none focus:border-gold/40 transition-colors cursor-pointer"
                     >
-                      <option value="">No added weight</option>
+                      <option value="">{noAddedWeightLabel}</option>
                       {MODIFIER_WEIGHT_OPTIONS.map((kg) => (
                         <option key={kg} value={String(kg)}>
                           {formatModifierWeightLabel(kg)}
@@ -1373,7 +1384,7 @@ export function SetLoggerPanel({
                       onChange={(e) => { setSelectedResistanceBand(e.target.value); setAutoPopulated(prev => ({ ...prev, band: false })); }}
                       className="bg-ink-dark border border-ink-light/20 rounded px-2 py-1 text-xs text-mountain-blue-glow outline-none focus:border-mountain-blue-glow/40 transition-colors cursor-pointer"
                     >
-                      <option value="">No resistance band</option>
+                      <option value="">{noResistanceBandLabel}</option>
                       {RESISTANCE_BAND_OPTIONS.map((kg) => (
                         <option key={kg} value={String(kg)}>
                           Resistance band {formatResistanceBandLabel(kg)}
@@ -1390,7 +1401,7 @@ export function SetLoggerPanel({
                       onChange={(e) => { setSelectedVariation(e.target.value); setAutoPopulated(prev => ({ ...prev, variation: false })); }}
                       className="bg-ink-dark border border-ink-light/20 rounded px-2 py-1 text-xs text-crimson-light outline-none focus:border-crimson/40 transition-colors cursor-pointer"
                     >
-                      <option value="">No variation</option>
+                      <option value="">{noVariationLabel}</option>
                       {availableVariationOptions.map((variationName) => (
                         <option key={variationName} value={variationName}>
                           {variationName}
@@ -1424,7 +1435,7 @@ export function SetLoggerPanel({
                     <div className="text-[9px] text-center uppercase tracking-widest font-bold pb-0.5" style={{ color: 'var(--col-reps)', opacity: 0.95 }}>W3</div>
                   </>
                 )}
-                <div className="text-[9px] text-center uppercase tracking-widest font-semibold text-mist-dark/50 pb-0.5">Notes</div>
+                <div className="text-[9px] text-center uppercase tracking-widest font-semibold text-mist-dark/50 pb-0.5">{notesLabel}</div>
 
                 {canUseBwQuickFill && latestCheckInWeightKg != null && (
                   <>
@@ -1515,7 +1526,7 @@ export function SetLoggerPanel({
                     </select>
                   </>
                 )}
-                <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes..."
+                <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={shortNotesPlaceholder}
                   className="w-full rounded-md px-1.5 py-1.5 text-xs outline-none transition-all duration-200 bg-ink-dark border border-ink-light/20 text-cloud-white placeholder:text-mist-dark/40 focus:border-mist-mid/30 focus:bg-ink-mid/30" />
               </div>
             </div>

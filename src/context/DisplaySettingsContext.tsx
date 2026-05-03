@@ -113,12 +113,25 @@ const DEFAULT_SETTINGS: DisplaySettings = {
   checkInCalendarScope: "all",
 };
 
+function normalizeLanguageMode(value: unknown): LanguageMode {
+  return value === "vietnamese" ? "vietnamese" : "english";
+}
+
+function normalizeShowExerciseForeignLanguage(value: unknown): boolean {
+  if (typeof value === "boolean") return value;
+  return false;
+}
+
 function normalizeDisplaySettings(partial?: Partial<DisplaySettings> | null): DisplaySettings {
-  return {
+  const merged = {
     ...DEFAULT_SETTINGS,
     ...(partial ?? {}),
-    languageMode: "english",
-    showExerciseForeignLanguage: false,
+  } as DisplaySettings;
+
+  return {
+    ...merged,
+    languageMode: normalizeLanguageMode(partial?.languageMode),
+    showExerciseForeignLanguage: normalizeShowExerciseForeignLanguage(partial?.showExerciseForeignLanguage),
   };
 }
 

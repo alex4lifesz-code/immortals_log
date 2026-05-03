@@ -225,9 +225,18 @@ function formatDate(
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffMs >= 0 && diffMins < 60) return `${Math.max(1, diffMins)}m ago`;
-  if (diffMs >= 0 && diffHours < 24) return `${Math.max(1, diffHours)}h ago`;
-  if (diffMs >= 0 && diffDays < 7) return `${Math.max(1, diffDays)}d ago`;
+  if (diffMs >= 0 && diffMins < 60) {
+    const minutes = Math.max(1, diffMins);
+    return `${minutes} ${minutes === 1 ? t("minute ago", "normal") : t("minutes ago", "normal")}`;
+  }
+  if (diffMs >= 0 && diffHours < 24) {
+    const hours = Math.max(1, diffHours);
+    return `${hours} ${hours === 1 ? t("hour ago", "normal") : t("hours ago", "normal")}`;
+  }
+  if (diffMs >= 0 && diffDays < 7) {
+    const days = Math.max(1, diffDays);
+    return `${days} ${days === 1 ? t("day ago", "normal") : t("days ago", "normal")}`;
+  }
   return formatDateWithPreference(date, dateFormat, timeZone);
 }
 
@@ -322,17 +331,17 @@ const TrainingLogMobileCard = memo(function TrainingLogMobileCard({
           >
             {hasAverageWeight && (
               <span className="training-log-mobile-entry-metric-primary text-[10px] leading-tight" style={{ color: "var(--jade-light)" }}>
-                Avg Weight: {averageValueText}
+                {t("Avg Weight", "normal")}: {averageValueText}
               </span>
             )}
             {hasAverageReps && (
               <span className="training-log-mobile-entry-metric text-[10px] leading-tight" style={{ color: "var(--text-secondary)" }}>
-                Avg Reps: {averageRepsText}
+                {t("Avg Reps", "normal")}: {averageRepsText}
               </span>
             )}
             {hasWeight && (
               <span className="training-log-mobile-entry-metric-accent text-[10px] leading-tight" style={{ color: "var(--gold)" }}>
-                Weight: {entry.modifier}
+                {t("Weight", "normal")}: {entry.modifier}
               </span>
             )}
           </div>

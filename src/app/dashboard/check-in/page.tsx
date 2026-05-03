@@ -12,6 +12,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { createCalendarMonthAnchor, formatDateWithPreference } from "@/lib/constants";
 import { t } from "@/lib/terminology";
+import { translateEnglishToLanguage } from "@/lib/language";
 import { syncWeightFromLatestCheckin } from "@/lib/user-physique";
 import { api } from "@/lib/api-client";
 import {
@@ -57,6 +58,7 @@ export default function DaoHallPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { settings } = useDisplaySettings();
+  const lt = (text: string) => translateEnglishToLanguage(text, settings.languageMode);
   const isAdmin = user?.role === "admin";
   const dateFormat = settings.dateFormat || "dd-mmm-yyyy";
   const router = useRouter();
@@ -532,13 +534,14 @@ export default function DaoHallPage() {
   const userNameById = useMemo(() => {
     const names = new Map<string, string>();
     for (const u of allUsers) {
-      names.set(u.id, u.name);
+      names.set(u.id, u.id === user?.id ? lt("Me") : u.name);
     }
     if (user && !names.has(user.id)) {
-      names.set(user.id, user.name || user.username || "You");
+      names.set(user.id, lt("Me"));
     }
     return names;
-  }, [allUsers, user]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allUsers, user, settings.languageMode]);
 
   const scopedCheckInTotalsByUser = useMemo(() => {
     const totals = new Map<string, number>();
@@ -677,7 +680,7 @@ export default function DaoHallPage() {
             createdAt: `${row.date}T00:00:00.000Z`,
             user: {
               id: userId,
-              name: noteUser?.name || "Unknown",
+              name: userId === user?.id ? "Me" : (noteUser?.name || "Unknown"),
               username: noteUser?.username || "unknown",
             },
           };
@@ -843,8 +846,8 @@ export default function DaoHallPage() {
 
   return (
     <PageLayout
-      title="Check-in"
-      subtitle="Daily check-in and notes"
+      title={lt("Check-in")}
+      subtitle={lt("Daily check-in and notes")}
       mobileContentPaddingClass="px-2 pt-4 pb-24"
       contentMaxWidthClass="max-w-[1220px]"
     >
@@ -857,7 +860,7 @@ export default function DaoHallPage() {
             <GlowCard glow="none" hoverable={false} className={historySurfaceClass} style={historySurfaceStyle}>
               <div className="space-y-2.5">
                 <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-medium text-[color:var(--text-secondary)]">Upcoming notes</h4>
+                  <h4 className="text-sm font-medium text-[color:var(--text-secondary)]">{lt("Upcoming notes")}</h4>
                   <span className="rounded-md px-2 py-0.5 text-[9px] font-medium text-[color:var(--text-muted)]" style={{ backgroundColor: "color-mix(in srgb, var(--ink-mid) 80%, transparent)" }}>{scopedFutureNotes.length}</span>
                 </div>
                 <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
@@ -872,7 +875,7 @@ export default function DaoHallPage() {
                           borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)",
                           backgroundColor: "color-mix(in srgb, var(--ink-deep) 92%, var(--ink-mid))",
                         }}
-                        title="Jump to this date"
+                        title={lt("Jump to this date")}
                       >
                         <div className="flex items-start gap-2">
                           <div
@@ -881,7 +884,7 @@ export default function DaoHallPage() {
                           />
                           <div className="min-w-0 flex-1">
                             <div className="mb-0.5 flex items-center gap-1.5">
-                              <span className="truncate text-[11px] font-semibold" style={{ color: noteColor }}>{note.user.name}</span>
+                              <span className="truncate text-[11px] font-semibold" style={{ color: noteColor }}>{note.user.id === user?.id ? "Me" : note.user.name}</span>
                               <span className="rounded-md px-1.5 py-0.5 text-[9px] text-[color:var(--text-muted)]" style={{ backgroundColor: "color-mix(in srgb, var(--ink-mid) 80%, transparent)" }}>
                                 {formatDateWithPreference(note.date, dateFormat)}
                               </span>
@@ -1193,7 +1196,7 @@ export default function DaoHallPage() {
             >
               <div className="flex items-center justify-between gap-2">
                 <h3 className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--mist-light)" }}>
-                  {isTodayEntry ? "Today" : formatDateWithPreference(checkInModal.date, dateFormat)}
+                  {isTodayEntry ? lt("Today") : formatDateWithPreference(checkInModal.date, dateFormat)}
                 </h3>
                 <button
                   type="button"
@@ -1204,7 +1207,7 @@ export default function DaoHallPage() {
                     color: "var(--mist-light)",
                     backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
                   }}
-                  aria-label="Close"
+                  aria-label={lt("Close")}
                 >
                   ✕
                 </button>
@@ -1220,14 +1223,14 @@ export default function DaoHallPage() {
                       color: "var(--gold-glow)",
                     }}
                   >
-                    Future days only support a personal note. Full check-in is available on the day itself.
+                    {lt("Future days only support a personal note. Full check-in is available on the day itself.")}
                   </div>
                 ) : null}
 
                 {!isFarFuture && circleUsers.length > 0 ? (
                   <div>
                     <span className="mb-1 block text-[10px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>
-                      {isTodayEntry ? "Circle today" : `Circle on ${formatDateWithPreference(checkInModal.date, dateFormat)}`}
+                      {isTodayEntry ? lt("Circle today") : `${lt("Circle on")} ${formatDateWithPreference(checkInModal.date, dateFormat)}`}
                     </span>
                     <div className="flex flex-wrap gap-2">
                       {checkedInUsers.map((u) => (
@@ -1244,7 +1247,7 @@ export default function DaoHallPage() {
                             className="h-2 w-2 rounded-full"
                             style={{ backgroundColor: u.id === user?.id ? "var(--cultivator-self)" : "var(--cultivator-friend)" }}
                           />
-                          {u.id === user?.id ? "You" : u.name}
+                          {u.id === user?.id ? lt("You") : u.name}
                         </span>
                       ))}
                     </div>
@@ -1254,11 +1257,11 @@ export default function DaoHallPage() {
                 {!isFarFuture && user?.id ? (
                   <label className="block">
                     <span className="mb-1 block text-[10px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>
-                      Weight (kg)
+                      {lt("Weight (kg)")}
                     </span>
                     {previousWeightRecord ? (
                       <span className="mb-1 block text-[10px]" style={{ color: "var(--text-muted)" }}>
-                        Last: {previousWeightRecord.weight} kg — {formatDateWithPreference(previousWeightRecord.date, dateFormat)}
+                        {lt("Last:")} {previousWeightRecord.weight} kg — {formatDateWithPreference(previousWeightRecord.date, dateFormat)}
                       </span>
                     ) : null}
                     <input
@@ -1278,18 +1281,18 @@ export default function DaoHallPage() {
                       autoFocus
                     />
                     <span className="mt-1 block text-[10px]" style={{ color: "var(--text-muted)" }}>
-                      Check-in is automatic when you log a workout.
+                      {lt("Check-in is automatic when you log a workout.")}
                     </span>
                   </label>
                 ) : null}
 
                 <label className="block">
                   <div className="mb-1 flex items-center justify-between">
-                    <span className="text-[10px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>Note</span>
+                    <span className="text-[10px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>{lt("Note")}</span>
                     <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>{noteCharCount}/280</span>
                   </div>
                   <textarea
-                    placeholder="Add a short note for this day"
+                    placeholder={lt("Add a short note for this day")}
                     value={noteValue}
                     onChange={(e) => {
                       if (user?.id) {
@@ -1345,7 +1348,7 @@ export default function DaoHallPage() {
                       color: "var(--danger-hover)",
                     }}
                   >
-                    Clear
+                    {lt("Clear")}
                   </button>
                 ) : null}
                 <button
@@ -1358,7 +1361,7 @@ export default function DaoHallPage() {
                     backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
                   }}
                 >
-                  Cancel
+                  {lt("Cancel")}
                 </button>
                 <button
                   type="button"
@@ -1370,7 +1373,7 @@ export default function DaoHallPage() {
                     backgroundColor: "var(--forest)",
                   }}
                 >
-                  {isFarFuture ? "Save Note" : "Save"}
+                  {isFarFuture ? lt("Save Note") : lt("Save")}
                 </button>
               </div>
             </div>
@@ -1382,17 +1385,17 @@ export default function DaoHallPage() {
       <GlowModal
         isOpen={showWeightPrompt}
         onClose={() => { setShowWeightPrompt(false); setWeightPromptValue(""); }}
-        title="⚖️ Log Your Weight"
+        title={lt("⚖️ Log Your Weight")}
       >
         <div className="space-y-5">
           <p className="text-xs text-[color:var(--text-secondary)]">
-            You haven&apos;t logged your weight for this check-in. Tracking your weight helps monitor your cultivation progress.
+            {lt("You haven't logged your weight for this check-in. Tracking your weight helps monitor your cultivation progress.")}
           </p>
           <div>
-            <label className="mb-2 block text-[10px] uppercase tracking-wider text-[color:var(--text-primary)]">Body Weight (kg)</label>
+            <label className="mb-2 block text-[10px] uppercase tracking-wider text-[color:var(--text-primary)]">{lt("Body Weight (kg)")}</label>
             <input
               type="number"
-              placeholder="Enter your weight..."
+              placeholder={lt("Enter your weight...")}
               value={weightPromptValue}
               onChange={(e) => setWeightPromptValue(e.target.value)}
               onKeyDown={(e) => {
@@ -1412,7 +1415,7 @@ export default function DaoHallPage() {
             onClick={handleWeightPromptSubmit}
             disabled={!weightPromptValue}
           >
-            ⚖️ Save with Weight
+            {lt("⚖️ Save with Weight")}
           </GlowButton>
           <div className="grid grid-cols-2 gap-2">
             <GlowButton
@@ -1421,7 +1424,7 @@ export default function DaoHallPage() {
               onClick={handleWeightPromptSkip}
               size="sm"
             >
-              Skip for Now
+              {lt("Skip for Now")}
             </GlowButton>
             <GlowButton
               variant="ghost"
@@ -1429,14 +1432,14 @@ export default function DaoHallPage() {
               onClick={handleWeightPromptDismissOneHour}
               size="sm"
             >
-              Hide 1 Hour
+              {lt("Hide 1 Hour")}
             </GlowButton>
           </div>
           <button
             onClick={handleWeightPromptDismissToday}
             className="w-full py-2 text-center text-[11px] text-[color:var(--text-muted)] transition-colors hover:text-[color:var(--text-primary)]"
           >
-            Don&apos;t remind me today
+            {lt("Don't remind me today")}
           </button>
         </div>
       </GlowModal>

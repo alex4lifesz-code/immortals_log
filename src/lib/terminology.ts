@@ -8,13 +8,24 @@ export type TerminologyMode = "fantasy" | "normal";
 import {
   type LanguageMode,
   getLearningHintFromEnglish,
+  isSupportedLanguageMode,
   translateEnglishToLanguage,
 } from "@/lib/language";
 
 const DISPLAY_SETTINGS_STORAGE_KEY = "cultivateos-display-settings";
 
 function resolveLanguageMode(_explicit?: LanguageMode): LanguageMode {
-  return "english";
+  if (_explicit) return _explicit;
+  if (typeof window === "undefined") return "english";
+
+  try {
+    const raw = localStorage.getItem(DISPLAY_SETTINGS_STORAGE_KEY);
+    if (!raw) return "english";
+    const parsed = JSON.parse(raw) as { languageMode?: unknown };
+    return isSupportedLanguageMode(parsed.languageMode) ? parsed.languageMode : "english";
+  } catch {
+    return "english";
+  }
 }
 
 // The terminology dictionary maps fantasy terms to their normal equivalents.

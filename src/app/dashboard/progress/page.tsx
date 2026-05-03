@@ -9,6 +9,7 @@ import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { api } from "@/lib/api-client";
 import { formatDateWithPreference } from "@/lib/constants";
 import { getExerciseDisplayName } from "@/lib/exercise-name";
+import { translateEnglishToLanguage } from "@/lib/language";
 import { DASHBOARD_ROUTES } from "@/lib/navigation";
 import { PROGRESSION_EXERCISES_UPDATED_EVENT } from "@/lib/progression-events";
 import type { ProgressionExercise, ProgressionLog } from "../workout/types";
@@ -56,29 +57,30 @@ function getLogsWithinDays(logs: ProgressionLog[], days: number): ProgressionLog
 function formatDate(
   value: string | null,
   dateFormat: "dd-mm-yyyy" | "dd-mmm-yyyy" | "dd-mm-yy" | "dd-mmm-yy",
+  lt: (text: string) => string,
   timeZone?: string,
 ): string {
-  if (!value) return "Never";
+  if (!value) return lt("Never");
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Never";
+  if (Number.isNaN(date.getTime())) return lt("Never");
   return formatDateWithPreference(date, dateFormat, timeZone);
 }
 
-function formatDaysAgo(value: string | null): string {
+function formatDaysAgo(value: string | null, lt: (text: string) => string): string {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
   const days = Math.max(0, Math.floor((Date.now() - date.getTime()) / (24 * 60 * 60 * 1000)));
-  if (days === 0) return "Today";
-  if (days === 1) return "1 day";
-  return `${days} days`;
+  if (days === 0) return lt("Today");
+  if (days === 1) return `1 ${lt("day")}`;
+  return `${days} ${lt("days")}`;
 }
 
-function getBestStatText(logs: ProgressionLog[]): string {
+function getBestStatText(logs: ProgressionLog[], lt: (text: string) => string): string {
   const holds = logs.flatMap((log) => [log.holdTime, log.holdTime2, log.holdTime3]).filter(
     (value): value is number => typeof value === "number" && Number.isFinite(value),
   );
-  if (holds.length > 0) return `${Math.max(...holds)}s hold`;
+  if (holds.length > 0) return `${Math.max(...holds)}s ${lt("hold")}`;
 
   const weights = logs.flatMap((log) => [log.weight1, log.weight2, log.weight3]).filter(
     (value): value is number => typeof value === "number" && Number.isFinite(value),
@@ -88,7 +90,7 @@ function getBestStatText(logs: ProgressionLog[]): string {
   const reps = logs.flatMap((log) => [log.reps1, log.reps2, log.reps3, log.reps]).filter(
     (value): value is number => typeof value === "number" && Number.isFinite(value),
   );
-  if (reps.length > 0) return `${Math.max(...reps)} reps`;
+  if (reps.length > 0) return `${Math.max(...reps)} ${lt("reps")}`;
 
   return "-";
 }
@@ -103,6 +105,7 @@ function getCategoryTint(category: string): string {
 
 export default function ProgressPage() {
   const { settings } = useDisplaySettings();
+  const lt = useCallback((text: string) => translateEnglishToLanguage(text, settings.languageMode), [settings.languageMode]);
   const displayTerminologyMode = !settings.showExerciseForeignLanguage && settings.languageMode === "english"
     ? "normal"
     : settings.terminologyMode;
@@ -129,7 +132,7 @@ export default function ProgressPage() {
           const logs = exercise.userProgress?.[0]?.logs ?? [];
           const sortedTiers = (exercise.tiers ?? []).slice().sort((a, b) => a.level - b.level);
           const tierNames = sortedTiers.length > 0
-            ? sortedTiers.map((tier) => String(tier.name || `Progression ${tier.level}`).trim())
+            ? sortedTiers.map((tier) => String(tier.name || `${lt("Progression")} ${tier.level}`).trim())
             : [exercise.name];
 
           const tierStats = tierNames.map((_, index) => {
@@ -142,7 +145,7 @@ export default function ProgressPage() {
 
             return {
               attempts: levelLogs.length,
-              best: getBestStatText(levelLogs),
+              best: getBestStatText(levelLogs, lt),
               lastPerformedAt,
             };
           });
@@ -176,11 +179,11 @@ export default function ProgressPage() {
       setSkills(mapped);
     } catch (error) {
       console.error("Failed to load progress:", error);
-      setErrorMessage("Could not load progress data right now.");
+      setErrorMessage(lt("Could not load progress data right now."));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [lt]);
 
   useEffect(() => {
     void loadSkills();
@@ -307,7 +310,7 @@ export default function ProgressPage() {
 
   return (
     <PageLayout
-      title="Progress"
+      title={lt("Progress")}
       mobileContentPaddingClass="px-2 pt-4 pb-24"
     >
       <div className="space-y-3 px-0 py-0 sm:space-y-4 sm:py-1">
@@ -324,7 +327,7 @@ export default function ProgressPage() {
               backgroundColor: "color-mix(in srgb, var(--ink-deep) 94%, var(--ink-mid))",
             }}
           >
-            <h2 className="mt-0.5 text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--text-primary)]">Progress overview</h2>
+            <h2 className="mt-0.5 text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--text-primary)]">{lt("Progress overview")}</h2>
           </div>
 
           <div className="px-3 py-3">
@@ -344,17 +347,17 @@ export default function ProgressPage() {
                     }}
                   >
                     <span className="text-xl font-semibold text-[color:var(--text-primary)]">{summary.coveragePct}%</span>
-                    <span className="text-[10px] uppercase tracking-[0.12em] text-[color:var(--text-muted)]">logged once</span>
+                    <span className="text-[10px] uppercase tracking-[0.12em] text-[color:var(--text-muted)]">{lt("logged once")}</span>
                   </div>
                 </div>
               </div>
 
               <div className="space-y-3">
                 <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-[color:var(--text-secondary)]">
-                  <span>Progressions: <span className="font-semibold text-[color:var(--text-primary)]">{summary.totalExercises}</span></span>
-                  <span>Logged once: <span className="font-semibold text-[color:var(--forest)]">{summary.loggedExercises}</span></span>
-                  <span>Untouched: <span className="font-semibold text-[color:var(--text-primary)]">{summary.untouched}</span></span>
-                  <span>Sessions: <span className="font-semibold text-[color:var(--forest)]">{summary.totalSessions}</span></span>
+                  <span>{lt("Progressions")}: <span className="font-semibold text-[color:var(--text-primary)]">{summary.totalExercises}</span></span>
+                  <span>{lt("Logged once")}: <span className="font-semibold text-[color:var(--forest)]">{summary.loggedExercises}</span></span>
+                  <span>{lt("Untouched")}: <span className="font-semibold text-[color:var(--text-primary)]">{summary.untouched}</span></span>
+                  <span>{lt("Sessions")}: <span className="font-semibold text-[color:var(--forest)]">{summary.totalSessions}</span></span>
                 </div>
 
                 <div className="space-y-2">
@@ -400,13 +403,13 @@ export default function ProgressPage() {
 
         {loading ? (
           <section className="rounded-xl border px-3 py-3" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 92%, black)" }}>
-            <p className="text-sm text-[color:var(--text-secondary)]">Loading progress...</p>
+            <p className="text-sm text-[color:var(--text-secondary)]">{lt("Loading progress...")}</p>
           </section>
         ) : null}
 
         {!loading && visibleSkills.length === 0 ? (
           <section className="rounded-xl border px-3 py-3" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 92%, black)" }}>
-            <p className="text-sm text-[color:var(--text-secondary)]">No exercises match the current filters.</p>
+            <p className="text-sm text-[color:var(--text-secondary)]">{lt("No exercises match the current filters.")}</p>
           </section>
         ) : null}
 
@@ -427,7 +430,7 @@ export default function ProgressPage() {
               >
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <h2 className="text-base font-semibold text-[color:var(--text-primary)]">Skills</h2>
+                    <h2 className="text-base font-semibold text-[color:var(--text-primary)]">{lt("Skills")}</h2>
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -435,7 +438,7 @@ export default function ProgressPage() {
                       type="button"
                       onClick={() => setSearchOpen((prev) => !prev)}
                       className="theme-control-btn inline-flex h-8 w-8 items-center justify-center rounded-md border"
-                      aria-label="Toggle search"
+                      aria-label={lt("Toggle search")}
                     >
                       <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden>
                         <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="1.6" />
@@ -447,7 +450,7 @@ export default function ProgressPage() {
                       type="button"
                       onClick={() => setFilterDrawerOpen(true)}
                       className="theme-control-btn relative inline-flex h-8 w-8 items-center justify-center rounded-md border"
-                      aria-label="Open filters"
+                      aria-label={lt("Open filters")}
                     >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} aria-hidden>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 5h18M6 12h12m-9 7h6" />
@@ -471,7 +474,7 @@ export default function ProgressPage() {
                       type="text"
                       value={search}
                       onChange={(event) => setSearch(event.target.value)}
-                      placeholder="Search exercise..."
+                      placeholder={lt("Search exercise...")}
                       className="w-full rounded-lg border px-3 py-2 text-sm outline-none"
                       style={{
                         borderColor: "color-mix(in srgb, var(--border) 72%, transparent)",
@@ -531,8 +534,8 @@ export default function ProgressPage() {
                           </div>
                           <p className="mt-1 pl-7 text-[11px] text-[color:var(--text-secondary)]">
                             {isLogged
-                              ? `${skill.performed} logs • ${skill.coveragePct}% coverage • ${formatDaysAgo(skill.lastLogAt)}`
-                              : `${skill.tierNames.length} tiers available • no sessions logged yet`}
+                              ? `${skill.performed} ${lt("logs")} • ${skill.coveragePct}% ${lt("coverage")} • ${formatDaysAgo(skill.lastLogAt, lt)}`
+                              : `${skill.tierNames.length} ${lt("tiers available")} • ${lt("no sessions logged yet")}`}
                           </p>
                         </div>
 
@@ -544,7 +547,7 @@ export default function ProgressPage() {
                             color: isLogged ? "color-mix(in srgb, var(--forest) 82%, white)" : "var(--text-secondary)",
                           }}
                         >
-                          {isLogged ? "Logged" : "Untouched"}
+                          {isLogged ? lt("Logged") : lt("Untouched")}
                         </span>
                       </button>
 
@@ -556,9 +559,9 @@ export default function ProgressPage() {
                           }}
                         >
                           <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-[color:var(--text-secondary)]">
-                            <span>Coverage: <span className="font-semibold text-[color:var(--forest)]">{skill.coveragePct}%</span></span>
-                            <span>Sessions: <span className="font-semibold text-[color:var(--text-primary)]">{skill.performed}</span></span>
-                            <span>Last: <span className="font-semibold text-[color:var(--text-primary)]">{formatDate(skill.lastLogAt, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone)}</span></span>
+                            <span>{lt("Coverage")}: <span className="font-semibold text-[color:var(--forest)]">{skill.coveragePct}%</span></span>
+                            <span>{lt("Sessions")}: <span className="font-semibold text-[color:var(--text-primary)]">{skill.performed}</span></span>
+                            <span>{lt("Last")}: <span className="font-semibold text-[color:var(--text-primary)]">{formatDate(skill.lastLogAt, settings.dateFormat || "dd-mmm-yyyy", lt, settings.timeZone)}</span></span>
                           </div>
 
                           <div className="mt-3">
@@ -568,9 +571,9 @@ export default function ProgressPage() {
                                 <div key={skill.id + "-" + tierName + "-" + index} className="flex items-center justify-between gap-3 py-2">
                                   <div className="min-w-0">
                                     <p className="truncate text-[11px] font-medium text-[color:var(--text-primary)]">{tierName}</p>
-                                    <p className="mt-0.5 text-[10px] text-[color:var(--text-muted)]">{stat.attempts} attempts • {stat.best}</p>
+                                    <p className="mt-0.5 text-[10px] text-[color:var(--text-muted)]">{stat.attempts} {lt("attempts")} • {stat.best}</p>
                                   </div>
-                                  <span className="shrink-0 text-[10px] text-[color:var(--text-secondary)]">{formatDate(stat.lastPerformedAt, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone)}</span>
+                                  <span className="shrink-0 text-[10px] text-[color:var(--text-secondary)]">{formatDate(stat.lastPerformedAt, settings.dateFormat || "dd-mmm-yyyy", lt, settings.timeZone)}</span>
                                 </div>
                               );
                             })}
@@ -581,13 +584,13 @@ export default function ProgressPage() {
                               href={historyHref}
                               className="theme-control-btn inline-flex flex-1 items-center justify-center rounded-md border px-3 py-2 text-sm font-medium"
                             >
-                              History
+                              {lt("History")}
                             </Link>
                             <Link
                               href={logHref}
                               className="theme-action-btn inline-flex flex-1 items-center justify-center rounded-md border px-3 py-2 text-sm font-medium"
                             >
-                              Log session
+                              {lt("Log session")}
                             </Link>
                           </div>
                         </div>
@@ -604,7 +607,7 @@ export default function ProgressPage() {
                   <>
                     <motion.button
                       type="button"
-                      aria-label="Close filters"
+                      aria-label={lt("Close filters")}
                       className="fixed inset-0 z-[250] bg-black/55"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
@@ -616,7 +619,7 @@ export default function ProgressPage() {
                       <motion.aside
                         role="dialog"
                         aria-modal="true"
-                        aria-label="Progress filters"
+                        aria-label={lt("Progress filters")}
                         className="pointer-events-auto ml-auto flex h-[100dvh] max-h-[100dvh] w-[min(22rem,92vw)] flex-col overflow-hidden border-l shadow-2xl sm:my-3 sm:mr-3 sm:h-[calc(100dvh-1.5rem)] sm:max-h-[52rem] sm:rounded-2xl sm:border"
                         initial={{ x: "100%", opacity: 0.98 }}
                         animate={{ x: 0, opacity: 1 }}
@@ -634,14 +637,14 @@ export default function ProgressPage() {
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div>
-                              <p className="text-[10px] uppercase tracking-[0.14em] text-[color:var(--text-muted)]">Filters</p>
-                              <h3 className="mt-1 text-base font-semibold text-[color:var(--text-primary)]">Filter</h3>
+                              <p className="text-[10px] uppercase tracking-[0.14em] text-[color:var(--text-muted)]">{lt("Filters")}</p>
+                              <h3 className="mt-1 text-base font-semibold text-[color:var(--text-primary)]">{lt("Filter")}</h3>
                             </div>
                             <button
                               type="button"
                               onClick={() => setFilterDrawerOpen(false)}
                               className="theme-control-btn inline-flex h-9 w-9 items-center justify-center rounded-md border"
-                              aria-label="Close filter drawer"
+                              aria-label={lt("Close filter drawer")}
                             >
                               ×
                             </button>
@@ -654,7 +657,7 @@ export default function ProgressPage() {
                         >
                           <div className="space-y-4">
                             <div>
-                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[color:var(--text-muted)]">Category</label>
+                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[color:var(--text-muted)]">{lt("Category")}</label>
                               <select
                                 value={categoryFilter}
                                 onChange={(event) => setCategoryFilter(event.target.value as CategoryFilter)}
@@ -663,24 +666,24 @@ export default function ProgressPage() {
                               >
                                 {categoryOptions.map((option) => (
                                   <option key={option} value={option}>
-                                    {option === "all" ? "All categories" : option}
+                                    {option === "all" ? lt("All categories") : option}
                                   </option>
                                 ))}
                               </select>
                             </div>
 
                             <div>
-                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[color:var(--text-muted)]">Activity</label>
+                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[color:var(--text-muted)]">{lt("Activity")}</label>
                               <select
                                 value={activityFilter}
                                 onChange={(event) => setActivityFilter(event.target.value as ActivityFilter)}
                                 className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
                                 style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 92%, black)", color: "var(--text-primary)" }}
                               >
-                                <option value="all">All exercises</option>
-                                <option value="active">Active in 14 days</option>
-                                <option value="stale">Stale 30+ days</option>
-                                <option value="untouched">Never logged</option>
+                                <option value="all">{lt("All exercises")}</option>
+                                <option value="active">{lt("Active in 14 days")}</option>
+                                <option value="stale">{lt("Stale 30+ days")}</option>
+                                <option value="untouched">{lt("Never logged")}</option>
                               </select>
                             </div>
 
@@ -694,21 +697,21 @@ export default function ProgressPage() {
                                 color: showLoggedOnly ? "color-mix(in srgb, var(--forest) 82%, white)" : "var(--text-primary)",
                               }}
                             >
-                              {showLoggedOnly ? "Showing logged exercises" : "Show logged only"}
+                              {showLoggedOnly ? lt("Showing logged exercises") : lt("Show logged only")}
                             </button>
 
                             <div>
-                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[color:var(--text-muted)]">Sort by</label>
+                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[color:var(--text-muted)]">{lt("Sort by")}</label>
                               <select
                                 value={sortBy}
                                 onChange={(event) => setSortBy(event.target.value as SortBy)}
                                 className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
                                 style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 92%, black)", color: "var(--text-primary)" }}
                               >
-                                <option value="recent">Recently trained</option>
-                                <option value="coverage">Best coverage</option>
-                                <option value="sessions">Most sessions</option>
-                                <option value="name">Name A-Z</option>
+                                <option value="recent">{lt("Recently trained")}</option>
+                                <option value="coverage">{lt("Best coverage")}</option>
+                                <option value="sessions">{lt("Most sessions")}</option>
+                                <option value="name">{lt("Name A-Z")}</option>
                               </select>
                             </div>
 
@@ -723,14 +726,14 @@ export default function ProgressPage() {
                                 }}
                                 className="theme-control-btn h-11 rounded-xl border px-3 text-sm font-medium"
                               >
-                                Reset
+                                {lt("Reset")}
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setFilterDrawerOpen(false)}
                                 className="theme-action-btn h-11 rounded-xl border px-3 text-sm font-semibold"
                               >
-                                Done
+                                {lt("Done")}
                               </button>
                             </div>
                           </div>

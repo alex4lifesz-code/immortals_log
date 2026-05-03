@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import DataManagement from "@/components/admin/DataManagement";
 import { api } from "@/lib/api-client";
 import { formatDateTimeWithPreference, formatDateWithPreference } from "@/lib/constants";
+import { translateEnglishToLanguage } from "@/lib/language";
 
 interface AdminActivityEntry {
   at: string;
@@ -88,6 +89,7 @@ export default function AdminPanelPage() {
   const router = useRouter();
   const dateFormat = settings.dateFormat || "dd-mmm-yyyy";
   const timeZone = settings.timeZone;
+  const lt = useCallback((text: string) => translateEnglishToLanguage(text, settings.languageMode), [settings.languageMode]);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [recycleBinUsers, setRecycleBinUsers] = useState<RecycleBinUser[]>([]);
   const [stats, setStats] = useState<SystemStats>({
@@ -186,25 +188,25 @@ export default function AdminPanelPage() {
       setNewUsername("");
       setNewPassword("");
       setNewName("");
-      setActionNotice({ type: "success", message: "User created successfully." });
+      setActionNotice({ type: "success", message: lt("User created successfully.") });
       await fetchData();
     } catch (err) {
       console.error("Failed to create user:", err);
-      setActionNotice({ type: "error", message: err instanceof Error ? err.message : "Failed to create user." });
+      setActionNotice({ type: "error", message: err instanceof Error ? err.message : lt("Failed to create user.") });
     }
   };
 
   const deleteUser = async (userId: string) => {
-    if (!confirm("Send this user to the recycle bin? Their active records will be removed from the app until restored.")) return;
+    if (!confirm(lt("Send this user to the recycle bin? Their active records will be removed from the app until restored."))) return;
 
     try {
       const result = await api.delete<{ message?: string }>(`/api/users/${userId}`);
       setShowUserDetailModal(false);
-      setActionNotice({ type: "success", message: result.message || "User moved to the recycle bin." });
+      setActionNotice({ type: "success", message: result.message || lt("User moved to the recycle bin.") });
       await fetchData();
     } catch (err) {
       console.error("Failed to delete user:", err);
-      setActionNotice({ type: "error", message: err instanceof Error ? err.message : "Failed to move user to the recycle bin." });
+      setActionNotice({ type: "error", message: err instanceof Error ? err.message : lt("Failed to move user to the recycle bin.") });
     }
   };
 
@@ -216,14 +218,14 @@ export default function AdminPanelPage() {
       if (user && userId === user.id) {
         login({ ...user, name: data.user.name });
       }
-      setActionNotice({ type: "success", message: "Display name updated." });
+      setActionNotice({ type: "success", message: lt("Display name updated.") });
       await fetchData();
       if (selectedUser && selectedUser.id === userId) {
         setSelectedUser({ ...selectedUser, name: data.user.name });
       }
     } catch (err) {
       console.error("Failed to update display name:", err);
-      setActionNotice({ type: "error", message: err instanceof Error ? err.message : "Failed to update display name." });
+      setActionNotice({ type: "error", message: err instanceof Error ? err.message : lt("Failed to update display name.") });
     } finally {
       setIsSavingName(false);
     }
@@ -232,7 +234,7 @@ export default function AdminPanelPage() {
   const resetUserPassword = async (userId: string) => {
     if (resetPassword.length === 0) return;
     if (resetPassword !== resetPasswordConfirm) {
-      setActionNotice({ type: "error", message: "Password and confirmation do not match." });
+      setActionNotice({ type: "error", message: lt("Password and confirmation do not match.") });
       return;
     }
 
@@ -242,14 +244,14 @@ export default function AdminPanelPage() {
       setActionNotice({
         type: "success",
         message: userId === user?.id
-          ? "Your password was updated. Use the new password on your next sign-in."
-          : "Password updated. Share the new credentials securely.",
+          ? lt("Your password was updated. Use the new password on your next sign-in.")
+          : lt("Password updated. Share the new credentials securely."),
       });
       setResetPassword("");
       setResetPasswordConfirm("");
     } catch (err) {
       console.error("Failed to reset user password:", err);
-      setActionNotice({ type: "error", message: err instanceof Error ? err.message : "Failed to update password." });
+      setActionNotice({ type: "error", message: err instanceof Error ? err.message : lt("Failed to update password.") });
     } finally {
       setIsResettingPassword(false);
     }
@@ -257,7 +259,7 @@ export default function AdminPanelPage() {
 
   const updateUserRole = async (userId: string, newRole: "admin" | "user") => {
     if (userId === user?.id && newRole !== "admin") {
-      setActionNotice({ type: "error", message: "You cannot remove your own admin privileges." });
+      setActionNotice({ type: "error", message: lt("You cannot remove your own admin privileges.") });
       return;
     }
     setIsUpdatingRole(true);
@@ -266,14 +268,14 @@ export default function AdminPanelPage() {
       if (user && userId === user.id) {
         login({ ...user, role: data.user.role });
       }
-      setActionNotice({ type: "success", message: `Account type updated to ${data.user.role}.` });
+      setActionNotice({ type: "success", message: `${lt("Account type updated to")} ${data.user.role}.` });
       if (selectedUser && selectedUser.id === userId) {
         setSelectedUser({ ...selectedUser, role: data.user.role });
       }
       await fetchData();
     } catch (err) {
       console.error("Failed to update user role:", err);
-      setActionNotice({ type: "error", message: err instanceof Error ? err.message : "Failed to update account type." });
+      setActionNotice({ type: "error", message: err instanceof Error ? err.message : lt("Failed to update account type.") });
     } finally {
       setIsUpdatingRole(false);
     }

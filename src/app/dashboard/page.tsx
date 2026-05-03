@@ -1,5 +1,6 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import PageLayout from "@/components/layout/PageLayout";
@@ -8,6 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import type { CalendarWeekStartOption } from "@/context/DisplaySettingsContext";
 import { api } from "@/lib/api-client";
+import { translateEnglishToLanguage } from "@/lib/language";
 import { formatDateWithPreference, getTodayInTimeZone, normalizeDateOnlyKey, resolveCalendarWeekStartsOn } from "@/lib/constants";
 import { DASHBOARD_ROUTES } from "@/lib/navigation";
 import { kgToLbs } from "@/lib/unit-conversion";
@@ -117,6 +119,7 @@ interface WeekCardProps {
   borderColor: string;
   dayLabelColor: string;
   shellStyle: React.CSSProperties;
+  translateFn?: (text: string) => string;
 }
 
 function WeekCard({
@@ -131,6 +134,7 @@ function WeekCard({
   borderColor,
   dayLabelColor,
   shellStyle,
+  translateFn = (x) => x,
 }: WeekCardProps) {
   const days = buildWeekDays(todayKey, weekOffset, calendarWeekStart, timeZone, checkinDates);
 
@@ -145,11 +149,11 @@ function WeekCard({
         <div className="flex items-center gap-2 text-[10px]" style={{ color: "var(--text-muted)" }}>
           <span className="flex items-center gap-1">
             <span className="inline-block h-2 w-2 rounded-sm" style={{ backgroundColor: activeColor }} />
-            Logged
+            {translateFn("Logged")}
           </span>
           <span className="flex items-center gap-1">
             <span className="inline-block h-2 w-2 rounded-sm border" style={{ borderColor }} />
-            Today
+            {translateFn("Today")}
           </span>
         </div>
       </div>
@@ -179,6 +183,7 @@ export default function DashboardHomePage() {
   const { user } = useAuth();
   const { settings } = useDisplaySettings();
   const weightUnit = settings.defaultWeightUnit ?? "kg";
+  const lt = (text: string) => translateEnglishToLanguage(text, settings.languageMode);
 
   const [checkInCount, setCheckInCount] = useState<number | null>(null);
   const [streak, setStreak] = useState<number | null>(null);
@@ -189,6 +194,7 @@ export default function DashboardHomePage() {
   const [weightTrend, setWeightTrend] = useState<WeightTrend | null>(null);
   const [cultivationDay, setCultivationDay] = useState<number | null>(null);
   const [weekOffset, setWeekOffset] = useState(0);
+  const [weekTransitionDirection, setWeekTransitionDirection] = useState<1 | -1>(-1);
 
   const weekSwipeRef = useRef<HTMLElement | null>(null);
   const swipeStartXRef = useRef<number | null>(null);
@@ -196,6 +202,46 @@ export default function DashboardHomePage() {
   const swipeHorizontalRef = useRef<boolean | null>(null);
 
   const minWeekOffset = -8;
+
+  const weekLabelAnimation = {
+    enter: (direction: 1 | -1) => ({
+      opacity: 0,
+      x: direction > 0 ? 20 : -20,
+      y: 0,
+    }),
+    center: { opacity: 1, x: 0, y: 0 },
+    exit: (direction: 1 | -1) => ({
+      opacity: 0,
+      x: direction > 0 ? -20 : 20,
+      y: 0,
+    }),
+  };
+
+  const weekContentAnimation = {
+    enter: (direction: 1 | -1) => ({
+      opacity: 0,
+      x: direction > 0 ? 64 : -64,
+      y: 0,
+      scale: 0.996,
+    }),
+    center: { opacity: 1, x: 0, y: 0, scale: 1 },
+    exit: (direction: 1 | -1) => ({
+      opacity: 0,
+      x: direction > 0 ? -64 : 64,
+      y: 0,
+      scale: 0.996,
+    }),
+  };
+
+  const goToPreviousWeek = () => {
+    setWeekTransitionDirection(-1);
+    setWeekOffset((previous) => Math.max(minWeekOffset, previous - 1));
+  };
+
+  const goToNextWeek = () => {
+    setWeekTransitionDirection(1);
+    setWeekOffset((previous) => Math.min(0, previous + 1));
+  };
 
   const todayKey = useMemo(() => getTodayInTimeZone(settings.timeZone), [settings.timeZone]);
 
@@ -230,9 +276,9 @@ export default function DashboardHomePage() {
       swipeHorizontalRef.current = null;
       if (Math.abs(dx) < 40) return;
       if (dx > 0) {
-        setWeekOffset((previous) => Math.max(minWeekOffset, previous - 1));
+        goToPreviousWeek();
       } else {
-        setWeekOffset((previous) => Math.min(0, previous + 1));
+        goToNextWeek();
       }
     };
 
@@ -350,8 +396,9 @@ export default function DashboardHomePage() {
   const checkedInToday = activeCheckinDates.has(todayKey);
 
   const weekLabel = useMemo(
-    () => buildWeekLabel(weekOffset, todayKey, settings.calendarWeekStart, settings.timeZone),
-    [weekOffset, todayKey, settings.calendarWeekStart, settings.timeZone]
+    () => lt(buildWeekLabel(weekOffset, todayKey, settings.calendarWeekStart, settings.timeZone)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [weekOffset, todayKey, settings.calendarWeekStart, settings.timeZone, settings.languageMode]
   );
 
   const displayWeight = useMemo(() => {
@@ -365,36 +412,36 @@ export default function DashboardHomePage() {
     const delta = weightUnit === "lbs" ? kgToLbs(Math.abs(weightTrend.deltaKg)) : Math.abs(weightTrend.deltaKg);
     const sign = weightTrend.deltaKg > 0 ? "+" : "-";
     const unitLabel = weightUnit === "lbs" ? "lb" : "kg";
-    const daysLabel = weightTrend.daysBetween === 1 ? "day" : "days";
-    return `${sign}${delta.toFixed(1)} ${unitLabel} since last check-in (${weightTrend.daysBetween} ${daysLabel})`;
-  }, [weightTrend, weightUnit]);
+    const daysLabel = weightTrend.daysBetween === 1 ? lt("day") : lt("days");
+    return `${sign}${delta.toFixed(1)} ${unitLabel} ${lt("since last check-in")} (${weightTrend.daysBetween} ${daysLabel})`;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weightTrend, weightUnit, settings.languageMode]);
 
-  const checkInStatusLabel = checkedInToday ? "Checked in" : "Not checked in";
-  const workoutStatusLabel = "Open your training log";
+  const checkInStatusLabel = checkedInToday ? lt("Checked in") : lt("Not checked in");
   const statTiles = [
     {
-      label: "Check-ins",
+      label: lt("Check-ins"),
       value: checkInCount == null ? "—" : String(checkInCount),
-      subline: "all time",
+      subline: lt("all time"),
     },
     {
-      label: "Streak",
-      value: streak == null ? "—" : `${streak} days`,
-      subline: streak != null && streak > 0 ? "keep it alive" : "start today",
+      label: lt("Streak"),
+      value: streak == null ? "—" : `${streak} ${lt("days")}`,
+      subline: streak != null && streak > 0 ? lt("keep it alive") : lt("start today"),
     },
     {
-      label: "Weight",
+      label: lt("Weight"),
       value: displayWeight,
-      subline: weightTrendText ?? "latest check-in",
+      subline: weightTrendText ?? lt("latest check-in"),
     },
-  ] as const;
+  ];
 
   const now = new Date();
   const zonedHourRaw = settings.timeZone
     ? Number.parseInt(new Intl.DateTimeFormat("en-US", { hour: "numeric", hour12: false, timeZone: settings.timeZone }).format(now), 10)
     : now.getHours();
   const hour = Number.isFinite(zonedHourRaw) ? zonedHourRaw : now.getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const greeting = lt(hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening");
 
   const shellStyle = {
     borderColor: "color-mix(in srgb, var(--ink-light) 56%, transparent)",
@@ -435,13 +482,13 @@ export default function DashboardHomePage() {
         <section className="rounded-xl border px-3 py-2.5" style={shellStyle}>
           <div className="flex items-end justify-between gap-3">
             <div>
-              <p className="text-[10px] uppercase tracking-[0.14em]" style={{ color: "var(--text-muted)" }}>Cultivation Path</p>
+              <p className="text-[10px] uppercase tracking-[0.14em]" style={{ color: "var(--text-muted)" }}>{lt("Cultivation Path")}</p>
               <p className="mt-0.5 text-[11px] font-medium" style={{ color: "var(--text-secondary)" }}>
                 修炼之路 · {formatDateWithPreference(todayKey, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone)}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-[10px] uppercase tracking-[0.14em]" style={{ color: "var(--text-muted)" }}>Day</p>
+              <p className="text-[10px] uppercase tracking-[0.14em]" style={{ color: "var(--text-muted)" }}>{lt("Day")}</p>
               <p className="mt-0.5 text-[22px] font-semibold leading-none" style={{ color: "var(--text-primary)" }}>
                 {cultivationDay ?? "-"}
               </p>
@@ -451,10 +498,10 @@ export default function DashboardHomePage() {
 
         {/* Today */}
         <section className="rounded-xl border p-3" style={shellStyle}>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>Today</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>{lt("Today")}</p>
           <div className="mt-2">
             <div className="rounded-lg border px-2.5 py-2" style={tileStyle}>
-              <p className="text-[9px] uppercase tracking-[0.1em]" style={{ color: "var(--text-muted)" }}>Check-in</p>
+              <p className="text-[9px] uppercase tracking-[0.1em]" style={{ color: "var(--text-muted)" }}>{lt("Check-in")}</p>
               <p className="mt-0.5 text-[12px] font-semibold" style={{ color: checkedInToday ? "var(--forest)" : "var(--text-primary)" }}>
                 {checkInStatusLabel}
               </p>
@@ -470,15 +517,15 @@ export default function DashboardHomePage() {
                 boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--accent) 26%, transparent), 0 0 7px color-mix(in srgb, var(--accent) 28%, transparent), 0 0 12px color-mix(in srgb, var(--accent) 18%, transparent)",
               }}
             >
-              <span className="block text-[13px] font-semibold" style={{ color: "var(--accent)" }}>Start workout</span>
-              <span className="mt-0.5 block text-[10px]" style={{ color: "var(--text-secondary)" }}>Open your training log and begin today&apos;s session</span>
+              <span className="block text-[13px] font-semibold" style={{ color: "var(--accent)" }}>{lt("Start workout")}</span>
+              <span className="mt-0.5 block text-[10px]" style={{ color: "var(--text-secondary)" }}>{lt("Open your training log and begin today's session")}</span>
             </Link>
           </div>
         </section>
 
         {/* Stats */}
         <section className="rounded-xl border p-3" style={shellStyle}>
-          <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>Your stats</p>
+          <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>{lt("Your stats")}</p>
           <div className="grid grid-cols-3 gap-2">
             {statTiles.map(({ label, value, subline }) => (
               <div key={label} className="rounded-lg border px-2.5 py-2.5" style={tileStyle}>
@@ -499,23 +546,40 @@ export default function DashboardHomePage() {
           <div className="mb-3 flex items-center justify-center gap-2">
             <button
               type="button"
-              onClick={() => setWeekOffset((previous) => Math.max(minWeekOffset, previous - 1))}
+              onClick={goToPreviousWeek}
               className="inline-flex h-7 w-7 items-center justify-center rounded-md border text-[16px]"
               style={{
                 color: "var(--text-muted)",
                 borderColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)",
                 backgroundColor: "color-mix(in srgb, var(--ink-mid) 56%, var(--ink-deep))",
               }}
-              aria-label="Previous week"
+              aria-label={lt("Previous week")}
             >
               &#8249;
             </button>
-            <p className="min-w-[120px] text-center text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--text-secondary)" }}>
-              {weekLabel}
-            </p>
+            <div className="relative min-w-[120px] overflow-hidden">
+              <AnimatePresence mode="wait" initial={false} custom={weekTransitionDirection}>
+                <motion.p
+                  key={`week-label-${weekOffset}`}
+                  className="text-center text-[11px] font-semibold uppercase tracking-[0.12em]"
+                  style={{ color: "var(--text-secondary)" }}
+                  custom={weekTransitionDirection}
+                  variants={weekLabelAnimation}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{
+                    x: { type: "spring", stiffness: 340, damping: 34, mass: 0.78 },
+                    opacity: { duration: 0.16, ease: "easeOut" },
+                  }}
+                >
+                  {weekLabel}
+                </motion.p>
+              </AnimatePresence>
+            </div>
             <button
               type="button"
-              onClick={() => setWeekOffset((previous) => Math.min(0, previous + 1))}
+              onClick={goToNextWeek}
               className="inline-flex h-7 w-7 items-center justify-center rounded-md border text-[16px]"
               style={{
                 color: "var(--text-muted)",
@@ -523,45 +587,62 @@ export default function DashboardHomePage() {
                 backgroundColor: "color-mix(in srgb, var(--ink-mid) 56%, var(--ink-deep))",
                 opacity: weekOffset >= 0 ? 0.35 : 1,
               }}
-              aria-label="Next week"
+              aria-label={lt("Next week")}
               disabled={weekOffset >= 0}
             >
               &#8250;
             </button>
           </div>
 
-          <div className="space-y-3">
-            <WeekCard
-              name="Your week"
-              checkinDates={activeCheckinDates}
-              todayKey={todayKey}
-              weekOffset={weekOffset}
-              calendarWeekStart={settings.calendarWeekStart}
-              timeZone={settings.timeZone}
-              activeColor={yourWeekPalette.active}
-              inactiveColor={yourWeekPalette.inactive}
-              borderColor={yourWeekPalette.border}
-              dayLabelColor={yourWeekPalette.label}
-              shellStyle={shellStyle}
-            />
-
-            {friendInfoList.map((friend) => (
+          <AnimatePresence mode="wait" initial={false} custom={weekTransitionDirection}>
+            <motion.div
+              key={`week-content-${weekOffset}`}
+              className="space-y-3"
+              custom={weekTransitionDirection}
+              variants={weekContentAnimation}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{
+                x: { type: "spring", stiffness: 250, damping: 30, mass: 0.9 },
+                opacity: { duration: 0.18, ease: "easeOut" },
+                scale: { duration: 0.18, ease: "easeOut" },
+              }}
+            >
               <WeekCard
-                key={friend.userId}
-                name={friend.name}
-                checkinDates={friendCheckinData.get(friend.userId) ?? new Set()}
+                name={lt("Your week")}
+                checkinDates={activeCheckinDates}
                 todayKey={todayKey}
                 weekOffset={weekOffset}
                 calendarWeekStart={settings.calendarWeekStart}
                 timeZone={settings.timeZone}
-                activeColor="color-mix(in srgb, var(--accent) 72%, transparent)"
-                inactiveColor="color-mix(in srgb, var(--accent) 18%, transparent)"
-                borderColor="var(--accent)"
-                dayLabelColor="var(--accent)"
+                activeColor={yourWeekPalette.active}
+                inactiveColor={yourWeekPalette.inactive}
+                borderColor={yourWeekPalette.border}
+                dayLabelColor={yourWeekPalette.label}
                 shellStyle={shellStyle}
+                translateFn={lt}
               />
-            ))}
-          </div>
+
+              {friendInfoList.map((friend) => (
+                <WeekCard
+                  key={friend.userId}
+                  name={friend.name}
+                  checkinDates={friendCheckinData.get(friend.userId) ?? new Set()}
+                  todayKey={todayKey}
+                  weekOffset={weekOffset}
+                  calendarWeekStart={settings.calendarWeekStart}
+                  timeZone={settings.timeZone}
+                  activeColor="color-mix(in srgb, var(--accent) 72%, transparent)"
+                  inactiveColor="color-mix(in srgb, var(--accent) 18%, transparent)"
+                  borderColor="var(--accent)"
+                  dayLabelColor="var(--accent)"
+                  shellStyle={shellStyle}
+                  translateFn={lt}
+                />
+              ))}
+            </motion.div>
+          </AnimatePresence>
         </section>
 
       </div>

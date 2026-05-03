@@ -15,8 +15,10 @@ import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { api } from "@/lib/api-client";
 import { getDeletedExerciseLabel } from "@/lib/exercise-name";
 import { rankExerciseSearchResults } from "@/lib/exercise-search";
+import { translateEnglishToLanguage } from "@/lib/language";
 import { DASHBOARD_ROUTES } from "@/lib/navigation";
 import { isDeletedExerciseDescription } from "@/lib/pending-exercises";
+import { t } from "@/lib/terminology";
 import { DEFAULT_USER_PHYSIQUE, loadUserPhysique } from "@/lib/user-physique";
 import { PROGRESSION_EXERCISES_UPDATED_EVENT } from "@/lib/progression-events";
 import { DAYS_OF_WEEK, formatDateWithPreference, parseDayAssignmentDetailsList, parseDayAssignments } from "@/lib/constants";
@@ -197,9 +199,9 @@ function TrainExerciseListRow({
       </div>
       {row.showAssignedContext ? (
         <p className="mt-0.5 flex items-center gap-1 text-[11px] italic" style={{ color: row.isDeleted ? "var(--crimson-light)" : "var(--text-muted)" }}>
-          <span>{`Assigned: ${row.assignedVariant ? `${row.assignedVariant} ` : ""}${row.assignedProgression || row.progression} ${row.exerciseName}`}</span>
+          <span>{`${t("Assigned", "normal")}: ${row.assignedVariant ? `${row.assignedVariant} ` : ""}${row.assignedProgression || row.progression} ${row.exerciseName}`}</span>
           {row.isCompleted ? (
-            <span className="inline-flex shrink-0" style={{ color: "var(--forest)" }} aria-label="Completed today">
+            <span className="inline-flex shrink-0" style={{ color: "var(--forest)" }} aria-label={t("Completed today", "normal")}>
               <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
@@ -208,7 +210,7 @@ function TrainExerciseListRow({
         </p>
       ) : (
         <p className="mt-0.5 text-[11px] italic" style={{ color: row.isDeleted ? "var(--crimson-light)" : "var(--text-muted)" }}>
-          {`Recent: ${row.variant ? `${row.variant} ` : ""}${row.progression} ${row.exerciseName}`}
+          {`${t("Recent", "normal")}: ${row.variant ? `${row.variant} ` : ""}${row.progression} ${row.exerciseName}`}
         </p>
       )}
     </article>
@@ -219,6 +221,7 @@ export default function HistoryPage() {
   const { user } = useAuth();
   const { themeStyle } = useAppContext();
   const { settings } = useDisplaySettings();
+  const lt = (text: string) => translateEnglishToLanguage(text, settings.languageMode);
   const weightUnit = settings.defaultWeightUnit ?? "kg";
   const timedUnit: TimedUnitPref = settings.defaultTimedUnit ?? "seconds";
   const searchParams = useSearchParams();
@@ -265,6 +268,9 @@ export default function HistoryPage() {
   const [trainRailOverviewOpen, setTrainRailOverviewOpen] = useState(false);
   const [exerciseManagementOpen, setExerciseManagementOpen] = useState(false);
   const [hideEmptyTrainDays, setHideEmptyTrainDays] = useState(true);
+  const hideEmptyTrainDaysLoadedKeyRef = useRef<string | null>(null);
+  const hideEmptyTrainDaysRemoteReadyRef = useRef(false);
+  const hideEmptyTrainDaysSyncedUserIdRef = useRef<string | null>(null);
   const mobileDrawerSearchInputRef = useRef<HTMLInputElement | null>(null);
   const mobileHistorySortPreferenceRef = useRef<"recent" | "oldest" | "name-az">("recent");
   const mobileLogFabSortPreferenceRef = useRef<"recent" | "oldest" | "name-az">("recent");
@@ -274,11 +280,106 @@ export default function HistoryPage() {
   const rawFriendView = searchParams.get("friendView") || "history";
   const friendView = rawFriendView === "chart" || rawFriendView === "checkin" ? rawFriendView : "history";
   const activeUserId = targetUserId || userId;
+  const hideEmptyTrainDaysStorageKey = useMemo(
+    () => (userId ? `cultivateos-history-hide-empty-days:${userId}` : null),
+    [userId],
+  );
   const prefillExerciseId = searchParams.get("prefillExerciseId");
   const prefillExerciseName = searchParams.get("prefillExercise");
   const prefillProgression = searchParams.get("prefillProgression");
   const prefillVariant = searchParams.get("prefillVariant");
   const librarySheetRequested = searchParams.get("library") === "1" && !targetUserId && !searchParams.get("friendView");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!hideEmptyTrainDaysStorageKey) {
+      hideEmptyTrainDaysLoadedKeyRef.current = null;
+      hideEmptyTrainDaysSyncedUserIdRef.current = null;
+      hideEmptyTrainDaysRemoteReadyRef.current = false;
+      setHideEmptyTrainDays(true);
+      return;
+    }
+
+    let nextValue = true;
+    try {
+      const raw = window.localStorage.getItem(hideEmptyTrainDaysStorageKey);
+      if (raw === "false") nextValue = false;
+      if (raw === "true") nextValue = true;
+    } catch {}
+
+    setHideEmptyTrainDays(nextValue);
+    hideEmptyTrainDaysLoadedKeyRef.current = hideEmptyTrainDaysStorageKey;
+  }, [hideEmptyTrainDaysStorageKey]);
+
+  useEffect(() => {
+    if (!userId) {
+      hideEmptyTrainDaysSyncedUserIdRef.current = null;
+      hideEmptyTrainDaysRemoteReadyRef.current = false;
+      return;
+    }
+
+    let cancelled = false;
+    hideEmptyTrainDaysRemoteReadyRef.current = false;
+
+    const hydrateRemoteHideEmptyDays = async () => {
+      try {
+        const payload = await api.get<{ appPrefs?: Record<string, unknown> }>("/api/users/preferences", { cache: "no-store" });
+        if (cancelled) return;
+
+        const appPrefs = payload?.appPrefs && typeof payload.appPrefs === "object" ? payload.appPrefs : null;
+        const remoteValue = appPrefs?.historyHideEmptyTrainDays;
+        if (typeof remoteValue === "boolean") {
+          setHideEmptyTrainDays(remoteValue);
+          if (hideEmptyTrainDaysStorageKey) {
+            try {
+              window.localStorage.setItem(hideEmptyTrainDaysStorageKey, remoteValue ? "true" : "false");
+            } catch {}
+          }
+        }
+      } catch {
+        // Keep local fallback when remote preferences cannot be reached.
+      } finally {
+        if (!cancelled) {
+          hideEmptyTrainDaysSyncedUserIdRef.current = userId;
+          hideEmptyTrainDaysRemoteReadyRef.current = true;
+        }
+      }
+    };
+
+    hydrateRemoteHideEmptyDays();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hideEmptyTrainDaysStorageKey, userId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!hideEmptyTrainDaysStorageKey) return;
+    if (hideEmptyTrainDaysLoadedKeyRef.current !== hideEmptyTrainDaysStorageKey) return;
+
+    try {
+      window.localStorage.setItem(hideEmptyTrainDaysStorageKey, hideEmptyTrainDays ? "true" : "false");
+    } catch {}
+  }, [hideEmptyTrainDays, hideEmptyTrainDaysStorageKey]);
+
+  useEffect(() => {
+    if (!userId) return;
+    if (!hideEmptyTrainDaysRemoteReadyRef.current) return;
+    if (hideEmptyTrainDaysSyncedUserIdRef.current !== userId) return;
+
+    const timer = window.setTimeout(() => {
+      api.put("/api/users/preferences", {
+        appPrefs: {
+          historyHideEmptyTrainDays: hideEmptyTrainDays,
+        },
+      }).catch(() => {
+        // Ignore remote save failures; local storage remains the fallback.
+      });
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+  }, [hideEmptyTrainDays, userId]);
 
   const setLibrarySheetOpen = useCallback((open: boolean) => {
     setMobileLogFabOpen(open);
@@ -309,7 +410,7 @@ export default function HistoryPage() {
     const weightLocked = mobileQuickCheckinTodayWeight != null;
     const noteLocked = Boolean(mobileQuickCheckinTodayNote.trim());
     if (weightLocked && noteLocked) {
-      setMobileQuickCheckinMessage("Already saved today");
+      setMobileQuickCheckinMessage(lt("Already saved today"));
       return;
     }
 
@@ -332,7 +433,7 @@ export default function HistoryPage() {
           },
         },
       });
-      setMobileQuickCheckinMessage("Saved");
+      setMobileQuickCheckinMessage(lt("Saved"));
       setMobileQuickCheckinOpen(false);
       setMobileQuickCheckinTodayWeight(effectiveWeight ?? null);
       setMobileQuickCheckinTodayNote(effectiveNote);
@@ -342,7 +443,7 @@ export default function HistoryPage() {
       setMobileQuickCheckinWeight("");
       setMobileQuickCheckinNote("");
     } catch {
-      setMobileQuickCheckinMessage("Unable to save");
+      setMobileQuickCheckinMessage(lt("Unable to save"));
     } finally {
       setMobileQuickCheckinSaving(false);
     }
@@ -571,24 +672,25 @@ export default function HistoryPage() {
   const orderedVisibleUsers = useMemo(() => {
     if (!userId) return visibleUsers;
 
-    const selfEntry = visibleUsers.find((u) => u.id === userId) ?? {
+    const selfEntry = {
       id: userId,
-      name: user?.name || "Me",
+      name: lt("Me"),
       username: user?.username || "",
     };
     const others = visibleUsers.filter((u) => u.id !== userId);
     return [selfEntry, ...others];
-  }, [user?.name, user?.username, userId, visibleUsers]);
+  }, [user?.username, userId, visibleUsers]);
 
   const targetUserDisplayName = useMemo(() => {
     if (!targetUserId) return undefined;
+    if (targetUserId === userId) return lt("Me");
     const target = orderedVisibleUsers.find((u) => u.id === targetUserId);
     if (!target) return undefined;
     return (target.name || target.username || "").trim() || undefined;
-  }, [orderedVisibleUsers, targetUserId]);
+  }, [orderedVisibleUsers, targetUserId, userId]);
 
   const activeUserProfile = useMemo(() => {
-    const fallbackName = user?.name || user?.username || "Me";
+    const fallbackName = user?.name || user?.username || lt("Me");
     const fallbackUsername = user?.username || "me";
     const selected = orderedVisibleUsers.find((u) => u.id === activeUserId)
       ?? (userId ? orderedVisibleUsers.find((u) => u.id === userId) : undefined);
@@ -602,10 +704,10 @@ export default function HistoryPage() {
 
   const trainPageTitle = targetUserDisplayName
     ? `${targetUserDisplayName} Train ${friendView === "history" ? "History" : friendView === "chart" ? "Chart" : "Check-in"}`
-    : "Train";
+    : lt("Train");
   const subtitle = targetUserDisplayName
     ? `Review ${targetUserDisplayName}'s training logs and cultivation entries`
-    : "Review your training logs and cultivation entries";
+    : lt("Review your training logs and cultivation entries");
   const isFriendTrainOverlay = Boolean(targetUserId);
   const shouldShowWeightSwipeHint = !isFriendTrainOverlay && mobileQuickCheckinTodayWeight == null && !showWeightHintThankYou;
   const shouldShowWeightThankYou = !isFriendTrainOverlay && showWeightHintThankYou;
@@ -1162,7 +1264,7 @@ export default function HistoryPage() {
       >
         {loading ? (
           <GlowCard glow="jade" hoverable={false}>
-            <p className="text-sm text-mist-dark text-center py-4">Loading history...</p>
+            <p className="text-sm text-mist-dark text-center py-4">{lt("Loading history...")}</p>
           </GlowCard>
         ) : (
           <>
@@ -1220,7 +1322,7 @@ export default function HistoryPage() {
                                   color: "var(--mist-light)",
                                   backgroundColor: "transparent",
                                 }}
-                                aria-label="Back to my train history"
+                                aria-label={lt("Back to my train history")}
                               >
                                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
                                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -1228,7 +1330,7 @@ export default function HistoryPage() {
                               </button>
                             ) : null}
                             <div>
-                              <p className="text-[9px] uppercase tracking-[0.1em]" style={{ color: "var(--text-muted)" }}>Training</p>
+                              <p className="text-[9px] uppercase tracking-[0.1em]" style={{ color: "var(--text-muted)" }}>{lt("Training")}</p>
                               <h2 className="mt-0.5 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-primary)" }}>
                                 {trainPageTitle}
                               </h2>
@@ -1241,8 +1343,8 @@ export default function HistoryPage() {
                                 <SearchField
                                   value={mobileSearchQuery}
                                   onChange={setMobileSearchQuery}
-                                  placeholder="Search exercises"
-                                  aria-label="Search exercises"
+                                  placeholder={lt("Search exercises")}
+                                  aria-label={lt("Search exercises")}
                                   wrapperClassName="min-w-0 flex-1"
                                   className="h-8 min-w-0 text-sm"
                                   style={{
@@ -1255,7 +1357,7 @@ export default function HistoryPage() {
                                   type="button"
                                   onClick={() => setMobileHistoryFilterOpen(true)}
                                   className="theme-control-btn relative inline-flex h-8 w-8 items-center justify-center rounded-md border transition-colors"
-                                  aria-label="Open filters"
+                                  aria-label={lt("Open filters")}
                                 >
                                   <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 5h18M6 12h12m-9 7h6" />
@@ -1286,7 +1388,7 @@ export default function HistoryPage() {
                               color: "var(--text-muted)",
                             }}
                           >
-                            No exercises match your search.
+                            {lt("No exercises match your search.")}
                           </div>
                         ) : (
                           filteredMobileExerciseRows.map((row) => {
@@ -1311,10 +1413,10 @@ export default function HistoryPage() {
                         <div className="px-3 py-5">
                           <div className="rounded-2xl border border-[var(--border)] bg-[var(--void-black)] p-4">
                             <p className="text-sm font-semibold text-[var(--text-primary)]">
-                              {friendView === "chart" ? "Chart" : "Check-in"} coming soon
+                              {friendView === "chart" ? lt("Chart") : lt("Check-in")} {lt("coming soon")}
                             </p>
                             <p className="mt-1 text-xs text-[var(--text-muted)]">
-                              UI placeholder ready. Functionality will be added in the next step.
+                              {lt("UI placeholder ready. Functionality will be added in the next step.")}
                             </p>
                           </div>
                         </div>
@@ -1372,14 +1474,14 @@ export default function HistoryPage() {
                           onClick={() => setTrainRailOverviewOpen(false)}
                           className="inline-flex h-9 w-9 items-center justify-center rounded-md"
                           style={{ color: "var(--mist-light)", backgroundColor: "transparent" }}
-                          aria-label="Close day overview"
+                          aria-label={lt("Close day overview")}
                         >
                           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                           </svg>
                         </button>
                         <h2 className="truncate text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--mist-light)" }}>
-                          Manage Training Days
+                          {lt("Manage Training Days")}
                         </h2>
                       </div>
                     </div>
@@ -1406,11 +1508,11 @@ export default function HistoryPage() {
                     >
                       <div className="flex items-start justify-between gap-2">
                         <p className="text-sm font-semibold leading-tight" style={{ color: "var(--text-primary)" }}>
-                          Manage day allocations
+                          {lt("Manage day allocations")}
                         </p>
                       </div>
                       <p className="mt-0.5 text-[11px] italic" style={{ color: "var(--text-muted)" }}>
-                        Assign exercises to specific training days.
+                        {lt("Assign exercises to specific training days.")}
                       </p>
                     </article>
 
@@ -1418,17 +1520,17 @@ export default function HistoryPage() {
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="text-sm font-semibold leading-tight" style={{ color: "var(--text-primary)" }}>
-                            Show empty days
+                            {lt("Show empty days")}
                           </p>
                           <p className="mt-0.5 text-[11px] italic" style={{ color: "var(--text-muted)" }}>
-                            Toggle on to show days without assigned exercises in the day rail.
+                            {lt("Toggle on to show days without assigned exercises in the day rail.")}
                           </p>
                         </div>
                         <button
                           type="button"
                           role="switch"
                           aria-checked={!hideEmptyTrainDays}
-                          aria-label="Toggle empty day visibility"
+                          aria-label={lt("Toggle empty day visibility")}
                           onClick={() => setHideEmptyTrainDays((prev) => !prev)}
                           className="relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors"
                           style={{
@@ -1512,7 +1614,7 @@ export default function HistoryPage() {
                           }}
                           className="inline-flex h-9 w-9 items-center justify-center rounded-md"
                           style={{ color: "var(--mist-light)", backgroundColor: "transparent" }}
-                          aria-label="Close day exercises"
+                          aria-label={lt("Close day exercises")}
                         >
                           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -1528,7 +1630,7 @@ export default function HistoryPage() {
 
                   {selectedDayExerciseRows.length === 0 ? (
                     <div className="px-3 py-4 text-center text-xs" style={{ color: "var(--text-muted)" }}>
-                      {`No exercises assigned to ${DAYS_OF_WEEK[trainDayFilter]}.`}
+                      {`${lt("No exercises assigned to")} ${DAYS_OF_WEEK[trainDayFilter]}.`}
                     </div>
                   ) : (
                     selectedDayExerciseRows.map((row) => {
@@ -1599,8 +1701,8 @@ export default function HistoryPage() {
               <div className="shrink-0 border-b px-4 pb-3 pt-[max(env(safe-area-inset-top,0px),1rem)]" style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)" }}>
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">Filters</p>
-                    <h2 className="mt-1 text-base font-semibold text-[var(--text-primary)]">Train History</h2>
+                    <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">{lt("Filters")}</p>
+                    <h2 className="mt-1 text-base font-semibold text-[var(--text-primary)]">{lt("Train History")}</h2>
                   </div>
                   <button
                     type="button"
@@ -1610,7 +1712,7 @@ export default function HistoryPage() {
                       borderColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)",
                       backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
                     }}
-                    aria-label="Close exercise filters"
+                    aria-label={lt("Close exercise filters")}
                   >
                     ×
                   </button>
@@ -1620,7 +1722,7 @@ export default function HistoryPage() {
               <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4" style={{ WebkitOverflowScrolling: "touch" }}>
                 <div className="space-y-4">
                   <div>
-                    <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">Category</label>
+                    <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">{lt("Category")}</label>
                     <select
                       value={mobileHistoryCategory}
                       onChange={(event) => setMobileHistoryCategory(event.target.value)}
@@ -1633,14 +1735,14 @@ export default function HistoryPage() {
                     >
                       {mobileHistoryCategoryOptions.map((category) => (
                         <option key={`history-category-${category}`} value={category}>
-                          {category === "all" ? "All categories" : category}
+                          {category === "all" ? lt("All categories") : category}
                         </option>
                       ))}
                     </select>
                   </div>
 
                   <div>
-                    <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">Sort by</label>
+                    <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">{lt("Sort by")}</label>
                     <select
                       value={mobileHistorySort}
                       onChange={(event) => setMobileHistorySort(event.target.value as "recent" | "oldest" | "name-az" | "relevant")}
@@ -1651,15 +1753,15 @@ export default function HistoryPage() {
                         color: "var(--text-primary)",
                       }}
                     >
-                      <option value="relevant">Relevant</option>
-                      <option value="recent">Recent first</option>
-                      <option value="oldest">Oldest first</option>
-                      <option value="name-az">Name A-Z</option>
+                      <option value="relevant">{lt("Relevant")}</option>
+                      <option value="recent">{lt("Recent first")}</option>
+                      <option value="oldest">{lt("Oldest first")}</option>
+                      <option value="name-az">{lt("Name A-Z")}</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">Updated</label>
+                    <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">{lt("Updated")}</label>
                     <select
                       value={mobileHistoryRecency}
                       onChange={(event) => setMobileHistoryRecency(event.target.value as "all" | "7d" | "30d")}
@@ -1670,9 +1772,9 @@ export default function HistoryPage() {
                         color: "var(--text-primary)",
                       }}
                     >
-                      <option value="all">All time</option>
-                      <option value="7d">Last 7 days</option>
-                      <option value="30d">Last 30 days</option>
+                      <option value="all">{lt("All time")}</option>
+                      <option value="7d">{lt("Last 7 days")}</option>
+                      <option value="30d">{lt("Last 30 days")}</option>
                     </select>
                   </div>
 
@@ -1687,7 +1789,7 @@ export default function HistoryPage() {
                       className="h-11 rounded-xl border px-3 text-sm font-medium text-[var(--text-primary)] transition-colors"
                       style={{ borderColor: "var(--border)", backgroundColor: "var(--void-black)" }}
                     >
-                      Reset
+                      {lt("Reset")}
                     </button>
                     <button
                       type="button"
@@ -1695,7 +1797,7 @@ export default function HistoryPage() {
                       className="h-11 rounded-xl border px-3 text-sm font-semibold text-[var(--void-black)] transition-colors"
                       style={{ borderColor: "color-mix(in srgb, var(--forest) 42%, transparent)", backgroundColor: "var(--forest)" }}
                     >
-                      Done
+                      {lt("Done")}
                     </button>
                   </div>
                 </div>
@@ -1744,7 +1846,7 @@ export default function HistoryPage() {
                   <div className="px-3 py-2.5">
                     <div className="flex items-center justify-between gap-2">
                       <h2 className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--mist-light)" }}>
-                        New Workout Log
+                        {lt("New Workout Log")}
                       </h2>
                       <button
                         type="button"
@@ -1755,7 +1857,7 @@ export default function HistoryPage() {
                           color: "var(--mist-light)",
                           backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
                         }}
-                        aria-label="Close workout logger chooser"
+                        aria-label={lt("Close workout logger chooser")}
                       >
                         x
                       </button>
@@ -1765,8 +1867,8 @@ export default function HistoryPage() {
                     <SearchField
                       value={mobileLogFabSearchQuery}
                       onChange={setMobileLogFabSearchQuery}
-                      placeholder="Search exercises"
-                      aria-label="Search exercises"
+                      placeholder={lt("Search exercises")}
+                      aria-label={lt("Search exercises")}
                       className="h-8 text-sm"
                       style={{
                         borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
@@ -1784,11 +1886,11 @@ export default function HistoryPage() {
                           backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
                           color: "var(--cloud-white)",
                         }}
-                        aria-label="Filter by category"
+                        aria-label={lt("Filter by category")}
                       >
                         {mobileFabCategoryOptions.map((category) => (
                           <option key={`mobile-fab-category-${category}`} value={category}>
-                            {category === "all" ? "All categories" : category}
+                            {category === "all" ? lt("All categories") : category}
                           </option>
                         ))}
                       </select>
@@ -1801,12 +1903,12 @@ export default function HistoryPage() {
                           backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
                           color: "var(--cloud-white)",
                         }}
-                        aria-label="Sort exercises"
+                        aria-label={lt("Sort exercises")}
                       >
-                        <option value="relevant">Relevant</option>
-                        <option value="recent">Recent first</option>
-                        <option value="oldest">Oldest first</option>
-                        <option value="name-az">Name A-Z</option>
+                        <option value="relevant">{lt("Relevant")}</option>
+                        <option value="recent">{lt("Recent first")}</option>
+                        <option value="oldest">{lt("Oldest first")}</option>
+                        <option value="name-az">{lt("Name A-Z")}</option>
                       </select>
                     </div>
                   </div>
@@ -1836,17 +1938,17 @@ export default function HistoryPage() {
                   >
                     <div className="flex items-start justify-between gap-2">
                       <p className="text-sm font-semibold leading-tight" style={{ color: "color-mix(in srgb, var(--forest) 72%, black 28%)" }}>
-                        + New Custom Exercise
+                        + {lt("New Custom Exercise")}
                       </p>
                     </div>
                     <p className="mt-0.5 text-[11px] italic" style={{ color: "var(--text-muted)" }}>
-                      Create a new exercise name and send it to review.
+                      {lt("Create a new exercise name and send it to review.")}
                     </p>
                   </button>
 
                   {filteredMobileLogFabRows.length === 0 ? (
                     <div className="px-3 py-4 text-center text-xs" style={{ color: "var(--text-muted)" }}>
-                      No exercises match your search or filters.
+                      {lt("No exercises match your search or filters.")}
                     </div>
                   ) : (
                     filteredMobileLogFabRows.map((row) => (
@@ -1874,12 +1976,12 @@ export default function HistoryPage() {
                             ) : null}
                           </p>
                           <span className="shrink-0 text-[11px]" style={{ color: "var(--text-muted)" }}>
-                            {row.date ? formatRelativeRecentDate(row.date, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone) : "Never"}
+                            {row.date ? formatRelativeRecentDate(row.date, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone) : lt("Never")}
                           </span>
                         </div>
                         {row.date ? (
                           <p className="mt-0.5 text-[11px] italic" style={{ color: "var(--text-muted)" }}>
-                            {`Recent: ${row.variant ? `${row.variant} ` : ""}${row.progression} ${row.exerciseName}`}
+                            {`${lt("Recent")}: ${row.variant ? `${row.variant} ` : ""}${row.progression} ${row.exerciseName}`}
                           </p>
                         ) : null}
                       </button>
@@ -1946,7 +2048,7 @@ export default function HistoryPage() {
                         color: "var(--mist-light)",
                         backgroundColor: "transparent",
                       }}
-                      aria-label="Back to exercise list"
+                      aria-label={lt("Back to exercise list")}
                     >
                       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -1957,10 +2059,10 @@ export default function HistoryPage() {
                         className="truncate text-sm font-semibold"
                         style={{ color: getRecentExerciseTextColor(selectedMobileExerciseLogs[0]?.createdAt, true) }}
                       >
-                        {selectedMobileExercise?.name || "Exercise"}
+                        {selectedMobileExercise?.name || lt("Exercise")}
                       </h3>
                       <p className="mt-0.5 text-[9px] uppercase tracking-[0.1em]" style={{ color: "var(--mist-light)" }}>
-                        Workout History
+                        {lt("Workout History")}
                       </p>
                     </div>
                     <div className="flex items-center gap-3 pt-0.5">
@@ -1982,8 +2084,8 @@ export default function HistoryPage() {
                           router.push(`/dashboard/train/input/${encodeURIComponent(pathId)}?${params.toString()}`);
                         }}
                         className="inline-flex h-8 items-center justify-center text-[var(--mist-mid)] transition-colors hover:text-[var(--text-primary)]"
-                        aria-label="Log a session for this exercise"
-                        title="Log a session"
+                        aria-label={lt("Log a session for this exercise")}
+                        title={lt("Log a session")}
                       >
                         <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
@@ -1993,7 +2095,7 @@ export default function HistoryPage() {
                         type="button"
                         onClick={() => setMobileDrawerSearchOpen((prev) => !prev)}
                         className="inline-flex h-8 items-center justify-center text-[var(--mist-mid)] transition-colors hover:text-[var(--text-primary)]"
-                        aria-label={mobileDrawerSearchOpen ? "Close log search" : "Open log search"}
+                        aria-label={mobileDrawerSearchOpen ? lt("Close log search") : lt("Open log search")}
                         aria-expanded={mobileDrawerSearchOpen}
                       >
                         <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -2004,7 +2106,7 @@ export default function HistoryPage() {
                         type="button"
                         onClick={() => setMobileDrawerFilterOpen(true)}
                         className="relative inline-flex h-8 items-center justify-center text-[var(--mist-mid)] transition-colors hover:text-[var(--text-primary)]"
-                        aria-label="Open log filters"
+                        aria-label={lt("Open log filters")}
                       >
                         <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M3 5h18M6 12h12m-9 7h6" />
@@ -2030,8 +2132,8 @@ export default function HistoryPage() {
                           autoFocus
                           value={mobileDrawerSearchQuery}
                           onChange={setMobileDrawerSearchQuery}
-                          placeholder="Search logs"
-                          aria-label="Search logs"
+                          placeholder={lt("Search logs")}
+                          aria-label={lt("Search logs")}
                           wrapperClassName="mt-2"
                           className="h-8 text-sm"
                           style={{
@@ -2074,8 +2176,8 @@ export default function HistoryPage() {
                         <div className="shrink-0 border-b px-4 pb-3 pt-[max(env(safe-area-inset-top,0px),1rem)]" style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)" }}>
                           <div className="flex items-start justify-between gap-3">
                             <div>
-                              <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">Filters</p>
-                              <h2 className="mt-1 text-base font-semibold text-[var(--text-primary)]">Log Filters</h2>
+                              <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">{lt("Filters")}</p>
+                              <h2 className="mt-1 text-base font-semibold text-[var(--text-primary)]">{lt("Log Filters")}</h2>
                             </div>
                             <button
                               type="button"
@@ -2085,7 +2187,7 @@ export default function HistoryPage() {
                                 borderColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)",
                                 backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
                               }}
-                              aria-label="Close log filters"
+                              aria-label={lt("Close log filters")}
                             >
                               ×
                             </button>
@@ -2095,7 +2197,7 @@ export default function HistoryPage() {
                         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4" style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: "contain" }}>
                           <div className="space-y-4">
                             <div>
-                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">Progression</label>
+                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">{lt("Progression")}</label>
                               <select
                                 value={mobileDrawerLevelFilter}
                                 onChange={(event) => setMobileDrawerLevelFilter(event.target.value)}
@@ -2106,7 +2208,7 @@ export default function HistoryPage() {
                                   color: "var(--text-primary)",
                                 }}
                               >
-                                <option value="all">All progressions</option>
+                                <option value="all">{lt("All progressions")}</option>
                                 {mobileDrawerLevelOptions.map((progressionName) => (
                                   <option key={`drawer-progression-${progressionName}`} value={progressionName}>{progressionName}</option>
                                 ))}
@@ -2114,7 +2216,7 @@ export default function HistoryPage() {
                             </div>
 
                             <div>
-                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">Variation</label>
+                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">{lt("Variation")}</label>
                               <select
                                 value={mobileDrawerVariantFilter}
                                 onChange={(event) => setMobileDrawerVariantFilter(event.target.value)}
@@ -2125,15 +2227,15 @@ export default function HistoryPage() {
                                   color: "var(--text-primary)",
                                 }}
                               >
-                                <option value="all">All variations</option>
+                                <option value="all">{lt("All variations")}</option>
                                 {mobileDrawerVariantOptions.map((variant) => (
-                                  <option key={`drawer-variant-${variant}`} value={variant}>{variant === "-" ? "No variation" : variant}</option>
+                                  <option key={`drawer-variant-${variant}`} value={variant}>{variant === "-" ? lt("No variation") : variant}</option>
                                 ))}
                               </select>
                             </div>
 
                             <div>
-                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">Weight</label>
+                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">{lt("Weight")}</label>
                               <select
                                 value={mobileDrawerWeightFilter}
                                 onChange={(event) => setMobileDrawerWeightFilter(event.target.value as "all" | "weighted" | "bodyweight")}
@@ -2144,14 +2246,14 @@ export default function HistoryPage() {
                                   color: "var(--text-primary)",
                                 }}
                               >
-                                <option value="all">All loads</option>
-                                <option value="weighted">Weighted</option>
-                                <option value="bodyweight">Bodyweight</option>
+                                <option value="all">{lt("All loads")}</option>
+                                <option value="weighted">{lt("Weighted")}</option>
+                                <option value="bodyweight">{lt("Bodyweight")}</option>
                               </select>
                             </div>
 
                             <div>
-                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">Reps</label>
+                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">{lt("Reps")}</label>
                               <select
                                 value={mobileDrawerRepsFilter}
                                 onChange={(event) => setMobileDrawerRepsFilter(event.target.value as "all" | "1-5" | "6-10" | "11+")}
@@ -2162,15 +2264,15 @@ export default function HistoryPage() {
                                   color: "var(--text-primary)",
                                 }}
                               >
-                                <option value="all">All rep ranges</option>
-                                <option value="1-5">1–5 reps</option>
-                                <option value="6-10">6–10 reps</option>
-                                <option value="11+">11+ reps</option>
+                                <option value="all">{lt("All rep ranges")}</option>
+                                <option value="1-5">{lt("1–5 reps")}</option>
+                                <option value="6-10">{lt("6–10 reps")}</option>
+                                <option value="11+">{lt("11+ reps")}</option>
                               </select>
                             </div>
 
                             <div>
-                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">Sort by</label>
+                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">{lt("Sort by")}</label>
                               <select
                                 value={mobileDrawerSort}
                                 onChange={(event) => setMobileDrawerSort(event.target.value as "recent" | "oldest" | "progression-asc" | "progression-desc")}
@@ -2181,10 +2283,10 @@ export default function HistoryPage() {
                                   color: "var(--text-primary)",
                                 }}
                               >
-                                <option value="recent">Recent first</option>
-                                <option value="oldest">Oldest first</option>
-                                <option value="progression-asc">Progression ascending</option>
-                                <option value="progression-desc">Progression descending</option>
+                                <option value="recent">{lt("Recent first")}</option>
+                                <option value="oldest">{lt("Oldest first")}</option>
+                                <option value="progression-asc">{lt("Progression ascending")}</option>
+                                <option value="progression-desc">{lt("Progression descending")}</option>
                               </select>
                             </div>
 
@@ -2201,7 +2303,7 @@ export default function HistoryPage() {
                                 className="h-11 rounded-xl border px-3 text-sm font-medium text-[var(--text-primary)] transition-colors"
                                 style={{ borderColor: "var(--border)", backgroundColor: "var(--void-black)" }}
                               >
-                                Reset
+                                {lt("Reset")}
                               </button>
                               <button
                                 type="button"
@@ -2209,7 +2311,7 @@ export default function HistoryPage() {
                                 className="h-11 rounded-xl border px-3 text-sm font-semibold text-[var(--void-black)] transition-colors"
                                 style={{ borderColor: "color-mix(in srgb, var(--forest) 42%, transparent)", backgroundColor: "var(--forest)" }}
                               >
-                                Done
+                                {lt("Done")}
                               </button>
                             </div>
                           </div>
@@ -2222,11 +2324,11 @@ export default function HistoryPage() {
                 <div>
                   {!mobileDrawerAnimReady ? (
                     <div className="px-3 py-6 text-center text-xs" style={{ color: "var(--text-muted)" }}>
-                      Loading...
+                      {lt("Loading...")}
                     </div>
                   ) : filteredSelectedMobileExerciseLogs.length === 0 ? (
                     <div className="px-3 py-4 text-center text-xs" style={{ color: "var(--text-muted)" }}>
-                      {selectedMobileExerciseLogs.length === 0 ? "No workout history for this exercise yet." : "No logs match your search or filters."}
+                      {selectedMobileExerciseLogs.length === 0 ? lt("No workout history for this exercise yet.") : lt("No logs match your search or filters.")}
                     </div>
                   ) : (
                     <>
@@ -2241,9 +2343,9 @@ export default function HistoryPage() {
                         router.push(`/dashboard/workout-history/input/${log.id}?${params.toString()}`);
                       };
                       const leftDetailRows = [
-                        { label: "Variation:", value: variationValue, valueColor: "var(--mountain-blue-glow)", step: "details", field: "variation" },
-                        { label: "Mod:", value: modValue, valueColor: "var(--gold-glow)", step: "session", field: "modifier" },
-                        { label: "Notes:", value: notesValue, valueColor: "var(--text-secondary)", step: "notes", field: "notes" },
+                        { label: `${lt("Variation")}:`, value: variationValue, valueColor: "var(--mountain-blue-glow)", step: "details", field: "variation" },
+                        { label: `${lt("Mod")}:`, value: modValue, valueColor: "var(--gold-glow)", step: "session", field: "modifier" },
+                        { label: `${lt("Notes")}:`, value: notesValue, valueColor: "var(--text-secondary)", step: "notes", field: "notes" },
                       ];
                       const alignedDetailRowCount = Math.max(leftDetailRows.length, alignedMetricRows.length);
                       return (
@@ -2309,7 +2411,7 @@ export default function HistoryPage() {
                                     {metric.weight !== "-" ? (
                                       targetUserId ? (
                                         <span className="truncate" style={{ color: "var(--mountain-blue-glow)" }}>
-                                          <span style={{ color: "var(--text-muted)" }}>Weight:</span> {metric.weight}
+                                          <span style={{ color: "var(--text-muted)" }}>{lt("Weight")}: </span>{metric.weight}
                                         </span>
                                       ) : (
                                         <button
@@ -2321,7 +2423,7 @@ export default function HistoryPage() {
                                           className="cursor-pointer truncate text-left hover:opacity-90"
                                           style={{ color: "var(--mountain-blue-glow)" }}
                                         >
-                                          <span style={{ color: "var(--text-muted)" }}>Weight:</span> {metric.weight}
+                                          <span style={{ color: "var(--text-muted)" }}>{lt("Weight")}: </span>{metric.weight}
                                         </button>
                                       )
                                     ) : (
@@ -2330,7 +2432,7 @@ export default function HistoryPage() {
                                     {metric.reps !== "-" ? (
                                       targetUserId ? (
                                         <span className="truncate" style={{ color: "var(--forest)" }}>
-                                          <span style={{ color: "var(--text-muted)" }}>Reps:</span> {metric.reps}
+                                          <span style={{ color: "var(--text-muted)" }}>{lt("Reps")}: </span>{metric.reps}
                                         </span>
                                       ) : (
                                         <button
@@ -2342,7 +2444,7 @@ export default function HistoryPage() {
                                           className="cursor-pointer truncate text-left hover:opacity-90"
                                           style={{ color: "var(--forest)" }}
                                         >
-                                          <span style={{ color: "var(--text-muted)" }}>Reps:</span> {metric.reps}
+                                          <span style={{ color: "var(--text-muted)" }}>{lt("Reps")}: </span>{metric.reps}
                                         </button>
                                       )
                                     ) : (
@@ -2399,12 +2501,12 @@ export default function HistoryPage() {
               >
                 {mobileQuickCheckinLoading ? (
                   <div className="mb-2 text-[11px]" style={{ color: "var(--text-muted)" }}>
-                    Loading latest check-in data...
+                    {lt("Loading latest check-in data...")}
                   </div>
                 ) : null}
                 <div className="flex items-center justify-between gap-2">
                   <h3 className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--mist-light)" }}>
-                    Quick Weight / Note
+                    {lt("Quick Weight / Note")}
                   </h3>
                   <button
                     type="button"
@@ -2415,7 +2517,7 @@ export default function HistoryPage() {
                       color: "var(--mist-light)",
                       backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
                     }}
-                    aria-label="Close quick check-in drawer"
+                    aria-label={lt("Close quick check-in drawer")}
                   >
                     x
                   </button>
@@ -2424,7 +2526,7 @@ export default function HistoryPage() {
                 <div className="mt-3 space-y-2">
                   <label className="block">
                     <span className="mb-1 block text-[10px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>
-                      Weight ({weightUnit})
+                      {lt("Weight")} ({weightUnit})
                     </span>
                     <input
                       type="number"
@@ -2436,7 +2538,7 @@ export default function HistoryPage() {
                       placeholder={
                         mobileQuickCheckinLatestWeight != null
                           ? String(mobileQuickCheckinLatestWeight)
-                          : (weightUnit === "lbs" ? "e.g. 165" : "e.g. 75")
+                          : (weightUnit === "lbs" ? lt("e.g. 165") : lt("e.g. 75"))
                       }
                       disabled={mobileQuickCheckinTodayWeight != null}
                       className="h-10 w-full rounded-md border px-3 text-sm outline-none"
@@ -2449,19 +2551,19 @@ export default function HistoryPage() {
                     />
                     {mobileQuickCheckinTodayWeight != null ? (
                       <span className="mt-1 block text-[10px]" style={{ color: "var(--text-muted)" }}>
-                        Weight already recorded today
+                        {lt("Weight already recorded today")}
                       </span>
                     ) : null}
                   </label>
 
                   <label className="block">
                     <span className="mb-1 block text-[10px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>
-                      Note
+                      {lt("Note")}
                     </span>
                     <textarea
                       value={mobileQuickCheckinNote}
                       onChange={(event) => setMobileQuickCheckinNote(event.target.value)}
-                      placeholder="How are you feeling today?"
+                      placeholder={lt("How are you feeling today?")}
                       rows={4}
                       disabled={Boolean(mobileQuickCheckinTodayNote.trim())}
                       className="w-full rounded-md border px-3 py-2 text-sm outline-none"
@@ -2474,7 +2576,7 @@ export default function HistoryPage() {
                     />
                     {mobileQuickCheckinTodayNote.trim() ? (
                       <span className="mt-1 block text-[10px]" style={{ color: "var(--text-muted)" }}>
-                        Note already recorded today
+                        {lt("Note already recorded today")}
                       </span>
                     ) : null}
                   </label>
@@ -2501,7 +2603,7 @@ export default function HistoryPage() {
                         backgroundColor: "color-mix(in srgb, var(--accent) 16%, var(--ink-deep))",
                       }}
                     >
-                      Go to Check-In
+                      {lt("Go to Check-In")}
                     </button>
                   ) : null}
                   <button
@@ -2514,7 +2616,7 @@ export default function HistoryPage() {
                       backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
                     }}
                   >
-                    Cancel
+                    {lt("Cancel")}
                   </button>
                   <button
                     type="button"
@@ -2528,7 +2630,7 @@ export default function HistoryPage() {
                       opacity: mobileQuickCheckinSaving || (mobileQuickCheckinTodayWeight != null && Boolean(mobileQuickCheckinTodayNote.trim())) ? 0.7 : 1,
                     }}
                   >
-                    {mobileQuickCheckinSaving ? "Saving..." : "Save"}
+                    {mobileQuickCheckinSaving ? lt("Saving...") : lt("Save")}
                   </button>
                 </div>
               </motion.section>
@@ -2576,8 +2678,8 @@ export default function HistoryPage() {
             color: themeStyle === "ying-yang" ? "var(--void-black)" : "var(--cloud-white)",
             boxShadow: "0 10px 28px color-mix(in srgb, var(--accent) 35%, transparent)",
           }}
-          aria-label="Slide up for workout log or left for quick weight and note"
-          title="Slide up: workout log, slide left: quick weight/note"
+          aria-label={lt("Slide up for workout log or left for quick weight and note")}
+          title={lt("Slide up: workout log, slide left: quick weight/note")}
         >
           {shouldShowWeightSwipeHint || shouldShowWeightThankYou ? (
             <motion.span
@@ -2591,7 +2693,7 @@ export default function HistoryPage() {
               animate={shouldShowWeightThankYou ? { opacity: 1, x: 0 } : { opacity: [0.72, 1, 0.72], x: [0, -6, 0] }}
               transition={shouldShowWeightThankYou ? { duration: 0.2 } : { duration: 1.15, repeat: Infinity, ease: "easeInOut" }}
             >
-              {shouldShowWeightThankYou ? "Thank you!" : "Log your weight!"}
+              {shouldShowWeightThankYou ? lt("Thank you!") : lt("Log your weight!")}
             </motion.span>
           ) : null}
           <motion.span

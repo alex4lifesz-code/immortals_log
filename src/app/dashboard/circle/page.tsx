@@ -11,6 +11,7 @@ import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { formatDateWithPreference } from "@/lib/constants";
 import { EmptyFriends } from "@/components/empty-states";
 import { useIncomingFriendRequestsCount } from "@/hooks/useIncomingFriendRequestsCount";
+import { translateEnglishToLanguage } from "@/lib/language";
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -114,8 +115,8 @@ const THEME_STYLE_LABELS: Record<string, string> = {
   "heavenly-sword": "Heavenly Sword",
 };
 
-function formatThemeStyle(themeStyle: string | null | undefined): string {
-  if (!themeStyle) return "Theme unknown";
+function formatThemeStyle(themeStyle: string | null | undefined, lt?: (text: string) => string): string {
+  if (!themeStyle) return lt ? lt("Theme unknown") : "Theme unknown";
   return THEME_STYLE_LABELS[themeStyle] || themeStyle;
 }
 
@@ -208,6 +209,7 @@ function getFeedSetChips(log: FeedLog): string[] {
 
 function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendDrawer?: (friendId: string) => void }) {
   const { settings } = useDisplaySettings();
+  const lt = useCallback((text: string) => translateEnglishToLanguage(text, settings.languageMode), [settings.languageMode]);
   const [loading, setLoading] = useState(true);
   const [logs, setLogs] = useState<FeedLog[]>([]);
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
@@ -255,12 +257,12 @@ function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendD
               allLogs.push({
                 id: log.id,
                 userId: progress.userId,
-                userName: progress.user?.name || "Unknown",
+                userName: progress.user?.name || lt("Unknown"),
                 exerciseName: exercise.name,
                 level: log.level,
                 progressionName:
                   exercise.tiers?.find((t) => t.level === log.level)?.name ??
-                  `Progression ${log.level}`,
+                  `${lt("Progression")} ${log.level}`,
                 variant: log.variant,
                 createdAt: log.createdAt,
                 reps1: log.reps1,
@@ -294,12 +296,12 @@ function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendD
 
     return () => {
       cancelled = true; };
-  }, []);
+  }, [lt]);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <p className="text-[12px] text-[color:var(--text-muted)]">Loading feed…</p>
+        <p className="text-[12px] text-[color:var(--text-muted)]">{lt("Loading feed...")}</p>
       </div>
     );
   }
@@ -307,9 +309,9 @@ function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendD
   if (logs.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-        <p className="text-sm font-semibold text-[color:var(--text-primary)]">Nothing yet</p>
+        <p className="text-sm font-semibold text-[color:var(--text-primary)]">{lt("Nothing yet")}</p>
         <p className="mt-1 text-[12px] text-[color:var(--text-muted)]">
-          When your circle logs workouts, their sessions will appear here.
+          {lt("When your circle logs workouts, their sessions will appear here.")}
         </p>
       </div>
     );
@@ -374,6 +376,7 @@ function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendD
                         settings.timeZone,
                       )
                     : "";
+                  const displayUserName = isCurrentUserLog ? lt("Me") : group.userName;
 
                   return (
                     <div key={groupKey}>
@@ -416,9 +419,9 @@ function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendD
                               if (!isCurrentUserLog) onOpenFriendDrawer?.(group.userId);
                             }}
                             disabled={isCurrentUserLog}
-                            aria-label={isCurrentUserLog ? undefined : `Open ${group.userName} drawer`}
+                            aria-label={isCurrentUserLog ? undefined : lt("Open friend drawer")}
                           >
-                            {group.userName}
+                            {displayUserName}
                           </button>
                         </div>
                         {!isExpanded && (
@@ -433,12 +436,12 @@ function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendD
                         )}
                         <div
                           className="mt-1 w-full text-left"
-                          aria-label={hasMultiple ? (isExpanded ? "Collapse sets" : "Expand sets") : "Set values"}
+                          aria-label={hasMultiple ? (isExpanded ? lt("Collapse sets") : lt("Expand sets")) : lt("Set values")}
                         >
                           <div className="space-y-1">
                             {visibleLogs.map((log, logIndex) => {
                               const chips = getFeedSetChips(log);
-                              const fullLabel = `${log.variant ? `${log.variant} ` : ""}${log.progressionName || `Progression ${log.level}`} ${group.exerciseName}`;
+                              const fullLabel = `${log.variant ? `${log.variant} ` : ""}${log.progressionName || `${lt("Progression")} ${log.level}`} ${group.exerciseName}`;
                               if (isExpanded) {
                                 return (
                                   <div key={`${groupKey}-log-${log.id || logIndex}`} className="flex flex-col gap-0.5">
@@ -464,7 +467,7 @@ function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendD
                                           {chip}
                                         </span>
                                       )) : (
-                                        <span className="text-[10px]" style={{ color: "var(--mist-light)" }}>No sets recorded</span>
+                                        <span className="text-[10px]" style={{ color: "var(--mist-light)" }}>{lt("No sets recorded")}</span>
                                       )}
                                     </div>
                                   </div>
@@ -485,7 +488,7 @@ function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendD
                                       {chip}
                                     </span>
                                   )) : (
-                                    <span className="text-[10px]" style={{ color: "var(--mist-light)" }}>No sets recorded</span>
+                                    <span className="text-[10px]" style={{ color: "var(--mist-light)" }}>{lt("No sets recorded")}</span>
                                   )}
                                 </div>
                               );
@@ -508,6 +511,7 @@ function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendD
 
 function MembersTab({ userId: _userId }: { userId: string }) {
   const { settings } = useDisplaySettings();
+  const lt = useCallback((text: string) => translateEnglishToLanguage(text, settings.languageMode), [settings.languageMode]);
   const dateFormat = settings.dateFormat || "dd-mmm-yyyy";
   const timeZone = settings.timeZone;
 
@@ -555,7 +559,7 @@ function MembersTab({ userId: _userId }: { userId: string }) {
   const sendRequest = useCallback(async () => {
     const code = friendCodeInput.trim();
     if (!code) {
-      setAddMsg("Enter a friend code first.");
+      setAddMsg(lt("Enter a friend code first."));
       return;
     }
     setWorking(true);
@@ -565,19 +569,19 @@ function MembersTab({ userId: _userId }: { userId: string }) {
       broadcastUpdated();
       await refresh();
       setFriendCodeInput("");
-      setAddMsg("Request sent.");
+      setAddMsg(lt("Request sent."));
     } catch (e) {
-      setAddMsg(e instanceof Error ? e.message : "Failed to send request.");
+      setAddMsg(e instanceof Error ? e.message : lt("Failed to send request."));
     } finally {
       setWorking(false);
     }
-  }, [broadcastUpdated, friendCodeInput, refresh]);
+  }, [broadcastUpdated, friendCodeInput, lt, refresh]);
 
   const removeFriend = useCallback(
     async (friendUserId: string, name?: string) => {
       if (
         typeof window !== "undefined" &&
-        !window.confirm(`Remove ${name || "this friend"}?`)
+        !window.confirm(`${lt("Remove")} ${name || lt("this friend")}?`)
       )
         return;
       setWorking(true);
@@ -589,7 +593,7 @@ function MembersTab({ userId: _userId }: { userId: string }) {
         setWorking(false);
       }
     },
-    [broadcastUpdated, refresh]
+    [broadcastUpdated, lt, refresh]
   );
 
   const friendStatsMap = useMemo(() => {
@@ -649,7 +653,7 @@ function MembersTab({ userId: _userId }: { userId: string }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <p className="text-[12px] text-[color:var(--text-muted)]">Loading members…</p>
+        <p className="text-[12px] text-[color:var(--text-muted)]">{lt("Loading members...")}</p>
       </div>
     );
   }
@@ -659,7 +663,7 @@ function MembersTab({ userId: _userId }: { userId: string }) {
       {/* Add friend */}
       <div className="rounded-lg px-3 py-3 border" style={tileStyle}>
         <p className="mb-2 text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">
-          Add by friend code
+          {lt("Add by friend code")}
         </p>
         <div className="flex gap-2">
           <input
@@ -668,7 +672,7 @@ function MembersTab({ userId: _userId }: { userId: string }) {
             onKeyDown={(e) => {
               if (e.key === "Enter") void sendRequest();
             }}
-            placeholder="Friend code"
+            placeholder={lt("Friend code")}
             className="flex-1 rounded-md bg-transparent px-2.5 py-1.5 text-[13px] text-[color:var(--text-primary)] outline-none"
             style={{
               border:
@@ -687,12 +691,12 @@ function MembersTab({ userId: _userId }: { userId: string }) {
                 "1px solid color-mix(in srgb, var(--accent) 40%, transparent)",
             }}
           >
-            Add
+            {lt("Add")}
           </button>
         </div>
         {data.me?.friendCode && (
           <p className="mt-2 text-[11px] text-[color:var(--text-secondary)]">
-            Your code:{" "}
+            {lt("Your code:")}{" "}
             <span className="font-semibold text-[color:var(--text-primary)]">
               {data.me.friendCode}
             </span>
@@ -714,10 +718,10 @@ function MembersTab({ userId: _userId }: { userId: string }) {
             const stats = friendStatsMap.get(friend.id);
             const expanded = expandedIds.has(friend.id);
             const lastActivityText = friend.lastActivityAt
-              ? `${friend.lastActivityLabel || "Active"} · ${formatRelative(friend.lastActivityAt)}`
+              ? `${friend.lastActivityLabel || lt("Active")} · ${formatRelative(friend.lastActivityAt)}`
               : stats?.lastSeenAt
                 ? formatRelative(stats.lastSeenAt)
-                : "No activity";
+                : lt("No activity");
             return (
               <article
                 key={friend.id}
@@ -762,7 +766,7 @@ function MembersTab({ userId: _userId }: { userId: string }) {
                     <div className="grid grid-cols-2 gap-1.5">
                       <div className="rounded-md px-2 py-1.5" style={microTileStyle}>
                         <p className="text-[10px] uppercase tracking-[0.08em] text-[color:var(--text-muted)]">
-                          Sessions
+                          {lt("Sessions")}
                         </p>
                         <p className="mt-0.5 text-[12px] font-semibold text-[color:var(--text-primary)]">
                           {stats?.totalSessions ?? 0}
@@ -778,7 +782,7 @@ function MembersTab({ userId: _userId }: { userId: string }) {
                       </div>
                       <div className="rounded-md px-2 py-1.5" style={microTileStyle}>
                         <p className="text-[10px] uppercase tracking-[0.08em] text-[color:var(--text-muted)]">
-                          Last check-in
+                          {lt("Last check-in")}
                         </p>
                         <p className="mt-0.5 text-[12px] font-semibold text-[color:var(--text-primary)]">
                           {stats?.lastCheckInDate
@@ -792,7 +796,7 @@ function MembersTab({ userId: _userId }: { userId: string }) {
                       </div>
                       <div className="rounded-md px-2 py-1.5" style={microTileStyle}>
                         <p className="text-[10px] uppercase tracking-[0.08em] text-[color:var(--text-muted)]">
-                          Member since
+                          {lt("Member since")}
                         </p>
                         <p className="mt-0.5 text-[12px] font-semibold text-[color:var(--text-primary)]">
                           {friend.createdAt
@@ -802,10 +806,10 @@ function MembersTab({ userId: _userId }: { userId: string }) {
                       </div>
                       <div className="rounded-md px-2 py-1.5" style={microTileStyle}>
                         <p className="text-[10px] uppercase tracking-[0.08em] text-[color:var(--text-muted)]">
-                          Theme
+                          {lt("Theme")}
                         </p>
                         <p className="mt-0.5 text-[12px] font-semibold text-[color:var(--text-primary)]">
-                          {formatThemeStyle(friend.themeStyle)}
+                          {formatThemeStyle(friend.themeStyle, lt)}
                         </p>
                         <div className="mt-1.5 flex items-center gap-1.5">
                           {getThemePalette(friend.themeStyle).map((color, index) => (
@@ -823,7 +827,7 @@ function MembersTab({ userId: _userId }: { userId: string }) {
                     </div>
                     <div className="rounded-md px-2 py-1.5" style={microTileStyle}>
                       <p className="text-[10px] uppercase tracking-[0.08em] text-[color:var(--text-muted)]">
-                        Last activity
+                        {lt("Last activity")}
                       </p>
                       <p className="mt-0.5 text-[12px] font-semibold text-[color:var(--text-primary)]">
                         {lastActivityText}
@@ -841,7 +845,7 @@ function MembersTab({ userId: _userId }: { userId: string }) {
                           "color-mix(in srgb, var(--danger) 8%, transparent)",
                       }}
                     >
-                      Remove
+                      {lt("Remove")}
                     </button>
                   </div>
                 )}
@@ -857,6 +861,8 @@ function MembersTab({ userId: _userId }: { userId: string }) {
 // ── Requests tab ───────────────────────────────────────────────────
 
 function RequestsTab() {
+  const { settings } = useDisplaySettings();
+  const lt = useCallback((text: string) => translateEnglishToLanguage(text, settings.languageMode), [settings.languageMode]);
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<FriendPayload>({
     me: null,
@@ -917,7 +923,7 @@ function RequestsTab() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <p className="text-[12px] text-[color:var(--text-muted)]">Loading requests…</p>
+        <p className="text-[12px] text-[color:var(--text-muted)]">{lt("Loading requests...")}</p>
       </div>
     );
   }
@@ -928,14 +934,14 @@ function RequestsTab() {
     <div className="space-y-4">
       <section>
         <p className="mb-2 text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">
-          Incoming ({incomingRequests.length})
+          {lt("Incoming")} ({incomingRequests.length})
         </p>
         {incomingRequests.length === 0 ? (
           <div
             className="rounded-lg p-3 text-center border"
             style={tileStyle}
           >
-            <p className="text-[12px] text-[color:var(--text-muted)]">No pending requests</p>
+            <p className="text-[12px] text-[color:var(--text-muted)]">{lt("No pending requests")}</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -966,7 +972,7 @@ function RequestsTab() {
                         "1px solid color-mix(in srgb, var(--forest) 34%, transparent)",
                     }}
                   >
-                    Accept
+                    {lt("Accept")}
                   </button>
                   <button
                     type="button"
@@ -980,7 +986,7 @@ function RequestsTab() {
                         "1px solid color-mix(in srgb, var(--danger) 24%, transparent)",
                     }}
                   >
-                    Decline
+                    {lt("Decline")}
                   </button>
                 </div>
               </div>
@@ -991,14 +997,14 @@ function RequestsTab() {
 
       <section>
         <p className="mb-2 text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">
-          Outgoing ({outgoingRequests.length})
+          {lt("Outgoing")} ({outgoingRequests.length})
         </p>
         {outgoingRequests.length === 0 ? (
           <div
             className="rounded-lg p-3 text-center border"
             style={tileStyle}
           >
-            <p className="text-[12px] text-[color:var(--text-muted)]">No outgoing requests</p>
+            <p className="text-[12px] text-[color:var(--text-muted)]">{lt("No outgoing requests")}</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -1028,7 +1034,7 @@ function RequestsTab() {
                       "1px solid color-mix(in srgb, var(--ink-light) 30%, transparent)",
                   }}
                 >
-                  Cancel
+                  {lt("Cancel")}
                 </button>
               </div>
             ))}
@@ -1043,6 +1049,8 @@ function RequestsTab() {
 
 export default function CirclePage() {
   const { user } = useAuth();
+  const { settings } = useDisplaySettings();
+  const lt = useCallback((text: string) => translateEnglishToLanguage(text, settings.languageMode), [settings.languageMode]);
   const { count: incomingFriendRequestCount } = useIncomingFriendRequestsCount(user?.id);
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -1069,9 +1077,9 @@ export default function CirclePage() {
   }, []);
 
   const tabs: Array<{ id: Tab; label: string }> = [
-    { id: "feed", label: "Feed" },
-    { id: "members", label: "Members" },
-    { id: "requests", label: "Requests" },
+    { id: "feed", label: lt("Feed") },
+    { id: "members", label: lt("Members") },
+    { id: "requests", label: lt("Requests") },
   ];
 
   const sectionShellStyle = {
@@ -1083,8 +1091,8 @@ export default function CirclePage() {
 
   return (
     <PageLayout
-      title="Circle"
-      subtitle="Your cultivation circle"
+      title={lt("Circle")}
+      subtitle={lt("Your cultivation circle")}
       mobileContentPaddingClass="p-0 pt-4 pb-0"
       mobileScrollContainerEnabled={false}
     >
@@ -1110,8 +1118,8 @@ export default function CirclePage() {
                 }}
               >
                 <PageHeader
-                  eyebrow="Circle"
-                  title={tabs.find((t) => t.id === tab)?.label ?? "Feed"}
+                  eyebrow={lt("Circle")}
+                  title={tabs.find((t) => t.id === tab)?.label ?? lt("Feed")}
                   className="px-3 pt-3 pb-2.5"
                   noBorder
                 />

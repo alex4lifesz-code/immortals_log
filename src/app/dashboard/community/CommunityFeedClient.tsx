@@ -10,6 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { api } from "@/lib/api-client";
 import { formatDateWithPreference } from "@/lib/constants";
+import { translateEnglishToLanguage } from "@/lib/language";
 import { formatSetValue } from "@/lib/unit-conversion";
 import { EmptyFeed } from "@/components/empty-states";
 
@@ -85,6 +86,7 @@ const ITEMS_PER_PAGE = 7;
 export default function CommunityFeedClient() {
   const { user } = useAuth();
   const { settings } = useDisplaySettings();
+  const lt = useCallback((text: string) => translateEnglishToLanguage(text, settings.languageMode), [settings.languageMode]);
   const dateFormat = settings.dateFormat || "dd-mmm-yyyy";
   const weightUnit = settings.defaultWeightUnit ?? "kg";
   const [loading, setLoading] = useState(true);
@@ -517,19 +519,19 @@ export default function CommunityFeedClient() {
                                               ) : null}
                                               <div className="grid grid-cols-2 gap-x-3">
                                                 <div className="min-w-0 truncate">
-                                                  <span className="text-[var(--text-muted)]">Status:</span>{" "}
+                                                  <span className="text-[var(--text-muted)]">{lt("Status:")}</span>{" "}
                                                   <span className={log.completed ? "text-[var(--forest)]" : "text-[var(--mist-mid)]"}>
-                                                    {log.completed ? "Completed" : "Logged"}
+                                                    {log.completed ? lt("Completed") : lt("Logged")}
                                                   </span>
                                                 </div>
                                               </div>
                                               <div className="grid grid-cols-2 gap-x-3">
                                                 <div className="min-w-0 truncate">
-                                                  <span className="text-[var(--text-muted)]">Sets:</span>{" "}
+                                                  <span className="text-[var(--text-muted)]">{lt("Sets:")}</span>{" "}
                                                   <span className="text-[var(--text-primary)]">{countLogSets(log)}</span>
                                                 </div>
                                                 <div className="min-w-0 truncate">
-                                                  <span className="text-[var(--text-muted)]">Volume:</span>{" "}
+                                                  <span className="text-[var(--text-muted)]">{lt("Volume:")}</span>{" "}
                                                   <span className="text-[var(--danger)]">{calculateLogVolume(log).toFixed(1)} {weightUnit}-reps</span>
                                                 </div>
                                               </div>
@@ -560,7 +562,7 @@ export default function CommunityFeedClient() {
                     <div className="h-2 w-2 rounded-full bg-jade-glow/60 animate-bounce" />
                     <div className="h-2 w-2 rounded-full bg-jade-glow/60 animate-bounce" style={{ animationDelay: "0.1s" }} />
                     <div className="h-2 w-2 rounded-full bg-jade-glow/60 animate-bounce" style={{ animationDelay: "0.2s" }} />
-                    <span className="ml-2 text-xs text-mist-light">Loading more activity...</span>
+                    <span className="ml-2 text-xs text-mist-light">{lt("Loading more activity...")}</span>
                   </div>
                 ) : hasMore ? (
                   <button
@@ -568,11 +570,11 @@ export default function CommunityFeedClient() {
                     onClick={() => setDisplayCount((prev) => Math.min(prev + ITEMS_PER_PAGE, allGroupedByMemberDay.length))}
                     className="dashboard-modern-loadmore-btn rounded-md border border-ink-light/30 bg-ink-dark/60 px-3 py-1.5 text-xs text-jade-glow hover:bg-ink-dark/80 transition-colors"
                   >
-                    Load more activity
+                    {lt("Load more activity")}
                   </button>
                 ) : allGroupedByMemberDay.length > 0 ? (
                   <div className="text-center">
-                    <p className="text-xs text-mist-dark mb-1">No more activity</p>
+                    <p className="text-xs text-mist-dark mb-1">{lt("No more activity")}</p>
                     <span className="text-[10px] text-mist-dark/60">You have seen all {allGroupedByMemberDay.length} recent entries</span>
                   </div>
                 ) : null}

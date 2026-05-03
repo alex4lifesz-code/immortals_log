@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import GlowButton from "@/components/ui/GlowButton";
 import { useIsMobile } from "@/context/AppContext";
 import type { CalendarWeekStartOption } from "@/context/DisplaySettingsContext";
@@ -347,14 +347,43 @@ export function Calendar({
   const touchStartYRef = useRef<number | null>(null);
   const touchCurrentXRef = useRef<number | null>(null);
   const touchCurrentYRef = useRef<number | null>(null);
+  const [monthTransitionDirection, setMonthTransitionDirection] = useState<1 | -1>(1);
+
+  const monthLabelAnimation = {
+    enter: (direction: 1 | -1) => ({
+      opacity: 0,
+      y: direction > 0 ? 10 : -10,
+    }),
+    center: { opacity: 1, y: 0 },
+    exit: (direction: 1 | -1) => ({
+      opacity: 0,
+      y: direction > 0 ? -10 : 10,
+    }),
+  };
+
+  const monthGridAnimation = {
+    enter: (direction: 1 | -1) => ({
+      opacity: 0,
+      x: direction > 0 ? 40 : -40,
+      scale: 0.985,
+    }),
+    center: { opacity: 1, x: 0, scale: 1 },
+    exit: (direction: 1 | -1) => ({
+      opacity: 0,
+      x: direction > 0 ? -40 : 40,
+      scale: 0.985,
+    }),
+  };
 
   const goToPreviousMonth = () => {
+    setMonthTransitionDirection(-1);
     const previousMonth = currentMonthNumber === 1 ? 12 : currentMonthNumber - 1;
     const previousYear = currentMonthNumber === 1 ? currentYear - 1 : currentYear;
     setCurrentMonth(createCalendarMonthAnchor(previousYear, previousMonth));
   };
 
   const goToNextMonth = () => {
+    setMonthTransitionDirection(1);
     const nextMonth = currentMonthNumber === 12 ? 1 : currentMonthNumber + 1;
     const nextYear = currentMonthNumber === 12 ? currentYear + 1 : currentYear;
     setCurrentMonth(createCalendarMonthAnchor(nextYear, nextMonth));
@@ -436,15 +465,20 @@ export function Calendar({
         <div className="min-w-0">
           <p className="text-[9px] uppercase tracking-[0.1em]" style={{ color: "var(--text-muted)" }}>Check-In Calendar</p>
           <div className="relative mt-0.5 h-[1.35rem] overflow-hidden">
-            <AnimatePresence mode="wait" initial={false}>
+            <AnimatePresence mode="wait" initial={false} custom={monthTransitionDirection}>
               <motion.h3
                 key={`month-label-${monthTransitionKey}`}
                 className="absolute inset-0 text-sm font-semibold uppercase tracking-wider"
                 style={{ color: "var(--text-primary)" }}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
+                custom={monthTransitionDirection}
+                variants={monthLabelAnimation}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{
+                  y: { type: "spring", stiffness: 420, damping: 34, mass: 0.68 },
+                  opacity: { duration: 0.16, ease: "easeOut" },
+                }}
               >
                 {formatCalendarMonthLabel(currentMonth, timeZone)}
               </motion.h3>
@@ -480,14 +514,20 @@ export function Calendar({
       </div>
 
       <div className={`relative ${compactMode ? "min-h-[216px]" : "min-h-[264px]"}`}>
-        <AnimatePresence mode="wait" initial={false}>
+        <AnimatePresence mode="wait" initial={false} custom={monthTransitionDirection}>
           <motion.div
             key={`month-grid-${monthTransitionKey}`}
             className={`grid grid-cols-7 ${compactMode ? "gap-1" : "gap-2"} min-w-0`}
-            initial={{ opacity: 0, x: 10 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -10 }}
-            transition={{ duration: 0.22, ease: "easeOut" }}
+            custom={monthTransitionDirection}
+            variants={monthGridAnimation}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{
+              x: { type: "spring", stiffness: 280, damping: 30, mass: 0.85 },
+              scale: { duration: 0.2, ease: "easeOut" },
+              opacity: { duration: 0.18, ease: "easeOut" },
+            }}
           >
             {days.map((date, i) => (
               <div key={i}>
