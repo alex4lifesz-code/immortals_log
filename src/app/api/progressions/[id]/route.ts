@@ -105,17 +105,15 @@ export const PATCH = withAuth(async (request, { auth, params }) => {
       return ApiErrors.notFound("Exercise not found");
     }
 
-    const isOwnerOrAdmin = existing.userId === auth.userId || auth.role === "admin";
+    const isOwner = existing.userId === auth.userId;
+    const isOwnerOrAdmin = isOwner || auth.role === "admin";
     const requestedKeys = Object.keys(body).filter((key) => body[key] !== undefined);
     const onlyAssignedDaysRequested = requestedKeys.length > 0 && requestedKeys.every((key) => key === "assignedDays");
 
     // Shared library exercises are visible to everyone. Keep day allocations user-scoped
     // by forking the exercise for this user when they only update assigned days.
-    if (!isOwnerOrAdmin) {
-      if (!onlyAssignedDaysRequested) {
-        return ApiErrors.forbidden("You can only update your own progression exercises");
-      }
-
+    // This intentionally treats admins like normal users for day allocation.
+    if (!isOwner && onlyAssignedDaysRequested) {
       const normalizedAssignedDays = normalizeAssignedDaysInput(body.assignedDays);
       if (normalizedAssignedDays == null) {
         return ApiErrors.badRequest("Invalid assigned days payload");
@@ -294,6 +292,10 @@ export const PATCH = withAuth(async (request, { auth, params }) => {
       }
 
       return apiSuccess({ exercise: forked });
+    }
+
+    if (!isOwnerOrAdmin) {
+      return ApiErrors.forbidden("You can only update your own progression exercises");
     }
 
     const data: Record<string, unknown> = {};

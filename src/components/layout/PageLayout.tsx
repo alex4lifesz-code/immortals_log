@@ -113,21 +113,31 @@ function PageLayout({
 
   return (
     <div
-      className="relative flex min-h-full flex-col"
+      className={mobileScrollContainerEnabled ? "relative flex h-full flex-col" : "relative flex h-full flex-col"}
       style={{ background: "var(--page-gutter-bg)" }}
     >
-      <div className="flex-1 min-w-0">
-        <div
-          data-mobile-scroll-container={mobileScrollContainerEnabled ? "true" : undefined}
-          className={`flex-1 min-w-0 ${mobileScrollContainerEnabled ? "overflow-y-auto scrollbar-hide" : "overflow-hidden"} ${mobileContentPaddingClass} overflow-x-hidden`}
-        >
-          <div className="page-rise">
-            <div className={contentContainerClass}>
-              {children}
+      {mobileScrollContainerEnabled ? (
+        <div className="flex-1 min-h-0 min-w-0 flex flex-col">
+          <div
+            data-mobile-scroll-container="true"
+            className={`flex-1 min-h-0 min-w-0 overflow-y-auto scrollbar-hide ${mobileContentPaddingClass} overflow-x-hidden`}
+          >
+            <div className="page-rise">
+              <div className={contentContainerClass}>
+                {children}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden">
+          <div
+            className={`flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden ${mobileContentPaddingClass} overflow-x-hidden`}
+          >
+            {children}
+          </div>
+        </div>
+      )}
 
 
       {/* ── Mobile slide-in sidebar (page panel) — native APK only ── */}

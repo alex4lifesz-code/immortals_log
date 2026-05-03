@@ -19,7 +19,7 @@ import { DASHBOARD_ROUTES } from "@/lib/navigation";
 import { isDeletedExerciseDescription } from "@/lib/pending-exercises";
 import { DEFAULT_USER_PHYSIQUE, loadUserPhysique } from "@/lib/user-physique";
 import { PROGRESSION_EXERCISES_UPDATED_EVENT } from "@/lib/progression-events";
-import { DAY_ABBREVIATIONS, formatDateWithPreference, parseDayAssignmentDetailsList, parseDayAssignments } from "@/lib/constants";
+import { DAYS_OF_WEEK, formatDateWithPreference, parseDayAssignmentDetailsList, parseDayAssignments } from "@/lib/constants";
 import { formatSetValue, type TimedUnitPref, type WeightUnit } from "@/lib/unit-conversion";
 import type { UserPhysiqueSettings } from "@/lib/user-physique";
 import type { ProgressionExercise, ProgressionLog } from "../workout/types";
@@ -1154,16 +1154,19 @@ export default function HistoryPage() {
         title={trainPageTitle}
         subtitle={isFriendTrainOverlay ? undefined : subtitle}
         mobileContentPaddingClass={isFriendTrainOverlay ? "p-0 pb-0" : "p-0 pt-4 pb-0"}
-        mobileScrollContainerEnabled={!isFriendTrainOverlay}
+        mobileScrollContainerEnabled={false}
       >
-      <div className={`nyaa-history-page px-0 ${isFriendTrainOverlay ? "space-y-0" : "space-y-4"}`}>
+      <div
+        className="nyaa-history-page flex min-h-0 min-w-0 flex-1 flex-col px-0"
+        style={{ maxWidth: "none", margin: 0, width: "100%" }}
+      >
         {loading ? (
           <GlowCard glow="jade" hoverable={false}>
             <p className="text-sm text-mist-dark text-center py-4">Loading history...</p>
           </GlowCard>
         ) : (
           <>
-            <div className="flex min-h-0">
+            <div className="flex flex-1 min-h-0">
               {!isFriendTrainOverlay && (
                 <div className="flex shrink-0">
                   <TrainDayRail
@@ -1185,7 +1188,7 @@ export default function HistoryPage() {
                   initial={isFriendTrainOverlay ? { x: "100%" } : false}
                   animate={isFriendTrainOverlay ? { x: "0%" } : { x: 0 }}
                   transition={isFriendTrainOverlay ? { duration: 0.24, ease: [0.22, 1, 0.36, 1] } : undefined}
-                  className={isFriendTrainOverlay ? "fixed inset-y-0 right-0 z-[71] border-l overflow-hidden safe-area-top safe-area-bottom safe-area-right" : "flex min-w-0 flex-1 h-[calc(100dvh-2rem)] min-h-[calc(100dvh-2rem)] flex-col"}
+                  className={isFriendTrainOverlay ? "fixed inset-y-0 right-0 z-[71] border-l overflow-hidden safe-area-top safe-area-bottom safe-area-right" : "flex min-w-0 flex-1 min-h-0 flex-col"}
                   style={isFriendTrainOverlay ? { left: `${friendRailWidthPx}px`, borderLeftColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)", backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))", minHeight: "100dvh" } : undefined}
                 >
                   <div
@@ -1516,7 +1519,7 @@ export default function HistoryPage() {
                           </svg>
                         </button>
                         <h2 className="truncate text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--mist-light)" }}>
-                          {`${DAY_ABBREVIATIONS[trainDayFilter]} Exercises`}
+                          {`${DAYS_OF_WEEK[trainDayFilter]} Exercises`}
                         </h2>
                       </div>
                     </div>
@@ -1525,7 +1528,7 @@ export default function HistoryPage() {
 
                   {selectedDayExerciseRows.length === 0 ? (
                     <div className="px-3 py-4 text-center text-xs" style={{ color: "var(--text-muted)" }}>
-                      {`No exercises assigned to ${DAY_ABBREVIATIONS[trainDayFilter]}.`}
+                      {`No exercises assigned to ${DAYS_OF_WEEK[trainDayFilter]}.`}
                     </div>
                   ) : (
                     selectedDayExerciseRows.map((row) => {

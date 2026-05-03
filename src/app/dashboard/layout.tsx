@@ -31,8 +31,16 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     pathname?.startsWith("/dashboard/train")
     && Boolean(searchParams.get("targetUserId"))
     && Boolean(searchParams.get("friendView"));
+  const isInternalScrollRoute =
+    isFriendDrawerRoute
+    || pathname === "/dashboard/circle"
+    || pathname?.startsWith("/dashboard/circle/")
+    || pathname === "/dashboard/train"
+    || pathname?.startsWith("/dashboard/train/")
+    || pathname === "/dashboard/history"
+    || pathname?.startsWith("/dashboard/history/");
   const matchesRouteOrChild = (route: string) => pathname === route || pathname?.startsWith(`${route}/`);
-  const mobileRootScrollEnabled = !isFriendDrawerRoute;
+  const mobileRootScrollEnabled = !isInternalScrollRoute;
   const showMobileNav = !isWorkoutInputFullscreen && !isTrainExerciseHistoryOpen;
   const lastLoggedActivityKeyRef = useRef("");
 

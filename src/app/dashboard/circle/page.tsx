@@ -206,7 +206,7 @@ function getFeedSetChips(log: FeedLog): string[] {
 
 // ── Feed tab ───────────────────────────────────────────────────────
 
-function FeedTab({ userId }: { userId: string }) {
+function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendDrawer?: (friendId: string) => void }) {
   const { settings } = useDisplaySettings();
   const [loading, setLoading] = useState(true);
   const [logs, setLogs] = useState<FeedLog[]>([]);
@@ -251,7 +251,6 @@ function FeedTab({ userId }: { userId: string }) {
         const allLogs: FeedLog[] = [];
         for (const exercise of data.exercises || []) {
           for (const progress of exercise.userProgress || []) {
-            if (progress.userId === userId) continue;
             for (const log of progress.logs || []) {
               allLogs.push({
                 id: log.id,
@@ -295,7 +294,7 @@ function FeedTab({ userId }: { userId: string }) {
 
     return () => {
       cancelled = true; };
-  }, [userId]);
+  }, []);
 
   if (loading) {
     return (
@@ -355,6 +354,10 @@ function FeedTab({ userId }: { userId: string }) {
                   const isExpanded = expandedKeys.has(groupKey);
                   const visibleLogs = isExpanded ? group.logs : [group.logs[0]];
                   const latestLog = group.logs[0];
+                  const isCurrentUserLog = group.userId === userId;
+                  const userNameColor = isCurrentUserLog
+                    ? "var(--cultivator-self)"
+                    : "var(--cultivator-friend)";
                   const toggleExpanded = () => {
                     if (!hasMultiple) return;
                     setExpandedKeys((prev) => {
@@ -401,18 +404,33 @@ function FeedTab({ userId }: { userId: string }) {
                               </sup>
                             ) : null}
                           </p>
-                          <p className="shrink-0 text-[11px]" style={{ color: "var(--text-muted)" }}>
+                          <button
+                            type="button"
+                            className="shrink-0 text-[11px]"
+                            style={{
+                              color: userNameColor,
+                              cursor: isCurrentUserLog ? "default" : "pointer",
+                            }}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              if (!isCurrentUserLog) onOpenFriendDrawer?.(group.userId);
+                            }}
+                            disabled={isCurrentUserLog}
+                            aria-label={isCurrentUserLog ? undefined : `Open ${group.userName} drawer`}
+                          >
                             {group.userName}
-                          </p>
+                          </button>
                         </div>
-                        <div className="mt-0.5 flex items-center justify-between gap-2">
-                          <p className="min-w-0 truncate text-[11px] italic" style={{ color: "var(--text-muted)" }}>
-                            {`${group.logs[0].variant ? `${group.logs[0].variant} ` : ""}${group.logs[0].progressionName} ${group.exerciseName}`}
-                          </p>
-                          <p className="shrink-0 text-[10px]" style={{ color: "var(--text-muted)" }}>
-                            {relativeDate}
-                          </p>
-                        </div>
+                        {!isExpanded && (
+                          <div className="mt-0.5 flex items-center justify-between gap-2">
+                            <p className="min-w-0 truncate text-[11px] italic" style={{ color: "var(--text-muted)" }}>
+                              {`${group.logs[0].variant ? `${group.logs[0].variant} ` : ""}${group.logs[0].progressionName} ${group.exerciseName}`}
+                            </p>
+                            <p className="shrink-0 text-[10px]" style={{ color: "var(--text-muted)" }}>
+                              {relativeDate}
+                            </p>
+                          </div>
+                        )}
                         <div
                           className="mt-1 w-full text-left"
                           aria-label={hasMultiple ? (isExpanded ? "Collapse sets" : "Expand sets") : "Set values"}
@@ -420,25 +438,40 @@ function FeedTab({ userId }: { userId: string }) {
                           <div className="space-y-1">
                             {visibleLogs.map((log, logIndex) => {
                               const chips = getFeedSetChips(log);
-                              const setupLabel = `${log.variant ? `${log.variant} · ` : ""}${log.progressionName || `Progression ${log.level}`}`;
+                              const fullLabel = `${log.variant ? `${log.variant} ` : ""}${log.progressionName || `Progression ${log.level}`} ${group.exerciseName}`;
+                              if (isExpanded) {
+                                return (
+                                  <div key={`${groupKey}-log-${log.id || logIndex}`} className="flex flex-col gap-0.5">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span className="min-w-0 truncate text-[11px] italic" style={{ color: "var(--text-muted)" }}>
+                                        {fullLabel}
+                                      </span>
+                                      <span className="shrink-0 text-[10px] italic" style={{ color: "var(--text-muted)" }}>
+                                        {formatRelativeRecentDate(log.createdAt, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone)}
+                                      </span>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-1 pl-1">
+                                      {chips.length > 0 ? chips.map((chip, chipIndex) => (
+                                        <span
+                                          key={`${groupKey}-log-${log.id || logIndex}-chip-${chipIndex}`}
+                                          className="rounded px-1.5 py-0.5 text-[10px]"
+                                          style={{
+                                            backgroundColor: "color-mix(in srgb, var(--ink-light) 14%, transparent)",
+                                            border: "1px solid color-mix(in srgb, var(--ink-light) 26%, transparent)",
+                                            color: "var(--mist-light)",
+                                          }}
+                                        >
+                                          {chip}
+                                        </span>
+                                      )) : (
+                                        <span className="text-[10px]" style={{ color: "var(--mist-light)" }}>No sets recorded</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              }
                               return (
                                 <div key={`${groupKey}-log-${log.id || logIndex}`} className="flex flex-wrap items-center gap-1">
-                                  {isExpanded ? (
-                                    <span
-                                      className="rounded px-1.5 py-0.5 text-[9px]"
-                                      style={{
-                                        backgroundColor: "color-mix(in srgb, var(--ink-light) 10%, transparent)",
-                                        color: "var(--text-secondary)",
-                                      }}
-                                    >
-                                      {setupLabel}
-                                    </span>
-                                  ) : null}
-                                  {isExpanded ? (
-                                    <span className="rounded px-1.5 py-0.5 text-[9px]" style={{ backgroundColor: "color-mix(in srgb, var(--ink-light) 10%, transparent)", color: "var(--text-muted)" }}>
-                                      {formatRelativeRecentDate(log.createdAt, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone)}
-                                    </span>
-                                  ) : null}
                                   {chips.length > 0 ? chips.map((chip, chipIndex) => (
                                     <span
                                       key={`${groupKey}-log-${log.id || logIndex}-chip-${chipIndex}`}
@@ -1026,14 +1059,20 @@ export default function CirclePage() {
     [pathname, router, tab]
   );
 
+  const openFriendDrawerFromFeed = useCallback((friendId: string) => {
+    if (!friendId || typeof window === "undefined") return;
+    window.dispatchEvent(
+      new CustomEvent("circle-open-friend-drawer", {
+        detail: { friendId },
+      })
+    );
+  }, []);
+
   const tabs: Array<{ id: Tab; label: string }> = [
     { id: "feed", label: "Feed" },
     { id: "members", label: "Members" },
     { id: "requests", label: "Requests" },
   ];
-
-  const shellMinHeight =
-    "calc(100dvh - var(--mobile-nav-offset) - 0.5rem)";
 
   const sectionShellStyle = {
     borderColor: "color-mix(in srgb, var(--ink-light) 56%, transparent)",
@@ -1049,18 +1088,18 @@ export default function CirclePage() {
       mobileContentPaddingClass="p-0 pt-4 pb-0"
       mobileScrollContainerEnabled={false}
     >
-      <div className="flex min-h-0" style={{ minHeight: shellMinHeight }}>
+      <div className="flex flex-1 min-h-0">
         <div className="flex shrink-0">
           <DiscordFriendsRail
             incomingFriendRequestCount={incomingFriendRequestCount}
             onDrawerOpenChange={setIsFriendRailDrawerOpen}
           />
         </div>
-        <div className="flex min-w-0 flex-1 flex-col px-0" style={{ minHeight: shellMinHeight }}>
+        <div className="flex min-w-0 flex-1 flex-col px-0">
           {!isFriendRailDrawerOpen ? (
             <section
               className="flex min-h-0 flex-1 flex-col rounded-tl-2xl border"
-              style={{ ...sectionShellStyle, minHeight: shellMinHeight }}
+              style={{ ...sectionShellStyle }}
             >
               {/* Fixed top region: Page header + Tab bar */}
               <div
@@ -1112,7 +1151,12 @@ export default function CirclePage() {
                     "calc(var(--mobile-nav-offset, calc(env(safe-area-inset-bottom, 0px) + 4.85rem)) + 0.75rem)",
                 }}
               >
-                {user && tab === "feed" && <FeedTab userId={user.id} />}
+                {user && tab === "feed" && (
+                  <FeedTab
+                    userId={user.id}
+                    onOpenFriendDrawer={openFriendDrawerFromFeed}
+                  />
+                )}
                 {user && tab === "members" && <MembersTab userId={user.id} />}
                 {tab === "requests" && <RequestsTab />}
               </div>

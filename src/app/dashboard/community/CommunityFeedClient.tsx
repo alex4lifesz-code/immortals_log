@@ -158,26 +158,24 @@ export default function CommunityFeedClient() {
             }
 
             for (const log of progress.logs || []) {
-              if (progress.userId !== user.id) {
-                allLogs.push({
-                  id: log.id,
-                  userId: progress.userId,
-                  userName: progress.user?.name || usersMap[progress.userId]?.name || "Unknown",
-                  exerciseName: exercise.name,
-                  level: log.level,
-                  progressionName: exercise.tiers?.find((tier) => tier.level === log.level)?.name ?? `Progression ${log.level}`,
-                  weight1: log.weight1,
-                  weight2: log.weight2,
-                  weight3: log.weight3,
-                  reps1: log.reps1,
-                  reps2: log.reps2,
-                  reps3: log.reps3,
-                  modifier: log.modifier,
-                  notes: log.notes,
-                  createdAt: log.createdAt,
-                  completed: log.completed || false,
-                });
-              }
+              allLogs.push({
+                id: log.id,
+                userId: progress.userId,
+                userName: progress.user?.name || usersMap[progress.userId]?.name || "Unknown",
+                exerciseName: exercise.name,
+                level: log.level,
+                progressionName: exercise.tiers?.find((tier) => tier.level === log.level)?.name ?? `Progression ${log.level}`,
+                weight1: log.weight1,
+                weight2: log.weight2,
+                weight3: log.weight3,
+                reps1: log.reps1,
+                reps2: log.reps2,
+                reps3: log.reps3,
+                modifier: log.modifier,
+                notes: log.notes,
+                createdAt: log.createdAt,
+                completed: log.completed || false,
+              });
             }
           }
         }
@@ -377,6 +375,9 @@ export default function CommunityFeedClient() {
                     {(() => {
                       const memberKey = `${member.userId}-${member.dateKey}`;
                       const isMemberExpanded = Boolean(expandedMemberGroups[memberKey]);
+                      const memberNameColor = member.userId === user.id
+                        ? "var(--cultivator-self)"
+                        : "var(--cultivator-friend)";
 
                       return (
                         <>
@@ -388,12 +389,12 @@ export default function CommunityFeedClient() {
                           >
                             <div className="grid grid-cols-[36px_1fr_auto] sm:grid-cols-[40px_1fr_auto] gap-2 sm:gap-3 items-center">
                               <div className="grid h-9 w-9 place-items-center rounded-md border border-[var(--border)] bg-[var(--ink-deep)] sm:h-10 sm:w-10">
-                                <span className="text-base font-bold text-[var(--text-primary)] sm:text-lg">
+                                <span className="text-base font-bold sm:text-lg" style={{ color: memberNameColor }}>
                                   {member.userName.charAt(0).toUpperCase()}
                                 </span>
                               </div>
                               <div className="min-w-0">
-                                <h3 className="truncate text-sm font-semibold text-[var(--text-primary)] sm:text-base">{member.userName}</h3>
+                                <h3 className="truncate text-sm font-semibold sm:text-base" style={{ color: memberNameColor }}>{member.userName}</h3>
                                 <p className="truncate text-[10px] text-[var(--mist-mid)] sm:text-xs">
                                   {member.exerciseGroups.length} {member.exerciseGroups.length === 1 ? "exercise" : "exercises"} • {member.logs.length} {member.logs.length === 1 ? "entry" : "entries"} • active {timeAgo(member.stats.lastActiveAt)}
                                 </p>

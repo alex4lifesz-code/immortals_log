@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useRef } from "react";
 import GlowButton from "@/components/ui/GlowButton";
 import { useIsMobile } from "@/context/AppContext";
@@ -166,15 +166,13 @@ function CalendarDay({ dayNumber, checkedInUsers, hasCurrentUserWeight, isToday,
   // Prioritize meaningful status over time-based dimming.
   const baseDayStyle = isToday && hasCurrentUserCheckIn
     ? {
-        borderColor: "color-mix(in srgb, var(--accent) 88%, var(--border))",
-        backgroundColor: "color-mix(in srgb, var(--accent) 24%, var(--surface))",
-        boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--accent) 32%, transparent), 0 0 8px color-mix(in srgb, var(--accent) 34%, transparent), 0 0 14px color-mix(in srgb, var(--accent) 22%, transparent)",
+        borderColor: "color-mix(in srgb, var(--cultivator-self) 74%, var(--border))",
+        backgroundColor: "color-mix(in srgb, var(--cultivator-self) 20%, var(--surface))",
       }
     : isToday
     ? {
-        borderColor: "color-mix(in srgb, var(--accent) 84%, var(--border))",
-        backgroundColor: "color-mix(in srgb, var(--accent) 18%, var(--surface))",
-        boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--accent) 26%, transparent), 0 0 7px color-mix(in srgb, var(--accent) 28%, transparent), 0 0 12px color-mix(in srgb, var(--accent) 18%, transparent)",
+        borderColor: "color-mix(in srgb, var(--cultivator-self) 64%, var(--border))",
+        backgroundColor: "color-mix(in srgb, var(--cultivator-self) 14%, var(--surface))",
       }
     : hasCurrentUserCheckIn
       ? {
@@ -253,19 +251,6 @@ function CalendarDay({ dayNumber, checkedInUsers, hasCurrentUserWeight, isToday,
                 }}
               >
                 W
-              </span>
-            ) : null}
-            {hasCurrentUserCheckIn ? (
-              <span
-                className="inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full border px-1 text-[8px] font-semibold leading-none"
-                title="Workout recorded"
-                style={{
-                  borderColor: "color-mix(in srgb, var(--cultivator-self) 56%, var(--border))",
-                  backgroundColor: "color-mix(in srgb, var(--cultivator-self) 16%, var(--surface))",
-                  color: "var(--cultivator-self)",
-                }}
-              >
-                ✓
               </span>
             ) : null}
           </div>
@@ -347,6 +332,7 @@ export function Calendar({
   const isMobile = useIsMobile();
   const compactMode = isMobile || forceCompact;
   const { year: currentYear, month: currentMonthNumber } = getTimeZoneDateParts(currentMonth, timeZone);
+  const monthTransitionKey = `${currentYear}-${String(currentMonthNumber).padStart(2, "0")}`;
   const daysInMonth = new Date(Date.UTC(currentYear, currentMonthNumber, 0)).getUTCDate();
   const firstDayOfMonth = new Date(Date.UTC(currentYear, currentMonthNumber - 1, 1)).getUTCDay();
   const weekStartsOn = resolveCalendarWeekStartsOn(calendarWeekStart, timeZone);
@@ -449,9 +435,21 @@ export function Calendar({
       <div className={`flex items-center justify-between gap-3 border-b ${compactMode ? "pb-2" : "pb-3"}`} style={{ borderBottomColor: "color-mix(in srgb, var(--border) 94%, transparent)" }}>
         <div className="min-w-0">
           <p className="text-[9px] uppercase tracking-[0.1em]" style={{ color: "var(--text-muted)" }}>Check-In Calendar</p>
-          <h3 className="mt-0.5 text-sm font-semibold uppercase tracking-wider" style={{ color: "var(--text-primary)" }}>
-            {formatCalendarMonthLabel(currentMonth, timeZone)}
-          </h3>
+          <div className="relative mt-0.5 h-[1.35rem] overflow-hidden">
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.h3
+                key={`month-label-${monthTransitionKey}`}
+                className="absolute inset-0 text-sm font-semibold uppercase tracking-wider"
+                style={{ color: "var(--text-primary)" }}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+              >
+                {formatCalendarMonthLabel(currentMonth, timeZone)}
+              </motion.h3>
+            </AnimatePresence>
+          </div>
         </div>
         <div className="ml-auto flex gap-1.5">
           <button
@@ -481,34 +479,45 @@ export function Calendar({
         ))}
       </div>
 
-      <div className={`grid grid-cols-7 ${compactMode ? "gap-1" : "gap-2"} min-w-0`}>
-        {days.map((date, i) => (
-          <div key={i}>
-            <CalendarDay
-              dayNumber={date.dayNumber}
-              checkedInUsers={
-                (checkInUsersByDate.get(date.dateStr) || []).map(uid => {
-                  const u = allUsers.find(usr => usr.id === uid);
-                  const isCurrentUser = uid === currentUserId;
-                  return {
-                    id: uid,
-                    name: u?.name || "Unknown",
-                    color: isCurrentUser ? "var(--cultivator-self)" : "var(--cultivator-friend)",
-                    isCurrentUser,
-                  };
-                })
-              }
-              hasCurrentUserWeight={currentUserWeightDates?.has(date.dateStr)}
-              isToday={date.dateStr === today}
-              isPast={date.dateStr < today}
-              hasNote={dayNotes?.has(date.dateStr)}
-              hasFutureNote={futureNoteDates?.has(date.dateStr)}
-              isOutsideMonth={date.isOutsideMonth}
-              compact={compactMode}
-              onClick={() => onDayClick?.(date.dateStr)}
-            />
-          </div>
-        ))}
+      <div className={`relative ${compactMode ? "min-h-[216px]" : "min-h-[264px]"}`}>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={`month-grid-${monthTransitionKey}`}
+            className={`grid grid-cols-7 ${compactMode ? "gap-1" : "gap-2"} min-w-0`}
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -10 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
+          >
+            {days.map((date, i) => (
+              <div key={i}>
+                <CalendarDay
+                  dayNumber={date.dayNumber}
+                  checkedInUsers={
+                    (checkInUsersByDate.get(date.dateStr) || []).map(uid => {
+                      const u = allUsers.find(usr => usr.id === uid);
+                      const isCurrentUser = uid === currentUserId;
+                      return {
+                        id: uid,
+                        name: u?.name || "Unknown",
+                        color: isCurrentUser ? "var(--cultivator-self)" : "var(--cultivator-friend)",
+                        isCurrentUser,
+                      };
+                    })
+                  }
+                  hasCurrentUserWeight={currentUserWeightDates?.has(date.dateStr)}
+                  isToday={date.dateStr === today}
+                  isPast={date.dateStr < today}
+                  hasNote={dayNotes?.has(date.dateStr)}
+                  hasFutureNote={futureNoteDates?.has(date.dateStr)}
+                  isOutsideMonth={date.isOutsideMonth}
+                  compact={compactMode}
+                  onClick={() => onDayClick?.(date.dateStr)}
+                />
+              </div>
+            ))}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       {upcomingNotes && upcomingNotes.length > 0 && (
@@ -563,7 +572,7 @@ export function Calendar({
 
       <div className={`flex flex-wrap border-t pt-3 ${compactMode ? "gap-2 text-[10px]" : "gap-3 text-xs"}`} style={{ borderTopColor: "color-mix(in srgb, var(--border) 94%, transparent)" }}>
         <div className="flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
-          <div className="h-2.5 w-2.5 rounded-sm border" style={{ borderColor: "color-mix(in srgb, var(--accent) 86%, var(--border))", backgroundColor: "color-mix(in srgb, var(--accent) 22%, var(--surface-hover))" }} />
+          <div className="h-2.5 w-2.5 rounded-sm border" style={{ borderColor: "color-mix(in srgb, var(--cultivator-self) 62%, var(--border))", backgroundColor: "color-mix(in srgb, var(--cultivator-self) 12%, var(--surface))" }} />
           <span>{t("Today", "normal")}</span>
         </div>
         <div className="flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
@@ -592,19 +601,6 @@ export function Calendar({
             W
           </div>
           <span>{t("Weight", "normal")}</span>
-        </div>
-        <div className="flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
-          <div
-            className="inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full border px-1 text-[8px] font-semibold leading-none"
-            style={{
-              borderColor: "color-mix(in srgb, var(--cultivator-self) 56%, var(--border))",
-              backgroundColor: "color-mix(in srgb, var(--cultivator-self) 16%, var(--surface))",
-              color: "var(--cultivator-self)",
-            }}
-          >
-            ✓
-          </div>
-          <span>{t("Workout", "normal")}</span>
         </div>
         <div className="flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
           <div className="h-2.5 w-2.5 rounded-sm border" style={{ borderColor: "color-mix(in srgb, var(--cultivator-self) 62%, var(--border))", backgroundColor: "color-mix(in srgb, var(--cultivator-self) 12%, var(--surface))" }} />

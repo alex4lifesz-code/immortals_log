@@ -2,13 +2,13 @@
 
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { DASHBOARD_ROUTES } from "@/lib/navigation";
 import { api } from "@/lib/api-client";
 import { useIsMobile } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
-import { formatDateWithPreference } from "@/lib/constants";
+import { formatDateLocal, formatDateWithPreference } from "@/lib/constants";
 import type { ProgressionExercise, ProgressionLog } from "@/app/dashboard/workout/types";
 
 interface FriendsPayload {
@@ -123,7 +123,6 @@ function DiscordFriendsRail({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const isMobile = useIsMobile();
   const { user } = useAuth();
   const { settings } = useDisplaySettings();
@@ -163,6 +162,15 @@ function DiscordFriendsRail({
   } | null>(null);
   const [friendHistoryExercises, setFriendHistoryExercises] = useState<ProgressionExercise[]>([]);
   const [friendHistoryLoading, setFriendHistoryLoading] = useState(false);
+  const [friendOverviewStats, setFriendOverviewStats] = useState<{
+    latestWeight: number | null;
+    todayCheckedIn: boolean;
+    todayWeight: number | null;
+  }>({
+    latestWeight: null,
+    todayCheckedIn: false,
+    todayWeight: null,
+  });
   const [friendHistorySearchOpen, setFriendHistorySearchOpen] = useState(false);
   const [friendHistorySearchQuery, setFriendHistorySearchQuery] = useState("");
   const [friendHistoryFilterOpen, setFriendHistoryFilterOpen] = useState(false);
@@ -237,12 +245,16 @@ function DiscordFriendsRail({
     };
   }, []);
 
+  const selectableFriends = useMemo(
+    () => friends.filter((friend) => friend.id !== user?.id),
+    [friends, user?.id]
+  );
+
   const railUsers = useMemo(() => {
-    return friends
-      .filter((friend) => friend.id !== user?.id)
+    return selectableFriends
       .slice(0, 6)
       .map((friend) => ({ ...friend, isMe: false }));
-  }, [friends, user?.id]);
+  }, [selectableFriends]);
 
   const setDrawerState = (
     friendId: string | null,
@@ -270,7 +282,7 @@ function DiscordFriendsRail({
       return;
     }
 
-    const matchedFriend = railUsers.find((friend) => !friend.isMe && friend.id === drawerFriendId);
+    const matchedFriend = selectableFriends.find((friend) => friend.id === drawerFriendId);
     if (!matchedFriend) return;
 
     setActiveFriend((current) => {
@@ -305,7 +317,34 @@ function DiscordFriendsRail({
       };
     });
     setFriendActionsOpen(!friendViewMode);
-  }, [drawerFriendId, friendViewMode, railUsers]);
+  }, [drawerFriendId, friendViewMode, selectableFriends]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const onOpenFriendDrawer = (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        friendId?: string;
+        view?: FriendViewMode | null;
+        exerciseId?: string | null;
+      }>;
+      const friendId = (customEvent.detail?.friendId || "").trim();
+      if (!friendId) return;
+
+      const targetFriend = selectableFriends.find((friend) => friend.id === friendId);
+      if (!targetFriend) return;
+
+      const view = customEvent.detail?.view ?? null;
+      const exerciseId = customEvent.detail?.exerciseId ?? null;
+      setDrawerState(friendId, { view, exerciseId });
+      setFriendActionsOpen(!view);
+    };
+
+    window.addEventListener("circle-open-friend-drawer", onOpenFriendDrawer as EventListener);
+    return () => {
+      window.removeEventListener("circle-open-friend-drawer", onOpenFriendDrawer as EventListener);
+    };
+  }, [selectableFriends]);
 
   useEffect(() => {
     if (friendViewMode !== "history" || !activeFriend?.id) {
@@ -341,6 +380,72 @@ function DiscordFriendsRail({
       cancelled = true;
     };
   }, [activeFriend?.id, friendViewMode]);
+
+  useEffect(() => {
+    if (!activeFriend?.id) {
+      setFriendOverviewStats({
+        latestWeight: null,
+        todayCheckedIn: false,
+        todayWeight: null,
+      });
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadFriendOverviewStats = async () => {
+      try {
+        const payload = await api.get<{ checkins: Array<{ date: string; userId: string; present: boolean; weight?: number | null }> }>("/api/checkins?scope=friends", { cache: "no-store" });
+        if (cancelled) return;
+
+        const todayKey = formatDateLocal(new Date(), timeZone);
+        const rows = (payload.checkins || []).filter((row) => row.userId === activeFriend.id);
+
+        let latestWeight: number | null = null;
+        let todayWeight: number | null = null;
+        let todayCheckedIn = false;
+
+        const sortedByDateDesc = [...rows].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        for (const row of sortedByDateDesc) {
+          const dayKey = row.date?.split("T")[0] || "";
+          const weightValue = row.weight == null ? null : Number(row.weight);
+          const hasWeight = weightValue != null && Number.isFinite(weightValue) && weightValue > 0;
+
+          if (latestWeight == null && hasWeight) {
+            latestWeight = weightValue;
+          }
+
+          if (dayKey === todayKey) {
+            todayCheckedIn = todayCheckedIn || Boolean(row.present);
+            if (todayWeight == null && hasWeight) {
+              todayWeight = weightValue;
+            }
+          }
+        }
+
+        setFriendOverviewStats({
+          latestWeight,
+          todayCheckedIn,
+          todayWeight,
+        });
+      } catch {
+        if (!cancelled) {
+          setFriendOverviewStats({
+            latestWeight: null,
+            todayCheckedIn: false,
+            todayWeight: null,
+          });
+        }
+      }
+    };
+
+    void loadFriendOverviewStats();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeFriend?.id, timeZone]);
 
   const friendHistoryRows = useMemo(() => {
     const rows: Array<{ exerciseId: string; exerciseName: string; date: string; progression: string; variant: string; recent24hCount: number }> = [];
@@ -738,7 +843,7 @@ function DiscordFriendsRail({
                             </svg>
                           </button>
                           <h2 className="truncate text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--mist-light)" }}>
-                            {`${toPossessive(activeFriend.name)} Train`}
+                            {`Your Friend ${activeFriend.name}`}
                           </h2>
                         </div>
                       </div>
@@ -746,6 +851,43 @@ function DiscordFriendsRail({
                     </div>
 
                     <div>
+                      <article
+                        className="mx-1 my-0.5 rounded-md px-3 py-2.5"
+                      >
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.1em]" style={{ color: "var(--text-secondary)" }}>
+                          Friend Overview
+                        </p>
+                        <div className="mt-1.5 grid grid-cols-2 gap-2">
+                          <div>
+                            <p className="text-[9px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>Sessions</p>
+                            <p className="text-xs font-semibold" style={{ color: "var(--text-primary)" }}>{activeFriend.sessionCount ?? 0}</p>
+                          </div>
+                          <div>
+                            <p className="text-[9px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>Check-Ins</p>
+                            <p className="text-xs font-semibold" style={{ color: "var(--text-primary)" }}>{activeFriend.checkInCount ?? 0}</p>
+                          </div>
+                          <div>
+                            <p className="text-[9px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>Weight</p>
+                            <p className="text-xs font-semibold" style={{ color: "var(--text-primary)" }}>
+                              {friendOverviewStats.latestWeight != null ? `${friendOverviewStats.latestWeight} kg` : "-"}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[9px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>Today</p>
+                            <p className="text-xs font-semibold" style={{ color: friendOverviewStats.todayCheckedIn ? "var(--forest)" : "var(--text-primary)" }}>
+                              {friendOverviewStats.todayCheckedIn
+                                ? friendOverviewStats.todayWeight != null
+                                  ? `Checked in • ${friendOverviewStats.todayWeight} kg`
+                                  : "Checked in"
+                                : "No check-in"}
+                            </p>
+                          </div>
+                        </div>
+                        <p className="mt-1.5 text-[10px]" style={{ color: "var(--text-muted)" }}>
+                          {selectedActivityMeta.label}: {selectedActivityMeta.value}
+                        </p>
+                      </article>
+
                       {friendActionItems.map((item) => {
                         const isAvailable = item.id === "history";
                         return (
@@ -758,42 +900,12 @@ function DiscordFriendsRail({
                           role="button"
                           tabIndex={0}
                           onClick={() => {
-                            if (item.id === "history") {
-                              const params = new URLSearchParams({
-                                targetUserId: activeFriend.id,
-                                friendView: "history",
-                              });
-                              const alreadyOnTargetHistory =
-                                pathname === DASHBOARD_ROUTES.workoutHistory
-                                && searchParams.get("targetUserId") === activeFriend.id
-                                && (searchParams.get("friendView") || "history") === "history";
-                              closeFriendPanels(false);
-                              if (alreadyOnTargetHistory) return;
-                              router.push(`${DASHBOARD_ROUTES.workoutHistory}?${params.toString()}`);
-                              return;
-                            }
-
                             setDrawerState(activeFriend.id, { view: item.id as FriendViewMode });
                             setFriendActionsOpen(false);
                           }}
                           onKeyDown={(event) => {
                             if (event.key === "Enter" || event.key === " ") {
                               event.preventDefault();
-                              if (item.id === "history") {
-                                const params = new URLSearchParams({
-                                  targetUserId: activeFriend.id,
-                                  friendView: "history",
-                                });
-                                const alreadyOnTargetHistory =
-                                  pathname === DASHBOARD_ROUTES.workoutHistory
-                                  && searchParams.get("targetUserId") === activeFriend.id
-                                  && (searchParams.get("friendView") || "history") === "history";
-                                closeFriendPanels(false);
-                                if (alreadyOnTargetHistory) return;
-                                router.push(`${DASHBOARD_ROUTES.workoutHistory}?${params.toString()}`);
-                                return;
-                              }
-
                               setDrawerState(activeFriend.id, { view: item.id as FriendViewMode });
                               setFriendActionsOpen(false);
                             }

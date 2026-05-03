@@ -109,6 +109,7 @@ interface WeekCardProps {
   name?: string;
   checkinDates: Set<string>;
   todayKey: string;
+  weekOffset: number;
   calendarWeekStart: CalendarWeekStartOption;
   timeZone: string;
   activeColor: string;
@@ -122,6 +123,7 @@ function WeekCard({
   name,
   checkinDates,
   todayKey,
+  weekOffset,
   calendarWeekStart,
   timeZone,
   activeColor,
@@ -130,77 +132,15 @@ function WeekCard({
   dayLabelColor,
   shellStyle,
 }: WeekCardProps) {
-  const [offset, setOffset] = useState(0);
-  const cardRef = useRef<HTMLElement | null>(null);
-  const txStart = useRef<number | null>(null);
-  const tyStart = useRef<number | null>(null);
-  const isHoriz = useRef<boolean | null>(null);
-
-  useEffect(() => {
-    const el = cardRef.current;
-    if (!el) return;
-    const onStart = (e: TouchEvent) => {
-      txStart.current = e.touches[0].clientX;
-      tyStart.current = e.touches[0].clientY;
-      isHoriz.current = null;
-    };
-    const onMove = (e: TouchEvent) => {
-      if (txStart.current === null || tyStart.current === null) return;
-      if (isHoriz.current === null) {
-        const dx = Math.abs(e.touches[0].clientX - txStart.current);
-        const dy = Math.abs(e.touches[0].clientY - tyStart.current);
-        if (dx < 5 && dy < 5) return;
-        isHoriz.current = dx > dy;
-      }
-      if (isHoriz.current) e.preventDefault();
-    };
-    const onEnd = (e: TouchEvent) => {
-      if (txStart.current === null || !isHoriz.current) {
-        txStart.current = null; tyStart.current = null; isHoriz.current = null;
-        return;
-      }
-      const dx = e.changedTouches[0].clientX - txStart.current;
-      txStart.current = null; tyStart.current = null; isHoriz.current = null;
-      if (Math.abs(dx) < 40) return;
-      if (dx > 0) setOffset((p) => Math.max(-2, p - 1));
-      else setOffset((p) => Math.min(0, p + 1));
-    };
-    el.addEventListener("touchstart", onStart, { passive: true });
-    el.addEventListener("touchmove", onMove, { passive: false });
-    el.addEventListener("touchend", onEnd, { passive: true });
-    return () => {
-      el.removeEventListener("touchstart", onStart);
-      el.removeEventListener("touchmove", onMove);
-      el.removeEventListener("touchend", onEnd);
-    };
-  }, []);
-
-  const weekLabel = buildWeekLabel(offset, todayKey, calendarWeekStart, timeZone);
-  const days = buildWeekDays(todayKey, offset, calendarWeekStart, timeZone, checkinDates);
+  const days = buildWeekDays(todayKey, weekOffset, calendarWeekStart, timeZone, checkinDates);
 
   return (
-    <section ref={cardRef} className="rounded-xl border p-3" style={shellStyle}>
+    <section className="rounded-xl border p-3" style={shellStyle}>
       <div className="mb-2.5 flex items-center justify-between">
         <div className="flex flex-col gap-0.5">
           {name && (
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>{name}</p>
           )}
-          <div className="flex items-center gap-0.5">
-            <button
-              onClick={() => setOffset((p) => Math.max(-2, p - 1))}
-              className="flex h-5 w-5 items-center justify-center rounded text-[14px]"
-              style={{ color: "var(--text-muted)" }}
-              aria-label="Previous week"
-            >&#8249;</button>
-            <p className="text-[10px] font-medium" style={{ color: "var(--text-muted)" }}>{weekLabel}</p>
-            <button
-              onClick={() => setOffset((p) => Math.min(0, p + 1))}
-              className="flex h-5 w-5 items-center justify-center rounded text-[14px]"
-              style={{ color: "var(--text-muted)", opacity: offset >= 0 ? 0.3 : 1 }}
-              aria-label="Next week"
-              disabled={offset >= 0}
-            >&#8250;</button>
-          </div>
         </div>
         <div className="flex items-center gap-2 text-[10px]" style={{ color: "var(--text-muted)" }}>
           <span className="flex items-center gap-1">
@@ -248,8 +188,64 @@ export default function DashboardHomePage() {
   const [friendCheckinData, setFriendCheckinData] = useState<Map<string, Set<string>>>(new Map());
   const [weightTrend, setWeightTrend] = useState<WeightTrend | null>(null);
   const [cultivationDay, setCultivationDay] = useState<number | null>(null);
+  const [weekOffset, setWeekOffset] = useState(0);
+
+  const weekSwipeRef = useRef<HTMLElement | null>(null);
+  const swipeStartXRef = useRef<number | null>(null);
+  const swipeStartYRef = useRef<number | null>(null);
+  const swipeHorizontalRef = useRef<boolean | null>(null);
+
+  const minWeekOffset = -8;
 
   const todayKey = useMemo(() => getTodayInTimeZone(settings.timeZone), [settings.timeZone]);
+
+  useEffect(() => {
+    const el = weekSwipeRef.current;
+    if (!el) return;
+    const onStart = (event: TouchEvent) => {
+      swipeStartXRef.current = event.touches[0].clientX;
+      swipeStartYRef.current = event.touches[0].clientY;
+      swipeHorizontalRef.current = null;
+    };
+    const onMove = (event: TouchEvent) => {
+      if (swipeStartXRef.current == null || swipeStartYRef.current == null) return;
+      if (swipeHorizontalRef.current == null) {
+        const dx = Math.abs(event.touches[0].clientX - swipeStartXRef.current);
+        const dy = Math.abs(event.touches[0].clientY - swipeStartYRef.current);
+        if (dx < 5 && dy < 5) return;
+        swipeHorizontalRef.current = dx > dy;
+      }
+      if (swipeHorizontalRef.current) event.preventDefault();
+    };
+    const onEnd = (event: TouchEvent) => {
+      if (swipeStartXRef.current == null || !swipeHorizontalRef.current) {
+        swipeStartXRef.current = null;
+        swipeStartYRef.current = null;
+        swipeHorizontalRef.current = null;
+        return;
+      }
+      const dx = event.changedTouches[0].clientX - swipeStartXRef.current;
+      swipeStartXRef.current = null;
+      swipeStartYRef.current = null;
+      swipeHorizontalRef.current = null;
+      if (Math.abs(dx) < 40) return;
+      if (dx > 0) {
+        setWeekOffset((previous) => Math.max(minWeekOffset, previous - 1));
+      } else {
+        setWeekOffset((previous) => Math.min(0, previous + 1));
+      }
+    };
+
+    el.addEventListener("touchstart", onStart, { passive: true });
+    el.addEventListener("touchmove", onMove, { passive: false });
+    el.addEventListener("touchend", onEnd, { passive: true });
+
+    return () => {
+      el.removeEventListener("touchstart", onStart);
+      el.removeEventListener("touchmove", onMove);
+      el.removeEventListener("touchend", onEnd);
+    };
+  }, []);
 
   useEffect(() => {
     if (!user?.id) {
@@ -352,6 +348,11 @@ export default function DashboardHomePage() {
   }, [settings.calendarWeekStart, settings.timeZone, todayKey, user?.id]);
 
   const checkedInToday = activeCheckinDates.has(todayKey);
+
+  const weekLabel = useMemo(
+    () => buildWeekLabel(weekOffset, todayKey, settings.calendarWeekStart, settings.timeZone),
+    [weekOffset, todayKey, settings.calendarWeekStart, settings.timeZone]
+  );
 
   const displayWeight = useMemo(() => {
     if (latestWeight == null) return "—";
@@ -489,37 +490,79 @@ export default function DashboardHomePage() {
           </div>
         </section>
 
-        {/* This week + Friends */}
-        <div className="space-y-3">
-          <WeekCard
-            name="Your week"
-            checkinDates={activeCheckinDates}
-            todayKey={todayKey}
-            calendarWeekStart={settings.calendarWeekStart}
-            timeZone={settings.timeZone}
-            activeColor={yourWeekPalette.active}
-            inactiveColor={yourWeekPalette.inactive}
-            borderColor={yourWeekPalette.border}
-            dayLabelColor={yourWeekPalette.label}
-            shellStyle={shellStyle}
-          />
+        {/* Shared week navigator (you + friends) */}
+        <section
+          ref={weekSwipeRef}
+          className="mx-auto w-full max-w-[640px] rounded-xl border p-3"
+          style={shellStyle}
+        >
+          <div className="mb-3 flex items-center justify-center gap-2">
+            <button
+              type="button"
+              onClick={() => setWeekOffset((previous) => Math.max(minWeekOffset, previous - 1))}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md border text-[16px]"
+              style={{
+                color: "var(--text-muted)",
+                borderColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)",
+                backgroundColor: "color-mix(in srgb, var(--ink-mid) 56%, var(--ink-deep))",
+              }}
+              aria-label="Previous week"
+            >
+              &#8249;
+            </button>
+            <p className="min-w-[120px] text-center text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--text-secondary)" }}>
+              {weekLabel}
+            </p>
+            <button
+              type="button"
+              onClick={() => setWeekOffset((previous) => Math.min(0, previous + 1))}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md border text-[16px]"
+              style={{
+                color: "var(--text-muted)",
+                borderColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)",
+                backgroundColor: "color-mix(in srgb, var(--ink-mid) 56%, var(--ink-deep))",
+                opacity: weekOffset >= 0 ? 0.35 : 1,
+              }}
+              aria-label="Next week"
+              disabled={weekOffset >= 0}
+            >
+              &#8250;
+            </button>
+          </div>
 
-          {friendInfoList.map((friend) => (
+          <div className="space-y-3">
             <WeekCard
-              key={friend.userId}
-              name={friend.name}
-              checkinDates={friendCheckinData.get(friend.userId) ?? new Set()}
+              name="Your week"
+              checkinDates={activeCheckinDates}
               todayKey={todayKey}
+              weekOffset={weekOffset}
               calendarWeekStart={settings.calendarWeekStart}
               timeZone={settings.timeZone}
-              activeColor="color-mix(in srgb, var(--accent) 72%, transparent)"
-              inactiveColor="color-mix(in srgb, var(--accent) 18%, transparent)"
-              borderColor="var(--accent)"
-              dayLabelColor="var(--accent)"
+              activeColor={yourWeekPalette.active}
+              inactiveColor={yourWeekPalette.inactive}
+              borderColor={yourWeekPalette.border}
+              dayLabelColor={yourWeekPalette.label}
               shellStyle={shellStyle}
             />
-          ))}
-        </div>
+
+            {friendInfoList.map((friend) => (
+              <WeekCard
+                key={friend.userId}
+                name={friend.name}
+                checkinDates={friendCheckinData.get(friend.userId) ?? new Set()}
+                todayKey={todayKey}
+                weekOffset={weekOffset}
+                calendarWeekStart={settings.calendarWeekStart}
+                timeZone={settings.timeZone}
+                activeColor="color-mix(in srgb, var(--accent) 72%, transparent)"
+                inactiveColor="color-mix(in srgb, var(--accent) 18%, transparent)"
+                borderColor="var(--accent)"
+                dayLabelColor="var(--accent)"
+                shellStyle={shellStyle}
+              />
+            ))}
+          </div>
+        </section>
 
       </div>
     </PageLayout>
