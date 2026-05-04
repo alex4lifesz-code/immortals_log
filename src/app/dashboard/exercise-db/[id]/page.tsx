@@ -36,6 +36,13 @@ function joinList(values: string[]): string {
   return values.join(", ") || "—";
 }
 
+function splitDraftLabels(value: string): string[] {
+  return value
+    .split(",")
+    .map((item) => item.trim().slice(0, 200))
+    .filter(Boolean);
+}
+
 export default function ExerciseDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -190,6 +197,25 @@ export default function ExerciseDetailPage() {
     return true;
   };
 
+  const addDraftLabels = useCallback((value: string, current: string[], setValue: (next: string[]) => void) => {
+    const nextLabels = splitDraftLabels(value);
+    if (nextLabels.length === 0) return false;
+
+    const existing = new Set(current.map((item) => item.toLowerCase()));
+    const additions: string[] = [];
+
+    for (const label of nextLabels) {
+      const normalized = label.toLowerCase();
+      if (existing.has(normalized)) continue;
+      existing.add(normalized);
+      additions.push(label);
+    }
+
+    if (additions.length === 0) return false;
+    setValue([...current, ...additions]);
+    return true;
+  }, []);
+
   const moveProgressionStage = (index: number, direction: -1 | 1) => {
     setProgression((prev) => {
       const targetIndex = index + direction;
@@ -324,7 +350,7 @@ export default function ExerciseDetailPage() {
 
   const saveReady = name.trim().length >= 2 && muscleGroups.length > 0 && progression.length > 0;
   const shellMinHeight = "calc(100dvh - 0.5rem)";
-  const panelShellStyle = { minHeight: "430px", height: "430px" };
+  const panelShellStyle = { minHeight: 0, height: "100%" };
   const activePanelIndex = EDITOR_PANELS.findIndex((panel) => panel.id === activePanel);
 
   const completionByPanel: Record<EditorPanelId, boolean> = {
@@ -416,6 +442,7 @@ export default function ExerciseDetailPage() {
         title="Exercise Editor"
         subtitle="Update category, type, muscles, progression, and variants for this exercise"
         mobileContentPaddingClass="p-0 pb-0"
+        mobileScrollContainerEnabled={false}
       >
         <div className="flex flex-col items-center justify-center py-20 space-y-4">
           <div className="text-5xl opacity-50">🔒</div>
@@ -436,6 +463,7 @@ export default function ExerciseDetailPage() {
       title="Exercise Editor"
       subtitle="Update category, type, muscles, progression, and variants for this exercise"
       mobileContentPaddingClass="p-0 pb-0"
+      mobileScrollContainerEnabled={false}
     >
       {loading ? (
         <GlowCard glow="jade" hoverable={false}>
@@ -577,7 +605,7 @@ export default function ExerciseDetailPage() {
                   </div>
                 </aside>
 
-                <div className="min-w-0 flex-1 overflow-y-auto space-y-3 pr-0.5">
+                <div className="min-w-0 flex min-h-0 flex-1 flex-col pr-0.5">
                   {activePanel === "identity" ? (
                     <section className="flex flex-col overflow-hidden px-1 py-1" style={panelShellStyle}>
                       <div className="flex-1 overflow-y-auto pr-0.5">
@@ -723,16 +751,16 @@ export default function ExerciseDetailPage() {
                                 onKeyDown={(event) => {
                                   if (event.key !== "Enter") return;
                                   event.preventDefault();
-                                  const added = addUniqueLabel(progressionDraft, progression, setProgression);
+                                  const added = addDraftLabels(progressionDraft, progression, setProgression);
                                   if (added) setProgressionDraft("");
                                 }}
-                                placeholder="Add progression stage"
+                                placeholder="e.g. Assisted, Bodyweight, Weighted"
                                 className={`${inputCls} !py-1.5`}
                               />
                               <button
                                 type="button"
                                 onClick={() => {
-                                  const added = addUniqueLabel(progressionDraft, progression, setProgression);
+                                  const added = addDraftLabels(progressionDraft, progression, setProgression);
                                   if (added) setProgressionDraft("");
                                 }}
                                 className="theme-action-btn rounded-md border px-3 py-1.5 text-xs"
@@ -740,6 +768,7 @@ export default function ExerciseDetailPage() {
                                 Add
                               </button>
                             </div>
+                            <p className="mt-2 text-[11px] text-[color:var(--text-secondary)]">Add one or paste multiple stages separated by commas.</p>
                           </div>
 
                           <div id="editor-field-variation" className="rounded-lg border px-3 py-3" style={getEditorFieldStyle("variation")}>
@@ -764,16 +793,16 @@ export default function ExerciseDetailPage() {
                                 onKeyDown={(event) => {
                                   if (event.key !== "Enter") return;
                                   event.preventDefault();
-                                  const added = addUniqueLabel(variationDraft, variations, setVariations);
+                                  const added = addDraftLabels(variationDraft, variations, setVariations);
                                   if (added) setVariationDraft("");
                                 }}
-                                placeholder="Add variant"
+                                placeholder="e.g. Wide grip, Neutral grip, Rings"
                                 className={`${inputCls} !py-1.5`}
                               />
                               <button
                                 type="button"
                                 onClick={() => {
-                                  const added = addUniqueLabel(variationDraft, variations, setVariations);
+                                  const added = addDraftLabels(variationDraft, variations, setVariations);
                                   if (added) setVariationDraft("");
                                 }}
                                 className="theme-action-btn rounded-md border px-3 py-1.5 text-xs"
@@ -781,6 +810,7 @@ export default function ExerciseDetailPage() {
                                 Add
                               </button>
                             </div>
+                            <p className="mt-2 text-[11px] text-[color:var(--text-secondary)]">Paste multiple variants separated by commas for bulk add.</p>
                           </div>
                         </div>
                       </div>

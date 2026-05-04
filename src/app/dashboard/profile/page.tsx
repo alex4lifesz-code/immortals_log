@@ -132,9 +132,10 @@ export default function ProfilePage() {
   }, [latestCheckinWeight, weightUnit]);
 
   const pageItems = [
-    { id: "progress", label: lt("Progress"), path: DASHBOARD_ROUTES.rankUp, icon: "✅" },
-    { id: "exercises", label: lt("Exercise Library"), path: "/dashboard/train?library=1", icon: "📚" },
-    { id: "settings", label: lt("Settings"), path: DASHBOARD_ROUTES.settings, icon: "⚙️" },
+    { id: "progress", label: lt("Progress"), path: DASHBOARD_ROUTES.rankUp, icon: "✅", disabled: false },
+    { id: "exercises", label: lt("Exercise Library"), path: "/dashboard/train?library=1", icon: "📚", disabled: true },
+    { id: "workout-history", label: lt("Workout History"), path: "/dashboard/workout/history", icon: "🕘", disabled: false },
+    { id: "settings", label: lt("Settings"), path: DASHBOARD_ROUTES.settings, icon: "⚙️", disabled: false },
   ] as const;
 
   const adminItems = user?.role === "admin"
@@ -234,25 +235,43 @@ export default function ProfilePage() {
                 <button
                   key={item.id}
                   type="button"
-                  className="flex min-h-[46px] items-center gap-2.5 rounded-lg px-3 py-2 transition-colors"
+                  disabled={Boolean(item.disabled)}
+                  aria-disabled={Boolean(item.disabled)}
+                  className="flex min-h-[46px] items-center gap-2.5 rounded-lg px-3 py-2 transition-colors disabled:cursor-not-allowed"
                   style={{
-                    border: "1px solid color-mix(in srgb, var(--ink-light) 48%, transparent)",
-                    backgroundColor: "color-mix(in srgb, var(--ink-mid) 55%, var(--ink-deep))",
-                    boxShadow: "inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 2%, transparent)",
-                    color: "var(--text-primary)",
+                    border: item.disabled
+                      ? "1px solid color-mix(in srgb, var(--ink-light) 30%, transparent)"
+                      : "1px solid color-mix(in srgb, var(--ink-light) 48%, transparent)",
+                    backgroundColor: item.disabled
+                      ? "color-mix(in srgb, var(--ink-mid) 35%, var(--ink-deep))"
+                      : "color-mix(in srgb, var(--ink-mid) 55%, var(--ink-deep))",
+                    boxShadow: item.disabled
+                      ? "inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 1%, transparent)"
+                      : "inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 2%, transparent)",
+                    color: item.disabled ? "var(--text-muted)" : "var(--text-primary)",
+                    opacity: item.disabled ? 0.72 : 1,
                   }}
-                  onClick={() => router.push(item.path)}
+                  onClick={() => {
+                    if (item.disabled) return;
+                    router.push(item.path);
+                  }}
                 >
                   <span
                     className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md"
-                    style={{ backgroundColor: "color-mix(in srgb, var(--ink-light) 14%, transparent)" }}
+                    style={{
+                      backgroundColor: item.disabled
+                        ? "color-mix(in srgb, var(--ink-light) 10%, transparent)"
+                        : "color-mix(in srgb, var(--ink-light) 14%, transparent)",
+                    }}
                   >
                     <span className="text-base">{item.icon}</span>
                   </span>
                   <div className="min-w-0 flex-1 text-left">
                     <span className="block truncate text-[13px] font-medium">{item.label}</span>
                   </div>
-                  <span className="text-[12px] text-[var(--text-muted)]">›</span>
+                  <span className="text-[12px]" style={{ color: item.disabled ? "color-mix(in srgb, var(--text-muted) 70%, transparent)" : "var(--text-muted)" }}>
+                    ›
+                  </span>
                 </button>
               );
             })}

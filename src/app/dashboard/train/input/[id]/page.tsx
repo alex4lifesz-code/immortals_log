@@ -196,6 +196,7 @@ export default function TrainInputCanvasPage() {
   const [selectedLevel, setSelectedLevel] = useState("");
   const [selectedVariant, setSelectedVariant] = useState(prefillVariant);
   const [modifierKg, setModifierKg] = useState(0);
+  const [isModifierPanelOpen, setIsModifierPanelOpen] = useState(false);
   const [trainingDate, setTrainingDate] = useState(getTodayInputValue(settings.timeZone));
   const [notes, setNotes] = useState("");
   const [sets, setSets] = useState<SetRow[]>(createInitialSets);
@@ -304,7 +305,10 @@ export default function TrainInputCanvasPage() {
         if (typeof draft.selectedLevel === "string") setSelectedLevel(draft.selectedLevel);
         if (typeof draft.selectedVariant === "string") setSelectedVariant(draft.selectedVariant);
       }
-      if (typeof draft.modifierKg === "number" && Number.isFinite(draft.modifierKg)) setModifierKg(draft.modifierKg);
+      if (typeof draft.modifierKg === "number" && Number.isFinite(draft.modifierKg)) {
+        setModifierKg(draft.modifierKg);
+        setIsModifierPanelOpen(draft.modifierKg !== 0);
+      }
       if (!arrivedFromPicker && typeof draft.trainingDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(draft.trainingDate)) {
         setTrainingDate(draft.trainingDate);
       }
@@ -502,6 +506,7 @@ export default function TrainInputCanvasPage() {
         setSelectedLevel(nextSelectedLevel);
         setSelectedVariant(nextSelectedVariant);
         setModifierKg(nextModifierKg);
+        setIsModifierPanelOpen(nextModifierKg !== 0);
         setTrainingDate(nextTrainingDate);
         setNotes(nextNotes);
         setValueMode(nextValueMode);
@@ -764,6 +769,7 @@ export default function TrainInputCanvasPage() {
     setSelectedLevel("");
     setSelectedVariant("");
     setModifierKg(0);
+    setIsModifierPanelOpen(false);
     setTrainingDate(getTodayInputValue(settings.timeZone));
     setNotes("");
     setSets(createInitialSets());
@@ -1045,6 +1051,8 @@ export default function TrainInputCanvasPage() {
   const selectedProgressionLabel = inputMode === "custom"
     ? `${lt("Progression")} 1`
     : selectedExercise?.tiers.find((tier) => String(tier.level) === selectedLevel)?.name || `${lt("Progression")} ${selectedLevel || "1"}`;
+  const selectedVariantLabel = selectedVariant.trim();
+  const confirmedExerciseSetupSummary = `${selectedVariantLabel ? `${selectedVariantLabel} ` : ""}${selectedProgressionLabel} ${selectedExerciseLabel}`;
   const reviewSetPreview = sets.flatMap((set, index) => {
     const value = set.value.trim();
     const reps = set.reps.trim();
@@ -1086,7 +1094,9 @@ export default function TrainInputCanvasPage() {
     ? lt("Update or delete this workout.")
     : isDayAssignment
       ? `${lt("Assigned")}: ${prefillVariant ? `${prefillVariant} ` : ""}${selectedExercise?.tiers.find((t) => String(t.level) === selectedLevel)?.name || prefillProgression} ${prefillExerciseName}`
-      : lt("Track your sets and reps.");
+      : confirmedPanels.includes("details")
+        ? confirmedExerciseSetupSummary
+        : lt("Track your sets and reps.");
   const isFocusedField = (field: string) => highlightedField === field;
   const getFieldHighlightStyle = (field: string) => (isFocusedField(field)
     ? {
@@ -1255,7 +1265,7 @@ export default function TrainInputCanvasPage() {
                   </Link>
                   <div className="min-w-0">
                     <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--text-primary)]">{editorPageTitle}</h2>
-                    <p className="mt-0.5 text-[11px] text-[color:var(--text-secondary)]">{editorPageDescription}</p>
+                    <p className="mt-0.5 text-[11px] text-[color:var(--text-secondary)]" aria-live="polite">{editorPageDescription}</p>
                   </div>
                 </div>
 
@@ -1541,34 +1551,30 @@ export default function TrainInputCanvasPage() {
                       <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">
                         <div>
                           <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Session format")}</p>
+                          <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">{lt("Choose how you want to log this workout.")}</p>
                         </div>
 
-                        <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                        <div className="mt-4 grid gap-2 sm:grid-cols-2">
                           <button
                             type="button"
                             onClick={() => setValueMode("weight")}
                             className="rounded-xl border px-3 py-3 text-left transition-colors"
                             style={{
-                              borderColor: valueMode === "weight" ? "color-mix(in srgb, var(--accent) 60%, transparent)" : "color-mix(in srgb, var(--border) 80%, transparent)",
-                              backgroundColor: valueMode === "weight" ? "color-mix(in srgb, var(--accent) 14%, var(--surface))" : "color-mix(in srgb, var(--surface-hover) 60%, var(--surface))",
-                              color: valueMode === "weight" ? "var(--accent)" : "var(--text-secondary)",
-                              boxShadow: "none",
+                              borderColor: valueMode === "weight" ? "color-mix(in srgb, var(--accent) 52%, transparent)" : "color-mix(in srgb, var(--ink-light) 36%, transparent)",
+                              backgroundColor: valueMode === "weight" ? "color-mix(in srgb, var(--accent) 12%, var(--ink-deep))" : "color-mix(in srgb, var(--ink-deep) 90%, var(--ink-mid))",
+                              color: valueMode === "weight" ? "var(--text-primary)" : "var(--text-secondary)",
+                              boxShadow: valueMode === "weight"
+                                ? "0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent) inset"
+                                : "inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 3%, transparent)",
                             }}
                           >
-                            <div className="flex items-center gap-3">
-                              <span
-                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
-                                style={{ backgroundColor: valueMode === "weight" ? "color-mix(in srgb, var(--accent) 18%, transparent)" : "color-mix(in srgb, var(--cloud-white) 5%, transparent)" }}
-                              >
-                                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.5 9h11" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 9.5V14a2 2 0 0 0 2 2h1.5V8H6a2 2 0 0 0-2 1.5Z" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M20 9.5V14a2 2 0 0 1-2 2h-1.5V8H18a2 2 0 0 1 2 1.5Z" />
-                                </svg>
-                              </span>
+                            <div className="flex items-start justify-between gap-3">
                               <span className="min-w-0">
                                 <span className="block text-sm font-semibold">{lt("Weight")}</span>
-                                <span className="mt-0.5 block text-[10px] text-[color:var(--text-muted)]">{lt("Load and reps")}</span>
+                                <span className="mt-1 block text-[10px] text-[color:var(--text-muted)]">{lt("Use load and reps.")}</span>
+                              </span>
+                              <span className="text-[10px] font-semibold" style={{ color: valueMode === "weight" ? "var(--accent)" : "var(--text-muted)" }}>
+                                {valueMode === "weight" ? lt("Selected") : ""}
                               </span>
                             </div>
                           </button>
@@ -1578,44 +1584,57 @@ export default function TrainInputCanvasPage() {
                             onClick={() => setValueMode("timed")}
                             className="rounded-xl border px-3 py-3 text-left transition-colors"
                             style={{
-                              borderColor: valueMode === "timed" ? "color-mix(in srgb, var(--accent) 60%, transparent)" : "color-mix(in srgb, var(--border) 80%, transparent)",
-                              backgroundColor: valueMode === "timed" ? "color-mix(in srgb, var(--accent) 14%, var(--surface))" : "color-mix(in srgb, var(--surface-hover) 60%, var(--surface))",
-                              color: valueMode === "timed" ? "var(--accent)" : "var(--text-secondary)",
-                              boxShadow: "none",
+                              borderColor: valueMode === "timed" ? "color-mix(in srgb, var(--accent) 52%, transparent)" : "color-mix(in srgb, var(--ink-light) 36%, transparent)",
+                              backgroundColor: valueMode === "timed" ? "color-mix(in srgb, var(--accent) 12%, var(--ink-deep))" : "color-mix(in srgb, var(--ink-deep) 90%, var(--ink-mid))",
+                              color: valueMode === "timed" ? "var(--text-primary)" : "var(--text-secondary)",
+                              boxShadow: valueMode === "timed"
+                                ? "0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent) inset"
+                                : "inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 3%, transparent)",
                             }}
                           >
-                            <div className="flex items-center gap-3">
-                              <span
-                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
-                                style={{ backgroundColor: valueMode === "timed" ? "color-mix(in srgb, var(--accent) 18%, transparent)" : "color-mix(in srgb, var(--cloud-white) 5%, transparent)" }}
-                              >
-                                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                                  <circle cx="12" cy="13" r="7" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4l2.5 1.5" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 3h6" />
-                                </svg>
-                              </span>
+                            <div className="flex items-start justify-between gap-3">
                               <span className="min-w-0">
                                 <span className="block text-sm font-semibold">{lt("Timed")}</span>
-                                <span className="mt-0.5 block text-[10px] text-[color:var(--text-muted)]">{lt("Seconds and holds")}</span>
+                                <span className="mt-1 block text-[10px] text-[color:var(--text-muted)]">{lt("Use time and reps.")}</span>
+                              </span>
+                              <span className="text-[10px] font-semibold" style={{ color: valueMode === "timed" ? "var(--accent)" : "var(--text-muted)" }}>
+                                {valueMode === "timed" ? lt("Selected") : ""}
                               </span>
                             </div>
                           </button>
                         </div>
 
-                        {valueMode === "timed" ? (
-                          <div className="mt-3 max-w-[320px]">
-                            <p className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Input unit")}</p>
-                            <div className="grid grid-cols-2 gap-2">
+                        <div
+                          className="mt-4 rounded-xl border px-3 py-3"
+                          style={{
+                            borderColor: "color-mix(in srgb, var(--ink-light) 36%, transparent)",
+                            backgroundColor: "color-mix(in srgb, var(--ink-deep) 90%, var(--ink-mid))",
+                            boxShadow: "inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 3%, transparent)",
+                          }}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div>
+                              <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Input unit")}</p>
+                              <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">
+                                {valueMode === "timed" ? lt("Pick whether you want to enter seconds or minutes.") : lt("Pick the weight unit you normally use.")}
+                              </p>
+                            </div>
+                            <span className="rounded-full border px-2.5 py-1 text-[10px] font-semibold" style={{ borderColor: "color-mix(in srgb, var(--accent) 24%, transparent)", backgroundColor: "color-mix(in srgb, var(--accent) 10%, transparent)", color: "var(--text-primary)" }}>
+                              {valueMode === "timed" ? (timedUnit === "minutes" ? lt("Minutes") : lt("Seconds")) : weightUnit.toUpperCase()}
+                            </span>
+                          </div>
+
+                          {valueMode === "timed" ? (
+                            <div className="mt-3 grid grid-cols-2 gap-2">
                               <button
                                 type="button"
                                 onClick={() => setTimedUnit("seconds")}
                                 className="rounded-xl border px-3 py-2 text-[11px] font-semibold transition-all"
                                 style={{
-                                  borderColor: timedUnit === "seconds" ? "color-mix(in srgb, var(--accent) 64%, transparent)" : "color-mix(in srgb, var(--border) 78%, transparent)",
-                                  backgroundColor: timedUnit === "seconds" ? "color-mix(in srgb, var(--accent) 18%, var(--surface))" : "color-mix(in srgb, var(--surface-hover) 72%, var(--surface))",
-                                  color: timedUnit === "seconds" ? "var(--accent)" : "var(--text-secondary)",
-                                  boxShadow: "none",
+                                  borderColor: timedUnit === "seconds" ? "color-mix(in srgb, var(--accent) 54%, transparent)" : "color-mix(in srgb, var(--ink-light) 36%, transparent)",
+                                  backgroundColor: timedUnit === "seconds" ? "color-mix(in srgb, var(--accent) 14%, var(--ink-deep))" : "color-mix(in srgb, var(--ink-mid) 85%, black)",
+                                  color: timedUnit === "seconds" ? "var(--text-primary)" : "var(--text-secondary)",
+                                  boxShadow: timedUnit === "seconds" ? "0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent) inset" : "none",
                                 }}
                               >
                                 {lt("Seconds")} (s)
@@ -1625,29 +1644,26 @@ export default function TrainInputCanvasPage() {
                                 onClick={() => setTimedUnit("minutes")}
                                 className="rounded-xl border px-3 py-2 text-[11px] font-semibold transition-all"
                                 style={{
-                                  borderColor: timedUnit === "minutes" ? "color-mix(in srgb, var(--accent) 64%, transparent)" : "color-mix(in srgb, var(--border) 78%, transparent)",
-                                  backgroundColor: timedUnit === "minutes" ? "color-mix(in srgb, var(--accent) 18%, var(--surface))" : "color-mix(in srgb, var(--surface-hover) 72%, var(--surface))",
-                                  color: timedUnit === "minutes" ? "var(--accent)" : "var(--text-secondary)",
-                                  boxShadow: "none",
+                                  borderColor: timedUnit === "minutes" ? "color-mix(in srgb, var(--accent) 54%, transparent)" : "color-mix(in srgb, var(--ink-light) 36%, transparent)",
+                                  backgroundColor: timedUnit === "minutes" ? "color-mix(in srgb, var(--accent) 14%, var(--ink-deep))" : "color-mix(in srgb, var(--ink-mid) 85%, black)",
+                                  color: timedUnit === "minutes" ? "var(--text-primary)" : "var(--text-secondary)",
+                                  boxShadow: timedUnit === "minutes" ? "0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent) inset" : "none",
                                 }}
                               >
                                 {lt("Minutes")} (m)
                               </button>
                             </div>
-                          </div>
-                        ) : (
-                          <div className="mt-3 max-w-[320px]">
-                            <p className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Input unit")}</p>
-                            <div className="grid grid-cols-2 gap-2">
+                          ) : (
+                            <div className="mt-3 grid grid-cols-2 gap-2">
                               <button
                                 type="button"
                                 onClick={() => setWeightUnit("kg")}
                                 className="rounded-xl border px-3 py-2 text-[11px] font-semibold transition-all"
                                 style={{
-                                  borderColor: weightUnit === "kg" ? "color-mix(in srgb, var(--accent) 64%, transparent)" : "color-mix(in srgb, var(--border) 78%, transparent)",
-                                  backgroundColor: weightUnit === "kg" ? "color-mix(in srgb, var(--accent) 18%, var(--surface))" : "color-mix(in srgb, var(--surface-hover) 72%, var(--surface))",
-                                  color: weightUnit === "kg" ? "var(--accent)" : "var(--text-secondary)",
-                                  boxShadow: "none",
+                                  borderColor: weightUnit === "kg" ? "color-mix(in srgb, var(--accent) 54%, transparent)" : "color-mix(in srgb, var(--ink-light) 36%, transparent)",
+                                  backgroundColor: weightUnit === "kg" ? "color-mix(in srgb, var(--accent) 14%, var(--ink-deep))" : "color-mix(in srgb, var(--ink-mid) 85%, black)",
+                                  color: weightUnit === "kg" ? "var(--text-primary)" : "var(--text-secondary)",
+                                  boxShadow: weightUnit === "kg" ? "0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent) inset" : "none",
                                 }}
                               >
                                 {lt("Kilograms")} (kg)
@@ -1657,17 +1673,17 @@ export default function TrainInputCanvasPage() {
                                 onClick={() => setWeightUnit("lbs")}
                                 className="rounded-xl border px-3 py-2 text-[11px] font-semibold transition-all"
                                 style={{
-                                  borderColor: weightUnit === "lbs" ? "color-mix(in srgb, var(--accent) 64%, transparent)" : "color-mix(in srgb, var(--border) 78%, transparent)",
-                                  backgroundColor: weightUnit === "lbs" ? "color-mix(in srgb, var(--accent) 18%, var(--surface))" : "color-mix(in srgb, var(--surface-hover) 72%, var(--surface))",
-                                  color: weightUnit === "lbs" ? "var(--accent)" : "var(--text-secondary)",
-                                  boxShadow: "none",
+                                  borderColor: weightUnit === "lbs" ? "color-mix(in srgb, var(--accent) 54%, transparent)" : "color-mix(in srgb, var(--ink-light) 36%, transparent)",
+                                  backgroundColor: weightUnit === "lbs" ? "color-mix(in srgb, var(--accent) 14%, var(--ink-deep))" : "color-mix(in srgb, var(--ink-mid) 85%, black)",
+                                  color: weightUnit === "lbs" ? "var(--text-primary)" : "var(--text-secondary)",
+                                  boxShadow: weightUnit === "lbs" ? "0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent) inset" : "none",
                                 }}
                               >
                                 {lt("Pounds")} (lbs)
                               </button>
                             </div>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
 
                       {renderPanelActions()}
@@ -1684,13 +1700,23 @@ export default function TrainInputCanvasPage() {
                               className="rounded-xl border px-3 py-3"
                               style={{
                                 ...getFieldHighlightStyle("modifier"),
-                                borderColor: "color-mix(in srgb, var(--border) 78%, transparent)",
-                                backgroundColor: "color-mix(in srgb, var(--surface-hover) 68%, var(--surface))",
+                                borderColor: "color-mix(in srgb, var(--ink-light) 40%, transparent)",
+                                backgroundColor: "color-mix(in srgb, var(--ink-deep) 92%, var(--ink-mid))",
+                                boxShadow: "inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 3%, transparent)",
                               }}
                             >
-                              <div className="flex items-start justify-between gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setIsModifierPanelOpen((prev) => !prev)}
+                                aria-expanded={isModifierPanelOpen}
+                                aria-controls="modifier-slider-panel"
+                                className="flex w-full items-start justify-between gap-2 text-left"
+                              >
                                 <div className="min-w-0">
                                   <p className="text-[10px] uppercase tracking-[0.08em] text-[color:var(--text-muted)]">{lt("Modifier")}</p>
+                                  <p className="mt-1 text-[10px] text-[color:var(--text-secondary)]">
+                                    {lt("Using weighted reps or a resistance band?")} {lt("Expand to set the modifier value.")}
+                                  </p>
                                 </div>
                                 <div className="flex shrink-0 items-center gap-1.5">
                                   <span
@@ -1703,40 +1729,55 @@ export default function TrainInputCanvasPage() {
                                   >
                                     {modifierKg === 0 ? lt("None") : formatSignedModifierKg(modifierKg)}
                                   </span>
+                                  <span
+                                    className="inline-flex h-6 w-6 items-center justify-center rounded-full border text-[10px]"
+                                    style={{
+                                      borderColor: "color-mix(in srgb, var(--border) 78%, transparent)",
+                                      color: "var(--text-muted)",
+                                      backgroundColor: "color-mix(in srgb, var(--surface-hover) 72%, var(--surface))",
+                                    }}
+                                    aria-hidden="true"
+                                  >
+                                    {isModifierPanelOpen ? "−" : "+"}
+                                  </span>
+                                </div>
+                              </button>
+
+                              {isModifierPanelOpen ? (
+                                <div id="modifier-slider-panel" className="mt-3 rounded-xl px-2.5 py-2" style={{ backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)" }}>
+                                  <input
+                                    type="range"
+                                    min="-50"
+                                    max="50"
+                                    step="0.5"
+                                    value={modifierKg}
+                                    onChange={(event) => setModifierKg(Number(event.target.value))}
+                                    className="h-1.5 w-full cursor-pointer accent-[var(--jade-glow)]"
+                                    aria-label={lt("Weight modifier slider")}
+                                  />
+                                  <div className="mt-2 flex items-center justify-between text-[9px] text-[color:var(--text-muted)]">
+                                    <span>-50kg</span>
+                                    <span>0</span>
+                                    <span>+50kg</span>
+                                  </div>
                                   {modifierKg !== 0 ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => setModifierKg(0)}
-                                      className="rounded-full border px-2.5 py-1 text-[10px] font-semibold"
-                                      style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface-hover) 72%, var(--surface))", color: "var(--text-secondary)" }}
-                                    >
-                                      {lt("Reset")}
-                                    </button>
+                                    <div className="mt-2 flex justify-end">
+                                      <button
+                                        type="button"
+                                        onClick={() => setModifierKg(0)}
+                                        className="rounded-full border px-2.5 py-1 text-[10px] font-semibold"
+                                        style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface-hover) 72%, var(--surface))", color: "var(--text-secondary)" }}
+                                      >
+                                        {lt("Reset")}
+                                      </button>
+                                    </div>
                                   ) : null}
                                 </div>
-                              </div>
-
-                              <div className="mt-3 rounded-xl px-2.5 py-2" style={{ backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)" }}>
-                                <input
-                                  type="range"
-                                  min="-50"
-                                  max="50"
-                                  step="0.5"
-                                  value={modifierKg}
-                                  onChange={(event) => setModifierKg(Number(event.target.value))}
-                                  className="h-1.5 w-full cursor-pointer accent-[var(--jade-glow)]"
-                                  aria-label={lt("Weight modifier slider")}
-                                />
-                                <div className="mt-2 flex items-center justify-between text-[9px] text-[color:var(--text-muted)]">
-                                  <span>-50kg</span>
-                                  <span>0</span>
-                                  <span>+50kg</span>
-                                </div>
-                              </div>
+                              ) : null}
                             </div>
                           ) : null}
 
-                          <div className="rounded-xl border px-3 py-3" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface-hover) 62%, var(--surface))" }}>
+                          <div className="rounded-xl border px-3 py-3" style={{ borderColor: "color-mix(in srgb, var(--ink-light) 40%, transparent)", backgroundColor: "color-mix(in srgb, var(--ink-deep) 92%, var(--ink-mid))", boxShadow: "inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 3%, transparent)" }}>
                             <div>
                               <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Sets")}</p>
                             </div>
@@ -1760,8 +1801,8 @@ export default function TrainInputCanvasPage() {
                                         ? "color-mix(in srgb, var(--forest) 46%, transparent)"
                                         : "color-mix(in srgb, var(--border) 76%, transparent)",
                                       background: set.id === highlightedSetId || isExpanded
-                                        ? "linear-gradient(180deg, color-mix(in srgb, var(--forest) 6%, transparent), color-mix(in srgb, var(--surface) 96%, var(--surface-hover)))"
-                                        : "linear-gradient(180deg, color-mix(in srgb, var(--surface-hover) 82%, var(--surface)), color-mix(in srgb, var(--surface) 96%, black))",
+                                        ? "linear-gradient(180deg, color-mix(in srgb, var(--forest) 8%, var(--ink-mid)), color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid)))"
+                                        : "linear-gradient(180deg, color-mix(in srgb, var(--ink-deep) 94%, var(--ink-mid)), color-mix(in srgb, var(--ink-mid) 92%, black))",
                                       boxShadow: set.id === highlightedSetId || isFocusedField(`set-${index + 1}`) || isExpanded
                                         ? "0 0 0 1px color-mix(in srgb, var(--forest) 12%, transparent), 0 0 16px color-mix(in srgb, var(--forest) 6%, transparent)"
                                         : "none",
@@ -1896,7 +1937,6 @@ export default function TrainInputCanvasPage() {
                                 );
                               })}
                             </div>
-
                           </div>
                         </div>
                       </div>

@@ -26,7 +26,10 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   const [isTrainExerciseHistoryOpen, setIsTrainExerciseHistoryOpen] = useState(false);
   const disableMotion = themeStyle === "discord" || prefersReducedMotion;
   const isWorkoutInputFullscreen =
-    pathname?.startsWith("/dashboard/train/input/") || pathname?.startsWith("/dashboard/workout-history/input/") || false;
+    pathname?.startsWith("/dashboard/train/input/")
+    || pathname?.startsWith("/dashboard/workout-history/input/")
+    || pathname?.startsWith("/dashboard/exercise-db/")
+    || false;
   const isFriendDrawerRoute =
     pathname?.startsWith("/dashboard/train")
     && Boolean(searchParams.get("targetUserId"))
@@ -37,6 +40,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     || pathname?.startsWith("/dashboard/circle/")
     || pathname === "/dashboard/train"
     || pathname?.startsWith("/dashboard/train/")
+    || pathname?.startsWith("/dashboard/exercise-db/")
     || pathname === "/dashboard/history"
     || pathname?.startsWith("/dashboard/history/");
   const matchesRouteOrChild = (route: string) => pathname === route || pathname?.startsWith(`${route}/`);

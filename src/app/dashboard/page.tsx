@@ -87,7 +87,12 @@ function buildWeekDays(
   return Array.from({ length: 7 }, (_, i) => {
     const key = shiftDateKey(startKey, i);
     const dow = new Date(key + "T00:00:00Z").getUTCDay();
-    return { key, label: DAY_LABELS[dow], active: checkinDates.has(key), isToday: key === todayKey };
+    return {
+      key,
+      label: DAY_LABELS[dow],
+      active: checkinDates.has(key),
+      isToday: key === todayKey,
+    };
   });
 }
 
@@ -112,6 +117,7 @@ interface WeekCardProps {
   checkinDates: Set<string>;
   todayKey: string;
   weekOffset: number;
+  transitionDirection: 1 | -1;
   calendarWeekStart: CalendarWeekStartOption;
   timeZone: string;
   activeColor: string;
@@ -127,6 +133,7 @@ function WeekCard({
   checkinDates,
   todayKey,
   weekOffset,
+  transitionDirection,
   calendarWeekStart,
   timeZone,
   activeColor,
@@ -160,14 +167,40 @@ function WeekCard({
       <div className="flex items-end gap-1.5">
         {days.map(({ key, label, active, isToday }) => (
           <div key={key} className="flex flex-1 flex-col items-center gap-1">
-            <div
-              className="w-full rounded-md"
-              style={{
-                height: 28,
-                backgroundColor: active ? activeColor : inactiveColor,
-                border: isToday ? `1.5px solid ${borderColor}` : "1px solid transparent",
-              }}
-            />
+            {(() => {
+              const isTodayAndLogged = active && isToday;
+              const dayBoxStyle: React.CSSProperties = isTodayAndLogged
+                ? {
+                    height: 28,
+                    backgroundColor: "color-mix(in srgb, var(--forest) 52%, var(--cloud-white) 48%)",
+                    backgroundImage: "repeating-linear-gradient(-45deg, color-mix(in srgb, var(--cloud-white) 24%, transparent) 0px, color-mix(in srgb, var(--cloud-white) 24%, transparent) 4px, transparent 4px, transparent 8px)",
+                    border: `1.5px solid ${borderColor}`,
+                    boxShadow: "inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 28%, transparent), 0 0 0 1px color-mix(in srgb, var(--forest) 14%, transparent)",
+                  }
+                : {
+                    height: 28,
+                    backgroundColor: active ? activeColor : inactiveColor,
+                    border: isToday ? `1.5px solid ${borderColor}` : "1px solid transparent",
+                  };
+
+              return (
+                <motion.div
+                  className="w-full rounded-md"
+                  style={dayBoxStyle}
+                  initial={{
+                    opacity: 0,
+                    x: transitionDirection > 0 ? 14 : -14,
+                    scale: 0.98,
+                  }}
+                  animate={{ opacity: 1, x: 0, scale: 1 }}
+                  transition={{
+                    x: { type: "spring", stiffness: 260, damping: 28, mass: 0.9 },
+                    opacity: { duration: 0.16, ease: "easeOut" },
+                    scale: { duration: 0.16, ease: "easeOut" },
+                  }}
+                />
+              );
+            })()}
             <span className="text-[9px] font-medium" style={{ color: isToday ? dayLabelColor : "var(--text-muted)" }}>
               {label}
             </span>
@@ -214,22 +247,6 @@ export default function DashboardHomePage() {
       opacity: 0,
       x: direction > 0 ? -20 : 20,
       y: 0,
-    }),
-  };
-
-  const weekContentAnimation = {
-    enter: (direction: 1 | -1) => ({
-      opacity: 0,
-      x: direction > 0 ? 64 : -64,
-      y: 0,
-      scale: 0.996,
-    }),
-    center: { opacity: 1, x: 0, y: 0, scale: 1 },
-    exit: (direction: 1 | -1) => ({
-      opacity: 0,
-      x: direction > 0 ? -64 : 64,
-      y: 0,
-      scale: 0.996,
     }),
   };
 
@@ -595,25 +612,16 @@ export default function DashboardHomePage() {
           </div>
 
           <AnimatePresence mode="wait" initial={false} custom={weekTransitionDirection}>
-            <motion.div
+            <div
               key={`week-content-${weekOffset}`}
               className="space-y-3"
-              custom={weekTransitionDirection}
-              variants={weekContentAnimation}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{
-                x: { type: "spring", stiffness: 250, damping: 30, mass: 0.9 },
-                opacity: { duration: 0.18, ease: "easeOut" },
-                scale: { duration: 0.18, ease: "easeOut" },
-              }}
             >
               <WeekCard
                 name={lt("Your week")}
                 checkinDates={activeCheckinDates}
                 todayKey={todayKey}
                 weekOffset={weekOffset}
+                transitionDirection={weekTransitionDirection}
                 calendarWeekStart={settings.calendarWeekStart}
                 timeZone={settings.timeZone}
                 activeColor={yourWeekPalette.active}
@@ -631,6 +639,7 @@ export default function DashboardHomePage() {
                   checkinDates={friendCheckinData.get(friend.userId) ?? new Set()}
                   todayKey={todayKey}
                   weekOffset={weekOffset}
+                  transitionDirection={weekTransitionDirection}
                   calendarWeekStart={settings.calendarWeekStart}
                   timeZone={settings.timeZone}
                   activeColor="color-mix(in srgb, var(--accent) 72%, transparent)"
@@ -641,7 +650,7 @@ export default function DashboardHomePage() {
                   translateFn={lt}
                 />
               ))}
-            </motion.div>
+            </div>
           </AnimatePresence>
         </section>
 

@@ -162,12 +162,15 @@ function CalendarDay({ dayNumber, checkedInUsers, hasCurrentUserWeight, isToday,
   const visibleDots = friendDots.slice(0, compact ? 3 : 4);
   const extraCount = friendDots.length - visibleDots.length;
   const neutralDayBackground = "color-mix(in srgb, var(--surface-hover) 62%, var(--surface))";
+  const isTodayAndLogged = isToday && hasCurrentUserCheckIn;
 
   // Prioritize meaningful status over time-based dimming.
-  const baseDayStyle = isToday && hasCurrentUserCheckIn
+  const baseDayStyle = isTodayAndLogged
     ? {
         borderColor: "color-mix(in srgb, var(--cultivator-self) 74%, var(--border))",
-        backgroundColor: "color-mix(in srgb, var(--cultivator-self) 20%, var(--surface))",
+        backgroundColor: "color-mix(in srgb, var(--forest) 52%, var(--cloud-white) 48%)",
+        backgroundImage: "repeating-linear-gradient(-45deg, color-mix(in srgb, var(--cloud-white) 24%, transparent) 0px, color-mix(in srgb, var(--cloud-white) 24%, transparent) 4px, transparent 4px, transparent 8px)",
+        boxShadow: "inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 28%, transparent), 0 0 0 1px color-mix(in srgb, var(--forest) 14%, transparent)",
       }
     : isToday
     ? {
@@ -443,7 +446,8 @@ export function Calendar({
     days.push({ dateStr, dayNumber: i, isOutsideMonth: false });
   }
 
-  const trailingDays = (7 - (days.length % 7)) % 7;
+  const totalCalendarCells = 42;
+  const trailingDays = Math.max(0, totalCalendarCells - days.length);
   for (let i = 1; i <= trailingDays; i++) {
     const dateStr = `${nextYear}-${String(nextMonthNumber).padStart(2, "0")}-${String(i).padStart(2, "0")}`;
     days.push({ dateStr, dayNumber: i, isOutsideMonth: true });

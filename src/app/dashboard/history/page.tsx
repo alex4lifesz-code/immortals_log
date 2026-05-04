@@ -707,7 +707,7 @@ export default function HistoryPage() {
     : lt("Train");
   const subtitle = targetUserDisplayName
     ? `Review ${targetUserDisplayName}'s training logs and cultivation entries`
-    : lt("Review your training logs and cultivation entries");
+    : lt("Training and Quick history");
   const isFriendTrainOverlay = Boolean(targetUserId);
   const shouldShowWeightSwipeHint = !isFriendTrainOverlay && mobileQuickCheckinTodayWeight == null && !showWeightHintThankYou;
   const shouldShowWeightThankYou = !isFriendTrainOverlay && showWeightHintThankYou;
@@ -1330,7 +1330,7 @@ export default function HistoryPage() {
                               </button>
                             ) : null}
                             <div>
-                              <p className="text-[9px] uppercase tracking-[0.1em]" style={{ color: "var(--text-muted)" }}>{lt("Training")}</p>
+                              <p className="text-[9px] uppercase tracking-[0.1em]" style={{ color: "var(--text-muted)" }}>{lt("Training and Quick history")}</p>
                               <h2 className="mt-0.5 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-primary)" }}>
                                 {trainPageTitle}
                               </h2>
@@ -2089,6 +2089,20 @@ export default function HistoryPage() {
                       >
                         <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          router.push("/dashboard/workout/history");
+                        }}
+                        className="inline-flex h-8 items-center justify-center text-[var(--mist-mid)] transition-colors hover:text-[var(--text-primary)]"
+                        aria-label={lt("Open workout history page")}
+                        title={lt("Workout history")}
+                      >
+                        <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l2.5 2.5" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 1 1-9-9" />
                         </svg>
                       </button>
                       <button
