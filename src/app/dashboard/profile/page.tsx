@@ -132,18 +132,18 @@ export default function ProfilePage() {
   }, [latestCheckinWeight, weightUnit]);
 
   const pageItems = [
-    { id: "progress", label: lt("Progress"), path: DASHBOARD_ROUTES.rankUp, icon: "✅", disabled: false },
-    { id: "exercises", label: lt("Exercise Library"), path: "/dashboard/train?library=1", icon: "📚", disabled: true },
-    { id: "workout-history", label: lt("Workout History"), path: "/dashboard/workout/history", icon: "🕘", disabled: false },
-    { id: "settings", label: lt("Settings"), path: DASHBOARD_ROUTES.settings, icon: "⚙️", disabled: false },
+    { id: "progress", label: lt("Progress"), path: DASHBOARD_ROUTES.rankUp, disabled: false },
+    { id: "exercises", label: lt("Exercise Library"), path: "/dashboard/train?library=1", disabled: true },
+    { id: "workout-history", label: lt("Workout History"), path: "/dashboard/workout/history", disabled: false },
+    { id: "settings", label: lt("Settings"), path: DASHBOARD_ROUTES.settings, disabled: false },
   ] as const;
 
   const adminItems = user?.role === "admin"
     ? [
-        { id: "attendance", label: "Check-In Log", path: DASHBOARD_ROUTES.attendance, icon: "🗓️" },
-        { id: "exercise-db", label: "Exercise DB", path: "/dashboard/exercise-db", icon: "🗃️" },
-        { id: "website-information", label: "Website Information", path: DASHBOARD_ROUTES.websiteInformation, icon: "🛠️" },
-        { id: "admin", label: "Admin Panel", path: DASHBOARD_ROUTES.admin, icon: "🛡️" },
+        { id: "attendance", label: "Check-In Log", path: DASHBOARD_ROUTES.attendance },
+        { id: "exercise-db", label: "Exercise DB", path: "/dashboard/exercise-db" },
+        { id: "website-information", label: "Website Information", path: DASHBOARD_ROUTES.websiteInformation },
+        { id: "admin", label: "Admin Panel", path: DASHBOARD_ROUTES.admin },
       ] as const
     : [];
 
@@ -157,6 +157,52 @@ export default function ProfilePage() {
     borderColor: "color-mix(in srgb, var(--ink-light) 50%, transparent)",
     backgroundColor: "color-mix(in srgb, var(--ink-mid) 62%, var(--ink-deep))",
     boxShadow: "inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 3%, transparent)",
+  };
+
+  const renderMeSectionIcon = (itemId: string, strokeWidth = 1.9) => {
+    switch (itemId) {
+      case "progress":
+        return (
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={strokeWidth}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 12l4 4 10-10" />
+          </svg>
+        );
+      case "exercises":
+      case "exercise-db":
+        return (
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={strokeWidth}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        );
+      case "workout-history":
+      case "attendance":
+        return (
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={strokeWidth}>
+            <circle cx="12" cy="12" r="8" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v5l3 2" />
+          </svg>
+        );
+      case "settings":
+      case "website-information":
+        return (
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={strokeWidth}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 2h3l.8 2.4 2.3 1 2.3-1.1 2.1 2.1-1.1 2.3 1 2.3 2.4.8v3l-2.4.8-1 2.3 1.1 2.3-2.1 2.1-2.3-1.1-2.3 1L13.5 22h-3l-.8-2.4-2.3-1-2.3 1.1-2.1-2.1 1.1-2.3-1-2.3L.7 13.5v-3l2.4-.8 1-2.3-1.1-2.3 2.1-2.1 2.3 1.1 2.3-1L10.5 2z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+        );
+      case "admin":
+        return (
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={strokeWidth}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 3l7 4v5c0 5-3 8-7 9-4-1-7-4-7-9V7l7-4z" />
+          </svg>
+        );
+      default:
+        return (
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={strokeWidth}>
+            <circle cx="12" cy="12" r="8" />
+          </svg>
+        );
+    }
   };
 
   return (
@@ -263,8 +309,9 @@ export default function ProfilePage() {
                         ? "color-mix(in srgb, var(--ink-light) 10%, transparent)"
                         : "color-mix(in srgb, var(--ink-light) 14%, transparent)",
                     }}
+                    aria-hidden
                   >
-                    <span className="text-base">{item.icon}</span>
+                    {renderMeSectionIcon(item.id)}
                   </span>
                   <div className="min-w-0 flex-1 text-left">
                     <span className="block truncate text-[13px] font-medium">{item.label}</span>
@@ -299,8 +346,9 @@ export default function ProfilePage() {
                     <span
                       className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md"
                       style={{ backgroundColor: "color-mix(in srgb, var(--gold-glow) 12%, transparent)" }}
+                      aria-hidden
                     >
-                      <span className="text-base">{item.icon}</span>
+                      {renderMeSectionIcon(item.id)}
                     </span>
                     <div className="min-w-0 flex-1 text-left">
                       <span className="block truncate text-[13px] font-medium">{item.label}</span>

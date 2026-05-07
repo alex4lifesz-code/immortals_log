@@ -4983,6 +4983,12 @@ function TrainingLogTable({
                       </thead>
                       <tbody>
                         {historyData.map((entry) => {
+                          const noWeightLabel = t("No weight recorded", "normal");
+                          const noRepsLabel = t("No reps recorded", "normal");
+                          const noModifierLabel = t("No modifier", "normal");
+                          const noVariantLabel = t("No variation", "normal");
+                          const defaultVariantLabel = t("Default", "normal");
+                          const noProgressionLabel = t("No progression", "normal");
                           const weights = [entry.weight1, entry.weight2, entry.weight3].filter(
                             (value): value is number => value != null,
                           );
@@ -5004,18 +5010,21 @@ function TrainingLogTable({
                               ? `${avgWeightDisplay.toFixed(1)} ${weightUnit}`
                               : entry.holdTime != null
                                 ? `${entry.holdTime}s`
-                                : "-";
-                          const avgRepsText = avgReps != null ? avgReps.toFixed(1) : "-";
-                          const modifierText = entry.modifier?.trim() ? entry.modifier : "-";
-                          const variantRaw = entry.variant?.trim() || "";
-                          const variantAbbrev = variantRaw ? abbreviateVariantText(variantRaw) : "-";
-                          const variantDisplayText = historyDockExpanded ? (variantRaw || "-") : variantAbbrev;
+                                : noWeightLabel;
+                          const avgRepsText = avgReps != null ? avgReps.toFixed(1) : noRepsLabel;
+                          const modifierText = entry.modifier?.trim() ? entry.modifier : noModifierLabel;
+                          const variantValue = entry.variant?.trim() || "";
+                          const variantRaw = variantValue === "-" || variantValue.toLowerCase() === "default"
+                            ? defaultVariantLabel
+                            : variantValue;
+                          const variantAbbrev = variantRaw ? abbreviateVariantText(variantRaw) : noVariantLabel;
+                          const variantDisplayText = historyDockExpanded ? (variantRaw || noVariantLabel) : variantAbbrev;
                           const progressionLevel = Number.isFinite(entry.level) ? Number(entry.level) : null;
                           const progressionText = progressionLevel != null
                             ? getProgressionTierLabel(selectedInputExercise, progressionLevel)
-                            : "-";
-                          const compactProgressionText = progressionText === "-"
-                            ? "-"
+                            : noProgressionLabel;
+                          const compactProgressionText = progressionText === noProgressionLabel
+                            ? noProgressionLabel
                             : (() => {
                                 const initials = progressionText
                                   .split(/\s+/)
@@ -5035,10 +5044,10 @@ function TrainingLogTable({
                             entry.reps2 != null ? `R2:${entry.reps2}` : null,
                             entry.reps3 != null ? `R3:${entry.reps3}` : null,
                           ].filter(Boolean).join(" ");
-                          const avgWeightTitle = [weightBreakdown || "No weight recorded", modifierText !== "-" ? `Mod: ${modifierText}` : null]
+                          const avgWeightTitle = [weightBreakdown || "No weight recorded", modifierText !== noModifierLabel ? `Mod: ${modifierText}` : null]
                             .filter(Boolean)
                             .join(" | ");
-                          const avgRepsTitle = [repsBreakdown || "No reps recorded", modifierText !== "-" ? `Mod: ${modifierText}` : null]
+                          const avgRepsTitle = [repsBreakdown || "No reps recorded", modifierText !== noModifierLabel ? `Mod: ${modifierText}` : null]
                             .filter(Boolean)
                             .join(" | ");
 
@@ -5051,7 +5060,7 @@ function TrainingLogTable({
                               <td className="px-2 py-1 text-center tabular-nums" style={{ color: "var(--text-primary)" }} title={avgWeightTitle}>{avgWeightText}</td>
                               <td className="px-2 py-1 text-center tabular-nums" style={{ color: "var(--text-primary)" }} title={avgRepsTitle}>{avgRepsText}</td>
                               <td className="px-2 py-1 text-center whitespace-nowrap" style={{ color: "var(--gold)" }} title={modifierText}>{modifierText}</td>
-                              <td className="px-2 py-1 text-center whitespace-nowrap" style={{ color: "var(--text-primary)" }} title={variantRaw || "-"}>{variantDisplayText}</td>
+                              <td className="px-2 py-1 text-center whitespace-nowrap" style={{ color: "var(--text-primary)" }} title={variantRaw || noVariantLabel}>{variantDisplayText}</td>
                             </tr>
                           );
                         })}

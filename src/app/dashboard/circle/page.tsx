@@ -208,11 +208,46 @@ function getFeedSetChips(log: FeedLog): string[] {
 // ── Feed tab ───────────────────────────────────────────────────────
 
 function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendDrawer?: (friendId: string) => void }) {
+  const NON_MUTUAL_VISIBILITY_KEY = "circle-show-non-mutual-users";
+  const NON_MUTUAL_VISIBILITY_EVENT = "circle-non-mutual-visibility-changed";
+  const { user } = useAuth();
   const { settings } = useDisplaySettings();
   const lt = useCallback((text: string) => translateEnglishToLanguage(text, settings.languageMode), [settings.languageMode]);
+  const isAdmin = user?.role === "admin";
   const [loading, setLoading] = useState(true);
   const [logs, setLogs] = useState<FeedLog[]>([]);
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
+  const [showNonMutualInFeed, setShowNonMutualInFeed] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(NON_MUTUAL_VISIBILITY_KEY) === "1";
+  });
+
+  useEffect(() => {
+    if (isAdmin || !showNonMutualInFeed) return;
+    setShowNonMutualInFeed(false);
+  }, [isAdmin, showNonMutualInFeed]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const syncNonMutualVisibility = () => {
+      if (!isAdmin) {
+        setShowNonMutualInFeed(false);
+        return;
+      }
+      setShowNonMutualInFeed(window.localStorage.getItem(NON_MUTUAL_VISIBILITY_KEY) === "1");
+    };
+
+    syncNonMutualVisibility();
+    window.addEventListener(NON_MUTUAL_VISIBILITY_EVENT, syncNonMutualVisibility);
+    window.addEventListener("storage", syncNonMutualVisibility);
+    return () => {
+      window.removeEventListener(NON_MUTUAL_VISIBILITY_EVENT, syncNonMutualVisibility);
+      window.removeEventListener("storage", syncNonMutualVisibility);
+    };
+  }, [isAdmin]);
+
+  const feedScope = isAdmin && showNonMutualInFeed ? "community" : "friends";
 
   useEffect(() => {
     let cancelled = false;
@@ -247,7 +282,7 @@ function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendD
     };
 
     api
-      .get<{ exercises: FeedExercise[] }>("/api/feed?scope=friends")
+      .get<{ exercises: FeedExercise[] }>(`/api/feed?scope=${feedScope}`)
       .then((data) => {
         if (cancelled) return;
         const allLogs: FeedLog[] = [];
@@ -296,7 +331,7 @@ function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendD
 
     return () => {
       cancelled = true; };
-  }, [lt]);
+  }, [feedScope, lt]);
 
   if (loading) {
     return (
@@ -352,20 +387,20 @@ function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendD
 
               <div className="space-y-1">
                 {Object.entries(exerciseGroups).map(([groupKey, group]) => {
+                  const scopedGroupKey = `${day}::${groupKey}`;
                   const hasMultiple = group.logs.length > 1;
-                  const isExpanded = expandedKeys.has(groupKey);
-                  const visibleLogs = isExpanded ? group.logs : [group.logs[0]];
+                  const isExpanded = expandedKeys.has(scopedGroupKey);
+                  const visibleLogs = isExpanded ? group.logs : [];
                   const latestLog = group.logs[0];
                   const isCurrentUserLog = group.userId === userId;
                   const userNameColor = isCurrentUserLog
                     ? "var(--cultivator-self)"
                     : "var(--cultivator-friend)";
                   const toggleExpanded = () => {
-                    if (!hasMultiple) return;
                     setExpandedKeys((prev) => {
                       const next = new Set(prev);
-                      if (next.has(groupKey)) next.delete(groupKey);
-                      else next.add(groupKey);
+                      if (next.has(scopedGroupKey)) next.delete(scopedGroupKey);
+                      else next.add(scopedGroupKey);
                       return next;
                     });
                   };
@@ -386,17 +421,17 @@ function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendD
                         style={{
                           border: "1px solid color-mix(in srgb, var(--ink-light) 40%, transparent)",
                           backgroundColor: "color-mix(in srgb, var(--ink-mid) 48%, var(--ink-deep))",
-                          cursor: hasMultiple ? "pointer" : "default",
+                          cursor: "pointer",
                         }}
-                        role={hasMultiple ? "button" : undefined}
-                        tabIndex={hasMultiple ? 0 : undefined}
-                        onClick={hasMultiple ? toggleExpanded : undefined}
-                        onKeyDown={hasMultiple ? (event) => {
+                        role="button"
+                        tabIndex={0}
+                        onClick={toggleExpanded}
+                        onKeyDown={(event) => {
                           if (event.key === "Enter" || event.key === " ") {
                             event.preventDefault();
                             toggleExpanded();
                           }
-                        } : undefined}
+                        }}
                       >
                         <div className="flex items-start justify-between gap-2">
                           <p className="min-w-0 text-sm font-semibold leading-tight" style={{ color: "var(--text-primary)" }}>
@@ -436,60 +471,39 @@ function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendD
                         )}
                         <div
                           className="mt-1 w-full text-left"
-                          aria-label={hasMultiple ? (isExpanded ? lt("Collapse sets") : lt("Expand sets")) : lt("Set values")}
+                          aria-label={isExpanded ? lt("Collapse sets") : lt("Expand sets")}
                         >
                           <div className="space-y-1">
                             {visibleLogs.map((log, logIndex) => {
                               const chips = getFeedSetChips(log);
                               const fullLabel = `${log.variant ? `${log.variant} ` : ""}${log.progressionName || `${lt("Progression")} ${log.level}`} ${group.exerciseName}`;
-                              if (isExpanded) {
-                                return (
-                                  <div key={`${groupKey}-log-${log.id || logIndex}`} className="flex flex-col gap-0.5">
-                                    <div className="flex items-center justify-between gap-2">
-                                      <span className="min-w-0 truncate text-[11px] italic" style={{ color: "var(--text-muted)" }}>
-                                        {fullLabel}
-                                      </span>
-                                      <span className="shrink-0 text-[10px] italic" style={{ color: "var(--text-muted)" }}>
-                                        {formatRelativeRecentDate(log.createdAt, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone)}
-                                      </span>
-                                    </div>
-                                    <div className="flex flex-wrap items-center gap-1 pl-1">
-                                      {chips.length > 0 ? chips.map((chip, chipIndex) => (
-                                        <span
-                                          key={`${groupKey}-log-${log.id || logIndex}-chip-${chipIndex}`}
-                                          className="rounded px-1.5 py-0.5 text-[10px]"
-                                          style={{
-                                            backgroundColor: "color-mix(in srgb, var(--ink-light) 14%, transparent)",
-                                            border: "1px solid color-mix(in srgb, var(--ink-light) 26%, transparent)",
-                                            color: "var(--mist-light)",
-                                          }}
-                                        >
-                                          {chip}
-                                        </span>
-                                      )) : (
-                                        <span className="text-[10px]" style={{ color: "var(--mist-light)" }}>{lt("No sets recorded")}</span>
-                                      )}
-                                    </div>
-                                  </div>
-                                );
-                              }
                               return (
-                                <div key={`${groupKey}-log-${log.id || logIndex}`} className="flex flex-wrap items-center gap-1">
-                                  {chips.length > 0 ? chips.map((chip, chipIndex) => (
-                                    <span
-                                      key={`${groupKey}-log-${log.id || logIndex}-chip-${chipIndex}`}
-                                      className="rounded px-1.5 py-0.5 text-[10px]"
-                                      style={{
-                                        backgroundColor: "color-mix(in srgb, var(--ink-light) 14%, transparent)",
-                                        border: "1px solid color-mix(in srgb, var(--ink-light) 26%, transparent)",
-                                        color: "var(--mist-light)",
-                                      }}
-                                    >
-                                      {chip}
+                                <div key={`${groupKey}-log-${log.id || logIndex}`} className="flex flex-col gap-0.5">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="min-w-0 truncate text-[11px] italic" style={{ color: "var(--text-muted)" }}>
+                                      {fullLabel}
                                     </span>
-                                  )) : (
-                                    <span className="text-[10px]" style={{ color: "var(--mist-light)" }}>{lt("No sets recorded")}</span>
-                                  )}
+                                    <span className="shrink-0 text-[10px] italic" style={{ color: "var(--text-muted)" }}>
+                                      {formatRelativeRecentDate(log.createdAt, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone)}
+                                    </span>
+                                  </div>
+                                  <div className="flex flex-wrap items-center gap-1 pl-1">
+                                    {chips.length > 0 ? chips.map((chip, chipIndex) => (
+                                      <span
+                                        key={`${groupKey}-log-${log.id || logIndex}-chip-${chipIndex}`}
+                                        className="rounded px-1.5 py-0.5 text-[10px]"
+                                        style={{
+                                          backgroundColor: "color-mix(in srgb, var(--ink-light) 14%, transparent)",
+                                          border: "1px solid color-mix(in srgb, var(--ink-light) 26%, transparent)",
+                                          color: "var(--mist-light)",
+                                        }}
+                                      >
+                                        {chip}
+                                      </span>
+                                    )) : (
+                                      <span className="text-[10px]" style={{ color: "var(--mist-light)" }}>{lt("No sets recorded")}</span>
+                                    )}
+                                  </div>
                                 </div>
                               );
                             })}
@@ -510,10 +524,14 @@ function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendD
 // ── Members tab ────────────────────────────────────────────────────
 
 function MembersTab({ userId: _userId }: { userId: string }) {
+  const NON_MUTUAL_VISIBILITY_KEY = "circle-show-non-mutual-users";
+  const NON_MUTUAL_VISIBILITY_EVENT = "circle-non-mutual-visibility-changed";
+  const { user } = useAuth();
   const { settings } = useDisplaySettings();
   const lt = useCallback((text: string) => translateEnglishToLanguage(text, settings.languageMode), [settings.languageMode]);
   const dateFormat = settings.dateFormat || "dd-mmm-yyyy";
   const timeZone = settings.timeZone;
+  const isAdmin = user?.role === "admin";
 
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<FriendPayload>({
@@ -523,10 +541,27 @@ function MembersTab({ userId: _userId }: { userId: string }) {
     outgoingRequests: [],
   });
   const [checkins, setCheckins] = useState<CheckInRow[]>([]);
+  const [communityUsers, setCommunityUsers] = useState<BasicUser[]>([]);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [friendCodeInput, setFriendCodeInput] = useState("");
   const [addMsg, setAddMsg] = useState("");
   const [working, setWorking] = useState(false);
+  const [showNonMutualUsers, setShowNonMutualUsers] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(NON_MUTUAL_VISIBILITY_KEY) === "1";
+  });
+
+  useEffect(() => {
+    // Non-admins should never be able to activate this view, even with stale local storage.
+    if (isAdmin || !showNonMutualUsers) return;
+    setShowNonMutualUsers(false);
+  }, [isAdmin, showNonMutualUsers]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !isAdmin) return;
+    window.localStorage.setItem(NON_MUTUAL_VISIBILITY_KEY, showNonMutualUsers ? "1" : "0");
+    window.dispatchEvent(new Event(NON_MUTUAL_VISIBILITY_EVENT));
+  }, [isAdmin, showNonMutualUsers]);
 
   const broadcastUpdated = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -537,20 +572,26 @@ function MembersTab({ userId: _userId }: { userId: string }) {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const [fd, ci] = await Promise.all([
+      const [fd, ci, community] = await Promise.all([
         api.get<FriendPayload>("/api/friends"),
         api
           .get<{ checkins: CheckInRow[] }>("/api/checkins?scope=friends")
           .catch(() => ({ checkins: [] as CheckInRow[] })),
+        isAdmin
+          ? api
+              .get<{ users: BasicUser[] }>("/api/users/public?scope=community")
+              .catch(() => ({ users: [] as BasicUser[] }))
+          : Promise.resolve({ users: [] as BasicUser[] }),
       ]);
       setData(fd);
       setCheckins(ci.checkins || []);
+      setCommunityUsers(community.users || []);
     } catch {
       // keep previous state on error
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isAdmin]);
 
   useEffect(() => {
     void refresh();
@@ -650,6 +691,15 @@ function MembersTab({ userId: _userId }: { userId: string }) {
     [data.friends, friendStatsMap]
   );
 
+  const nonMutualUsers = useMemo(() => {
+    if (!isAdmin) return [];
+    const friendIds = new Set(data.friends.map((friend) => friend.id));
+    return [...communityUsers]
+      .filter((member) => member.id !== data.me?.id)
+      .filter((member) => !friendIds.has(member.id))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [communityUsers, data.friends, data.me?.id, isAdmin]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -708,12 +758,94 @@ function MembersTab({ userId: _userId }: { userId: string }) {
       </div>
 
       {/* Friends list */}
-      {sorted.length === 0 ? (
+      {isAdmin && (
+        <div className="rounded-lg px-3 py-2.5 border" style={tileStyle}>
+          <label className="flex cursor-pointer items-center justify-between gap-3">
+            <div>
+              <p className="text-[12px] font-semibold text-[color:var(--text-primary)]">
+                {lt("Show users not mutually friended")}
+              </p>
+              <p className="text-[11px] text-[color:var(--text-muted)]">
+                {lt("Toggle between your friends and all non-mutual users.")}
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              checked={showNonMutualUsers}
+              onChange={(e) => setShowNonMutualUsers(e.target.checked)}
+              className="h-4 w-4"
+            />
+          </label>
+        </div>
+      )}
+
+      {isAdmin && showNonMutualUsers ? (
+        nonMutualUsers.length === 0 ? (
+          <div className="rounded-lg p-3 border" style={tileStyle}>
+            <p className="text-[12px] text-[color:var(--text-muted)]">{lt("No non-mutual users found")}</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {isAdmin && (
+              <div className="my-1 flex w-full items-center justify-center gap-1.5 px-2">
+                <div className="h-px flex-1" style={{ backgroundColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)" }} />
+                <span className="text-[9px] uppercase tracking-[0.1em]" style={{ color: "var(--text-muted)" }}>
+                  {lt("Non-mutual")}
+                </span>
+                <div className="h-px flex-1" style={{ backgroundColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)" }} />
+              </div>
+            )}
+            {nonMutualUsers.map((member) => (
+              <article
+                key={member.id}
+                className="rounded-lg p-3 border"
+                style={tileStyle}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-[color:var(--text-primary)]">
+                      {member.name}
+                    </p>
+                    <p className="truncate text-[11px] text-[color:var(--text-secondary)]">
+                      @{member.username}
+                    </p>
+                  </div>
+                  <span
+                    className="shrink-0 rounded-md px-2 py-1 text-[11px] text-[color:var(--mist-light)]"
+                    style={{
+                      backgroundColor:
+                        "color-mix(in srgb, var(--ink-light) 14%, transparent)",
+                      border:
+                        "1px solid color-mix(in srgb, var(--ink-light) 34%, transparent)",
+                    }}
+                  >
+                    {lt("Not mutual")}
+                  </span>
+                </div>
+                <p className="mt-2 text-[11px] text-[color:var(--text-muted)]">
+                  {lt("Member since")}: {member.createdAt
+                    ? formatDateWithPreference(member.createdAt, dateFormat, timeZone)
+                    : "-"}
+                </p>
+              </article>
+            ))}
+          </div>
+        )
+      ) : sorted.length === 0 ? (
         <div className="rounded-lg p-3 border" style={tileStyle}>
           <EmptyFriends friendCode={data.me?.friendCode ?? undefined} />
         </div>
       ) : (
         <div className="space-y-2">
+          {isAdmin && (
+            <div className="my-1 flex w-full items-center justify-center gap-1.5 px-2">
+              <div className="h-px flex-1" style={{ backgroundColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)" }} />
+              <span className="text-[9px] uppercase tracking-[0.1em]" style={{ color: "var(--text-muted)" }}>
+                {lt("Mutual")}
+              </span>
+              <div className="h-px flex-1" style={{ backgroundColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)" }} />
+            </div>
+          )}
           {sorted.map((friend) => {
             const stats = friendStatsMap.get(friend.id);
             const expanded = expandedIds.has(friend.id);

@@ -28,6 +28,19 @@ interface FriendsPayload {
   }>;
 }
 
+interface PublicUsersPayload {
+  users?: Array<{
+    id: string;
+    name: string;
+    username?: string | null;
+    createdAt?: string | Date | null;
+  }>;
+}
+
+const APP_EXERCISE_LIBRARY_USERNAME = "__app_exercise_library__";
+const NON_MUTUAL_VISIBILITY_KEY = "circle-show-non-mutual-users";
+const NON_MUTUAL_VISIBILITY_EVENT = "circle-non-mutual-visibility-changed";
+
 function initials(value: string) {
   const parts = value.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "?";
@@ -130,6 +143,7 @@ function DiscordFriendsRail({
   const lt = useCallback((text: string) => translateEnglishToLanguage(text, settings.languageMode), [settings.languageMode]);
   const dateFormat = settings.dateFormat || "dd-mmm-yyyy";
   const timeZone = settings.timeZone;
+  const isAdmin = user?.role === "admin";
 
   const isActive = pathname === DASHBOARD_ROUTES.circle || pathname?.startsWith(`${DASHBOARD_ROUTES.circle}/`);
   const [drawerFriendId, setDrawerFriendId] = useState("");
@@ -148,6 +162,22 @@ function DiscordFriendsRail({
     lastActivityAt?: string;
     lastActivityLabel?: string;
   }>>([]);
+  const [communityUsers, setCommunityUsers] = useState<Array<{
+    id: string;
+    name: string;
+    username?: string;
+    createdAt?: string;
+  }>>([]);
+  const [showNonMutualInRail, setShowNonMutualInRail] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(NON_MUTUAL_VISIBILITY_KEY) === "1";
+  });
+
+  useEffect(() => {
+    // Prevent non-admin users from enabling this mode via persisted client state.
+    if (isAdmin || !showNonMutualInRail) return;
+    setShowNonMutualInRail(false);
+  }, [isAdmin, showNonMutualInRail]);
   const [friendActionsOpen, setFriendActionsOpen] = useState(false);
   const [activeFriend, setActiveFriend] = useState<{
     id: string;
@@ -209,16 +239,44 @@ function DiscordFriendsRail({
   }, [friendExerciseSearchOpen]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const syncNonMutualVisibility = () => {
+      if (!isAdmin) {
+        setShowNonMutualInRail(false);
+        return;
+      }
+      setShowNonMutualInRail(window.localStorage.getItem(NON_MUTUAL_VISIBILITY_KEY) === "1");
+    };
+
+    syncNonMutualVisibility();
+    window.addEventListener(NON_MUTUAL_VISIBILITY_EVENT, syncNonMutualVisibility);
+    window.addEventListener("storage", syncNonMutualVisibility);
+    return () => {
+      window.removeEventListener(NON_MUTUAL_VISIBILITY_EVENT, syncNonMutualVisibility);
+      window.removeEventListener("storage", syncNonMutualVisibility);
+    };
+  }, [isAdmin]);
+
+  useEffect(() => {
     let cancelled = false;
 
     const loadFriends = async () => {
       try {
-        const payload = await api.get<FriendsPayload>("/api/friends", { cache: "no-store" });
+        const [payload, communityPayload] = await Promise.all([
+          api.get<FriendsPayload>("/api/friends", { cache: "no-store" }),
+          isAdmin
+            ? api
+                .get<PublicUsersPayload>("/api/users/public?scope=community", { cache: "no-store" })
+                .catch(() => ({ users: [] as PublicUsersPayload["users"] }))
+            : Promise.resolve({ users: [] as PublicUsersPayload["users"] }),
+        ]);
         if (cancelled) return;
 
         const normalized = Array.isArray(payload.friends)
           ? payload.friends
               .filter((friend) => typeof friend?.id === "string")
+              .filter((friend) => (friend.username || "").trim().toLowerCase() !== APP_EXERCISE_LIBRARY_USERNAME)
               .map((friend) => ({
                 id: friend.id,
                 name: (friend.name || friend.username || lt("Friend")).trim() || lt("Friend"),
@@ -234,9 +292,25 @@ function DiscordFriendsRail({
               }))
           : [];
 
+        const normalizedCommunity = Array.isArray(communityPayload.users)
+          ? communityPayload.users
+              .filter((member) => typeof member?.id === "string")
+              .filter((member) => (member.username || "").trim().toLowerCase() !== APP_EXERCISE_LIBRARY_USERNAME)
+              .map((member) => ({
+                id: member.id,
+                name: (member.name || member.username || lt("Friend")).trim() || lt("Friend"),
+                username: (member.username || "").trim() || undefined,
+                createdAt: member.createdAt ? new Date(member.createdAt).toISOString() : undefined,
+              }))
+          : [];
+
         setFriends(normalized);
+        setCommunityUsers(normalizedCommunity);
       } catch {
-        if (!cancelled) setFriends([]);
+        if (!cancelled) {
+          setFriends([]);
+          setCommunityUsers([]);
+        }
       }
     };
 
@@ -252,11 +326,29 @@ function DiscordFriendsRail({
     [friends, user?.id]
   );
 
-  const railUsers = useMemo(() => {
+  const nonMutualRailUsers = useMemo(() => {
+    if (!isAdmin || !showNonMutualInRail) return [];
+    const mutualIds = new Set(selectableFriends.map((friend) => friend.id));
+    return communityUsers
+      .filter((member) => member.id !== user?.id)
+      .filter((member) => !mutualIds.has(member.id))
+      .slice(0, 6)
+      .map((member) => ({
+        ...member,
+        isMutual: false,
+      }));
+  }, [communityUsers, isAdmin, selectableFriends, showNonMutualInRail, user?.id]);
+
+  const mutualRailUsers = useMemo(() => {
     return selectableFriends
       .slice(0, 6)
-      .map((friend) => ({ ...friend, isMe: false }));
+      .map((friend) => ({ ...friend, isMutual: true }));
   }, [selectableFriends]);
+
+  const railDrawerUsers = useMemo(
+    () => [...mutualRailUsers, ...nonMutualRailUsers],
+    [mutualRailUsers, nonMutualRailUsers]
+  );
 
   const setDrawerState = (
     friendId: string | null,
@@ -284,42 +376,45 @@ function DiscordFriendsRail({
       return;
     }
 
-    const matchedFriend = selectableFriends.find((friend) => friend.id === drawerFriendId);
-    if (!matchedFriend) return;
+    const matchedFriend = railDrawerUsers.find((friend) => friend.id === drawerFriendId);
+    if (!matchedFriend) {
+      setFriendActionsOpen(false);
+      setActiveFriend(null);
+      setDrawerState(null);
+      return;
+    }
 
-    setActiveFriend((current) => {
-      if (
-        current?.id === matchedFriend.id
-        && current?.name === matchedFriend.name
-        && current?.username === ("username" in matchedFriend ? matchedFriend.username : undefined)
-        && current?.createdAt === ("createdAt" in matchedFriend ? matchedFriend.createdAt : undefined)
-        && current?.updatedAt === ("updatedAt" in matchedFriend ? matchedFriend.updatedAt : undefined)
-        && current?.sessionCount === ("sessionCount" in matchedFriend ? matchedFriend.sessionCount : undefined)
-        && current?.checkInCount === ("checkInCount" in matchedFriend ? matchedFriend.checkInCount : undefined)
-        && current?.lastWorkoutAt === ("lastWorkoutAt" in matchedFriend ? matchedFriend.lastWorkoutAt : undefined)
-        && current?.lastCheckInAt === ("lastCheckInAt" in matchedFriend ? matchedFriend.lastCheckInAt : undefined)
-        && current?.lastActivityAt === ("lastActivityAt" in matchedFriend ? matchedFriend.lastActivityAt : undefined)
-        && current?.lastActivityLabel === ("lastActivityLabel" in matchedFriend ? matchedFriend.lastActivityLabel : undefined)
-      ) {
-        return current;
-      }
+    const normalizedMatchedFriend = {
+      id: matchedFriend.id,
+      name: matchedFriend.name,
+      username: typeof matchedFriend.username === "string" ? matchedFriend.username : undefined,
+      createdAt: typeof matchedFriend.createdAt === "string" ? matchedFriend.createdAt : undefined,
+      updatedAt: typeof (matchedFriend as { updatedAt?: unknown }).updatedAt === "string"
+        ? (matchedFriend as { updatedAt?: string }).updatedAt
+        : undefined,
+      sessionCount: typeof (matchedFriend as { sessionCount?: unknown }).sessionCount === "number"
+        ? (matchedFriend as { sessionCount?: number }).sessionCount
+        : undefined,
+      checkInCount: typeof (matchedFriend as { checkInCount?: unknown }).checkInCount === "number"
+        ? (matchedFriend as { checkInCount?: number }).checkInCount
+        : undefined,
+      lastWorkoutAt: typeof (matchedFriend as { lastWorkoutAt?: unknown }).lastWorkoutAt === "string"
+        ? (matchedFriend as { lastWorkoutAt?: string }).lastWorkoutAt
+        : undefined,
+      lastCheckInAt: typeof (matchedFriend as { lastCheckInAt?: unknown }).lastCheckInAt === "string"
+        ? (matchedFriend as { lastCheckInAt?: string }).lastCheckInAt
+        : undefined,
+      lastActivityAt: typeof (matchedFriend as { lastActivityAt?: unknown }).lastActivityAt === "string"
+        ? (matchedFriend as { lastActivityAt?: string }).lastActivityAt
+        : undefined,
+      lastActivityLabel: typeof (matchedFriend as { lastActivityLabel?: unknown }).lastActivityLabel === "string"
+        ? (matchedFriend as { lastActivityLabel?: string }).lastActivityLabel
+        : undefined,
+    };
 
-      return {
-        id: matchedFriend.id,
-        name: matchedFriend.name,
-        username: "username" in matchedFriend ? matchedFriend.username : undefined,
-        createdAt: "createdAt" in matchedFriend ? matchedFriend.createdAt : undefined,
-        updatedAt: "updatedAt" in matchedFriend ? matchedFriend.updatedAt : undefined,
-        sessionCount: "sessionCount" in matchedFriend ? matchedFriend.sessionCount : undefined,
-        checkInCount: "checkInCount" in matchedFriend ? matchedFriend.checkInCount : undefined,
-        lastWorkoutAt: "lastWorkoutAt" in matchedFriend ? matchedFriend.lastWorkoutAt : undefined,
-        lastCheckInAt: "lastCheckInAt" in matchedFriend ? matchedFriend.lastCheckInAt : undefined,
-        lastActivityAt: "lastActivityAt" in matchedFriend ? matchedFriend.lastActivityAt : undefined,
-        lastActivityLabel: "lastActivityLabel" in matchedFriend ? matchedFriend.lastActivityLabel : undefined,
-      };
-    });
+    setActiveFriend(normalizedMatchedFriend);
     setFriendActionsOpen(!friendViewMode);
-  }, [drawerFriendId, friendViewMode, selectableFriends]);
+  }, [drawerFriendId, friendViewMode, railDrawerUsers]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -333,7 +428,7 @@ function DiscordFriendsRail({
       const friendId = (customEvent.detail?.friendId || "").trim();
       if (!friendId) return;
 
-      const targetFriend = selectableFriends.find((friend) => friend.id === friendId);
+      const targetFriend = railDrawerUsers.find((friend) => friend.id === friendId);
       if (!targetFriend) return;
 
       const view = customEvent.detail?.view ?? null;
@@ -346,7 +441,7 @@ function DiscordFriendsRail({
     return () => {
       window.removeEventListener("circle-open-friend-drawer", onOpenFriendDrawer as EventListener);
     };
-  }, [selectableFriends]);
+  }, [railDrawerUsers]);
 
   useEffect(() => {
     if (friendViewMode !== "history" || !activeFriend?.id) {
@@ -397,7 +492,8 @@ function DiscordFriendsRail({
 
     const loadFriendOverviewStats = async () => {
       try {
-        const payload = await api.get<{ checkins: Array<{ date: string; userId: string; present: boolean; weight?: number | null }> }>("/api/checkins?scope=friends", { cache: "no-store" });
+        const scope = isAdmin ? "community" : "friends";
+        const payload = await api.get<{ checkins: Array<{ date: string; userId: string; present: boolean; weight?: number | null }> }>(`/api/checkins?scope=${scope}`, { cache: "no-store" });
         if (cancelled) return;
 
         const todayKey = formatDateLocal(new Date(), timeZone);
@@ -447,7 +543,7 @@ function DiscordFriendsRail({
     return () => {
       cancelled = true;
     };
-  }, [activeFriend?.id, timeZone]);
+  }, [activeFriend?.id, isAdmin, timeZone]);
 
   const friendHistoryRows = useMemo(() => {
     const rows: Array<{ exerciseId: string; exerciseName: string; date: string; progression: string; variant: string; recent24hCount: number }> = [];
@@ -594,6 +690,41 @@ function DiscordFriendsRail({
   const hasFriendDrawerOpen = Boolean(friendActionsOpen || friendViewMode || drawerFriendId || activeFriend?.id);
   const isFriendsHomeActive = isActive && !hasFriendDrawerOpen;
 
+  const openRailUserDrawer = (friend: {
+    id: string;
+    name: string;
+    username?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    sessionCount?: number;
+    checkInCount?: number;
+    lastWorkoutAt?: string;
+    lastCheckInAt?: string;
+    lastActivityAt?: string;
+    lastActivityLabel?: string;
+  }) => {
+    if (friendActionsOpen && activeFriend?.id === friend.id) {
+      closeFriendPanels(false);
+      return;
+    }
+
+    setActiveFriend({
+      id: friend.id,
+      name: friend.name,
+      username: friend.username,
+      createdAt: friend.createdAt,
+      updatedAt: friend.updatedAt,
+      sessionCount: friend.sessionCount,
+      checkInCount: friend.checkInCount,
+      lastWorkoutAt: friend.lastWorkoutAt,
+      lastCheckInAt: friend.lastCheckInAt,
+      lastActivityAt: friend.lastActivityAt,
+      lastActivityLabel: friend.lastActivityLabel,
+    });
+    setFriendActionsOpen(true);
+    setDrawerState(friend.id);
+  };
+
   useEffect(() => {
     onDrawerOpenChange?.(hasFriendDrawerOpen);
   }, [hasFriendDrawerOpen, onDrawerOpenChange]);
@@ -713,37 +844,14 @@ function DiscordFriendsRail({
           </div>
 
           <div data-mobile-scroll-container="true" className="flex w-full min-h-0 flex-1 flex-col items-center gap-2 overflow-y-auto">
-            {railUsers.map((friend) => {
+            {mutualRailUsers.map((friend) => {
               const isSelected = selectedRailFriendId === friend.id && hasFriendDrawerOpen;
 
               return (
                 <button
                   key={friend.id}
                   type="button"
-                  onClick={() => {
-                    if (friend.isMe) {
-                      closeFriendPanels(false);
-                      router.push(DASHBOARD_ROUTES.workoutHistory);
-                      return;
-                    }
-
-                    if (friendActionsOpen && activeFriend?.id === friend.id) {
-                      closeFriendPanels(false);
-                      return;
-                    }
-
-                    setActiveFriend({
-                      id: friend.id,
-                      name: friend.name,
-                      username: "username" in friend ? friend.username : undefined,
-                      createdAt: "createdAt" in friend ? friend.createdAt : undefined,
-                      updatedAt: "updatedAt" in friend ? friend.updatedAt : undefined,
-                      sessionCount: "sessionCount" in friend ? friend.sessionCount : undefined,
-                      checkInCount: "checkInCount" in friend ? friend.checkInCount : undefined,
-                    });
-                    setFriendActionsOpen(true);
-                    setDrawerState(friend.id);
-                  }}
+                  onClick={() => openRailUserDrawer(friend)}
                   className="group relative flex h-12 w-12 items-center justify-center text-center transition-all duration-150 md:h-14 md:w-14"
                   style={{
                     borderColor: "transparent",
@@ -782,6 +890,55 @@ function DiscordFriendsRail({
                 </button>
               );
             })}
+
+            {mutualRailUsers.length > 0 && nonMutualRailUsers.length > 0 && (
+              <div className="my-1 flex w-full items-center justify-center gap-1.5 px-2">
+                <div className="h-px flex-1" style={{ backgroundColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)" }} />
+                <span className="text-[9px] uppercase tracking-[0.1em]" style={{ color: "var(--text-muted)" }}>
+                  {lt("Non-mutual")}
+                </span>
+                <div className="h-px flex-1" style={{ backgroundColor: "color-mix(in srgb, var(--ink-light) 44%, transparent)" }} />
+              </div>
+            )}
+
+            {nonMutualRailUsers.map((friend) => (
+              <button
+                key={friend.id}
+                type="button"
+                onClick={() => openRailUserDrawer(friend)}
+                className="group relative flex h-12 w-12 items-center justify-center text-center transition-all duration-150 md:h-14 md:w-14"
+                style={{
+                  borderColor: "transparent",
+                  backgroundColor: "transparent",
+                  boxShadow: "none",
+                }}
+                title={`${friend.name} (${lt("Not mutual")})`}
+                aria-label={lt("Open friend actions")}
+              >
+                {selectedRailFriendId === friend.id && hasFriendDrawerOpen && (
+                  <span
+                    className="pointer-events-none absolute -left-1.5 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full"
+                    style={{ backgroundColor: "var(--cloud-white)" }}
+                  />
+                )}
+                <span
+                  className="flex h-10 w-10 items-center justify-center rounded-full border font-semibold transition-all duration-150 md:h-11 md:w-11"
+                  style={{
+                    color: "var(--cloud-white)",
+                    fontSize: "10px",
+                    borderColor: selectedRailFriendId === friend.id && hasFriendDrawerOpen
+                      ? "color-mix(in srgb, var(--accent) 72%, transparent)"
+                      : "color-mix(in srgb, var(--ink-light) 52%, transparent)",
+                    backgroundColor: selectedRailFriendId === friend.id && hasFriendDrawerOpen
+                      ? "color-mix(in srgb, var(--accent) 30%, var(--surface))"
+                      : "color-mix(in srgb, var(--surface-hover) 72%, var(--surface))",
+                    opacity: selectedRailFriendId === friend.id && hasFriendDrawerOpen ? 1 : 0.85,
+                  }}
+                >
+                  {initials(friend.name)}
+                </span>
+              </button>
+            ))}
           </div>
         </div>
       </aside>

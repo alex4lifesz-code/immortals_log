@@ -120,6 +120,19 @@ function formatRelativeRecentDate(
   return formatDateWithPreference(new Date(timestamp), dateFormat, timeZone);
 }
 
+function getVariantDisplayValue(variant: string | null | undefined): string {
+  const trimmed = variant?.trim() || "";
+  if (!trimmed) return "Default";
+  if (trimmed === "-" || trimmed.toLowerCase() === "default") return "Default";
+  return trimmed;
+}
+
+function getTextDisplayValue(value: string | null | undefined, emptyLabel: string): string {
+  const trimmed = value?.trim() || "";
+  if (!trimmed || trimmed === "-") return emptyLabel;
+  return trimmed;
+}
+
 function getRecentExerciseTextColor(dateLike: string | null | undefined, isSelected = false): string {
   const defaultColor = isSelected ? "var(--cloud-white)" : "var(--text-muted)";
   if (!dateLike) return defaultColor;
@@ -906,6 +919,14 @@ export default function HistoryPage() {
     setExerciseManagementOpen(false);
   }, []);
 
+  const meShortcutItems = useMemo(
+    () => [
+      { id: "progress", label: lt("Progress"), path: DASHBOARD_ROUTES.rankUp },
+      { id: "workout-history", label: lt("Workout History"), path: "/dashboard/workout/history" },
+    ],
+    [lt]
+  );
+
   const mobileExerciseRows = useMemo(() => {
     const rows: TrainExerciseRow[] = [];
 
@@ -1135,14 +1156,14 @@ export default function HistoryPage() {
   }, [selectedMobileExercise, selectedMobileExerciseLogs]);
 
   const mobileDrawerVariantOptions = useMemo(() => {
-    return Array.from(new Set(selectedMobileExerciseLogs.map((log) => log.variant?.trim() || "-"))).sort((a, b) => a.localeCompare(b));
+    return Array.from(new Set(selectedMobileExerciseLogs.map((log) => getVariantDisplayValue(log.variant)))).sort((a, b) => a.localeCompare(b));
   }, [selectedMobileExerciseLogs]);
 
   const filteredSelectedMobileExerciseLogs = useMemo(() => {
     const query = mobileDrawerSearchQuery.trim().toLowerCase();
     const filtered = selectedMobileExerciseLogs.filter((log) => {
       const progressionName = selectedMobileExercise?.tiers.find((tier) => tier.level === log.level)?.name ?? `Progression ${log.level}`;
-      const variationValue = log.variant?.trim() || "-";
+      const variationValue = getVariantDisplayValue(log.variant);
       const metricRows = getWorkoutMetricRows(log, weightUnit, timedUnit);
       const hasWeightedValue = metricRows.some((row) => row.weight !== "-" && !row.weight.endsWith("s"));
       const reps = metricRows
@@ -1367,6 +1388,36 @@ export default function HistoryPage() {
                                   ) : null}
                                 </button>
                               </div>
+
+                              {!isFriendTrainOverlay && (
+                                <div
+                                  className="mt-2 flex items-center gap-1.5 overflow-x-auto whitespace-nowrap pb-0.5 scrollbar-hide"
+                                  aria-label={lt("Me shortcuts")}
+                                >
+                                  {meShortcutItems.map((item) => {
+                                    const isActive = pathname === item.path || pathname?.startsWith(`${item.path}/`);
+                                    return (
+                                      <button
+                                        key={`train-me-shortcut-${item.id}`}
+                                        type="button"
+                                        onClick={() => router.push(item.path)}
+                                        className="inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors"
+                                        style={{
+                                          borderColor: isActive
+                                            ? "color-mix(in srgb, var(--accent) 56%, transparent)"
+                                            : "color-mix(in srgb, var(--ink-light) 54%, transparent)",
+                                          backgroundColor: isActive
+                                            ? "color-mix(in srgb, var(--accent) 14%, var(--ink-deep))"
+                                            : "color-mix(in srgb, var(--ink-mid) 74%, var(--ink-deep))",
+                                          color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
+                                        }}
+                                      >
+                                        <span>{item.label}</span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
 
 
                             </>
@@ -2348,9 +2399,9 @@ export default function HistoryPage() {
                     <>
                       {filteredSelectedMobileExerciseLogs.map((log) => {
                       const tierName = selectedMobileExercise?.tiers.find((tier) => tier.level === log.level)?.name ?? `Progression ${log.level}`;
-                      const variationValue = log.variant?.trim() || "-";
-                      const modValue = log.modifier?.trim() || "-";
-                      const notesValue = log.notes?.trim() || "-";
+                      const variationValue = getVariantDisplayValue(log.variant);
+                      const modValue = getTextDisplayValue(log.modifier, "No modifier");
+                      const notesValue = getTextDisplayValue(log.notes, "No notes");
                       const alignedMetricRows = getWorkoutMetricRows(log, weightUnit, timedUnit);
                       const openEditorField = (step: string, field: string) => {
                         const params = new URLSearchParams({ step, field });

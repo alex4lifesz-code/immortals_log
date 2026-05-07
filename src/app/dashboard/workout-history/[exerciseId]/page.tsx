@@ -167,19 +167,19 @@ export default function WorkoutHistoryDetailPage() {
 
   const averageWeightDisplay = useMemo(() => {
     const weights = filteredLogs.flatMap((log) => [log.weight1, log.weight2, log.weight3]).filter((value): value is number => value != null);
-    if (weights.length === 0) return "-";
+    if (weights.length === 0) return lt("No weight recorded");
     const avgKg = weights.reduce((sum, value) => sum + value, 0) / weights.length;
     const unit = (settings.defaultWeightUnit ?? "kg") === "lbs" ? "lbs" : "kg";
     const displayValue = unit === "lbs" ? kgToLbs(avgKg) : avgKg;
     return `${displayValue.toFixed(1)} ${unit}`;
-  }, [filteredLogs, settings.defaultWeightUnit]);
+  }, [filteredLogs, lt, settings.defaultWeightUnit]);
 
   const averageRepsDisplay = useMemo(() => {
     const reps = filteredLogs.flatMap((log) => [log.reps1, log.reps2, log.reps3]).filter((value): value is number => value != null);
-    if (reps.length === 0) return "-";
+    if (reps.length === 0) return lt("No reps recorded");
     const avg = reps.reduce((sum, value) => sum + value, 0) / reps.length;
     return avg.toFixed(1);
-  }, [filteredLogs]);
+  }, [filteredLogs, lt]);
 
   const lastLoggedDisplay = useMemo(() => {
     if (!lastLogDate) return lt("No logs yet");
@@ -300,7 +300,7 @@ export default function WorkoutHistoryDetailPage() {
                   <tr>
                     <td className="theme-snapshot-label px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)" }}>{lt("Difficulty / Equipment")}:</td>
                     <td className="theme-snapshot-value px-2 py-1.5 border-b border-r" style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)" }}>
-                      {exercise.difficulty || "-"} / {exercise.equipmentType || lt("Bodyweight")}
+                      {exercise.difficulty || lt("Unspecified")} / {exercise.equipmentType || lt("Bodyweight")}
                     </td>
                     <td className="theme-snapshot-label px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)" }}>{lt("Activity")}:</td>
                     <td className="theme-snapshot-value px-2 py-1.5 border-b" style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)" }}>
@@ -310,13 +310,13 @@ export default function WorkoutHistoryDetailPage() {
                   <tr>
                     <td className="theme-snapshot-label px-2 py-1.5 font-semibold border-b border-r whitespace-nowrap" style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)" }}>{lt("Primary Muscles")}:</td>
                     <td className="theme-snapshot-value px-2 py-1.5 border-b" colSpan={3} style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)" }}>
-                      {exercise.primaryMuscles || "-"}
+                      {exercise.primaryMuscles || lt("Not specified")}
                     </td>
                   </tr>
                   <tr>
                     <td className="theme-snapshot-label px-2 py-1.5 font-semibold border-r whitespace-nowrap" style={{ borderColor: "color-mix(in srgb, var(--border) 92%, transparent)" }}>{lt("Assigned Days")}:</td>
                     <td className="theme-snapshot-value px-2 py-1.5" colSpan={3}>
-                      {exercise.assignedDays || "-"}
+                      {exercise.assignedDays || lt("Not assigned")}
                     </td>
                   </tr>
                 </tbody>
