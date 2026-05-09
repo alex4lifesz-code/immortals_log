@@ -22,6 +22,12 @@ type ProfileCheckin = {
   present?: boolean | null;
 };
 
+type ProfileAdminUser = {
+  id: string;
+  role?: string;
+  createdAt?: string | null;
+};
+
 export default function ProfilePage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -31,6 +37,7 @@ export default function ProfilePage() {
   const [latestCheckinWeight, setLatestCheckinWeight] = useState<{ weight: number; date: string | null } | null>(null);
   const [weightTrendLabel, setWeightTrendLabel] = useState<string | null>(null);
   const [checkInTotalCount, setCheckInTotalCount] = useState<number | null>(null);
+  const [canAccessAdminPanelShortcut, setCanAccessAdminPanelShortcut] = useState(false);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -69,6 +76,35 @@ export default function ProfilePage() {
       cancelled = true;
     };
   }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id || user.role !== "admin") {
+      setCanAccessAdminPanelShortcut(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    api.get<{ users?: ProfileAdminUser[] }>("/api/users", { cache: "no-store" })
+      .then((payload) => {
+        if (cancelled) return;
+
+        const earliestAdmin = (Array.isArray(payload?.users) ? payload.users : [])
+          .filter((candidate) => candidate.role === "admin" && Boolean(candidate.id))
+          .sort((left, right) => String(left.createdAt || "").localeCompare(String(right.createdAt || "")))[0];
+
+        setCanAccessAdminPanelShortcut(earliestAdmin?.id === user.id);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCanAccessAdminPanelShortcut(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, user?.role]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -136,10 +172,11 @@ export default function ProfilePage() {
 
   const adminItems = user?.role === "admin"
     ? [
-        { id: "attendance", label: "Check-In Log", path: DASHBOARD_ROUTES.attendance },
         { id: "exercise-db", label: "Exercise DB", path: "/dashboard/exercise-db" },
         { id: "website-information", label: "Website Information", path: DASHBOARD_ROUTES.websiteInformation },
-        { id: "admin", label: "Admin Panel", path: DASHBOARD_ROUTES.admin },
+        ...(canAccessAdminPanelShortcut
+          ? [{ id: "admin", label: "Admin Panel", path: DASHBOARD_ROUTES.admin }]
+          : []),
       ] as const
     : [];
 

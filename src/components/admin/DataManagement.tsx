@@ -89,16 +89,16 @@ export default function DataManagement() {
   const targetUserSessionCount = targetUser?.sessionCount ?? targetUser?.progressionLogCount ?? 0;
   const targetUserCheckins = targetUser?._count?.checkIns ?? 0;
 
-  const handleExport = async () => {
+  const handleExport = async (format: "json" | "xlsx" = "json") => {
     if (!targetUserId) {
       setExportStatus({ type: "error", message: lt("Select a user before exporting.") });
       return;
     }
 
-    setExportStatus({ type: "loading", message: lt("Preparing backup package...") });
+    setExportStatus({ type: "loading", message: format === "xlsx" ? lt("Preparing backup workbook...") : lt("Preparing backup package...") });
 
     try {
-      const res = await fetch(`/api/admin/backup-studio/export?targetUserId=${encodeURIComponent(targetUserId)}`, {
+      const res = await fetch(`/api/admin/backup-studio/export?targetUserId=${encodeURIComponent(targetUserId)}&format=${format}`, {
         credentials: "include",
       });
 
@@ -119,13 +119,15 @@ export default function DataManagement() {
       const slug = targetUserName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "user";
       const link = document.createElement("a");
       link.href = url;
-      link.download = `backup-studio-${slug}-${new Date().toISOString().slice(0, 10)}.json`;
+      link.download = `backup-studio-${slug}-${new Date().toISOString().slice(0, 10)}.${format}`;
       link.click();
       URL.revokeObjectURL(url);
 
       setExportStatus({
         type: "success",
-        message: `Backup exported: ${exerciseCount} exercises, ${logCount} logs, ${checkinCount} check-ins, ${noteCount} notes.`,
+        message: format === "xlsx"
+          ? `Backup workbook exported: ${exerciseCount} exercises, ${logCount} logs, ${checkinCount} check-ins, ${noteCount} notes.`
+          : `Backup exported: ${exerciseCount} exercises, ${logCount} logs, ${checkinCount} check-ins, ${noteCount} notes.`,
       });
     } catch (error) {
       setExportStatus({
@@ -414,8 +416,11 @@ export default function DataManagement() {
 
         <div className="rounded-xl border border-ink-light/50 bg-ink-mid/15 p-3">
           <div className="flex flex-wrap gap-3">
-            <GlowButton variant="jade" size="sm" glow onClick={handleExport}>
+            <GlowButton variant="jade" size="sm" glow onClick={() => { void handleExport("json"); }}>
               Export Backup JSON
+            </GlowButton>
+            <GlowButton variant="blue" size="sm" onClick={() => { void handleExport("xlsx"); }}>
+              Export Backup XLSX
             </GlowButton>
             <GlowButton variant="gold" size="sm" onClick={() => importInputRef.current?.click()}>
               Import Backup JSON

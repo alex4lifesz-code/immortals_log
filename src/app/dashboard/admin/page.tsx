@@ -68,6 +68,14 @@ interface AdminFriendRequest {
   receiver: { id: string; name: string; username: string };
 }
 
+interface StatCardConfig {
+  id: string;
+  label: string;
+  value: number;
+  glow: "jade" | "blue" | "gold" | "crimson";
+  valueClassName: string;
+}
+
 function AdminSidebar() {
   return (
     <div className="dashboard-sidebar-shell">
@@ -174,6 +182,58 @@ export default function AdminPanelPage() {
     () => users.find((entry) => entry.id === selectedActivityUserId) ?? null,
     [selectedActivityUserId, users],
   );
+
+  const firstCreatedAdminId = useMemo(() => {
+    const earliestAdmin = users
+      .filter((entry) => entry.role === "admin")
+      .sort((left, right) => String(left.createdAt || "").localeCompare(String(right.createdAt || "")))[0];
+    return earliestAdmin?.id ?? null;
+  }, [users]);
+
+  const statCards = useMemo<StatCardConfig[]>(() => [
+    {
+      id: "users",
+      label: lt("Total Users"),
+      value: stats.totalUsers,
+      glow: "jade",
+      valueClassName: "text-jade-glow",
+    },
+    {
+      id: "logs",
+      label: lt("Training Logs"),
+      value: stats.totalProgressionLogs,
+      glow: "blue",
+      valueClassName: "text-mountain-blue-glow",
+    },
+    {
+      id: "exercises",
+      label: lt("Techniques"),
+      value: stats.totalExercises,
+      glow: "gold",
+      valueClassName: "text-gold",
+    },
+    {
+      id: "checkins",
+      label: lt("Check-Ins"),
+      value: stats.totalCheckIns,
+      glow: "crimson",
+      valueClassName: "text-crimson-light",
+    },
+  ], [lt, stats.totalCheckIns, stats.totalExercises, stats.totalProgressionLogs, stats.totalUsers]);
+
+  const userTableColumns = useMemo(() => [
+    { id: "username", label: lt("Username"), className: "px-3 py-2 text-left" },
+    { id: "name", label: lt("Name"), className: "px-3 py-2 text-left" },
+    { id: "type", label: lt("Account Type"), className: "px-3 py-2 text-center" },
+    { id: "created", label: lt("Created"), className: "px-3 py-2 text-center" },
+    { id: "actions", label: lt("Actions"), className: "px-2 py-2 text-center" },
+  ], [lt]);
+
+  const getRoleBadgeClasses = useCallback((role?: string) => {
+    if (role === "admin") return "border-gold/40 bg-gold/10 text-gold";
+    if (role === "system") return "border-mountain-blue-glow/40 bg-mountain-blue-glow/10 text-mountain-blue-glow";
+    return "border-ink-light/40 bg-ink-mid/30 text-mist-light";
+  }, []);
 
   const createUser = async () => {
     if (!newUsername.trim() || !newPassword.trim() || !newName.trim()) return;
@@ -345,37 +405,6 @@ export default function AdminPanelPage() {
         <PageSkeleton statCards={4} wideBlock={false} rows={4} />
       ) : (
         <div className="space-y-6">
-          {/* System Statistics */}
-          <div>
-            <h3 className="text-sm text-jade-glow uppercase mb-3">System Overview</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <GlowCard glow="jade">
-                <p className="text-xs text-mist-dark uppercase">Total Users</p>
-                <p className="text-2xl font-bold text-jade-glow mt-1">{stats.totalUsers}</p>
-              </GlowCard>
-              <GlowCard glow="blue">
-                <p className="text-xs text-mist-dark uppercase">Training Logs</p>
-                <p className="text-2xl font-bold text-mountain-blue-glow mt-1">
-                  {stats.totalProgressionLogs}
-                </p>
-              </GlowCard>
-              <GlowCard glow="gold">
-                <p className="text-xs text-mist-dark uppercase">Techniques</p>
-                <p className="text-2xl font-bold text-gold mt-1">{stats.totalExercises}</p>
-              </GlowCard>
-              <GlowCard glow="crimson">
-                <p className="text-xs text-mist-dark uppercase">Check-Ins</p>
-                <p className="text-2xl font-bold text-crimson-light mt-1">{stats.totalCheckIns}</p>
-              </GlowCard>
-            </div>
-          </div>
-
-          {/* Admin Tools */}
-          <div>
-            <h3 className="text-sm text-jade-glow uppercase mb-3">Admin Tools</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" />
-          </div>
-
           {actionNotice ? (
             <div
               className={`rounded-lg border px-3 py-2 text-xs ${actionNotice.type === "success" ? "border-jade-glow/40 bg-jade-deep/10 text-jade-light" : "border-crimson-light/40 bg-crimson-deep/10 text-crimson-light"}`}
@@ -384,11 +413,23 @@ export default function AdminPanelPage() {
             </div>
           ) : null}
 
+          <section>
+            <h3 className="mb-3 text-sm uppercase text-jade-glow">{lt("System Overview")}</h3>
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              {statCards.map((card) => (
+                <GlowCard key={card.id} glow={card.glow} hoverable={false}>
+                  <p className="text-xs uppercase text-mist-dark">{card.label}</p>
+                  <p className={`mt-1 text-2xl font-bold ${card.valueClassName}`}>{card.value}</p>
+                </GlowCard>
+              ))}
+            </div>
+          </section>
+
           <GlowCard glow="blue" hoverable={false}>
-            <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="mb-4 flex items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm text-mountain-blue-glow uppercase tracking-wider">User Activity Log</h3>
-                <p className="text-xs text-mist-dark mt-1">Navigation-based activity is used for the friends rail last activity display.</p>
+                <h3 className="text-sm uppercase tracking-wider text-mountain-blue-glow">{lt("User Activity Log")}</h3>
+                <p className="mt-1 text-xs text-mist-dark">{lt("Navigation-based activity powers the friends rail last-activity display.")}</p>
               </div>
               <select
                 value={selectedActivityUserId}
@@ -406,18 +447,16 @@ export default function AdminPanelPage() {
             {selectedActivityUser ? (
               <div className="space-y-2">
                 <div className="rounded-lg border border-ink-light/50 bg-ink-mid/20 p-3">
-                  <p className="text-xs text-mist-dark uppercase">Latest</p>
-                  <p className="mt-1 text-sm text-cloud-white">
-                    {selectedActivityUser.lastActivityLabel || "No recent activity"}
-                  </p>
+                  <p className="text-xs uppercase text-mist-dark">{lt("Latest")}</p>
+                  <p className="mt-1 text-sm text-cloud-white">{selectedActivityUser.lastActivityLabel || lt("No recent activity")}</p>
                   <p className="mt-1 text-xs text-mist-dark">
-                    {selectedActivityUser.lastActivityAt ? formatDateTimeWithPreference(selectedActivityUser.lastActivityAt, dateFormat, timeZone) : "Nothing logged yet"}
+                    {selectedActivityUser.lastActivityAt ? formatDateTimeWithPreference(selectedActivityUser.lastActivityAt, dateFormat, timeZone) : lt("Nothing logged yet")}
                   </p>
                 </div>
 
                 <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
                   {(selectedActivityUser.activityLog || []).length === 0 ? (
-                    <p className="text-xs text-mist-dark">No activity has been logged for this user yet.</p>
+                    <p className="text-xs text-mist-dark">{lt("No activity has been logged for this user yet.")}</p>
                   ) : (
                     (selectedActivityUser.activityLog || []).map((entry, index) => (
                       <div key={`activity-entry-${entry.at}-${index}`} className="rounded-lg border border-ink-light/40 bg-ink-dark/30 p-2.5">
@@ -430,16 +469,15 @@ export default function AdminPanelPage() {
                 </div>
               </div>
             ) : (
-              <p className="text-xs text-mist-dark">Select a user to inspect activity.</p>
+              <p className="text-xs text-mist-dark">{lt("Select a user to inspect activity.")}</p>
             )}
           </GlowCard>
 
-          {/* User Management */}
           <GlowCard glow="jade" hoverable={false}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm text-jade-glow uppercase tracking-wider">User Management</h3>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-sm uppercase tracking-wider text-jade-glow">{lt("User Management")}</h3>
               <GlowButton variant="jade" size="sm" glow onClick={() => setShowNewUserModal(true)}>
-                + Create User
+                + {lt("Create User")}
               </GlowButton>
             </div>
 
@@ -447,53 +485,39 @@ export default function AdminPanelPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-ink-light">
-                    <th className="px-3 py-2 text-left text-xs text-jade-glow uppercase">
-                      Username
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs text-jade-glow uppercase">Name</th>
-                    <th className="px-3 py-2 text-center text-xs text-jade-glow uppercase">Account Type</th>
-                    <th className="px-3 py-2 text-center text-xs text-jade-glow uppercase">
-                      Created
-                    </th>
-                    <th className="px-2 py-2 text-xs text-jade-glow uppercase">Actions</th>
+                    {userTableColumns.map((column) => (
+                      <th key={column.id} className={`${column.className} text-xs uppercase text-jade-glow`}>
+                        {column.label}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((user) => (
+                  {users.map((entry) => (
                     <motion.tr
-                      key={user.id}
+                      key={entry.id}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="border-b border-ink-light/50 hover:bg-ink-dark/50 transition-colors"
+                      className="border-b border-ink-light/50 transition-colors hover:bg-ink-dark/50"
                     >
-                      <td className="px-3 py-2 text-cloud-white">{user.username}</td>
-                      <td className="px-3 py-2 text-mist-light">{user.name}</td>
+                      <td className="px-3 py-2 text-cloud-white">{entry.username}</td>
+                      <td className="px-3 py-2 text-mist-light">{entry.name}</td>
                       <td className="px-3 py-2 text-center">
-                        <span
-                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-                            user.role === "admin"
-                              ? "border-gold/40 bg-gold/10 text-gold"
-                              : user.role === "system"
-                                ? "border-mountain-blue-glow/40 bg-mountain-blue-glow/10 text-mountain-blue-glow"
-                                : "border-ink-light/40 bg-ink-mid/30 text-mist-light"
-                          }`}
-                        >
-                          {user.role === "admin" ? "Admin" : user.role === "system" ? "System" : "User"}
+                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${getRoleBadgeClasses(entry.role)}`}>
+                          {entry.role === "admin" ? lt("Admin") : entry.role === "system" ? lt("System") : lt("User")}
                         </span>
                       </td>
-                      <td className="px-3 py-2 text-center text-mist-dark text-xs">
-                        {formatDateWithPreference(user.createdAt, dateFormat, timeZone)}
-                      </td>
+                      <td className="px-3 py-2 text-center text-xs text-mist-dark">{formatDateWithPreference(entry.createdAt, dateFormat, timeZone)}</td>
                       <td className="px-2 py-2 text-center">
                         <GlowButton
                           variant="ghost"
                           size="sm"
                           onClick={() => {
-                            setSelectedUser(user);
+                            setSelectedUser(entry);
                             setShowUserDetailModal(true);
                           }}
                         >
-                          View
+                          {lt("View")}
                         </GlowButton>
                       </td>
                     </motion.tr>
@@ -503,101 +527,97 @@ export default function AdminPanelPage() {
             </div>
           </GlowCard>
 
-          <GlowCard glow="crimson" hoverable={false}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm text-crimson-light uppercase tracking-wider">Recycle Bin</h3>
-              <span className="text-xs text-mist-dark">{recycleBinUsers.length} archived</span>
-            </div>
-
-            <p className="text-xs text-mist-dark mb-3">
-              Deleted users are removed from the live app and stored here until an admin restores them or permanently deletes the archive.
-            </p>
-
-            {recycleBinUsers.length === 0 ? (
-              <p className="text-xs text-mist-dark">No deleted users are waiting in the recycle bin.</p>
-            ) : (
-              <div className="space-y-2">
-                {recycleBinUsers.map((entry) => (
-                  <div key={entry.archiveId} className="rounded-lg border border-ink-light/50 bg-ink-mid/20 p-3 flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm text-cloud-white">{entry.name} (@{entry.username})</p>
-                      <p className="text-xs text-mist-dark">
-                        Deleted {formatDateTimeWithPreference(entry.deletedAt, dateFormat, timeZone)} • {entry.summary.progressionLogCount} logs • {entry.summary.checkInCount} check-ins • {entry.summary.ownedExerciseCount} owned exercises
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <GlowButton
-                        variant="jade"
-                        size="sm"
-                        disabled={recycleBinActionId === entry.archiveId}
-                        onClick={() => restoreRecycleBinUser(entry.archiveId)}
-                      >
-                        Restore
-                      </GlowButton>
-                      <GlowButton
-                        variant="crimson"
-                        size="sm"
-                        disabled={recycleBinActionId === entry.archiveId}
-                        onClick={() => permanentlyDeleteRecycleBinUser(entry.archiveId)}
-                      >
-                        Permanent Delete
-                      </GlowButton>
-                    </div>
-                  </div>
-                ))}
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <GlowCard glow="gold" hoverable={false}>
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-sm uppercase tracking-wider text-gold">{lt("Pending Friend Requests")}</h3>
+                <span className="text-xs text-mist-dark">{pendingFriendRequests.length} {lt("pending")}</span>
               </div>
-            )}
-          </GlowCard>
 
-          {/* Data Management Section */}
-          <div>
-            <h3 className="text-sm text-jade-glow uppercase mb-3">Backup Studio & Library Control</h3>
-            <p className="text-xs text-mist-dark mb-3">
-              Manage user backup packages and the shared Application Exercise Library from one admin surface.
-            </p>
+              {pendingFriendRequests.length === 0 ? (
+                <p className="text-xs text-mist-dark">{lt("No pending friend requests right now.")}</p>
+              ) : (
+                <div className="space-y-2">
+                  {pendingFriendRequests.map((request) => (
+                    <div key={request.id} className="flex items-center justify-between gap-3 rounded-lg border border-ink-light/50 bg-ink-mid/20 p-3">
+                      <div>
+                        <p className="text-sm text-cloud-white">{request.requester.name} (@{request.requester.username})</p>
+                        <p className="text-xs text-mist-dark">{lt("Requested")} {formatDateWithPreference(request.createdAt, dateFormat, timeZone)} {lt("to connect with")} {request.receiver.name}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <GlowButton
+                          variant="jade"
+                          size="sm"
+                          disabled={moderatingRequestId === request.id}
+                          onClick={() => moderateFriendRequest(request.id, "accepted")}
+                        >
+                          {lt("Approve")}
+                        </GlowButton>
+                        <GlowButton
+                          variant="crimson"
+                          size="sm"
+                          disabled={moderatingRequestId === request.id}
+                          onClick={() => moderateFriendRequest(request.id, "rejected")}
+                        >
+                          {lt("Reject")}
+                        </GlowButton>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </GlowCard>
+
+            <GlowCard glow="crimson" hoverable={false}>
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-sm uppercase tracking-wider text-crimson-light">{lt("Recycle Bin")}</h3>
+                <span className="text-xs text-mist-dark">{recycleBinUsers.length} {lt("archived")}</span>
+              </div>
+
+              <p className="mb-3 text-xs text-mist-dark">{lt("Deleted users are removed from the live app and stored here until restored or permanently deleted.")}</p>
+
+              {recycleBinUsers.length === 0 ? (
+                <p className="text-xs text-mist-dark">{lt("No deleted users are waiting in the recycle bin.")}</p>
+              ) : (
+                <div className="space-y-2">
+                  {recycleBinUsers.map((entry) => (
+                    <div key={entry.archiveId} className="flex items-center justify-between gap-3 rounded-lg border border-ink-light/50 bg-ink-mid/20 p-3">
+                      <div>
+                        <p className="text-sm text-cloud-white">{entry.name} (@{entry.username})</p>
+                        <p className="text-xs text-mist-dark">
+                          {lt("Deleted")} {formatDateTimeWithPreference(entry.deletedAt, dateFormat, timeZone)} • {entry.summary.progressionLogCount} {lt("logs")} • {entry.summary.checkInCount} {lt("check-ins")} • {entry.summary.ownedExerciseCount} {lt("owned exercises")}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <GlowButton
+                          variant="jade"
+                          size="sm"
+                          disabled={recycleBinActionId === entry.archiveId}
+                          onClick={() => restoreRecycleBinUser(entry.archiveId)}
+                        >
+                          {lt("Restore")}
+                        </GlowButton>
+                        <GlowButton
+                          variant="crimson"
+                          size="sm"
+                          disabled={recycleBinActionId === entry.archiveId}
+                          onClick={() => permanentlyDeleteRecycleBinUser(entry.archiveId)}
+                        >
+                          {lt("Permanent Delete")}
+                        </GlowButton>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </GlowCard>
           </div>
 
-          <GlowCard glow="gold" hoverable={false}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm text-gold uppercase tracking-wider">Pending Friend Requests</h3>
-              <span className="text-xs text-mist-dark">{pendingFriendRequests.length} pending</span>
-            </div>
-
-            {pendingFriendRequests.length === 0 ? (
-              <p className="text-xs text-mist-dark">No pending friend requests right now.</p>
-            ) : (
-              <div className="space-y-2">
-                {pendingFriendRequests.map((request) => (
-                  <div key={request.id} className="rounded-lg border border-ink-light/50 bg-ink-mid/20 p-3 flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm text-cloud-white">{request.requester.name} (@{request.requester.username})</p>
-                      <p className="text-xs text-mist-dark">Requested {formatDateWithPreference(request.createdAt, dateFormat, timeZone)} to connect with {request.receiver.name}</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <GlowButton
-                        variant="jade"
-                        size="sm"
-                        disabled={moderatingRequestId === request.id}
-                        onClick={() => moderateFriendRequest(request.id, "accepted")}
-                      >
-                        Approve
-                      </GlowButton>
-                      <GlowButton
-                        variant="crimson"
-                        size="sm"
-                        disabled={moderatingRequestId === request.id}
-                        onClick={() => moderateFriendRequest(request.id, "rejected")}
-                      >
-                        Reject
-                      </GlowButton>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </GlowCard>
-
-          <DataManagement />
+          <section>
+            <h3 className="mb-2 text-sm uppercase text-jade-glow">{lt("Backup Studio & Library Control")}</h3>
+            <p className="mb-3 text-xs text-mist-dark">{lt("Manage user backup packages and the shared Application Exercise Library from one admin surface.")}</p>
+            <DataManagement />
+          </section>
         </div>
       )}
 
@@ -649,32 +669,51 @@ export default function AdminPanelPage() {
           setResetPasswordConfirm("");
         }}
         title={selectedUser?.name || "User Details"}
+        panelClassName="!max-w-2xl"
+        contentClassName="max-h-[68vh] overflow-y-auto space-y-3 bg-[color:color-mix(in_srgb,var(--ink-deep)_94%,var(--ink-mid))]"
       >
         {selectedUser && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
+          <div className="space-y-3">
+            {(() => {
+              const isFirstCreatedAdmin = selectedUser.id === firstCreatedAdminId;
+              return (
+                <>
+            <div
+              className="rounded-xl border px-3 py-3"
+              style={{
+                borderColor: "color-mix(in srgb, var(--ink-light) 50%, transparent)",
+                backgroundColor: "color-mix(in srgb, var(--ink-mid) 52%, var(--ink-deep))",
+              }}
+            >
+              <div className="grid grid-cols-2 gap-3">
+                <div>
                 <p className="text-xs text-mist-dark uppercase">Username</p>
                 <p className="text-sm text-cloud-white mt-1">{selectedUser.username}</p>
-              </div>
-              <div>
+                </div>
+                <div>
                 <p className="text-xs text-mist-dark uppercase">Sessions</p>
                 <p className="text-sm text-mountain-blue-glow mt-1">{selectedUser.sessionCount ?? selectedUser.progressionLogCount ?? 0}</p>
-              </div>
-              <div>
+                </div>
+                <div>
                 <p className="text-xs text-mist-dark uppercase">Check-Ins</p>
                 <p className="text-sm text-gold mt-1">{selectedUser._count?.checkIns || 0}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-mist-dark uppercase">Member Since</p>
+                  <p className="text-sm text-mist-light mt-1">
+                    {formatDateWithPreference(selectedUser.createdAt, dateFormat, timeZone)}
+                  </p>
+                </div>
               </div>
             </div>
 
-            <div>
-              <p className="text-xs text-mist-dark uppercase">Member Since</p>
-              <p className="text-sm text-mist-light mt-1">
-                {formatDateWithPreference(selectedUser.createdAt, dateFormat, timeZone)}
-              </p>
-            </div>
-
-            <div className="pt-2 border-t border-ink-light">
+            <div
+              className="rounded-xl border px-3 py-3"
+              style={{
+                borderColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)",
+                backgroundColor: "color-mix(in srgb, var(--ink-mid) 44%, var(--ink-deep))",
+              }}
+            >
               <p className="text-xs text-mist-dark uppercase mb-2">Display Name</p>
               <div className="flex gap-2">
                 <GlowInput
@@ -693,7 +732,13 @@ export default function AdminPanelPage() {
               </div>
             </div>
 
-            <div className="pt-2 border-t border-ink-light">
+            <div
+              className="rounded-xl border px-3 py-3"
+              style={{
+                borderColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)",
+                backgroundColor: "color-mix(in srgb, var(--ink-mid) 44%, var(--ink-deep))",
+              }}
+            >
               <p className="text-xs text-mist-dark uppercase mb-2">Account Type</p>
               {selectedUser.role === "system" ? (
                 <div className="flex items-center justify-between gap-2">
@@ -707,14 +752,16 @@ export default function AdminPanelPage() {
               ) : (
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex gap-2">
-                    <GlowButton
-                      variant={selectedUser.role === "user" ? "jade" : "ghost"}
-                      size="sm"
-                      disabled={isUpdatingRole || selectedUser.role === "user" || selectedUser.id === user?.id}
-                      onClick={() => updateUserRole(selectedUser.id, "user")}
-                    >
-                      User
-                    </GlowButton>
+                    {!isFirstCreatedAdmin ? (
+                      <GlowButton
+                        variant={selectedUser.role === "user" ? "jade" : "ghost"}
+                        size="sm"
+                        disabled={isUpdatingRole || selectedUser.role === "user" || selectedUser.id === user?.id}
+                        onClick={() => updateUserRole(selectedUser.id, "user")}
+                      >
+                        User
+                      </GlowButton>
+                    ) : null}
                     <GlowButton
                       variant={selectedUser.role === "admin" ? "jade" : "ghost"}
                       size="sm"
@@ -725,7 +772,9 @@ export default function AdminPanelPage() {
                     </GlowButton>
                   </div>
                   <p className="text-[11px] text-mist-dark text-right max-w-[60%]">
-                    {selectedUser.id === user?.id
+                    {isFirstCreatedAdmin
+                      ? "The first created admin account cannot be switched to User from this panel."
+                      : selectedUser.id === user?.id
                       ? "You cannot remove your own admin privileges. Have another admin demote you if needed."
                       : "Admins have full access to user management and system data."}
                   </p>
@@ -733,7 +782,13 @@ export default function AdminPanelPage() {
               )}
             </div>
 
-            <div className="pt-2 border-t border-ink-light">
+            <div
+              className="rounded-xl border px-3 py-3"
+              style={{
+                borderColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)",
+                backgroundColor: "color-mix(in srgb, var(--ink-mid) 44%, var(--ink-deep))",
+              }}
+            >
               <p className="text-xs text-mist-dark uppercase mb-2">Reset Password</p>
               <div className="space-y-2">
                 <GlowInput
@@ -766,18 +821,29 @@ export default function AdminPanelPage() {
               </div>
             </div>
 
-            <div className="flex gap-2 pt-4 border-t border-ink-light">
-              <GlowButton
-                variant="crimson"
-                size="sm"
-                onClick={() => deleteUser(selectedUser.id)}
-              >
-                Send to Recycle Bin
-              </GlowButton>
+            <div
+              className="flex gap-2 rounded-xl border px-3 py-3"
+              style={{
+                borderColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)",
+                backgroundColor: "color-mix(in srgb, var(--ink-mid) 44%, var(--ink-deep))",
+              }}
+            >
+              {!isFirstCreatedAdmin ? (
+                <GlowButton
+                  variant="crimson"
+                  size="sm"
+                  onClick={() => deleteUser(selectedUser.id)}
+                >
+                  Send to Recycle Bin
+                </GlowButton>
+              ) : null}
               <GlowButton variant="ghost" size="sm" onClick={() => setShowUserDetailModal(false)}>
                 Close
               </GlowButton>
             </div>
+                </>
+              );
+            })()}
           </div>
         )}
       </GlowModal>

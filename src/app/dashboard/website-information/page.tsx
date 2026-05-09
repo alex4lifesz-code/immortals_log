@@ -10,34 +10,35 @@ import { DASHBOARD_ROUTES } from "@/lib/navigation";
 
 const techStack = [
   ["Framework", "Next.js App Router with React client components"],
-  ["Runtime", "Node.js server runtime for route handlers and middleware"],
+  ["Runtime", "Node.js server runtime for route handlers, auth guards, and proxy-style routing"],
   ["Styling", "Tailwind utilities with themed surface, border, and glow variables"],
   ["Database", "SQLite through Prisma + @prisma/adapter-libsql"],
   ["ORM Client", "Generated Prisma client at src/generated/prisma"],
-  ["Auth", "JWT cookie auth with role-based middleware and API wrappers"],
+  ["Auth", "JWT cookie auth with role-based guards and withAuth / withAdmin API wrappers"],
   ["Animation", "Framer Motion for panels, dialogs, and table interactions"],
 ];
 
 const appModules = [
-  ["Authentication & Access", "Cookie-based session auth, role checks, protected admin routes"],
-  ["Workout History", "Set logging, per-set metrics, progression completion tracking"],
-  ["Exercise Library", "ProgressionExercise CRUD, variants/modifiers, edit-audit timeline"],
-  ["Check-In", "Daily attendance and user notes with one-note-per-day guarantees"],
-  ["Social", "Friend request lifecycle and user-to-user relationship state"],
-  ["Display System", "Theme, panel layout, sidebar placement, nav visibility preferences"],
+  ["Authentication & Access", "Cookie session auth, role checks, protected admin routes, and user-scoped API access"],
+  ["Train & Workout History", "Set logging, progression tracking, quick log flows, and train-mode history views"],
+  ["Circle & Feed", "Friend requests, circle membership, community feed, and friend activity visibility"],
+  ["Check-In & Notes", "Daily presence, weight logging, quick check-ins, and per-day notes"],
+  ["Exercise Library", "ProgressionExercise CRUD, tiers, variants, modifiers, translations, and edit audit history"],
+  ["Display & Admin Tooling", "Theme/layout preferences, dashboard controls, admin panel, backup/import, and internal documentation"],
 ];
 
 const persistenceSections = {
   database: [
-    "User accounts, roles, and friend relationships",
-    "Check-ins and per-day check-in notes",
-    "Progression exercises, tiers, modifiers, and variations",
+    "User accounts, roles, profiles, and friend relationships",
+    "Friend suggestions, check-ins, and per-day check-in notes",
+    "Progression exercises, tiers, modifiers, variations, and translation rows",
     "User progression levels and submitted progression logs",
+    "Server-side user settings and JSON-backed train combo routines/logs",
     "Exercise library edit history audit trail",
   ],
   local: [
-    "Workout history table mode, sort, and column order preferences",
-    "Workout input draft convenience state for the current browser",
+    "Dashboard, train, and circle view preferences for the current browser",
+    "Workout input draft convenience state and transient search/sort selections",
     "Exercise library filters, search, sort, and table mode preferences",
   ],
   memory: [
@@ -49,28 +50,39 @@ const persistenceSections = {
 };
 
 const relationSchema = [
+  ["User", "1 -> 1", "UserProfile", "User.id -> UserProfile.userId", "Cascade delete"],
   ["User", "1 -> N", "CheckIn", "User.id -> CheckIn.userId", "No cascade declared in schema"],
   ["User", "1 -> N", "CheckInNote", "User.id -> CheckInNote.userId", "Cascade delete"],
   ["User", "1 -> 1", "UserSettings", "User.id -> UserSettings.userId", "Single settings row per user"],
   ["User", "1 -> N", "FriendRequest (as requester)", "User.id -> FriendRequest.requesterId", "Cascade delete"],
   ["User", "1 -> N", "FriendRequest (as receiver)", "User.id -> FriendRequest.receiverId", "Cascade delete"],
+  ["Exercise", "1 -> 1", "ExerciseTranslation", "Exercise.id -> ExerciseTranslation.id", "Cascade delete"],
   ["ProgressionExercise", "1 -> N", "ProgressionTier", "ProgressionExercise.id -> ProgressionTier.exerciseId", "Cascade delete"],
   ["ProgressionExercise", "1 -> N", "ProgressionVariation", "ProgressionExercise.id -> ProgressionVariation.exerciseId", "Cascade delete"],
   ["ProgressionExercise", "1 -> N", "ProgressionModifier", "ProgressionExercise.id -> ProgressionModifier.exerciseId", "Cascade delete"],
+  ["ProgressionExercise", "1 -> 1", "ProgressionExerciseTranslation", "ProgressionExercise.id -> ProgressionExerciseTranslation.id", "Cascade delete"],
   ["ProgressionExercise", "1 -> N", "UserProgressionLevel", "ProgressionExercise.id -> UserProgressionLevel.exerciseId", "Cascade delete"],
+  ["ProgressionTier", "1 -> 1", "ProgressionTierTranslation", "ProgressionTier.id -> ProgressionTierTranslation.id", "Cascade delete"],
+  ["ProgressionVariation", "1 -> 1", "ProgressionVariationTranslation", "ProgressionVariation.id -> ProgressionVariationTranslation.id", "Cascade delete"],
   ["UserProgressionLevel", "1 -> N", "ProgressionLog", "UserProgressionLevel.id -> ProgressionLog.userProgressionId", "Cascade delete"],
 ];
 
 const tableDictionary = [
   ["User", "Identity", "id", "username (unique), friendCode (unique), role, createdAt, updatedAt"],
+  ["UserProfile", "Profile", "id", "userId (unique), fitnessBackground, primaryGoal, tier, publicProfile, displayName"],
+  ["FriendSuggestion", "Social", "id", "userId, suggestedId, reason, dismissed, createdAt"],
   ["FriendRequest", "Social", "id", "requesterId, receiverId, status, createdAt, respondedAt"],
-  ["UserSettings", "Preferences", "id", "userId (unique), dualPageView, panelPosition, pinnedNavItems"],
+  ["UserSettings", "Preferences", "id", "userId (unique), dualPageView, panelPosition, pinnedNavItems JSON, hiddenNavItems JSON, combinedView"],
   ["CheckIn", "Attendance", "id", "date, userId, present, weight, comment, createdAt"],
   ["CheckInNote", "Attendance Notes", "id", "date (YYYY-MM-DD), userId, content, pinned, updatedAt"],
   ["Exercise", "Legacy Catalog", "id", "name, wuxiaName, difficulty, type, assignedDays"],
+  ["ExerciseTranslation", "Legacy Translation", "id", "englishName, vietnameseName, story and difficulty translation fields"],
   ["ProgressionExercise", "Progression Catalog", "id", "name, category, equipmentType, muscles, prerequisites JSON, cues JSON"],
+  ["ProgressionExerciseTranslation", "Progression Translation", "id", "english/vietnamese exercise names, story, difficulty, and type fields"],
   ["ProgressionTier", "Progression Levels", "id", "exerciseId, level, name, targetReps, targetHold"],
+  ["ProgressionTierTranslation", "Tier Translation", "id", "english/vietnamese name, description, and difficulty fields"],
   ["ProgressionVariation", "Variants", "id", "exerciseId, name, wuxia metadata, description"],
+  ["ProgressionVariationTranslation", "Variant Translation", "id", "english/vietnamese name, description, and difficulty fields"],
   ["ProgressionModifier", "Modifiers", "id", "exerciseId, type, available, difficultyMod, method"],
   ["UserProgressionLevel", "User State", "id", "userId, exerciseId, currentLevel, updatedAt"],
   ["ProgressionLog", "Workout Logs", "id", "userProgressionId, level, set metrics, hold times, notes, completed"],
@@ -79,6 +91,8 @@ const tableDictionary = [
 
 const indexHighlights = [
   ["User", "@unique", "username, friendCode", "Fast account lookup and invite/friend-code joins"],
+  ["UserProfile", "@unique + @@index", "userId, userId", "Single profile row per user with efficient profile lookup"],
+  ["FriendSuggestion", "@@index", "userId, suggestedId", "Supports suggestion generation and dismissal lookup"],
   ["FriendRequest", "@@unique + @@index", "[requesterId, receiverId], requesterId, receiverId, status", "Prevents duplicate active pairs and supports inbox queries"],
   ["CheckIn", "@@unique + @@index", "[date, userId], userId", "Guarantees one check-in row per user/day"],
   ["CheckInNote", "@@unique + @@index", "[date, userId], userId", "Guarantees one note per user/date"],
@@ -96,29 +110,35 @@ const databaseModels = [
     title: "Identity & Social",
     items: [
       "User: account profile, role, timestamps",
+      "UserProfile: onboarding answers, goals, and public profile fields",
+      "FriendSuggestion: suggested user links and dismissal state",
       "FriendRequest: requester, receiver, status, response tracking",
-      "UserSettings: nav and panel preferences stored server-side",
+      "UserSettings: server-side display settings and JSON-backed app preferences",
     ],
   },
   {
     title: "Check-In System",
     items: [
-      "CheckIn: attendance, weight, comment, presence by day",
-      "CheckInNote: one pinned note per user per date",
+      "CheckIn: attendance, weight, quick-check-in comment, presence by day",
+      "CheckInNote: one pinned note per user per date for schedule-style note flows",
     ],
   },
   {
     title: "Legacy Exercise Catalog",
     items: [
       "Exercise: older exercise reference records with name, difficulty, type, and assignment days",
+      "ExerciseTranslation: bilingual fields for legacy exercise content",
     ],
   },
   {
     title: "Progression Module",
     items: [
       "ProgressionExercise: main exercise entity with muscles, category, equipment, and metadata",
+      "ProgressionExerciseTranslation: bilingual exercise copy for progression records",
       "ProgressionTier: level targets and descriptions per exercise",
+      "ProgressionTierTranslation: bilingual tier names and descriptions",
       "ProgressionVariation: persisted exercise variants",
+      "ProgressionVariationTranslation: bilingual variation copy",
       "ProgressionModifier: available modifiers and difficulty adjustments",
       "UserProgressionLevel: current level per user per exercise",
       "ProgressionLog: submitted set data, modifier, variant, notes, and completion status",
@@ -138,8 +158,20 @@ const keyFlows = [
     body: "Training log submissions write to progression log tables. View preferences remain browser-local, while submitted sets and history remain database-backed.",
   },
   {
+    title: "Train Combo",
+    body: "Combo routines and combo log entries are user-scoped and stored inside UserSettings.pinnedNavItems as JSON, then normalized through the train-combo API before use in the UI.",
+  },
+  {
+    title: "Circle & Feed",
+    body: "Friend relationships and role-aware visibility helpers determine which workout logs and check-ins appear in circle and community feed views.",
+  },
+  {
     title: "Exercise Library",
     body: "Exercise entities, variants, and edit history are persisted in the database. Search, filters, sorting, and open-mode layout are local per user.",
+  },
+  {
+    title: "Check-In",
+    body: "Quick check-ins and full check-in flows write daily weight, presence, and notes into user-scoped check-in rows, while pinned note content is stored separately in CheckInNote.",
   },
   {
     title: "Admin Access",
