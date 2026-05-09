@@ -208,7 +208,14 @@ export function RadarChartCard({ title, values }: { title: string; values: NumPo
         {[0.25, 0.5, 0.75, 1].map((ratio) => (
           <circle key={ratio} cx={center.x} cy={center.y} r={radius * ratio} fill="none" style={{ stroke: "var(--chart-grid)" }} />
         ))}
-        <polygon points={points} style={{ fill: "rgb(var(--chart-primary-rgb) / 0.35)", stroke: "var(--chart-primary)" }} strokeWidth="2" />
+        <polygon
+          points={points}
+          style={{
+            fill: "color-mix(in srgb, var(--chart-primary) 35%, transparent)",
+            stroke: "var(--chart-primary)",
+          }}
+          strokeWidth="2"
+        />
       </svg>
     </ChartFrame>
   );
@@ -221,7 +228,14 @@ export function HeatMapCard({ title, points }: { title: string; points: NumPoint
       <div className="grid grid-cols-10 gap-1">
         {points.slice(-120).map((p, i) => {
           const alpha = clamp(p.value / max, 0.12, 1);
-          return <div key={`${p.label}-${i}`} className="h-4 rounded" style={{ background: `rgb(var(--chart-primary-rgb) / ${alpha})` }} title={`${p.label}: ${p.value}`} />;
+          return (
+            <div
+              key={`${p.label}-${i}`}
+              className="h-4 rounded"
+              style={{ backgroundColor: "var(--chart-primary)", opacity: alpha }}
+              title={`${p.label}: ${p.value}`}
+            />
+          );
         })}
       </div>
     </ChartFrame>
@@ -264,7 +278,16 @@ export function BoxPlotCard({ title, stats }: { title: string; stats: { min: num
     <ChartFrame title={title}>
       <svg viewBox="0 0 640 160" className="h-24 w-full">
         <line x1={x(stats.min)} y1="80" x2={x(stats.max)} y2="80" style={{ stroke: "var(--chart-whisker)" }} strokeWidth="2" />
-        <rect x={x(stats.q1)} y={58} width={x(stats.q3) - x(stats.q1)} height={44} style={{ fill: "rgb(var(--chart-primary-rgb) / 0.35)", stroke: "var(--chart-primary)" }} />
+        <rect
+          x={x(stats.q1)}
+          y={58}
+          width={x(stats.q3) - x(stats.q1)}
+          height={44}
+          style={{
+            fill: "color-mix(in srgb, var(--chart-primary) 35%, transparent)",
+            stroke: "var(--chart-primary)",
+          }}
+        />
         <line x1={x(stats.median)} y1="56" x2={x(stats.median)} y2="104" style={{ stroke: "var(--chart-secondary)" }} strokeWidth="3" />
       </svg>
     </ChartFrame>

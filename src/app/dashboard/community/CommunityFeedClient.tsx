@@ -39,6 +39,13 @@ interface ExerciseLog {
   completed: boolean;
 }
 
+interface FeedExercise {
+  id: string;
+  name: string;
+  category: string;
+  primaryMuscles?: string;
+}
+
 interface MemberStats {
   lastActiveAt: string;
 }
@@ -91,7 +98,7 @@ export default function CommunityFeedClient() {
   const weightUnit = settings.defaultWeightUnit ?? "kg";
   const [loading, setLoading] = useState(true);
   const [exerciseLogs, setExerciseLogs] = useState<ExerciseLog[]>([]);
-  const [allExercises, setAllExercises] = useState<any[]>([]);
+  const [allExercises, setAllExercises] = useState<FeedExercise[]>([]);
   const [filterMode, setFilterMode] = useState<"category" | "muscle-group">("category");
   const [selectedFilter, setSelectedFilter] = useState<string>("");
   const [scope, setScope] = useState<"friends" | "community">(() => {

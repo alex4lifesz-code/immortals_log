@@ -472,17 +472,72 @@ export default function DashboardHomePage() {
 
   const yourWeekPalette = useMemo(() => {
     const paletteByTheme: Record<string, { active: string; inactive: string; border: string; label: string }> = {
-      discord: { active: "rgb(232 121 249 / 0.72)", inactive: "rgb(232 121 249 / 0.2)", border: "#e879f9", label: "#f0abfc" },
-      forest: { active: "rgb(56 189 248 / 0.72)", inactive: "rgb(56 189 248 / 0.2)", border: "#38bdf8", label: "#7dd3fc" },
-      "ink-dragon": { active: "rgb(250 204 21 / 0.72)", inactive: "rgb(250 204 21 / 0.2)", border: "#facc15", label: "#fde047" },
-      "ying-yang": { active: "rgb(56 189 248 / 0.76)", inactive: "rgb(56 189 248 / 0.2)", border: "#38bdf8", label: "#7dd3fc" },
-      "ying-yang-light": { active: "rgb(29 78 216 / 0.74)", inactive: "rgb(29 78 216 / 0.16)", border: "#1d4ed8", label: "#2563eb" },
-      "phoenix-bloom": { active: "rgb(251 146 60 / 0.72)", inactive: "rgb(251 146 60 / 0.2)", border: "#fb923c", label: "#fdba74" },
-      "storm-chains": { active: "rgb(34 211 238 / 0.72)", inactive: "rgb(34 211 238 / 0.2)", border: "#22d3ee", label: "#67e8f9" },
-      "obsidian-ember": { active: "rgb(110 224 144 / 0.72)", inactive: "rgb(110 224 144 / 0.2)", border: "#6ee090", label: "#9aeab4" },
-      "mist-cultivator": { active: "rgb(129 140 248 / 0.72)", inactive: "rgb(129 140 248 / 0.2)", border: "#818cf8", label: "#a5b4fc" },
-      "frost-sect": { active: "rgb(45 212 191 / 0.72)", inactive: "rgb(45 212 191 / 0.2)", border: "#2dd4bf", label: "#5eead4" },
-      "heavenly-sword": { active: "rgb(250 204 21 / 0.72)", inactive: "rgb(250 204 21 / 0.2)", border: "#facc15", label: "#fde047" },
+      discord: {
+        active: "color-mix(in srgb, var(--accent) 72%, transparent)",
+        inactive: "color-mix(in srgb, var(--accent) 20%, transparent)",
+        border: "color-mix(in srgb, var(--accent) 78%, transparent)",
+        label: "color-mix(in srgb, var(--accent) 40%, var(--cloud-white))",
+      },
+      forest: {
+        active: "color-mix(in srgb, var(--forest) 72%, transparent)",
+        inactive: "color-mix(in srgb, var(--forest) 20%, transparent)",
+        border: "color-mix(in srgb, var(--forest) 78%, transparent)",
+        label: "color-mix(in srgb, var(--forest) 46%, var(--cloud-white))",
+      },
+      "ink-dragon": {
+        active: "color-mix(in srgb, var(--gold) 72%, transparent)",
+        inactive: "color-mix(in srgb, var(--gold) 20%, transparent)",
+        border: "color-mix(in srgb, var(--gold) 78%, transparent)",
+        label: "color-mix(in srgb, var(--gold) 46%, var(--cloud-white))",
+      },
+      "ying-yang": {
+        active: "color-mix(in srgb, var(--accent) 76%, transparent)",
+        inactive: "color-mix(in srgb, var(--accent) 20%, transparent)",
+        border: "color-mix(in srgb, var(--accent) 78%, transparent)",
+        label: "color-mix(in srgb, var(--accent) 46%, var(--cloud-white))",
+      },
+      "ying-yang-light": {
+        active: "color-mix(in srgb, var(--accent) 74%, transparent)",
+        inactive: "color-mix(in srgb, var(--accent) 16%, transparent)",
+        border: "color-mix(in srgb, var(--accent) 84%, transparent)",
+        label: "color-mix(in srgb, var(--accent) 52%, var(--cloud-white))",
+      },
+      "phoenix-bloom": {
+        active: "color-mix(in srgb, var(--danger) 72%, transparent)",
+        inactive: "color-mix(in srgb, var(--danger) 20%, transparent)",
+        border: "color-mix(in srgb, var(--danger) 78%, transparent)",
+        label: "color-mix(in srgb, var(--danger) 36%, var(--cloud-white))",
+      },
+      "storm-chains": {
+        active: "color-mix(in srgb, var(--accent) 72%, transparent)",
+        inactive: "color-mix(in srgb, var(--accent) 20%, transparent)",
+        border: "color-mix(in srgb, var(--accent) 78%, transparent)",
+        label: "color-mix(in srgb, var(--accent) 46%, var(--cloud-white))",
+      },
+      "obsidian-ember": {
+        active: "color-mix(in srgb, var(--jade) 72%, transparent)",
+        inactive: "color-mix(in srgb, var(--jade) 20%, transparent)",
+        border: "color-mix(in srgb, var(--jade) 78%, transparent)",
+        label: "color-mix(in srgb, var(--jade) 46%, var(--cloud-white))",
+      },
+      "mist-cultivator": {
+        active: "color-mix(in srgb, var(--accent) 72%, transparent)",
+        inactive: "color-mix(in srgb, var(--accent) 20%, transparent)",
+        border: "color-mix(in srgb, var(--accent) 78%, transparent)",
+        label: "color-mix(in srgb, var(--accent) 40%, var(--cloud-white))",
+      },
+      "frost-sect": {
+        active: "color-mix(in srgb, var(--jade) 72%, transparent)",
+        inactive: "color-mix(in srgb, var(--jade) 20%, transparent)",
+        border: "color-mix(in srgb, var(--jade) 78%, transparent)",
+        label: "color-mix(in srgb, var(--jade) 46%, var(--cloud-white))",
+      },
+      "heavenly-sword": {
+        active: "color-mix(in srgb, var(--gold) 72%, transparent)",
+        inactive: "color-mix(in srgb, var(--gold) 20%, transparent)",
+        border: "color-mix(in srgb, var(--gold) 78%, transparent)",
+        label: "color-mix(in srgb, var(--gold) 46%, var(--cloud-white))",
+      },
     };
     return paletteByTheme[themeStyle] ?? paletteByTheme.discord;
   }, [themeStyle]);
@@ -516,18 +571,16 @@ export default function DashboardHomePage() {
         {/* Today */}
         <section className="rounded-xl border p-3" style={shellStyle}>
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>{lt("Today")}</p>
-          <div className="mt-2">
+          <div className="mt-2 grid grid-cols-2 gap-2">
             <div className="rounded-lg border px-2.5 py-2" style={tileStyle}>
               <p className="text-[9px] uppercase tracking-[0.1em]" style={{ color: "var(--text-muted)" }}>{lt("Check-in")}</p>
               <p className="mt-0.5 text-[12px] font-semibold" style={{ color: checkedInToday ? "var(--forest)" : "var(--text-primary)" }}>
                 {checkInStatusLabel}
               </p>
             </div>
-          </div>
-          <div className="mt-2.5">
             <Link
               href={DASHBOARD_ROUTES.workoutHistory}
-              className="block rounded-lg border px-3 py-3 text-left"
+              className="block rounded-lg border px-3 py-2 text-left"
               style={{
                 borderColor: "color-mix(in srgb, var(--accent) 84%, var(--border))",
                 backgroundColor: "color-mix(in srgb, var(--accent) 18%, var(--surface))",

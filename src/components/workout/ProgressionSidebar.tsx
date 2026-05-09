@@ -173,7 +173,7 @@ export function ProgressionSidebar({
     }
 
     return map;
-  }, [exercises, settings.terminologyMode]);
+  }, [exercises, settings.showExerciseForeignLanguage, settings.terminologyMode]);
 
   const filtered = useMemo(
     () =>
@@ -238,7 +238,7 @@ export function ProgressionSidebar({
             return 0;
         }
       }),
-    [exerciseDerived, filtered, selectedIds, settings.terminologyMode, sortMode]
+    [exerciseDerived, filtered, selectedIds, settings.showExerciseForeignLanguage, settings.terminologyMode, sortMode]
   );
 
   const [showFilters, setShowFilters] = useState(false);

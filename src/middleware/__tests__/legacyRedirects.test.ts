@@ -15,7 +15,7 @@ function mockCtx(pathname: string): MiddlewareContext {
         },
       },
       url: url.toString(),
-    } as any,
+    } as unknown as MiddlewareContext["request"],
     route: "protected-dashboard",
     token: null,
     auth: null,
@@ -51,7 +51,7 @@ describe("handleLegacyRedirects", () => {
       request: {
         nextUrl: { pathname: "/api/health" },
         url: "http://localhost:3000/api/health",
-      } as any,
+      } as unknown as MiddlewareContext["request"],
       route: "public-api",
       token: null,
       auth: null,

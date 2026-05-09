@@ -23,7 +23,7 @@ function mockCtx(
     request: {
       nextUrl: { pathname },
       url: "http://localhost:3000" + pathname,
-    } as any,
+    } as unknown as MiddlewareContext["request"],
     route: "protected-dashboard",
     token: "dummy",
     auth: role ? mockAuth(role) : null,
@@ -70,7 +70,7 @@ describe("enforceRole", () => {
       request: {
         nextUrl: { pathname: "/api/checkins" },
         url: "http://localhost:3000/api/checkins",
-      } as any,
+      } as unknown as MiddlewareContext["request"],
       route: "protected-api",
       token: "dummy",
       auth: mockAuth("user"),

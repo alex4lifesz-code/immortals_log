@@ -48,6 +48,8 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   const matchesRouteOrChild = (route: string) => pathname === route || pathname?.startsWith(`${route}/`);
   const mobileRootScrollEnabled = !isInternalScrollRoute;
   const showMobileNav = !isWorkoutInputFullscreen && !isTrainExerciseHistoryOpen;
+  const isTrainRoute = pathname?.startsWith("/dashboard/train") ?? false;
+  const effectiveTrainExerciseHistoryOpen = isTrainRoute && isTrainExerciseHistoryOpen;
   const lastLoggedActivityKeyRef = useRef("");
 
   const currentActivity = useMemo(() => {
@@ -102,12 +104,6 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!pathname?.startsWith("/dashboard/train")) {
-      setIsTrainExerciseHistoryOpen(false);
-    }
-  }, [pathname]);
-
-  useEffect(() => {
     if (!user?.id || !currentActivity.route) return;
 
     const activityKey = `${currentActivity.label}:${currentActivity.route}:${searchParams.toString()}`;
@@ -155,7 +151,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         {showMobileNav && (
           <MobileNavBar
             incomingFriendRequestCount={incomingFriendRequestCount}
-            isTrainExerciseHistoryOpen={isTrainExerciseHistoryOpen}
+            isTrainExerciseHistoryOpen={effectiveTrainExerciseHistoryOpen}
           />
         )}
       </div>

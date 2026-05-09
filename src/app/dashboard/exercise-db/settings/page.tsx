@@ -752,7 +752,7 @@ export function ExerciseDbSettingsPanel({ embedded = false }: { embedded?: boole
             <div className="border overflow-hidden" style={{ borderColor: "var(--border)", borderRadius: "2px" }}>
               <div className="px-3 py-2 border-b" style={{ borderColor: "var(--nyaa-table-grid)", backgroundColor: "var(--nyaa-table-head-bg)" }}>
                 <p className="text-xs font-semibold" style={{ color: "var(--text-primary)" }}>Exercise Progressions and Variants</p>
-                <p className="text-[11px]" style={{ color: "var(--text-secondary)" }}>Review progression tracks and manage each exercise's unique variants here.</p>
+                <p className="text-[11px]" style={{ color: "var(--text-secondary)" }}>Review progression tracks and manage each exercise&apos;s unique variants here.</p>
               </div>
               <div className="flex flex-wrap gap-2 px-3 py-2 border-b" style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)" }}>
                 <select

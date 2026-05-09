@@ -9,7 +9,7 @@ vi.mock("jose", () => ({
 
 import { validateJwt } from "../jwtValidator";
 import { jwtVerify } from "jose";
-import type { MiddlewareContext, JwtPayload } from "../types";
+import type { MiddlewareContext } from "../types";
 
 const mockedJwtVerify = vi.mocked(jwtVerify);
 
@@ -25,7 +25,7 @@ function mockCtx(
       cookies: {
         delete: vi.fn(),
       },
-    } as any,
+    } as unknown as MiddlewareContext["request"],
     route,
     token,
     auth: null,
@@ -81,7 +81,7 @@ describe("validateJwt", () => {
         exp: now + 86400,
       },
       protectedHeader: { alg: "HS256" },
-    } as any);
+    } as unknown as object);
 
     const ctx = mockCtx("protected-api", "/api/checkins", "valid-token");
     const result = await validateJwt(ctx);
@@ -117,7 +117,7 @@ describe("validateJwt", () => {
     mockedJwtVerify.mockResolvedValueOnce({
       payload: { role: "user" },
       protectedHeader: { alg: "HS256" },
-    } as any);
+    } as unknown as object);
 
     const ctx = mockCtx("protected-api", "/api/checkins", "incomplete-token");
     const result = await validateJwt(ctx);

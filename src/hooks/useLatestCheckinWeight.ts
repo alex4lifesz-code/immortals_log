@@ -13,15 +13,12 @@ export function useLatestCheckinWeight(userId: string | null, enabled: boolean, 
   const [value, setValue] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!enabled || !userId) {
-      setValue(null);
-      return;
-    }
+    if (!enabled || !userId) return;
 
     const cacheKey = userId;
     const cached = latestWeightCache.get(cacheKey);
     if (cached && Date.now() - cached.ts < cacheMs) {
-      setValue(cached.value);
+      queueMicrotask(() => setValue(cached.value));
       return;
     }
 
@@ -46,5 +43,6 @@ export function useLatestCheckinWeight(userId: string | null, enabled: boolean, 
     };
   }, [enabled, userId, cacheMs]);
 
+  if (!enabled || !userId) return null;
   return value;
 }

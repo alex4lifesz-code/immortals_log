@@ -101,7 +101,14 @@ export default function MobileCheckinPage() {
                       <h2 className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--mist-light)" }}>
                         Check-In
                       </h2>
-                      <span className="rounded-md border px-3 py-1.5 text-[11px] font-semibold" style={{ borderColor: "#3b3f48", backgroundColor: "#383a40", color: "#f2f3f5" }}>
+                      <span
+                        className="rounded-md border px-3 py-1.5 text-[11px] font-semibold"
+                        style={{
+                          borderColor: "color-mix(in srgb, var(--ink-light) 56%, transparent)",
+                          backgroundColor: "color-mix(in srgb, var(--ink-mid) 74%, var(--ink-deep))",
+                          color: "var(--cloud-white)",
+                        }}
+                      >
                         {formattedToday}
                       </span>
                     </div>
@@ -114,11 +121,18 @@ export default function MobileCheckinPage() {
                             setPresent(true);
                             markDirty();
                           }}
-                          className={`rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-colors ${
-                            present
-                              ? "border-[#5865f2]/70 bg-[#383a40] text-[#f2f3f5]"
-                              : "border-[#3b3f48] bg-[#383a40]/65 text-[#b5bac1]"
-                          }`}
+                          className="rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-colors"
+                          style={present
+                            ? {
+                              borderColor: "color-mix(in srgb, var(--accent) 70%, transparent)",
+                              backgroundColor: "color-mix(in srgb, var(--ink-mid) 74%, var(--ink-deep))",
+                              color: "var(--cloud-white)",
+                            }
+                            : {
+                              borderColor: "color-mix(in srgb, var(--ink-light) 56%, transparent)",
+                              backgroundColor: "color-mix(in srgb, var(--ink-mid) 65%, var(--ink-deep))",
+                              color: "var(--text-muted)",
+                            }}
                         >
                           Checked in
                         </button>
@@ -128,15 +142,29 @@ export default function MobileCheckinPage() {
                             setPresent(false);
                             markDirty();
                           }}
-                          className={`rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-colors ${
-                            !present
-                              ? "border-[#5865f2]/70 bg-[#383a40] text-[#f2f3f5]"
-                              : "border-[#3b3f48] bg-[#383a40]/65 text-[#b5bac1]"
-                          }`}
+                          className="rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-colors"
+                          style={!present
+                            ? {
+                              borderColor: "color-mix(in srgb, var(--accent) 70%, transparent)",
+                              backgroundColor: "color-mix(in srgb, var(--ink-mid) 74%, var(--ink-deep))",
+                              color: "var(--cloud-white)",
+                            }
+                            : {
+                              borderColor: "color-mix(in srgb, var(--ink-light) 56%, transparent)",
+                              backgroundColor: "color-mix(in srgb, var(--ink-mid) 65%, var(--ink-deep))",
+                              color: "var(--text-muted)",
+                            }}
                         >
                           Rest mode
                         </button>
-                        <span className="rounded-md border border-[#3b3f48] bg-[#383a40]/65 px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap text-[#b5bac1]">
+                        <span
+                          className="rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap"
+                          style={{
+                            borderColor: "color-mix(in srgb, var(--ink-light) 56%, transparent)",
+                            backgroundColor: "color-mix(in srgb, var(--ink-mid) 65%, var(--ink-deep))",
+                            color: "var(--text-muted)",
+                          }}
+                        >
                           {settings.timeZone || "Timezone"}
                         </span>
                       </div>
@@ -162,7 +190,7 @@ export default function MobileCheckinPage() {
                         markDirty();
                       }}
                       className="mt-2 h-8 w-full"
-                      style={{ accentColor: "#7289da" }}
+                      style={{ accentColor: "var(--accent)" }}
                     />
                     <input
                       type="number"

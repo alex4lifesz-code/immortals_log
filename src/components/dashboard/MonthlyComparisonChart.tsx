@@ -119,7 +119,7 @@ export default function MonthlyComparisonChart({
               tickFormatter={(v: number) => `${v}%`}
             />
             <Tooltip
-              cursor={{ fill: "rgba(255,255,255,0.04)" }}
+              cursor={{ fill: "color-mix(in srgb, var(--cloud-white) 4%, transparent)" }}
               contentStyle={{
                 backgroundColor: "var(--surface)",
                 border: "1px solid var(--border)",

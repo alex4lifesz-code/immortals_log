@@ -111,8 +111,13 @@ function asNumber(value: unknown, fallback = 0): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
+type RecycleBinTransactionClient = Pick<
+  typeof prisma,
+  "progressionExercise" | "progressionTier" | "progressionVariation" | "progressionModifier"
+>;
+
 async function ensureExerciseExists(
-  tx: any,
+  tx: RecycleBinTransactionClient,
   userId: string,
   exerciseLike: Record<string, unknown> | null | undefined,
 ): Promise<string | null> {

@@ -19,7 +19,7 @@ export default function MobileButton({
   children, 
   className = "", 
   variant = "primary", 
-  ...props 
+  ...buttonProps 
 }: MobileButtonProps) {
   const variantClass =
     variant === "secondary"
@@ -36,7 +36,7 @@ export default function MobileButton({
       whileTap={{ scale: 0.95 }}
       transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
       className={`mobile-card-polish min-h-12 rounded-xl border px-4 py-3 text-sm font-semibold transition-colors ${variantClass} ${className}`}
-      {...(props as any)}
+      {...buttonProps}
     >
       {children}
     </motion.button>

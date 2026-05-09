@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 vi.mock("jose", () => {
   const mockSign = vi.fn().mockResolvedValue("new-refreshed-token");
   class MockSignJWT {
-    constructor(_payload: any) {}
+    constructor(_payload: Record<string, unknown>) {}
     setProtectedHeader() { return this; }
     setIssuedAt() { return this; }
     setExpirationTime() { return this; }
@@ -30,7 +30,7 @@ function mockCtx(
       headers: {
         get: () => null,
       },
-    } as any,
+    } as unknown as MiddlewareContext["request"],
     route,
     token: "old-token",
     auth: {

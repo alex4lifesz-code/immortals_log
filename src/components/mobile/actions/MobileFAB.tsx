@@ -103,15 +103,6 @@ export default function MobileFAB({ icon = "+", label, onClick, side = "right" }
     };
   }, [clampToBounds, getSafeInsets, resolveBottomNavTop, side]);
 
-  useEffect(() => {
-    if (!isPositionReady) return;
-    const clamped = clampToBounds(position);
-    if (clamped.x !== position.x || clamped.y !== position.y) {
-      setPosition(clamped);
-      lastSafePositionRef.current = clamped;
-    }
-  }, [clampToBounds, isPositionReady, position]);
-
   const handlePanStart = useCallback(() => {
     panOriginRef.current = { ...position };
   }, [position]);

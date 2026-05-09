@@ -145,6 +145,7 @@ function MobileNavBar({
     () => regularMoreItems.filter((item) => !quickAccessItems.some((quick) => quick.path === item.path)),
     [quickAccessItems, regularMoreItems],
   );
+  void menuPageItems;
 
   const handleNavigate = useCallback((path: string) => {
     setMenuOpen(false);
@@ -173,6 +174,7 @@ function MobileNavBar({
     setMobileSidebarOpen(false);
     setMenuOpen((prev) => !prev);
   }, [setMobileSidebarOpen]);
+  void handleMenuToggle;
 
   const isPathActive = useCallback((path: string) => {
     if (!pathname) return false;
@@ -232,7 +234,6 @@ function MobileNavBar({
 
     const scrollContainers = getScrollContainers();
     lastScrollYRef.current = getCurrentScrollTop();
-    setNavVisible(true);
     let ticking = false;
 
     const onScroll = (event?: Event) => {
@@ -291,14 +292,7 @@ function MobileNavBar({
   }, [effectiveMobile]);
 
   useEffect(() => {
-    setMenuOpen(false);
-  }, [pathname]);
-
-  useEffect(() => {
-    if (!user?.id || typeof window === "undefined") {
-      setBodyWeightKg(null);
-      return;
-    }
+    if (!user?.id || typeof window === "undefined") return;
 
     const syncBodyWeight = () => {
       const physique = loadUserPhysique(user.id);
@@ -320,11 +314,7 @@ function MobileNavBar({
   }, [user?.id]);
 
   useEffect(() => {
-    if (!user?.id) {
-      setWeightTrendLabel(null);
-      setCheckInTotalCount(null);
-      return;
-    }
+    if (!user?.id) return;
 
     let cancelled = false;
 

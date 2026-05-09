@@ -407,8 +407,13 @@ export function resolveCalendarWeekStartsOn(
   option: CalendarWeekStartOption = "sunday",
   timeZone?: string,
 ): 0 | 1 {
+  if (option === "sunday") return 0;
   if (option === "monday") return 1;
-  return 0;
+
+  const tz = resolvePreferredTimeZone(timeZone);
+  if (tz.startsWith("America/")) return 0;
+  if (tz === "Pacific/Honolulu" || tz === "Pacific/Pago_Pago") return 0;
+  return 1;
 }
 
 export function formatCalendarMonthLabel(date: Date, timeZone?: string): string {

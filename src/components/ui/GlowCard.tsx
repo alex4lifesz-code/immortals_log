@@ -15,10 +15,10 @@ interface GlowCardProps {
 }
 
 const glowHover = {
-  jade: "hover:shadow-[0_0_20px_rgba(58,143,143,0.3)] hover:border-jade/40",
-  crimson: "hover:shadow-[0_0_20px_rgba(196,48,48,0.3)] hover:border-crimson/40",
-  gold: "hover:shadow-[0_0_20px_rgba(232,200,74,0.3)] hover:border-gold-dim/40",
-  blue: "hover:shadow-[0_0_20px_rgba(74,143,184,0.3)] hover:border-mountain-blue/40",
+  jade: "hover:shadow-[var(--shadow-elev-2)] hover:border-jade/40",
+  crimson: "hover:shadow-[var(--shadow-elev-2)] hover:border-crimson/40",
+  gold: "hover:shadow-[var(--shadow-elev-2)] hover:border-gold-dim/40",
+  blue: "hover:shadow-[var(--shadow-elev-2)] hover:border-mountain-blue/40",
   none: "hover:border-ink-light",
 };
 
@@ -31,10 +31,10 @@ export default function GlowCard({
   style,
 }: GlowCardProps) {
   const glowBase = {
-    jade: "rgba(58,143,143,0.22)",
-    crimson: "rgba(196,48,48,0.22)",
-    gold: "rgba(232,200,74,0.2)",
-    blue: "rgba(74,143,184,0.22)",
+    jade: "color-mix(in srgb, var(--jade) 22%, transparent)",
+    crimson: "color-mix(in srgb, var(--danger) 22%, transparent)",
+    gold: "color-mix(in srgb, var(--gold) 20%, transparent)",
+    blue: "color-mix(in srgb, var(--accent) 22%, transparent)",
     none: "transparent",
   };
 

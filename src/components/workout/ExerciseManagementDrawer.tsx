@@ -68,16 +68,10 @@ function ExerciseAllocationRow({
   const displayName = getExerciseDisplayName(exercise, settings.terminologyMode, settings.showExerciseForeignLanguage);
   const [selectedProgression, setSelectedProgression] = useState("");
   const [selectedVariant, setSelectedVariant] = useState("");
-  const [selectedDay, setSelectedDay] = useState<string>(focusedDay == null ? "" : String(focusedDay));
+  const [selectedDayDraft, setSelectedDayDraft] = useState<string>(focusedDay == null ? "" : String(focusedDay));
   const assigned = parseDayAssignments(exercise.assignedDays || "");
   const isAllocated = assigned.length > 0;
   const assignmentDetails = useMemo(() => parseDayAssignmentDetailsList(exercise.assignedDays || ""), [exercise.assignedDays]);
-
-  useEffect(() => {
-    if (focusedDay != null) {
-      setSelectedDay(String(focusedDay));
-    }
-  }, [focusedDay]);
 
   const progressionOptions = useMemo(() => {
     const tiers = Array.isArray(exercise.tiers) ? exercise.tiers : [];
@@ -110,36 +104,21 @@ function ExerciseAllocationRow({
     return matched?.label || (rawProgression || "");
   };
 
+  const selectedDay = focusedDay == null ? selectedDayDraft : String(focusedDay);
   const selectedDayNumber = selectedDay === "" ? null : Number(selectedDay);
   const selectedAssignmentsForDay = selectedDayNumber == null ? [] : (assignmentDetails[selectedDayNumber] || []);
-  const selectedProgressionValue = selectedProgression || "";
+  const firstAssignmentDetail = selectedAssignmentsForDay[0];
+  const defaultProgressionValue = firstAssignmentDetail?.progression
+    ? (progressionOptions.find((option) => option.label === firstAssignmentDetail.progression || option.value === firstAssignmentDetail.progression)?.value || "")
+    : "";
+  const defaultVariantValue = typeof firstAssignmentDetail?.variant === "string" ? firstAssignmentDetail.variant : "";
+  const selectedProgressionValue = selectedProgression || defaultProgressionValue;
+  const selectedVariantValue = selectedVariant || defaultVariantValue;
   const selectedCombinationAssigned = isComboRoutine
     ? (selectedDayNumber != null && assigned.includes(selectedDayNumber))
     : selectedAssignmentsForDay.some(
-      (entry) => getProgressionValue(entry.progression) === selectedProgressionValue && (entry.variant || "") === (selectedVariant || ""),
+      (entry) => getProgressionValue(entry.progression) === selectedProgressionValue && (entry.variant || "") === selectedVariantValue,
     );
-
-  useEffect(() => {
-    if (selectedDayNumber == null) {
-      return;
-    }
-
-    const detail = assignmentDetails[selectedDayNumber];
-    if (!detail || detail.length === 0) {
-      return;
-    }
-
-    const firstDetail = detail[0];
-
-    if (firstDetail.progression && !selectedProgression) {
-      const matched = progressionOptions.find((option) => option.label === firstDetail.progression || option.value === firstDetail.progression);
-      setSelectedProgression(matched?.value || "");
-    }
-
-    if (typeof firstDetail.variant === "string" && firstDetail.variant.length > 0 && !selectedVariant) {
-      setSelectedVariant(firstDetail.variant);
-    }
-  }, [assignmentDetails, progressionOptions, selectedDayNumber]);
 
   const handleApply = async () => {
     if (selectedDayNumber == null) return;
@@ -163,11 +142,11 @@ function ExerciseAllocationRow({
       return;
     }
 
-    const progressionLabel = progressionOptions.find((option) => option.value === selectedProgression)?.label || undefined;
-    const selectedProgressionForCompare = selectedProgression || "";
+    const progressionLabel = progressionOptions.find((option) => option.value === selectedProgressionValue)?.label || undefined;
+    const selectedProgressionForCompare = selectedProgressionValue;
     const selectedEntry = {
       progression: progressionLabel,
-      variant: selectedVariant || undefined,
+      variant: selectedVariantValue || undefined,
     };
 
     if (!shouldAssign) {
@@ -255,7 +234,7 @@ function ExerciseAllocationRow({
                   Progression
                 </label>
                 <select
-                  value={selectedProgression}
+                  value={selectedProgressionValue}
                   onChange={(event) => setSelectedProgression(event.target.value)}
                   className="h-9 w-full rounded-md border px-2 text-xs outline-none"
                   style={{
@@ -282,7 +261,7 @@ function ExerciseAllocationRow({
                   Variant
                 </label>
                 <select
-                  value={selectedVariant}
+                  value={selectedVariantValue}
                   onChange={(event) => setSelectedVariant(event.target.value)}
                   className="h-9 w-full rounded-md border px-2 text-xs outline-none"
                   style={{
@@ -307,7 +286,7 @@ function ExerciseAllocationRow({
                 </label>
                 <select
                   value={selectedDay}
-                  onChange={(event) => setSelectedDay(event.target.value)}
+                  onChange={(event) => setSelectedDayDraft(event.target.value)}
                   className="h-9 w-full rounded-md border px-2 text-xs outline-none"
                   style={{
                     borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
@@ -331,7 +310,7 @@ function ExerciseAllocationRow({
                 <button
                   type="button"
                   onClick={() => void handleApply()}
-                  disabled={isUpdating || selectedDayNumber == null || (!isComboRoutine && !selectedProgression && !selectedVariant)}
+                  disabled={isUpdating || selectedDayNumber == null || (!isComboRoutine && !selectedProgressionValue && !selectedVariantValue)}
                   className="inline-flex h-9 shrink-0 items-center justify-center rounded-md border px-3 text-xs font-semibold transition-colors disabled:opacity-60"
                   style={{
                     borderColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
@@ -359,7 +338,7 @@ function ExerciseAllocationRow({
                         const progressionLabel = getProgressionLabel(entry.progression);
                         const label = `${entry.variant || "Default"}${progressionLabel ? ` • ${progressionLabel}` : ""}`;
                         const isActive = getProgressionValue(entry.progression) === selectedProgressionValue
-                          && (entry.variant || "") === (selectedVariant || "");
+                          && (entry.variant || "") === selectedVariantValue;
                         return (
                           <button
                             key={`${exercise.id}-assigned-entry-${selectedDayNumber}-${index}`}

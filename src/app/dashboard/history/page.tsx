@@ -285,6 +285,7 @@ export default function HistoryPage() {
   const [mobileQuickCheckinLatestWeight, setMobileQuickCheckinLatestWeight] = useState<number | null>(null);
   const [mobileQuickCheckinTodayWeight, setMobileQuickCheckinTodayWeight] = useState<number | null>(null);
   const [mobileQuickCheckinTodayNote, setMobileQuickCheckinTodayNote] = useState("");
+  const [mobileQuickCheckinStateReady, setMobileQuickCheckinStateReady] = useState(false);
   const [mobileQuickCheckinLoading, setMobileQuickCheckinLoading] = useState(false);
   const [mobileQuickCheckinSaving, setMobileQuickCheckinSaving] = useState(false);
   const [mobileQuickCheckinMessage, setMobileQuickCheckinMessage] = useState<string | null>(null);
@@ -516,6 +517,7 @@ export default function HistoryPage() {
 
     let cancelled = false;
     const loadTodayCheckinState = async () => {
+      setMobileQuickCheckinStateReady(false);
       try {
         const todayKey = getTodayDateKey();
         const [latestWeightPayload, checkinsPayload] = await Promise.all([
@@ -543,6 +545,10 @@ export default function HistoryPage() {
           setMobileQuickCheckinLatestWeight(null);
           setMobileQuickCheckinTodayWeight(null);
           setMobileQuickCheckinTodayNote("");
+        }
+      } finally {
+        if (!cancelled) {
+          setMobileQuickCheckinStateReady(true);
         }
       }
     };
@@ -837,7 +843,10 @@ export default function HistoryPage() {
       ? lt("Log and review combo routines")
       : lt("Training and Quick history");
   const isFriendTrainOverlay = Boolean(targetUserId);
-  const shouldShowWeightSwipeHint = !isFriendTrainOverlay && mobileQuickCheckinTodayWeight == null && !showWeightHintThankYou;
+  const shouldShowWeightSwipeHint = !isFriendTrainOverlay
+    && mobileQuickCheckinStateReady
+    && mobileQuickCheckinTodayWeight == null
+    && !showWeightHintThankYou;
   const shouldShowWeightThankYou = !isFriendTrainOverlay && showWeightHintThankYou;
   const friendRailWidthPx = 64;
   const trainRailWidthPx = 64;

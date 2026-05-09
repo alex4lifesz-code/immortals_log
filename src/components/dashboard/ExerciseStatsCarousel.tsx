@@ -96,25 +96,23 @@ export default function ExerciseStatsCarousel({
       .map(([value]) => value);
   }, [exercises, filterMode]);
 
-  // Reset selected filter when mode changes
-  useEffect(() => {
-    setSelectedFilter("");
-    onFilterChange(filterMode, "");
-  }, [filterMode, onFilterChange]);
-
   useEffect(() => {
     if (selectedFilter && !filterOptions.includes(selectedFilter)) {
-      setSelectedFilter("");
       onFilterChange(filterMode, "");
     }
   }, [selectedFilter, filterOptions, filterMode, onFilterChange]);
 
+  const effectiveSelectedFilter = filterOptions.includes(selectedFilter) ? selectedFilter : "";
+
   const handleFilterModeChange = (newMode: FilterMode) => {
+    if (newMode === filterMode) return;
     setFilterMode(newMode);
+    setSelectedFilter("");
+    onFilterChange(newMode, "");
   };
 
   const handleFilterSelect = (filter: string) => {
-    const newFilter = selectedFilter === filter ? "" : filter;
+    const newFilter = effectiveSelectedFilter === filter ? "" : filter;
     setSelectedFilter(newFilter);
     onFilterChange(filterMode, newFilter);
   };
@@ -165,8 +163,8 @@ export default function ExerciseStatsCarousel({
               Feed controls
             </p>
             <p className="mt-1 text-[12px] text-[color:var(--text-primary)]">
-              {selectedFilter
-                ? `Showing ${selectedFilter} activity in ${scope === "friends" ? "friends" : "community"}.`
+              {effectiveSelectedFilter
+                ? `Showing ${effectiveSelectedFilter} activity in ${scope === "friends" ? "friends" : "community"}.`
                 : scope === "friends"
                   ? "Browse recent activity from your circle."
                   : "Browse recent activity from the wider community."}
@@ -204,7 +202,7 @@ export default function ExerciseStatsCarousel({
               {mode === "category" ? "Category" : "Muscle"}
             </button>
           ))}
-          {selectedFilter ? (
+          {effectiveSelectedFilter ? (
             <button
               type="button"
               onClick={() => handleFilterSelect("")}
@@ -263,7 +261,7 @@ export default function ExerciseStatsCarousel({
                 initial={{ opacity: 0, x: 12 }}
                 animate={{ opacity: 1, x: 0 }}
                 onClick={() => handleFilterSelect("")}
-                className={selectedFilter === "" ? activeChipButton : inactiveChipButton}
+                className={effectiveSelectedFilter === "" ? activeChipButton : inactiveChipButton}
               >
                 All activity <span className="ml-1 text-[color:var(--text-muted)]">{communityLogsWithoutUser.length}</span>
               </motion.button>
@@ -281,7 +279,7 @@ export default function ExerciseStatsCarousel({
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: idx * 0.02 }}
                     onClick={() => handleFilterSelect(option)}
-                    className={selectedFilter === option ? activeChipButton : inactiveChipButton}
+                    className={effectiveSelectedFilter === option ? activeChipButton : inactiveChipButton}
                   >
                     {option} <span className="ml-1 text-[color:var(--text-muted)]">{matchingLogs.length}</span>
                   </motion.button>

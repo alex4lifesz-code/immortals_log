@@ -77,6 +77,7 @@ interface CheckInRow {
   userId: string;
   present: boolean;
   weight?: number | null;
+  comment?: string | null;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────
@@ -216,16 +217,14 @@ function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendD
   const isAdmin = user?.role === "admin";
   const [loading, setLoading] = useState(true);
   const [logs, setLogs] = useState<FeedLog[]>([]);
+  const [checkInMarkers, setCheckInMarkers] = useState<Record<string, { hasWeight: boolean; hasNote: boolean }>>({});
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
   const [showNonMutualInFeed, setShowNonMutualInFeed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem(NON_MUTUAL_VISIBILITY_KEY) === "1";
   });
 
-  useEffect(() => {
-    if (isAdmin || !showNonMutualInFeed) return;
-    setShowNonMutualInFeed(false);
-  }, [isAdmin, showNonMutualInFeed]);
+  const effectiveShowNonMutualInFeed = isAdmin && showNonMutualInFeed;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -247,11 +246,10 @@ function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendD
     };
   }, [isAdmin]);
 
-  const feedScope = isAdmin && showNonMutualInFeed ? "community" : "friends";
+  const feedScope = effectiveShowNonMutualInFeed ? "community" : "friends";
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
 
     type FeedExercise = {
       id: string;
@@ -281,11 +279,31 @@ function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendD
       }>;
     };
 
-    api
-      .get<{ exercises: FeedExercise[] }>(`/api/feed?scope=${feedScope}`)
-      .then((data) => {
+    Promise.all([
+      api.get<{ exercises: FeedExercise[] }>(`/api/feed?scope=${feedScope}`),
+      api
+        .get<{ checkins?: CheckInRow[] }>(`/api/checkins?scope=${feedScope}`)
+        .catch(() => ({ checkins: [] as CheckInRow[] })),
+    ])
+      .then(([data, checkinsData]) => {
         if (cancelled) return;
         const allLogs: FeedLog[] = [];
+        const nextCheckInMarkers: Record<string, { hasWeight: boolean; hasNote: boolean }> = {};
+
+        for (const checkin of checkinsData.checkins || []) {
+          const dateKey = String(checkin.date || "").slice(0, 10);
+          if (!checkin.userId || !dateKey) continue;
+          const hasWeight = checkin.weight != null && Number.isFinite(Number(checkin.weight));
+          const hasNote = typeof checkin.comment === "string" && checkin.comment.trim().length > 0;
+          if (!hasWeight && !hasNote) continue;
+          const markerKey = `${checkin.userId}:${dateKey}`;
+          const existing = nextCheckInMarkers[markerKey] || { hasWeight: false, hasNote: false };
+          nextCheckInMarkers[markerKey] = {
+            hasWeight: existing.hasWeight || hasWeight,
+            hasNote: existing.hasNote || hasNote,
+          };
+        }
+
         for (const exercise of data.exercises || []) {
           for (const progress of exercise.userProgress || []) {
             for (const log of progress.logs || []) {
@@ -321,6 +339,7 @@ function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendD
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
         setLogs(allLogs);
+        setCheckInMarkers(nextCheckInMarkers);
       })
       .catch(() => {
         // silent — empty state handles it
@@ -375,6 +394,14 @@ function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendD
             exerciseGroups[key].logs.push(log);
           }
 
+          const groupEntries = Object.entries(exerciseGroups);
+          const firstGroupKeyByUser: Record<string, string> = {};
+          for (const [entryKey, entryGroup] of groupEntries) {
+            if (!firstGroupKeyByUser[entryGroup.userId]) {
+              firstGroupKeyByUser[entryGroup.userId] = entryKey;
+            }
+          }
+
           return (
             <div key={day}>
               <div className={`flex items-center gap-2 ${groupIndex === 0 ? "mb-2" : "mb-2 mt-6"}`}>
@@ -386,7 +413,7 @@ function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendD
               </div>
 
               <div className="space-y-1">
-                {Object.entries(exerciseGroups).map(([groupKey, group]) => {
+                {groupEntries.map(([groupKey, group]) => {
                   const scopedGroupKey = `${day}::${groupKey}`;
                   const hasMultiple = group.logs.length > 1;
                   const isExpanded = expandedKeys.has(scopedGroupKey);
@@ -412,9 +439,58 @@ function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendD
                       )
                     : "";
                   const displayUserName = isCurrentUserLog ? lt("Me") : group.userName;
+                  const checkInMarker = checkInMarkers[`${group.userId}:${day}`];
+                  const showCheckInBlock = Boolean(checkInMarker) && firstGroupKeyByUser[group.userId] === groupKey;
+                  const primaryCheckInText = checkInMarker?.hasWeight
+                    ? lt("Has logged their weight!")
+                    : checkInMarker?.hasNote
+                      ? lt("Has created a note!")
+                      : "";
+                  const secondaryCheckInText = checkInMarker?.hasWeight && checkInMarker?.hasNote
+                    ? lt("Has created a note!")
+                    : "";
 
                   return (
                     <div key={groupKey}>
+                      {showCheckInBlock ? (
+                        <article
+                          className="mx-1 my-0.5 rounded-md px-3 py-2.5"
+                          style={{
+                            border: "1px solid color-mix(in srgb, var(--ink-light) 40%, transparent)",
+                            backgroundColor: "color-mix(in srgb, var(--ink-mid) 48%, var(--ink-deep))",
+                          }}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="min-w-0 text-sm font-semibold leading-tight" style={{ color: "var(--text-primary)" }}>
+                              {primaryCheckInText}
+                            </p>
+                            <button
+                              type="button"
+                              className="shrink-0 text-[11px]"
+                              style={{
+                                color: userNameColor,
+                                cursor: isCurrentUserLog ? "default" : "pointer",
+                              }}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                if (!isCurrentUserLog) onOpenFriendDrawer?.(group.userId);
+                              }}
+                              disabled={isCurrentUserLog}
+                              aria-label={isCurrentUserLog ? undefined : lt("Open friend drawer")}
+                            >
+                              {displayUserName}
+                            </button>
+                          </div>
+                          {secondaryCheckInText ? (
+                            <p
+                              className="mt-0.5 text-[11px]"
+                              style={{ color: "var(--text-muted)" }}
+                            >
+                              {secondaryCheckInText}
+                            </p>
+                          ) : null}
+                        </article>
+                      ) : null}
                       {/* Exercise header — train-style row */}
                       <article
                         className="mx-1 my-0.5 rounded-md px-3 py-2.5"

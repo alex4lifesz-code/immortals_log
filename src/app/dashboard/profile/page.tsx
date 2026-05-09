@@ -71,11 +71,7 @@ export default function ProfilePage() {
   }, [user?.id]);
 
   useEffect(() => {
-    if (!user?.id) {
-      setWeightTrendLabel(null);
-      setCheckInTotalCount(null);
-      return;
-    }
+    if (!user?.id) return;
 
     let cancelled = false;
 

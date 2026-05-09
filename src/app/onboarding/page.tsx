@@ -43,10 +43,11 @@ export default function OnboardingPage() {
   // Resume from last saved step
   useEffect(() => {
     if (!onboarding.loading && onboarding.step > 0 && onboarding.step < TOTAL_STEPS) {
-      setCurrentStep(onboarding.step);
+      queueMicrotask(() => setCurrentStep(onboarding.step));
     }
-    if (onboarding.profile?.recommendedTier) {
-      setRecommendedTier(onboarding.profile.recommendedTier);
+    const recommendedTier = onboarding.profile?.recommendedTier;
+    if (recommendedTier) {
+      queueMicrotask(() => setRecommendedTier(recommendedTier));
     }
   }, [onboarding.loading, onboarding.step, onboarding.profile]);
 

@@ -722,7 +722,7 @@ export default function ExerciseDetailPage() {
                                     onClick={() => moveProgressionStage(index, -1)}
                                     disabled={index === 0}
                                     className="rounded px-1 disabled:opacity-35"
-                                    style={{ color: "#b5bac1" }}
+                                    style={{ color: "var(--text-muted)" }}
                                     title="Move up"
                                   >
                                     ↑
@@ -732,7 +732,7 @@ export default function ExerciseDetailPage() {
                                     onClick={() => moveProgressionStage(index, 1)}
                                     disabled={index === progression.length - 1}
                                     className="rounded px-1 disabled:opacity-35"
-                                    style={{ color: "#b5bac1" }}
+                                    style={{ color: "var(--text-muted)" }}
                                     title="Move down"
                                   >
                                     ↓

@@ -77,7 +77,10 @@ export default function DataManagement() {
   };
 
   useEffect(() => {
-    void refreshUsers();
+    const timer = window.setTimeout(() => {
+      void refreshUsers();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [user?.id]);
 
   const targetUserId = selectedUserId || user?.id || "";

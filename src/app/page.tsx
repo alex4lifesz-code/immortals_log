@@ -298,7 +298,7 @@ export default function LoginPage() {
                 size="lg"
                 glow
                 className="w-full !border-jade-glow/80 hover:!border-jade-light"
-                style={{ backgroundColor: 'var(--jade-glow)', color: '#ffffff' }}
+                style={{ backgroundColor: "var(--jade-glow)", color: "var(--cloud-white)" }}
                 disabled={loading}
               >
                 {loading
@@ -318,9 +318,13 @@ export default function LoginPage() {
                 onClick={() => persistLanguageMode("english")}
                 className="rounded border px-2 py-1 text-[10px] login-lang-btn"
                 style={{
-                  borderColor: languageMode === "english" ? "var(--jade-glow)" : "rgba(60, 70, 90, 0.5)",
-                  color: languageMode === "english" ? "var(--jade-glow)" : "#9eaab6",
-                  backgroundColor: "rgba(10, 14, 22, 0.5)",
+                  borderColor: languageMode === "english"
+                    ? "var(--jade-glow)"
+                    : "color-mix(in srgb, var(--ink-light) 50%, transparent)",
+                  color: languageMode === "english"
+                    ? "var(--jade-glow)"
+                    : "var(--text-muted)",
+                  backgroundColor: "color-mix(in srgb, var(--ink-deep) 50%, transparent)",
                 }}
               >
                 English
@@ -330,9 +334,13 @@ export default function LoginPage() {
                 onClick={() => persistLanguageMode("vietnamese")}
                 className="rounded border px-2 py-1 text-[10px] login-lang-btn"
                 style={{
-                  borderColor: languageMode === "vietnamese" ? "var(--jade-glow)" : "rgba(60, 70, 90, 0.5)",
-                  color: languageMode === "vietnamese" ? "var(--jade-glow)" : "#9eaab6",
-                  backgroundColor: "rgba(10, 14, 22, 0.5)",
+                  borderColor: languageMode === "vietnamese"
+                    ? "var(--jade-glow)"
+                    : "color-mix(in srgb, var(--ink-light) 50%, transparent)",
+                  color: languageMode === "vietnamese"
+                    ? "var(--jade-glow)"
+                    : "var(--text-muted)",
+                  backgroundColor: "color-mix(in srgb, var(--ink-deep) 50%, transparent)",
                 }}
               >
                 Tiếng Việt

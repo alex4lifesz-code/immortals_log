@@ -17,7 +17,7 @@ function mockCtx(pathname: string, cookieValue?: string): MiddlewareContext {
     request: {
       nextUrl: { pathname },
       cookies,
-    } as any,
+    } as unknown as MiddlewareContext["request"],
     route: "unmatched",
     token: null,
     auth: null,
