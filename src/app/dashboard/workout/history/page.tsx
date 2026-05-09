@@ -18,6 +18,7 @@ type WorkoutHistoryEntry = {
   category: string;
   progressionLabel: string;
   log: ProgressionLog;
+  sourceType: "individual" | "combo";
 };
 
 function compareLogRecency(a: Pick<ProgressionLog, "id" | "createdAt">, b: Pick<ProgressionLog, "id" | "createdAt">): number {
@@ -89,9 +90,26 @@ export default function WorkoutHistoryPage() {
               category: (exercise.category || "Other").trim() || "Other",
               progressionLabel: exercise.tiers.find((tier) => tier.level === log.level)?.name ?? `Progression ${log.level}`,
               log,
+              sourceType: "individual" as const,
             }));
           })
           .sort((a, b) => compareLogRecency(a.log, b.log));
+
+        const entriesByTimestamp = new Map<string, WorkoutHistoryEntry[]>();
+        nextEntries.forEach((entry) => {
+          const existing = entriesByTimestamp.get(entry.log.createdAt) ?? [];
+          existing.push(entry);
+          entriesByTimestamp.set(entry.log.createdAt, existing);
+        });
+
+        entriesByTimestamp.forEach((entriesAtTimestamp) => {
+          if (entriesAtTimestamp.length < 2) return;
+          const distinctExerciseCount = new Set(entriesAtTimestamp.map((entry) => entry.exerciseId)).size;
+          if (distinctExerciseCount < 2) return;
+          entriesAtTimestamp.forEach((entry) => {
+            entry.sourceType = "combo";
+          });
+        });
 
         setEntries(nextEntries);
       } catch {
@@ -170,9 +188,23 @@ export default function WorkoutHistoryPage() {
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-normal italic leading-tight" style={{ color: "var(--text-muted)" }}>
-                            {composedExerciseName}
-                        </p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="truncate text-sm font-normal italic leading-tight" style={{ color: "var(--text-muted)" }}>
+                              {composedExerciseName}
+                          </p>
+                          {entry.sourceType === "combo" ? (
+                            <span
+                              className="shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.06em]"
+                              style={{
+                                borderColor: "color-mix(in srgb, var(--gold) 54%, transparent)",
+                                backgroundColor: "color-mix(in srgb, var(--gold) 14%, transparent)",
+                                color: "var(--gold)",
+                              }}
+                            >
+                              {lt("Combo")}
+                            </span>
+                          ) : null}
+                        </div>
                       </div>
                       <span className="shrink-0 text-[11px]" style={{ color: "var(--text-muted)" }}>
                         {formatRelativeRecentDate(entry.log.createdAt, dateFormat, settings.timeZone)}

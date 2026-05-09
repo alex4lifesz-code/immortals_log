@@ -27,6 +27,8 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   const disableMotion = themeStyle === "discord" || prefersReducedMotion;
   const isWorkoutInputFullscreen =
     pathname?.startsWith("/dashboard/train/input/")
+    || pathname?.startsWith("/dashboard/train/combo-input")
+    || pathname?.startsWith("/dashboard/train/combo-log/")
     || pathname?.startsWith("/dashboard/workout-history/input/")
     || pathname?.startsWith("/dashboard/exercise-db/")
     || false;

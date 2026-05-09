@@ -25,6 +25,8 @@ import {
 interface Exercise {
   id: string;
   name: string;
+  allocationType?: "exercise" | "combo";
+  comboStopCount?: number;
   wuxiaName?: string;
   category?: string;
   difficulty: string;
@@ -42,7 +44,7 @@ interface ExerciseManagementDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   exercises: Exercise[];
-  onUpdateDayAssignments: (exerciseId: string, assignedDays: string) => Promise<void>;
+  onUpdateDayAssignments: (exerciseId: string, assignedDays: string, sourceType?: "exercise" | "combo") => Promise<void>;
   selectedDayFilter?: number | null;
 }
 
@@ -58,10 +60,11 @@ function ExerciseAllocationRow({
   focusedDay: number | null;
   expanded: boolean;
   onToggleExpand: () => void;
-  onApplyAssignmentPayload: (exerciseId: string, assignedDaysPayload: string) => Promise<void>;
+  onApplyAssignmentPayload: (exerciseId: string, assignedDaysPayload: string, sourceType?: "exercise" | "combo") => Promise<void>;
   isUpdating: boolean;
 }) {
   const { settings } = useDisplaySettings();
+  const isComboRoutine = exercise.allocationType === "combo";
   const displayName = getExerciseDisplayName(exercise, settings.terminologyMode, settings.showExerciseForeignLanguage);
   const [selectedProgression, setSelectedProgression] = useState("");
   const [selectedVariant, setSelectedVariant] = useState("");
@@ -110,9 +113,11 @@ function ExerciseAllocationRow({
   const selectedDayNumber = selectedDay === "" ? null : Number(selectedDay);
   const selectedAssignmentsForDay = selectedDayNumber == null ? [] : (assignmentDetails[selectedDayNumber] || []);
   const selectedProgressionValue = selectedProgression || "";
-  const selectedCombinationAssigned = selectedAssignmentsForDay.some(
-    (entry) => getProgressionValue(entry.progression) === selectedProgressionValue && (entry.variant || "") === (selectedVariant || ""),
-  );
+  const selectedCombinationAssigned = isComboRoutine
+    ? (selectedDayNumber != null && assigned.includes(selectedDayNumber))
+    : selectedAssignmentsForDay.some(
+      (entry) => getProgressionValue(entry.progression) === selectedProgressionValue && (entry.variant || "") === (selectedVariant || ""),
+    );
 
   useEffect(() => {
     if (selectedDayNumber == null) {
@@ -139,6 +144,24 @@ function ExerciseAllocationRow({
   const handleApply = async () => {
     if (selectedDayNumber == null) return;
     const shouldAssign = !selectedCombinationAssigned;
+
+    if (isComboRoutine) {
+      if (!shouldAssign) {
+        const confirmed = window.confirm(`Remove ${displayName} from ${DAYS_OF_WEEK[selectedDayNumber]}?`);
+        if (!confirmed) return;
+      }
+
+      const days = new Set(parseDayAssignments(exercise.assignedDays || ""));
+      if (shouldAssign) {
+        days.add(selectedDayNumber);
+      } else {
+        days.delete(selectedDayNumber);
+      }
+
+      const payload = serializeDayAssignmentPayload(Array.from(days));
+      await onApplyAssignmentPayload(exercise.id, payload, "combo");
+      return;
+    }
 
     const progressionLabel = progressionOptions.find((option) => option.value === selectedProgression)?.label || undefined;
     const selectedProgressionForCompare = selectedProgression || "";
@@ -176,7 +199,7 @@ function ExerciseAllocationRow({
     }
 
     const payload = serializeDayAssignmentPayload(Array.from(days), details);
-    await onApplyAssignmentPayload(exercise.id, payload);
+    await onApplyAssignmentPayload(exercise.id, payload, "exercise");
   };
 
   return (
@@ -191,7 +214,19 @@ function ExerciseAllocationRow({
         style={{ color: isAllocated ? "var(--jade-light)" : "var(--text-primary)" }}
         aria-expanded={expanded}
       >
-        <span className="truncate text-sm font-semibold leading-tight">{displayName}</span>
+        <span className="min-w-0 truncate text-sm font-semibold leading-tight">{displayName}</span>
+        {isComboRoutine ? (
+          <span
+            className="shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.06em]"
+            style={{
+              borderColor: "color-mix(in srgb, var(--gold) 54%, transparent)",
+              backgroundColor: "color-mix(in srgb, var(--gold) 14%, transparent)",
+              color: "var(--gold)",
+            }}
+          >
+            Combo
+          </span>
+        ) : null}
         <svg
           className={`h-4 w-4 shrink-0 transition-transform ${expanded ? "rotate-180" : "rotate-0"}`}
           fill="none"
@@ -214,7 +249,8 @@ function ExerciseAllocationRow({
             className="overflow-hidden"
           >
             <div className="mt-2 space-y-2">
-              <div>
+              {!isComboRoutine ? (
+                <div>
                 <label className="mb-1 block text-[10px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>
                   Progression
                 </label>
@@ -233,9 +269,15 @@ function ExerciseAllocationRow({
                     <option key={`${exercise.id}-progression-${option.value}`} value={option.value}>{option.label}</option>
                   ))}
                 </select>
-              </div>
+                </div>
+              ) : (
+                <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>
+                  {exercise.comboStopCount ? `${exercise.comboStopCount} exercises in combo` : "Combo routine"}
+                </p>
+              )}
 
-              <div>
+              {!isComboRoutine ? (
+                <div>
                 <label className="mb-1 block text-[10px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>
                   Variant
                 </label>
@@ -256,7 +298,8 @@ function ExerciseAllocationRow({
                     </option>
                   ))}
                 </select>
-              </div>
+                </div>
+              ) : null}
 
               <div>
                 <label className="mb-1 block text-[10px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>
@@ -288,7 +331,7 @@ function ExerciseAllocationRow({
                 <button
                   type="button"
                   onClick={() => void handleApply()}
-                  disabled={isUpdating || selectedDayNumber == null || (!selectedProgression && !selectedVariant)}
+                  disabled={isUpdating || selectedDayNumber == null || (!isComboRoutine && !selectedProgression && !selectedVariant)}
                   className="inline-flex h-9 shrink-0 items-center justify-center rounded-md border px-3 text-xs font-semibold transition-colors disabled:opacity-60"
                   style={{
                     borderColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
@@ -303,7 +346,13 @@ function ExerciseAllocationRow({
               </div>
 
               <div className="rounded-md border px-2 py-1.5" style={{ borderColor: "color-mix(in srgb, var(--ink-light) 60%, transparent)" }}>
-                {selectedDayNumber != null && selectedAssignmentsForDay.length > 0 ? (
+                {isComboRoutine ? (
+                  selectedDayNumber != null && selectedCombinationAssigned ? (
+                    <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>
+                      Assigned to {DAYS_OF_WEEK[selectedDayNumber]}
+                    </p>
+                  ) : null
+                ) : selectedDayNumber != null && selectedAssignmentsForDay.length > 0 ? (
                   <>
                     <div className="flex flex-wrap gap-1.5">
                       {selectedAssignmentsForDay.map((entry, index) => {
@@ -356,10 +405,11 @@ export default function ExerciseManagementDrawer({
 }: ExerciseManagementDrawerProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [showAssignedOnly, setShowAssignedOnly] = useState(false);
+  const [showCombo, setShowCombo] = useState(true);
   const [dayFilter, setDayFilter] = useState<number | null>(null);
   const [typeFilter, setTypeFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
-  const [sortBy, setSortBy] = useState<"name-az" | "name-za" | "realm-az" | "path-az" | "custom">("name-az");
+  const [sortBy, setSortBy] = useState<"name-az" | "name-za" | "realm-az" | "path-az" | "combo-first" | "custom">("name-az");
   const [sortManuallySelected, setSortManuallySelected] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [expandedExerciseId, setExpandedExerciseId] = useState<string | null>(null);
@@ -408,13 +458,14 @@ export default function ExerciseManagementDrawer({
     return exercises.filter((exercise) => {
       const matchesSearch = matchesLooseSearch(getExerciseSearchText(exercise), searchTerm);
       const matchesAssignedOnly = !showAssignedOnly || parseDayAssignments(exercise.assignedDays || "").length > 0;
+      const matchesComboVisibility = showCombo || exercise.allocationType !== "combo";
       const matchesDay = dayFilter == null || isDayAssigned(exercise.assignedDays || "", dayFilter);
       const matchesType = !typeFilter || exercise.type === typeFilter;
       const categoryValue = (exercise.category || exercise.targetGroup || "").trim();
       const matchesCategory = !categoryFilter || categoryValue === categoryFilter;
-      return matchesSearch && matchesAssignedOnly && matchesDay && matchesType && matchesCategory;
+      return matchesSearch && matchesAssignedOnly && matchesComboVisibility && matchesDay && matchesType && matchesCategory;
     });
-  }, [categoryFilter, dayFilter, exercises, searchTerm, showAssignedOnly, typeFilter]);
+  }, [categoryFilter, dayFilter, exercises, searchTerm, showAssignedOnly, showCombo, typeFilter]);
 
   const sortedFilteredExercises = useMemo(() => {
     const list = [...filteredExercises];
@@ -458,12 +509,22 @@ export default function ExerciseManagementDrawer({
       });
     }
 
+    if (sortBy === "combo-first") {
+      return list.sort((left, right) => {
+        const leftCombo = left.allocationType === "combo";
+        const rightCombo = right.allocationType === "combo";
+        if (leftCombo !== rightCombo) return leftCombo ? -1 : 1;
+        return left.name.localeCompare(right.name);
+      });
+    }
+
     return list.sort((left, right) => left.name.localeCompare(right.name));
   }, [filteredExercises, sortBy, sortManuallySelected]);
 
   const clearFilters = () => {
     setSearchTerm("");
     setShowAssignedOnly(false);
+    setShowCombo(true);
     setDayFilter(null);
     setTypeFilter("");
     setCategoryFilter("");
@@ -471,12 +532,12 @@ export default function ExerciseManagementDrawer({
     setSortManuallySelected(false);
   };
 
-  const hasActiveFilters = Boolean(showAssignedOnly || dayFilter != null || typeFilter || categoryFilter || sortBy !== "name-az" || sortManuallySelected);
+  const hasActiveFilters = Boolean(showAssignedOnly || !showCombo || dayFilter != null || typeFilter || categoryFilter || sortBy !== "name-az" || sortManuallySelected);
 
-  const handleApplyAssignmentPayload = async (exerciseId: string, assignedDaysPayload: string) => {
+  const handleApplyAssignmentPayload = async (exerciseId: string, assignedDaysPayload: string, sourceType: "exercise" | "combo" = "exercise") => {
     setUpdatingExerciseId(exerciseId);
     try {
-      await onUpdateDayAssignments(exerciseId, assignedDaysPayload);
+      await onUpdateDayAssignments(exerciseId, assignedDaysPayload, sourceType);
     } finally {
       setUpdatingExerciseId(null);
     }
@@ -583,6 +644,24 @@ export default function ExerciseManagementDrawer({
                           <option key={cat} value={cat}>{cat}</option>
                         ))}
                       </select>
+                      <button
+                        type="button"
+                        aria-pressed={showCombo}
+                        aria-label="Toggle combo routines in day allocation"
+                        onClick={() => setShowCombo((prev) => !prev)}
+                        className="inline-flex h-8 items-center rounded-md border px-3 text-[11px] font-medium transition-colors"
+                        style={{
+                          borderColor: showCombo
+                            ? "color-mix(in srgb, var(--gold) 62%, transparent)"
+                            : "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                          backgroundColor: showCombo
+                            ? "color-mix(in srgb, var(--gold) 18%, var(--ink-deep))"
+                            : "color-mix(in srgb, var(--ink-mid) 86%, var(--ink-deep))",
+                          color: showCombo ? "var(--cloud-white)" : "var(--text-secondary)",
+                        }}
+                      >
+                        {showCombo ? "Show combo" : "Hide combo"}
+                      </button>
                       <button
                         type="button"
                         aria-pressed={showAssignedOnly}
@@ -720,7 +799,7 @@ export default function ExerciseManagementDrawer({
                                 value={sortBy}
                                 onChange={(event) => {
                                   setSortManuallySelected(true);
-                                  setSortBy(event.target.value as "name-az" | "name-za" | "realm-az" | "path-az" | "custom");
+                                  setSortBy(event.target.value as "name-az" | "name-za" | "realm-az" | "path-az" | "combo-first" | "custom");
                                 }}
                                 className="h-11 w-full rounded-xl border px-3 text-sm outline-none"
                                 style={{
@@ -733,6 +812,7 @@ export default function ExerciseManagementDrawer({
                                 <option value="name-za">Exercise name (Z to A)</option>
                                 <option value="realm-az">Difficulty level (A to Z)</option>
                                 <option value="path-az">Exercise type (A to Z)</option>
+                                <option value="combo-first">Combo first, then exercise name</option>
                                 <option value="custom">Manual order (drag and drop)</option>
                               </select>
                             </div>

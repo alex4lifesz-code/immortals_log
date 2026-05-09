@@ -126,6 +126,7 @@ interface UnifiedFlatLogEntry {
   origHoldTime: number | null;
   origHoldTime2: number | null;
   origHoldTime3: number | null;
+  sourceType: "individual" | "combo";
 }
 
 interface ExerciseHistoryEntry {
@@ -162,6 +163,7 @@ interface MobileInputPickerState {
 
 function flattenLogsUnified(exercises: ProgressionExercise[]): UnifiedFlatLogEntry[] {
   const entries: UnifiedFlatLogEntry[] = [];
+  const exerciseIdsByTimestamp = new Map<string, Set<string>>();
 
   for (const ex of exercises) {
     const progress = ex.userProgress[0];
@@ -206,9 +208,28 @@ function flattenLogsUnified(exercises: ProgressionExercise[]): UnifiedFlatLogEnt
         origHoldTime: log.holdTime,
         origHoldTime2: log.holdTime2,
         origHoldTime3: log.holdTime3,
+        sourceType: "individual",
       });
+
+      const existingExerciseIds = exerciseIdsByTimestamp.get(log.createdAt) ?? new Set<string>();
+      existingExerciseIds.add(ex.id);
+      exerciseIdsByTimestamp.set(log.createdAt, existingExerciseIds);
     }
   }
+
+  const comboTimestamps = new Set<string>();
+  exerciseIdsByTimestamp.forEach((exerciseIds, timestamp) => {
+    if (exerciseIds.size >= 2) {
+      comboTimestamps.add(timestamp);
+    }
+  });
+
+  entries.forEach((entry) => {
+    if (comboTimestamps.has(entry.date)) {
+      entry.sourceType = "combo";
+    }
+  });
+
   entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   return entries;
 }
@@ -279,6 +300,7 @@ const TrainingLogMobileCard = memo(function TrainingLogMobileCard({
   formattedEntryDate,
   weightUnit,
   timedUnit,
+  sourceType,
   onOpenExerciseHistory,
 }: {
   entry: UnifiedFlatLogEntry;
@@ -287,6 +309,7 @@ const TrainingLogMobileCard = memo(function TrainingLogMobileCard({
   formattedEntryDate: string;
   weightUnit: "kg" | "lbs";
   timedUnit: TimedUnitPref;
+  sourceType: "individual" | "combo";
   onOpenExerciseHistory: () => void;
 }) {
   const typeTone = getCategoryTone(typeLabel);
@@ -386,6 +409,19 @@ const TrainingLogMobileCard = memo(function TrainingLogMobileCard({
             title={entry.variant}
           >
             {entry.variant}
+          </span>
+        )}
+        {sourceType === "combo" && (
+          <span
+            className={badgeClassName}
+            style={{
+              borderColor: "color-mix(in srgb, var(--gold) 54%, transparent)",
+              backgroundColor: "color-mix(in srgb, var(--gold) 14%, transparent)",
+              color: "var(--gold)",
+              boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--gold) 18%, transparent)",
+            }}
+          >
+            {t("Combo", "normal")}
           </span>
         )}
       </div>
@@ -3725,6 +3761,7 @@ function TrainingLogTable({
                       formattedEntryDate={formattedEntryDate}
                       weightUnit={weightUnit}
                       timedUnit={timedUnit}
+                      sourceType={entry.sourceType}
                       onOpenExerciseHistory={() => openExerciseHistoryFromMobileCard(entry)}
                     />
                   );
@@ -4113,6 +4150,18 @@ function TrainingLogTable({
                                         {entryDisplayName}
                                       </Link>
                                     )}
+                                    {entry.sourceType === "combo" ? (
+                                      <span
+                                        className="inline-flex shrink-0 items-center rounded-full border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.06em]"
+                                        style={{
+                                          borderColor: "color-mix(in srgb, var(--gold) 54%, transparent)",
+                                          backgroundColor: "color-mix(in srgb, var(--gold) 14%, transparent)",
+                                          color: "var(--gold)",
+                                        }}
+                                      >
+                                        {t("Combo", "normal")}
+                                      </span>
+                                    ) : null}
                                     {(showSimpleProgressionLabel || showSimpleVariantLabel) && (
                                       <div className="flex flex-wrap items-center gap-1 text-[10px]" style={{ color: "var(--text-muted)" }}>
                                         {showSimpleProgressionLabel && (
@@ -4165,6 +4214,18 @@ function TrainingLogTable({
                                     >
                                       {entryDisplayName}
                                     </Link>
+                                    {entry.sourceType === "combo" ? (
+                                      <span
+                                        className="inline-flex shrink-0 items-center rounded-full border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.06em]"
+                                        style={{
+                                          borderColor: "color-mix(in srgb, var(--gold) 54%, transparent)",
+                                          backgroundColor: "color-mix(in srgb, var(--gold) 14%, transparent)",
+                                          color: "var(--gold)",
+                                        }}
+                                      >
+                                        {t("Combo", "normal")}
+                                      </span>
+                                    ) : null}
                                     {(showSimpleProgressionLabel || showSimpleVariantLabel) && (
                                       <div className="flex flex-wrap items-center gap-1 text-[10px]" style={{ color: "var(--text-muted)" }}>
                                         {showSimpleProgressionLabel && (
@@ -4576,6 +4637,7 @@ function TrainingLogTable({
                     formattedEntryDate={formattedEntryDate}
                     weightUnit={weightUnit}
                     timedUnit={timedUnit}
+                    sourceType={entry.sourceType}
                     onOpenExerciseHistory={() => openExerciseHistoryFromMobileCard(entry)}
                   />
                 );

@@ -203,8 +203,8 @@ export default function WorkoutHistoryDetailPage() {
                   const progressionValue = detail.progressionLabel?.trim() || "-";
                   const parentValue = detail.exerciseName?.trim() || "-";
                   const variationValue = detail.log.variant?.trim() || "-";
-                  const modValue = detail.log.modifier?.trim() || "-";
-                  const notesValue = detail.log.notes?.trim() || "-";
+                  const modValue = detail.log.modifier?.trim() || "";
+                  const notesValue = detail.log.notes?.trim() || "";
                   const leftDetailRows = [
                     { label: `${lt("Parent")}:`, value: parentValue, valueColor: "var(--cloud-white)" },
                     { label: `${lt("Progression")}:`, value: progressionValue, valueColor: "var(--jade-light)" },

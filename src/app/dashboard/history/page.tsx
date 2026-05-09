@@ -23,13 +23,16 @@ import { DEFAULT_USER_PHYSIQUE, loadUserPhysique } from "@/lib/user-physique";
 import { PROGRESSION_EXERCISES_UPDATED_EVENT } from "@/lib/progression-events";
 import { DAYS_OF_WEEK, formatDateWithPreference, parseDayAssignmentDetailsList, parseDayAssignments } from "@/lib/constants";
 import { formatSetValue, type TimedUnitPref, type WeightUnit } from "@/lib/unit-conversion";
+import { normalizeTrainComboLogs, type TrainComboLog } from "@/lib/train-combo";
 import type { UserPhysiqueSettings } from "@/lib/user-physique";
 import type { ProgressionExercise, ProgressionLog } from "../workout/types";
 
 type WorkoutMetricRow = { weight: string; reps: string };
+type TrainMode = "train" | "combo";
 type TrainExerciseRow = {
   rowKey: string;
   exerciseId: string;
+  allocationType?: "exercise" | "combo";
   exerciseName: string;
   date: string | null;
   logId: string | null;
@@ -45,6 +48,7 @@ type TrainExerciseRow = {
   showAssignedContext?: boolean;
   isCompleted?: boolean;
   completionDate?: string | null;
+  sourceType?: "individual" | "combo";
 };
 
 function getWorkoutMetricRows(log: ProgressionLog, displayUnit: WeightUnit = "kg", timedUnit: TimedUnitPref = "seconds"): WorkoutMetricRow[] {
@@ -199,6 +203,18 @@ function TrainExerciseListRow({
                 </sup>
               ) : null}
             </p>
+            {row.sourceType === "combo" ? (
+              <span
+                className="shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.06em]"
+                style={{
+                  borderColor: "color-mix(in srgb, var(--gold) 54%, transparent)",
+                  backgroundColor: "color-mix(in srgb, var(--gold) 14%, transparent)",
+                  color: "var(--gold)",
+                }}
+              >
+                {t("Combo", "normal")}
+              </span>
+            ) : null}
           </div>
         </div>
         <span
@@ -280,6 +296,12 @@ export default function HistoryPage() {
   const [trainDayDrawerOpen, setTrainDayDrawerOpen] = useState(false);
   const [trainRailOverviewOpen, setTrainRailOverviewOpen] = useState(false);
   const [exerciseManagementOpen, setExerciseManagementOpen] = useState(false);
+  const [trainMode, setTrainMode] = useState<TrainMode>("train");
+  const [comboLogs, setComboLogs] = useState<TrainComboLog[]>([]);
+  const [comboRoutines, setComboRoutines] = useState<TrainComboLog[]>([]);
+  const [comboLoading, setComboLoading] = useState(false);
+  const [comboSearchQuery, setComboSearchQuery] = useState("");
+  const [expandedComboLogId, setExpandedComboLogId] = useState<string | null>(null);
   const [hideEmptyTrainDays, setHideEmptyTrainDays] = useState(true);
   const hideEmptyTrainDaysLoadedKeyRef = useRef<string | null>(null);
   const hideEmptyTrainDaysRemoteReadyRef = useRef(false);
@@ -287,6 +309,7 @@ export default function HistoryPage() {
   const mobileDrawerSearchInputRef = useRef<HTMLInputElement | null>(null);
   const mobileHistorySortPreferenceRef = useRef<"recent" | "oldest" | "name-az">("recent");
   const mobileLogFabSortPreferenceRef = useRef<"recent" | "oldest" | "name-az">("recent");
+  const modeTouchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const userId = user?.id ?? "";
   const targetUserId = searchParams.get("targetUserId") || "";
@@ -301,7 +324,25 @@ export default function HistoryPage() {
   const prefillExerciseName = searchParams.get("prefillExercise");
   const prefillProgression = searchParams.get("prefillProgression");
   const prefillVariant = searchParams.get("prefillVariant");
+  const requestedTrainMode: TrainMode = searchParams.get("trainMode") === "combo" ? "combo" : "train";
   const librarySheetRequested = searchParams.get("library") === "1" && !targetUserId && !searchParams.get("friendView");
+
+  const setTrainModeWithQuery = useCallback((nextMode: TrainMode) => {
+    if (Boolean(targetUserId)) return;
+    setTrainMode(nextMode);
+
+    const params = new URLSearchParams(searchParams.toString());
+    if (nextMode === "combo") {
+      params.set("trainMode", "combo");
+    } else {
+      params.delete("trainMode");
+    }
+
+    const next = params.toString();
+    const current = searchParams.toString();
+    if (next === current) return;
+    router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
+  }, [pathname, router, searchParams, targetUserId]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -591,6 +632,77 @@ export default function HistoryPage() {
   }, [mobileLogFabSort]);
 
   useEffect(() => {
+    if (targetUserId && trainMode !== "train") {
+      setTrainMode("train");
+      return;
+    }
+    if (!targetUserId && requestedTrainMode !== trainMode) {
+      setTrainMode(requestedTrainMode);
+    }
+  }, [requestedTrainMode, targetUserId, trainMode]);
+
+  const fetchComboLogs = useCallback(async () => {
+    if (!userId || targetUserId) {
+      setComboLogs([]);
+      setComboRoutines([]);
+      setComboLoading(false);
+      return;
+    }
+
+    setComboLoading(true);
+    try {
+      const payload = await api.get<{ logs?: unknown; routines?: unknown }>("/api/train-combo", { cache: "no-store" });
+      setComboLogs(normalizeTrainComboLogs(payload.logs));
+      setComboRoutines(normalizeTrainComboLogs(payload.routines));
+    } catch (error) {
+      console.error("Failed to load train combo logs:", error);
+      setComboLogs([]);
+      setComboRoutines([]);
+    } finally {
+      setComboLoading(false);
+    }
+  }, [targetUserId, userId]);
+
+  useEffect(() => {
+    void fetchComboLogs();
+  }, [fetchComboLogs]);
+
+  useEffect(() => {
+    const handleComboLogsUpdated = () => {
+      void fetchComboLogs();
+    };
+
+    window.addEventListener("train-combo-logs-updated", handleComboLogsUpdated);
+    return () => {
+      window.removeEventListener("train-combo-logs-updated", handleComboLogsUpdated);
+    };
+  }, [fetchComboLogs]);
+
+  const handleModeTouchStart = useCallback((event: React.TouchEvent<HTMLElement>) => {
+    if (targetUserId) return;
+    const touch = event.touches?.[0];
+    if (!touch) return;
+    modeTouchStartRef.current = { x: touch.clientX, y: touch.clientY };
+  }, [targetUserId]);
+
+  const handleModeTouchEnd = useCallback((event: React.TouchEvent<HTMLElement>) => {
+    if (targetUserId) return;
+    const start = modeTouchStartRef.current;
+    const touch = event.changedTouches?.[0];
+    modeTouchStartRef.current = null;
+    if (!start || !touch) return;
+
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+    if (Math.abs(deltaX) < 56 || Math.abs(deltaX) <= Math.abs(deltaY)) return;
+
+    const nextMode: TrainMode = deltaX < 0 ? "combo" : "train";
+    if (nextMode !== trainMode) {
+      setTrainModeWithQuery(nextMode);
+    }
+  }, [setTrainModeWithQuery, targetUserId, trainMode]);
+
+  useEffect(() => {
     const hasQuery = mobileSearchQuery.trim().length > 0;
     if (hasQuery) {
       if (mobileHistorySort !== "relevant") setMobileHistorySort("relevant");
@@ -715,17 +827,224 @@ export default function HistoryPage() {
     };
   }, [activeUserId, orderedVisibleUsers, user?.name, user?.username, userId]);
 
+  const trainModeTitle = trainMode === "combo" ? `${lt("Train")} - ${lt("Combo")}` : lt("Train");
   const trainPageTitle = targetUserDisplayName
     ? `${targetUserDisplayName} Train ${friendView === "history" ? "History" : friendView === "chart" ? "Chart" : "Check-in"}`
-    : lt("Train");
+    : trainModeTitle;
   const subtitle = targetUserDisplayName
     ? `Review ${targetUserDisplayName}'s training logs and cultivation entries`
-    : lt("Training and Quick history");
+    : trainMode === "combo"
+      ? lt("Log and review combo routines")
+      : lt("Training and Quick history");
   const isFriendTrainOverlay = Boolean(targetUserId);
   const shouldShowWeightSwipeHint = !isFriendTrainOverlay && mobileQuickCheckinTodayWeight == null && !showWeightHintThankYou;
   const shouldShowWeightThankYou = !isFriendTrainOverlay && showWeightHintThankYou;
   const friendRailWidthPx = 64;
   const trainRailWidthPx = 64;
+
+  const inferredComboLogs = useMemo(() => {
+    const routines = [...comboRoutines, ...comboLogs];
+    if (routines.length === 0 || exercises.length === 0) return [] as TrainComboLog[];
+
+    const logsByTimestamp = new Map<string, Array<{ exerciseId: string; level: number; variant: string; name: string }>>();
+    for (const exercise of exercises) {
+      const logs = exercise.userProgress?.[0]?.logs ?? [];
+      for (const log of logs) {
+        if (!log?.createdAt) continue;
+        const existing = logsByTimestamp.get(log.createdAt) ?? [];
+        existing.push({
+          exerciseId: exercise.id,
+          level: Number.isFinite(log.level) ? log.level : 1,
+          variant: (log.variant || "").trim().toLowerCase(),
+          name: exercise.name,
+        });
+        logsByTimestamp.set(log.createdAt, existing);
+      }
+    }
+
+    const getRoutineMatchScore = (
+      routine: TrainComboLog,
+      entries: Array<{ exerciseId: string; level: number; variant: string; name: string }>,
+    ) => {
+      const remainingEntries = [...entries];
+      let matches = 0;
+
+      for (const stop of routine.exercises) {
+        const stopVariant = (stop.variant || "").trim().toLowerCase();
+        const index = remainingEntries.findIndex((entry) => {
+          if (entry.exerciseId !== stop.exerciseId) return false;
+          if (typeof stop.progressionLevel === "number" && entry.level !== stop.progressionLevel) return false;
+          if (stopVariant && stopVariant !== entry.variant) return false;
+          return true;
+        });
+        if (index !== -1) {
+          matches += 1;
+          remainingEntries.splice(index, 1);
+        }
+      }
+
+      return matches;
+    };
+
+    const inferred: TrainComboLog[] = [];
+    for (const [createdAt, entries] of logsByTimestamp.entries()) {
+      const distinctExerciseCount = new Set(entries.map((entry) => entry.exerciseId)).size;
+      if (distinctExerciseCount < 2) continue;
+
+      let bestRoutine: TrainComboLog | null = null;
+      let bestScore = 0;
+      for (const routine of routines) {
+        const score = getRoutineMatchScore(routine, entries);
+        if (score > bestScore) {
+          bestScore = score;
+          bestRoutine = routine;
+        }
+      }
+
+      if (!bestRoutine || bestScore < 2) continue;
+
+      inferred.push({
+        id: `derived-combo-${bestRoutine.id}-${createdAt}`,
+        routineName: bestRoutine.routineName,
+        notes: bestRoutine.notes,
+        trainingDate: createdAt.slice(0, 10),
+        createdAt,
+        exercises: bestRoutine.exercises,
+      });
+    }
+
+    return inferred;
+  }, [comboLogs, comboRoutines, exercises]);
+
+  const combinedComboLogs = useMemo(() => {
+    const merged = [...comboLogs];
+    const existingKeys = new Set(comboLogs.map((log) => `${log.routineName.toLowerCase()}::${log.createdAt}`));
+
+    for (const inferred of inferredComboLogs) {
+      const key = `${inferred.routineName.toLowerCase()}::${inferred.createdAt}`;
+      if (existingKeys.has(key)) continue;
+      merged.push(inferred);
+    }
+
+    return [...merged].sort((left, right) => {
+      const leftMs = new Date(left.createdAt).getTime();
+      const rightMs = new Date(right.createdAt).getTime();
+      if (rightMs !== leftMs) return rightMs - leftMs;
+      return right.id.localeCompare(left.id);
+    });
+  }, [comboLogs, inferredComboLogs]);
+
+  const filteredComboLogs = useMemo(() => {
+    const query = comboSearchQuery.trim().toLowerCase();
+    if (!query) return combinedComboLogs;
+    return combinedComboLogs.filter((log) => {
+      const haystack = `${log.routineName} ${log.notes || ""} ${log.exercises.map((entry) => entry.name).join(" ")}`.toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [combinedComboLogs, comboSearchQuery]);
+
+  const filteredComboRoutines = useMemo(() => {
+    const query = comboSearchQuery.trim().toLowerCase();
+    if (!query) return comboRoutines;
+    return comboRoutines.filter((routine) => {
+      const haystack = `${routine.routineName} ${routine.notes || ""} ${routine.exercises.map((entry) => entry.name).join(" ")}`.toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [comboRoutines, comboSearchQuery]);
+
+  const comboSourceLogIds = useMemo(() => {
+    const logsByTimestamp = new Map<string, Array<{ id: string; exerciseId: string }>>();
+
+    for (const exercise of exercises) {
+      const logs = exercise.userProgress?.[0]?.logs ?? [];
+      for (const log of logs) {
+        if (!log?.id || !log?.createdAt) continue;
+        const existing = logsByTimestamp.get(log.createdAt) ?? [];
+        existing.push({ id: log.id, exerciseId: exercise.id });
+        logsByTimestamp.set(log.createdAt, existing);
+      }
+    }
+
+    const comboIds = new Set<string>();
+    for (const entries of logsByTimestamp.values()) {
+      if (entries.length < 2) continue;
+      const exerciseCount = new Set(entries.map((entry) => entry.exerciseId)).size;
+      if (exerciseCount < 2) continue;
+      entries.forEach((entry) => comboIds.add(entry.id));
+    }
+
+    return comboIds;
+  }, [exercises]);
+
+  const comboRoutineNameByLogId = useMemo(() => {
+    const logsByTimestamp = new Map<string, Array<{ id: string; exerciseId: string; level: number; variant: string }>>();
+
+    for (const exercise of exercises) {
+      const logs = exercise.userProgress?.[0]?.logs ?? [];
+      for (const log of logs) {
+        if (!log?.id || !log?.createdAt) continue;
+        const existing = logsByTimestamp.get(log.createdAt) ?? [];
+        existing.push({
+          id: log.id,
+          exerciseId: exercise.id,
+          level: Number.isFinite(log.level) ? log.level : 1,
+          variant: (log.variant || "").trim().toLowerCase(),
+        });
+        logsByTimestamp.set(log.createdAt, existing);
+      }
+    }
+
+    const routines = [...comboRoutines, ...comboLogs];
+    const nameByLogId = new Map<string, string>();
+
+    const getRoutineMatchScore = (
+      routine: TrainComboLog,
+      entries: Array<{ id: string; exerciseId: string; level: number; variant: string }>,
+    ) => {
+      const remainingEntries = [...entries];
+      let matches = 0;
+
+      for (const stop of routine.exercises) {
+        const stopVariant = (stop.variant || "").trim().toLowerCase();
+        const index = remainingEntries.findIndex((entry) => {
+          if (entry.exerciseId !== stop.exerciseId) return false;
+          if (typeof stop.progressionLevel === "number" && entry.level !== stop.progressionLevel) return false;
+          if (stopVariant && stopVariant !== entry.variant) return false;
+          return true;
+        });
+        if (index !== -1) {
+          matches += 1;
+          remainingEntries.splice(index, 1);
+        }
+      }
+
+      return matches;
+    };
+
+    for (const entries of logsByTimestamp.values()) {
+      const distinctExerciseCount = new Set(entries.map((entry) => entry.exerciseId)).size;
+      if (distinctExerciseCount < 2) continue;
+
+      let bestRoutine: TrainComboLog | null = null;
+      let bestScore = 0;
+
+      for (const routine of routines) {
+        const score = getRoutineMatchScore(routine, entries);
+        if (score > bestScore) {
+          bestScore = score;
+          bestRoutine = routine;
+        }
+      }
+
+      if (!bestRoutine || bestScore < 2) continue;
+
+      entries.forEach((entry) => {
+        nameByLogId.set(entry.id, bestRoutine.routineName);
+      });
+    }
+
+    return nameByLogId;
+  }, [comboLogs, comboRoutines, exercises]);
 
   const dayAssignmentSummary = useMemo(() => {
     const rowsByDay: TrainExerciseRow[][] = Array.from({ length: 7 }, () => []);
@@ -819,6 +1138,7 @@ export default function HistoryPage() {
           const row: TrainExerciseRow = {
             rowKey: `${exercise.id}:${day}:${assignedProgression || "base"}:${assignedVariant || "base"}:${index}`,
             exerciseId: exercise.id,
+            allocationType: "exercise",
             exerciseName,
             date: referenceLog?.createdAt ?? null,
             logId: referenceLog?.id ?? null,
@@ -834,6 +1154,7 @@ export default function HistoryPage() {
             showAssignedContext: true,
             isCompleted: Boolean(doneLog),
             completionDate: doneLog?.createdAt ?? null,
+            sourceType: referenceLog?.id && comboSourceLogIds.has(referenceLog.id) ? "combo" : "individual",
           };
 
           rowsByDay[day].push(row);
@@ -842,6 +1163,51 @@ export default function HistoryPage() {
             remainingCounts[day] += 1;
           }
         });
+      }
+    }
+
+    for (const routine of comboRoutines) {
+      const assignedDays = parseDayAssignments(routine.assignedDays || "");
+      if (assignedDays.length === 0) continue;
+
+      const routineLogs = combinedComboLogs
+        .filter((log) => log.routineName.trim().toLowerCase() === routine.routineName.trim().toLowerCase())
+        .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
+      const latestRoutineLog = routineLogs[0] ?? null;
+      const recentRoutineLogs = routineLogs.filter((log) => {
+        const ts = new Date(log.createdAt).getTime();
+        return Number.isFinite(ts) && now - ts <= dayMs;
+      });
+
+      for (const day of assignedDays) {
+        if (day < 0 || day > 6) continue;
+
+        const row: TrainExerciseRow = {
+          rowKey: `combo:${routine.id}:${day}`,
+          exerciseId: routine.id,
+          allocationType: "combo",
+          exerciseName: routine.routineName,
+          date: latestRoutineLog?.createdAt ?? routine.createdAt,
+          logId: latestRoutineLog?.id ?? null,
+          progression: "Combo",
+          variant: "",
+          category: "Combo",
+          isDeleted: false,
+          recent24hCount: recentRoutineLogs.length,
+          assignedDays: routine.assignedDays || "",
+          assignedProgression: "Combo",
+          assignedVariant: undefined,
+          showAssignedContext: true,
+          isCompleted: recentRoutineLogs.length > 0,
+          completionDate: recentRoutineLogs[0]?.createdAt ?? null,
+          sourceType: "combo",
+        };
+
+        rowsByDay[day].push(row);
+        assignedCounts[day] += 1;
+        if (recentRoutineLogs.length === 0) {
+          remainingCounts[day] += 1;
+        }
       }
     }
 
@@ -863,14 +1229,43 @@ export default function HistoryPage() {
     }
 
     return { rowsByDay, assignedCounts, remainingCounts };
-  }, [exercises]);
+  }, [comboRoutines, comboSourceLogIds, combinedComboLogs, exercises]);
 
-  const handleUpdateDayAssignments = useCallback(async (exerciseId: string, assignedDays: string) => {
-    const response = await api.patch<{ exercise?: ProgressionExercise }>(`/api/progressions/${exerciseId}`, { assignedDays });
+  const handleUpdateAllocationAssignments = useCallback(async (
+    itemId: string,
+    assignedDays: string,
+    sourceType: "exercise" | "combo" = "exercise",
+  ) => {
+    if (sourceType === "combo") {
+      const targetRoutine = comboRoutines.find((routine) => routine.id === itemId);
+      if (!targetRoutine) return;
+
+      await api.put("/api/train-combo", {
+        id: targetRoutine.id,
+        routineName: targetRoutine.routineName,
+        trainingDate: targetRoutine.trainingDate,
+        notes: targetRoutine.notes,
+        exercises: targetRoutine.exercises,
+        assignedDays,
+      });
+
+      setComboRoutines((prev) => prev.map((routine) => (
+        routine.id === itemId
+          ? { ...routine, assignedDays }
+          : routine
+      )));
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("train-combo-logs-updated"));
+      }
+      return;
+    }
+
+    const response = await api.patch<{ exercise?: ProgressionExercise }>(`/api/progressions/${itemId}`, { assignedDays });
     const returnedExercise = response.exercise;
 
     setExercises((prev) => {
-      const index = prev.findIndex((exercise) => exercise.id === exerciseId);
+      const index = prev.findIndex((exercise) => exercise.id === itemId);
       if (index === -1) return prev;
 
       const next = [...prev];
@@ -888,7 +1283,24 @@ export default function HistoryPage() {
       next[index] = returnedExercise;
       return next;
     });
-  }, []);
+  }, [comboRoutines]);
+
+  const dayAllocationItems = useMemo(() => {
+    const comboItems = comboRoutines.map((routine) => ({
+      id: routine.id,
+      name: routine.routineName,
+      allocationType: "combo" as const,
+      comboStopCount: routine.exercises.length,
+      assignedDays: routine.assignedDays || "",
+      difficulty: "Combo",
+      type: "Combo",
+      category: "Combo",
+      tiers: [],
+      variations: [],
+    }));
+
+    return [...exercises, ...comboItems];
+  }, [comboRoutines, exercises]);
 
   const handleUserScopeChange = (nextUserId: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -959,6 +1371,7 @@ export default function HistoryPage() {
         isDeleted: deletedExercise,
         recent24hCount,
         assignedDays: exercise.assignedDays || "",
+        sourceType: comboSourceLogIds.has(latestLog.id) ? "combo" : "individual",
       });
     }
 
@@ -968,7 +1381,7 @@ export default function HistoryPage() {
       return (b.logId || "").localeCompare(a.logId || "");
     });
     return rows;
-  }, [exercises]);
+  }, [comboSourceLogIds, exercises]);
 
   const mobileHistoryCategoryOptions = useMemo(() => {
     const categories = Array.from(new Set(mobileExerciseRows.map((row) => row.category).filter(Boolean)));
@@ -1217,6 +1630,22 @@ export default function HistoryPage() {
   }, [mobileExerciseDrawerExerciseId]);
 
   useEffect(() => {
+    setMobileExerciseDrawerExerciseId(null);
+    setMobileLogFabOpen(false);
+    setMobileQuickCheckinOpen(false);
+    setTrainDayDrawerOpen(false);
+    setTrainDayFilter(null);
+    setTrainRailOverviewOpen(false);
+    setExerciseManagementOpen(false);
+  }, [trainMode]);
+
+  useEffect(() => {
+    if (trainMode !== "combo") {
+      setExpandedComboLogId(null);
+    }
+  }, [trainMode]);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
 
     const isOpen = Boolean(mobileExerciseDrawerExerciseId || mobileLogFabOpen);
@@ -1231,6 +1660,7 @@ export default function HistoryPage() {
     if (typeof window === "undefined") return;
 
     const onTrainReset = () => {
+      setTrainMode("train");
       setMobileExerciseDrawerExerciseId(null);
       setMobileLogFabOpen(false);
       setMobileSearchQuery("");
@@ -1253,6 +1683,7 @@ export default function HistoryPage() {
       setTrainDayFilter(null);
       setTrainRailOverviewOpen(false);
       setExerciseManagementOpen(false);
+      setComboSearchQuery("");
 
     };
 
@@ -1360,12 +1791,47 @@ export default function HistoryPage() {
 
                           {friendView === "history" && (
                             <>
+                              {!isFriendTrainOverlay ? (
+                                <div className="mt-2">
+                                  <div className="grid grid-cols-2 gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => setTrainModeWithQuery("train")}
+                                      className="h-8 rounded-none border-b-2 text-[11px] font-semibold uppercase tracking-[0.06em]"
+                                      style={{
+                                        borderColor: trainMode === "train"
+                                          ? "color-mix(in srgb, var(--accent) 70%, transparent)"
+                                          : "transparent",
+                                        backgroundColor: "transparent",
+                                        color: trainMode === "train" ? "var(--text-primary)" : "var(--text-secondary)",
+                                      }}
+                                    >
+                                      {lt("Train")}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setTrainModeWithQuery("combo")}
+                                      className="h-8 rounded-none border-b-2 text-[11px] font-semibold uppercase tracking-[0.06em]"
+                                      style={{
+                                        borderColor: trainMode === "combo"
+                                          ? "color-mix(in srgb, var(--forest) 74%, transparent)"
+                                          : "transparent",
+                                        backgroundColor: "transparent",
+                                        color: trainMode === "combo" ? "var(--text-primary)" : "var(--text-secondary)",
+                                      }}
+                                    >
+                                      {lt("Train - Combo")}
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : null}
+
                               <div className="mt-2 flex items-center gap-2">
                                 <SearchField
-                                  value={mobileSearchQuery}
-                                  onChange={setMobileSearchQuery}
-                                  placeholder={lt("Search exercises")}
-                                  aria-label={lt("Search exercises")}
+                                  value={trainMode === "combo" ? comboSearchQuery : mobileSearchQuery}
+                                  onChange={trainMode === "combo" ? setComboSearchQuery : setMobileSearchQuery}
+                                  placeholder={trainMode === "combo" ? lt("Search combo routines") : lt("Search exercises")}
+                                  aria-label={trainMode === "combo" ? lt("Search combo routines") : lt("Search exercises")}
                                   wrapperClassName="min-w-0 flex-1"
                                   className="h-8 min-w-0 text-sm"
                                   style={{
@@ -1374,19 +1840,21 @@ export default function HistoryPage() {
                                     color: "var(--cloud-white)",
                                   }}
                                 />
-                                <button
-                                  type="button"
-                                  onClick={() => setMobileHistoryFilterOpen(true)}
-                                  className="theme-control-btn relative inline-flex h-8 w-8 items-center justify-center rounded-md border transition-colors"
-                                  aria-label={lt("Open filters")}
-                                >
-                                  <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 5h18M6 12h12m-9 7h6" />
-                                  </svg>
-                                  {(mobileHistoryCategory !== "all" || mobileHistorySort !== "recent" || mobileHistoryRecency !== "all") ? (
-                                    <span className="absolute right-0.5 top-1 h-2 w-2 rounded-full" style={{ backgroundColor: "var(--accent)" }} />
-                                  ) : null}
-                                </button>
+                                {trainMode === "train" ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => setMobileHistoryFilterOpen(true)}
+                                    className="theme-control-btn relative inline-flex h-8 w-8 items-center justify-center rounded-md border transition-colors"
+                                    aria-label={lt("Open filters")}
+                                  >
+                                    <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 5h18M6 12h12m-9 7h6" />
+                                    </svg>
+                                    {(mobileHistoryCategory !== "all" || mobileHistorySort !== "recent" || mobileHistoryRecency !== "all") ? (
+                                      <span className="absolute right-0.5 top-1 h-2 w-2 rounded-full" style={{ backgroundColor: "var(--accent)" }} />
+                                    ) : null}
+                                  </button>
+                                ) : null}
                               </div>
 
                               {!isFriendTrainOverlay && (
@@ -1429,10 +1897,78 @@ export default function HistoryPage() {
                       {friendView === "history" ? (
                       <div
                         data-mobile-scroll-container="true"
+                        onTouchStart={handleModeTouchStart}
+                        onTouchEnd={handleModeTouchEnd}
                         className={isFriendTrainOverlay ? "flex-1 pb-[calc(var(--mobile-nav-offset)+0.5rem)]" : "min-h-0 flex-1 overflow-y-auto scrollbar-hide pb-[calc(var(--mobile-nav-offset)+0.75rem)]"}
                         style={isFriendTrainOverlay ? undefined : { WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain", touchAction: "pan-y" }}
                       >
-                        {filteredMobileExerciseRows.length === 0 ? (
+                        {trainMode === "combo" ? (
+                          comboLoading ? (
+                            <div className="px-3 py-4 text-center text-xs" style={{ color: "var(--text-muted)" }}>
+                              {lt("Loading combo history...")}
+                            </div>
+                          ) : filteredComboLogs.length === 0 ? (
+                            <div className="px-3 py-4 text-center text-xs" style={{ color: "var(--text-muted)" }}>
+                              {combinedComboLogs.length === 0 ? lt("No exercises logged.") : lt("No combo logs match your search.")}
+                            </div>
+                          ) : (
+                            filteredComboLogs.map((log) => (
+                              (() => {
+                                const isExpanded = expandedComboLogId === log.id;
+                                return (
+                              <article
+                                key={`combo-log-${log.id}`}
+                                className="mx-1 my-0.5 rounded-md px-3 py-2.5"
+                                style={{
+                                  cursor: "pointer",
+                                }}
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => setExpandedComboLogId((prev) => (prev === log.id ? null : log.id))}
+                                onKeyDown={(event) => {
+                                  if (event.key === "Enter" || event.key === " ") {
+                                    event.preventDefault();
+                                    setExpandedComboLogId((prev) => (prev === log.id ? null : log.id));
+                                  }
+                                }}
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <p className="min-w-0 flex-1 truncate text-sm font-semibold leading-tight" style={{ color: "color-mix(in srgb, var(--forest) 74%, var(--cloud-white) 26%)" }}>
+                                    {log.routineName}
+                                  </p>
+                                  <span className="shrink-0 text-[11px]" style={{ color: "var(--text-muted)" }}>
+                                    {formatRelativeRecentDate(log.createdAt, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone)}
+                                  </span>
+                                </div>
+                                <p className="mt-0.5 text-[11px] italic" style={{ color: "var(--text-muted)" }}>
+                                  {`${lt("Stops")}: ${log.exercises.map((entry) => entry.name).join(" • ")}`}
+                                </p>
+                                {log.notes ? (
+                                  <p className="mt-0.5 line-clamp-2 text-[11px]" style={{ color: "var(--text-secondary)" }}>
+                                    {log.notes}
+                                  </p>
+                                ) : null}
+                                {isExpanded ? (
+                                  <div className="mt-1.5 space-y-0.5 text-[11px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                                    {log.exercises.map((entry, index) => {
+                                      const progressionLabel = entry.progressionLevel != null
+                                        ? `${lt("Progression")} ${entry.progressionLevel}`
+                                        : lt("Progression 1");
+                                      const variantLabel = (entry.variant || "").trim() || lt("Default");
+                                      return (
+                                        <p key={`combo-log-entry-${log.id}-${entry.exerciseId}-${index}`}>
+                                          {`${index + 1}. ${entry.name} • ${progressionLabel} • ${lt("Variation")}: ${variantLabel}`}
+                                        </p>
+                                      );
+                                    })}
+                                  </div>
+                                ) : null}
+                              </article>
+                                );
+                              })()
+                            ))
+                          )
+                        ) : filteredMobileExerciseRows.length === 0 ? (
                           <div
                             className="px-3 py-4 text-center text-xs"
                             style={{
@@ -1694,6 +2230,14 @@ export default function HistoryPage() {
                           dateFormat={settings.dateFormat || "dd-mmm-yyyy"}
                           timeZone={settings.timeZone}
                           onActivate={(selectedRow) => {
+                            if (selectedRow.allocationType === "combo") {
+                              setDayDrawerLastSelectedRowKey(selectedRow.rowKey);
+                              setTrainDayDrawerOpen(false);
+                              setTrainDayFilter(null);
+                              router.push(`/dashboard/train/combo-log/${encodeURIComponent(selectedRow.exerciseId)}`);
+                              return;
+                            }
+
                             const progressionParam = selectedRow.assignedLevel != null
                               ? String(selectedRow.assignedLevel)
                               : (selectedRow.assignedProgression || selectedRow.progression);
@@ -1718,13 +2262,13 @@ export default function HistoryPage() {
       <ExerciseManagementDrawer
         isOpen={!isFriendTrainOverlay && exerciseManagementOpen}
         onClose={() => setExerciseManagementOpen(false)}
-        exercises={exercises}
-        onUpdateDayAssignments={handleUpdateDayAssignments}
+        exercises={dayAllocationItems}
+        onUpdateDayAssignments={handleUpdateAllocationAssignments}
         selectedDayFilter={trainDayFilter}
       />
 
       <AnimatePresence>
-        {friendView === "history" && mobileHistoryFilterOpen ? (
+        {friendView === "history" && trainMode === "train" && mobileHistoryFilterOpen ? (
           <>
             <motion.div
               key="mobile-history-filter-backdrop"
@@ -1897,7 +2441,7 @@ export default function HistoryPage() {
                   <div className="px-3 py-2.5">
                     <div className="flex items-center justify-between gap-2">
                       <h2 className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--mist-light)" }}>
-                        {lt("New Workout Log")}
+                        {trainMode === "combo" ? lt("New Combo Log") : lt("New Workout Log")}
                       </h2>
                       <button
                         type="button"
@@ -1908,7 +2452,7 @@ export default function HistoryPage() {
                           color: "var(--mist-light)",
                           backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
                         }}
-                        aria-label={lt("Close workout logger chooser")}
+                        aria-label={trainMode === "combo" ? lt("Close combo logger chooser") : lt("Close workout logger chooser")}
                       >
                         x
                       </button>
@@ -1916,10 +2460,10 @@ export default function HistoryPage() {
                   </div>
                   <div className="px-3 py-2.5 border-t" style={{ borderTopColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)" }}>
                     <SearchField
-                      value={mobileLogFabSearchQuery}
-                      onChange={setMobileLogFabSearchQuery}
-                      placeholder={lt("Search exercises")}
-                      aria-label={lt("Search exercises")}
+                      value={trainMode === "combo" ? comboSearchQuery : mobileLogFabSearchQuery}
+                      onChange={trainMode === "combo" ? setComboSearchQuery : setMobileLogFabSearchQuery}
+                      placeholder={trainMode === "combo" ? lt("Search combo routines") : lt("Search exercises")}
+                      aria-label={trainMode === "combo" ? lt("Search combo routines") : lt("Search exercises")}
                       className="h-8 text-sm"
                       style={{
                         borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
@@ -1927,41 +2471,43 @@ export default function HistoryPage() {
                         color: "var(--cloud-white)",
                       }}
                     />
-                    <div className="mt-2 grid grid-cols-2 gap-2">
-                      <select
-                        value={mobileLogFabCategory}
-                        onChange={(event) => setMobileLogFabCategory(event.target.value)}
-                        className="h-8 rounded-md border px-2 text-xs outline-none"
-                        style={{
-                          borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                          backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
-                          color: "var(--cloud-white)",
-                        }}
-                        aria-label={lt("Filter by category")}
-                      >
-                        {mobileFabCategoryOptions.map((category) => (
-                          <option key={`mobile-fab-category-${category}`} value={category}>
-                            {category === "all" ? lt("All categories") : category}
-                          </option>
-                        ))}
-                      </select>
-                      <select
-                        value={mobileLogFabSort}
-                        onChange={(event) => setMobileLogFabSort(event.target.value as "recent" | "oldest" | "name-az" | "relevant")}
-                        className="h-8 rounded-md border px-2 text-xs outline-none"
-                        style={{
-                          borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                          backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
-                          color: "var(--cloud-white)",
-                        }}
-                        aria-label={lt("Sort exercises")}
-                      >
-                        <option value="relevant">{lt("Relevant")}</option>
-                        <option value="recent">{lt("Recent first")}</option>
-                        <option value="oldest">{lt("Oldest first")}</option>
-                        <option value="name-az">{lt("Name A-Z")}</option>
-                      </select>
-                    </div>
+                    {trainMode === "train" ? (
+                      <div className="mt-2 grid grid-cols-2 gap-2">
+                        <select
+                          value={mobileLogFabCategory}
+                          onChange={(event) => setMobileLogFabCategory(event.target.value)}
+                          className="h-8 rounded-md border px-2 text-xs outline-none"
+                          style={{
+                            borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                            backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
+                            color: "var(--cloud-white)",
+                          }}
+                          aria-label={lt("Filter by category")}
+                        >
+                          {mobileFabCategoryOptions.map((category) => (
+                            <option key={`mobile-fab-category-${category}`} value={category}>
+                              {category === "all" ? lt("All categories") : category}
+                            </option>
+                          ))}
+                        </select>
+                        <select
+                          value={mobileLogFabSort}
+                          onChange={(event) => setMobileLogFabSort(event.target.value as "recent" | "oldest" | "name-az" | "relevant")}
+                          className="h-8 rounded-md border px-2 text-xs outline-none"
+                          style={{
+                            borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                            backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
+                            color: "var(--cloud-white)",
+                          }}
+                          aria-label={lt("Sort exercises")}
+                        >
+                          <option value="relevant">{lt("Relevant")}</option>
+                          <option value="recent">{lt("Recent first")}</option>
+                          <option value="oldest">{lt("Oldest first")}</option>
+                          <option value="name-az">{lt("Name A-Z")}</option>
+                        </select>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
 
@@ -1977,27 +2523,93 @@ export default function HistoryPage() {
                       backgroundColor: "transparent",
                     }}
                     onClick={() => {
+                      setLibrarySheetOpen(false);
+                      if (trainMode === "combo") {
+                        router.push("/dashboard/train/combo-input");
+                        return;
+                      }
                       const params = new URLSearchParams();
                       params.set("custom", "1");
                       const customName = mobileLogFabSearchQuery.trim();
                       if (customName) {
                         params.set("prefillExercise", customName);
                       }
-                      setLibrarySheetOpen(false);
                       router.push(`/dashboard/train/input/new?${params.toString()}`);
                     }}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <p className="text-sm font-semibold leading-tight" style={{ color: "color-mix(in srgb, var(--forest) 72%, black 28%)" }}>
-                        + {lt("New Custom Exercise")}
+                        + {trainMode === "combo" ? lt("New Combo Exercise") : lt("New Custom Exercise")}
                       </p>
                     </div>
                     <p className="mt-0.5 text-[11px] italic" style={{ color: "var(--text-muted)" }}>
-                      {lt("Create a new exercise name and send it to review.")}
+                      {trainMode === "combo"
+                        ? lt("Start a combo routine and add exercises like route stops.")
+                        : lt("Create a new exercise name and send it to review.")}
                     </p>
                   </button>
 
-                  {filteredMobileLogFabRows.length === 0 ? (
+                  {trainMode === "combo" ? (
+                    <button
+                      type="button"
+                      className="mx-1 my-0.5 block w-[calc(100%-0.5rem)] rounded-md px-3 py-2.5 text-left"
+                      style={{
+                        backgroundColor: "transparent",
+                      }}
+                      onClick={() => {
+                        setLibrarySheetOpen(false);
+                        router.push("/dashboard/train/combo-input?manage=1");
+                      }}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-semibold leading-tight" style={{ color: "color-mix(in srgb, var(--danger-hover) 78%, var(--cloud-white) 22%)" }}>
+                          {lt("Delete/Edit Combo Exercise")}
+                        </p>
+                      </div>
+                      <p className="mt-0.5 text-[11px] italic" style={{ color: "var(--text-muted)" }}>
+                        {lt("Pick a combo routine from the dropdown to edit or delete.")}
+                      </p>
+                    </button>
+                  ) : null}
+
+                  {trainMode === "combo" ? (
+                    comboLoading ? (
+                      <div className="px-3 py-4 text-center text-xs" style={{ color: "var(--text-muted)" }}>
+                        {lt("Loading combo history...")}
+                      </div>
+                    ) : filteredComboRoutines.length === 0 ? (
+                      <div className="px-3 py-4 text-center text-xs" style={{ color: "var(--text-muted)" }}>
+                        {comboRoutines.length === 0 ? lt("No combo exercises created yet.") : lt("No combo exercises match your search.")}
+                      </div>
+                    ) : (
+                      filteredComboRoutines.map((log) => (
+                        <button
+                          key={`mobile-combo-fab-row-${log.id}`}
+                          type="button"
+                          className="mx-1 my-0.5 block w-[calc(100%-0.5rem)] rounded-md px-3 py-2.5 text-left"
+                          style={{
+                            backgroundColor: "transparent",
+                          }}
+                          onClick={() => {
+                            setLibrarySheetOpen(false);
+                            router.push(`/dashboard/train/combo-log/${encodeURIComponent(log.id)}`);
+                          }}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-sm font-semibold leading-tight" style={{ color: "color-mix(in srgb, var(--forest) 74%, var(--cloud-white) 26%)" }}>
+                              {log.routineName}
+                            </p>
+                            <span className="shrink-0 text-[11px]" style={{ color: "var(--text-muted)" }}>
+                              {formatRelativeRecentDate(log.createdAt, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone)}
+                            </span>
+                          </div>
+                          <p className="mt-0.5 text-[11px] italic" style={{ color: "var(--text-muted)" }}>
+                            {`${lt("Stops")}: ${log.exercises.map((entry) => entry.name).join(" • ")}`}
+                          </p>
+                        </button>
+                      ))
+                    )
+                  ) : filteredMobileLogFabRows.length === 0 ? (
                     <div className="px-3 py-4 text-center text-xs" style={{ color: "var(--text-muted)" }}>
                       {lt("No exercises match your search or filters.")}
                     </div>
@@ -2399,9 +3011,11 @@ export default function HistoryPage() {
                     <>
                       {filteredSelectedMobileExerciseLogs.map((log) => {
                       const tierName = selectedMobileExercise?.tiers.find((tier) => tier.level === log.level)?.name ?? `Progression ${log.level}`;
+                      const comboRoutineName = comboRoutineNameByLogId.get(log.id);
+                      const titleLabel = comboRoutineName || tierName;
                       const variationValue = getVariantDisplayValue(log.variant);
-                      const modValue = getTextDisplayValue(log.modifier, "No modifier");
-                      const notesValue = getTextDisplayValue(log.notes, "No notes");
+                      const modValue = (log.modifier || "").trim();
+                      const notesValue = (log.notes || "").trim();
                       const alignedMetricRows = getWorkoutMetricRows(log, weightUnit, timedUnit);
                       const openEditorField = (step: string, field: string) => {
                         const params = new URLSearchParams({ step, field });
@@ -2422,20 +3036,34 @@ export default function HistoryPage() {
                           }}
                         >
                           <div className="flex items-start justify-between gap-2">
-                            {targetUserId ? (
-                              <p className="text-sm font-semibold leading-tight" style={{ color: "var(--jade-light)" }}>
-                                {tierName}
-                              </p>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => router.push(`/dashboard/workout-history/input/${log.id}`)}
-                                className="cursor-pointer text-left text-sm font-semibold leading-tight transition-colors hover:opacity-90"
-                                style={{ color: "var(--jade-light)" }}
-                              >
-                                {tierName}
-                              </button>
-                            )}
+                            <div className="flex min-w-0 items-start gap-1.5">
+                              {targetUserId ? (
+                                <p className="min-w-0 text-sm font-semibold leading-tight" style={{ color: "var(--jade-light)" }}>
+                                  {titleLabel}
+                                </p>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => router.push(`/dashboard/workout-history/input/${log.id}`)}
+                                  className="cursor-pointer text-left text-sm font-semibold leading-tight transition-colors hover:opacity-90"
+                                  style={{ color: "var(--jade-light)" }}
+                                >
+                                  {titleLabel}
+                                </button>
+                              )}
+                              {comboSourceLogIds.has(log.id) ? (
+                                <span
+                                  className="shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.06em]"
+                                  style={{
+                                    borderColor: "color-mix(in srgb, var(--gold) 54%, transparent)",
+                                    backgroundColor: "color-mix(in srgb, var(--gold) 14%, transparent)",
+                                    color: "var(--gold)",
+                                  }}
+                                >
+                                  {lt("Combo")}
+                                </span>
+                              ) : null}
+                            </div>
                             <span className="shrink-0 text-[11px]" style={{ color: "var(--text-muted)" }}>
                               {formatRelativeRecentDate(log.createdAt, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone)}
                             </span>
@@ -2533,7 +3161,7 @@ export default function HistoryPage() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {mobileQuickCheckinOpen ? (
+        {trainMode === "train" && mobileQuickCheckinOpen ? (
           <>
             <motion.div
               key="train-quick-checkin-backdrop"
@@ -2704,7 +3332,7 @@ export default function HistoryPage() {
         ) : null}
       </AnimatePresence>
 
-      {!mobileExerciseDrawerExerciseId && !mobileLogFabOpen && !mobileQuickCheckinOpen && !exerciseManagementOpen ? (
+      {!isFriendTrainOverlay && !mobileExerciseDrawerExerciseId && !mobileLogFabOpen && !mobileQuickCheckinOpen && !exerciseManagementOpen ? (
         <motion.button
           key="train-log-fab"
           type="button"
@@ -2723,6 +3351,8 @@ export default function HistoryPage() {
               return;
             }
 
+            if (trainMode === "combo") return;
+
             // Slide left to open quick weight/note drawer
             if (x <= -56 && Math.abs(x) >= Math.abs(y)) {
               setQuickCheckinOpen(true);
@@ -2737,16 +3367,16 @@ export default function HistoryPage() {
           style={{
             bottom: "calc(var(--mobile-nav-offset, calc(env(safe-area-inset-bottom,0px) + 4.85rem)) + 0.5rem)",
             borderColor: themeStyle === "ying-yang"
-              ? "color-mix(in srgb, var(--void-black) 42%, var(--accent))"
-              : "color-mix(in srgb, var(--accent) 48%, transparent)",
-            backgroundColor: "var(--accent)",
+              ? `color-mix(in srgb, var(--void-black) 42%, ${trainMode === "combo" ? "var(--forest)" : "var(--accent)"})`
+              : `color-mix(in srgb, ${trainMode === "combo" ? "var(--forest)" : "var(--accent)"} 48%, transparent)`,
+            backgroundColor: trainMode === "combo" ? "var(--forest)" : "var(--accent)",
             color: themeStyle === "ying-yang" ? "var(--void-black)" : "var(--cloud-white)",
-            boxShadow: "0 10px 28px color-mix(in srgb, var(--accent) 35%, transparent)",
+            boxShadow: `0 10px 28px color-mix(in srgb, ${trainMode === "combo" ? "var(--forest)" : "var(--accent)"} 35%, transparent)`,
           }}
-          aria-label={lt("Slide up for workout log or left for quick weight and note")}
-          title={lt("Slide up: workout log, slide left: quick weight/note")}
+          aria-label={trainMode === "combo" ? lt("Open combo logger chooser") : lt("Slide up for workout log or left for quick weight and note")}
+          title={trainMode === "combo" ? lt("Slide up: combo logger") : lt("Slide up: workout log, slide left: quick weight/note")}
         >
-          {shouldShowWeightSwipeHint || shouldShowWeightThankYou ? (
+          {trainMode === "train" && (shouldShowWeightSwipeHint || shouldShowWeightThankYou) ? (
             <motion.span
               className="pointer-events-none absolute right-[calc(100%+0.45rem)] top-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border px-2 py-1 text-[10px] font-medium"
               style={{
@@ -2763,10 +3393,10 @@ export default function HistoryPage() {
           ) : null}
           <motion.span
             aria-hidden="true"
-            animate={shouldShowWeightSwipeHint ? { x: [0, -8, 0] } : { x: 0 }}
-            transition={shouldShowWeightSwipeHint ? { duration: 1.05, repeat: Infinity, ease: "easeInOut" } : undefined}
+            animate={trainMode === "train" && shouldShowWeightSwipeHint ? { x: [0, -8, 0] } : { x: 0 }}
+            transition={trainMode === "train" && shouldShowWeightSwipeHint ? { duration: 1.05, repeat: Infinity, ease: "easeInOut" } : undefined}
           >
-            +
+            {trainMode === "combo" ? "C" : "+"}
           </motion.span>
         </motion.button>
       ) : null}
