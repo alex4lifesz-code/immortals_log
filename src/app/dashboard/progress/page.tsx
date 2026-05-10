@@ -14,7 +14,11 @@ import { DASHBOARD_ROUTES } from "@/lib/navigation";
 import { PROGRESSION_EXERCISES_UPDATED_EVENT } from "@/lib/progression-events";
 import type { ProgressionExercise, ProgressionLog } from "../workout/types";
 
-type TierStat = {
+type ComboRow = {
+  key: string;
+  progressionName: string;
+  variantName: string;
+  machineName: string;
   attempts: number;
   best: string;
   lastPerformedAt: string | null;
@@ -27,12 +31,12 @@ type ProgressSkill = {
   vietnameseName?: string;
   wuxiaName?: string;
   category: string;
-  tierNames: string[];
-  tierStats: TierStat[];
+  comboRows: ComboRow[];
   performed: number;
   lastLogAt: string | null;
   sessions14d: number;
-  attemptedTierCount: number;
+  loggedCombos: number;
+  catalogCombos: number;
   coveragePct: number;
 };
 
@@ -131,23 +135,57 @@ export default function ProgressPage() {
       const mapped = (data.exercises ?? []).map((exercise): ProgressSkill => {
           const logs = exercise.userProgress?.[0]?.logs ?? [];
           const sortedTiers = (exercise.tiers ?? []).slice().sort((a, b) => a.level - b.level);
-          const tierNames = sortedTiers.length > 0
-            ? sortedTiers.map((tier) => String(tier.name || `${lt("Progression")} ${tier.level}`).trim())
-            : [exercise.name];
+          const tierLookup = new Map<number, string>();
+          sortedTiers.forEach((tier) => {
+            tierLookup.set(tier.level, String(tier.name || `${lt("Progression")} ${tier.level}`).trim());
+          });
 
-          const tierStats = tierNames.map((_, index) => {
-            const levelLogs = logs.filter((log) => (Number(log.level) || 0) === index + 1);
-            const lastPerformedAt = levelLogs.length > 0
-              ? [...levelLogs]
+          // Catalog size: every (progression × variant × machine) combination counts
+          // as a unique "workout slot" under this parent. Grip (setupOption) is
+          // intentionally excluded from the count.
+          const tierCount = Math.max(1, sortedTiers.length);
+          const variantCount = Math.max(1, (exercise.variations ?? []).length);
+          const machineCount = Math.max(1, (exercise.modifiers ?? []).length);
+          const catalogCombos = tierCount * variantCount * machineCount;
+
+          // Group logs by (level, variant, modifier) — ignore setupOption/grip.
+          const comboMap = new Map<string, { logs: ProgressionLog[]; level: number; variant: string; modifier: string }>();
+          for (const log of logs) {
+            const level = Number(log.level) || 0;
+            const variant = (log.variant || "").trim();
+            const modifier = (log.modifier || "").trim();
+            const key = `${level}::${variant.toLowerCase()}::${modifier.toLowerCase()}`;
+            const existing = comboMap.get(key);
+            if (existing) {
+              existing.logs.push(log);
+            } else {
+              comboMap.set(key, { logs: [log], level, variant, modifier });
+            }
+          }
+
+          const comboRows: ComboRow[] = Array.from(comboMap.entries()).map(([key, entry]) => {
+            const lastPerformedAt = entry.logs.length > 0
+              ? [...entry.logs]
                   .map((log) => log.createdAt)
                   .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0]
               : null;
-
+            const progressionName = tierLookup.get(entry.level) || `${lt("Progression")} ${entry.level || 1}`;
             return {
-              attempts: levelLogs.length,
-              best: getBestStatText(levelLogs, lt),
+              key,
+              progressionName,
+              variantName: entry.variant || "",
+              machineName: entry.modifier || "",
+              attempts: entry.logs.length,
+              best: getBestStatText(entry.logs, lt),
               lastPerformedAt,
             };
+          });
+
+          comboRows.sort((a, b) => {
+            const aTime = a.lastPerformedAt ? new Date(a.lastPerformedAt).getTime() : 0;
+            const bTime = b.lastPerformedAt ? new Date(b.lastPerformedAt).getTime() : 0;
+            if (bTime !== aTime) return bTime - aTime;
+            return a.progressionName.localeCompare(b.progressionName);
           });
 
           const lastLogAt = logs.length > 0
@@ -156,8 +194,10 @@ export default function ProgressPage() {
                 .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0]
             : null;
 
-          const attemptedTierCount = tierStats.filter((tier) => tier.attempts > 0).length;
-          const coveragePct = tierNames.length > 0 ? Math.round((attemptedTierCount / tierNames.length) * 100) : 0;
+          const loggedCombos = comboRows.length;
+          const coveragePct = catalogCombos > 0
+            ? Math.min(100, Math.round((loggedCombos / catalogCombos) * 100))
+            : 0;
 
           return {
             id: exercise.id,
@@ -166,12 +206,12 @@ export default function ProgressPage() {
             vietnameseName: exercise.vietnameseName,
             wuxiaName: exercise.wuxiaName,
             category: getPrimaryCategory(exercise.category),
-            tierNames,
-            tierStats,
+            comboRows,
             performed: logs.length,
             lastLogAt,
             sessions14d: getLogsWithinDays(logs, 14).length,
-            attemptedTierCount,
+            loggedCombos,
+            catalogCombos,
             coveragePct,
           };
         });
@@ -534,8 +574,8 @@ export default function ProgressPage() {
                           </div>
                           <p className="mt-1 pl-7 text-[11px] text-[color:var(--text-secondary)]">
                             {isLogged
-                              ? `${skill.performed} ${lt("logs")} • ${skill.coveragePct}% ${lt("coverage")} • ${formatDaysAgo(skill.lastLogAt, lt)}`
-                              : `${skill.tierNames.length} ${lt("tiers available")} • ${lt("no sessions logged yet")}`}
+                              ? `${skill.performed} ${lt("logs")} • ${skill.loggedCombos}/${skill.catalogCombos} ${lt("workouts")} • ${skill.coveragePct}% • ${formatDaysAgo(skill.lastLogAt, lt)}`
+                              : `${skill.catalogCombos} ${lt("workouts available")} • ${lt("no sessions logged yet")}`}
                           </p>
                         </div>
 
@@ -565,18 +605,24 @@ export default function ProgressPage() {
                           </div>
 
                           <div className="mt-3">
-                            {skill.tierNames.map((tierName, index) => {
-                              const stat = skill.tierStats[index];
-                              return (
-                                <div key={skill.id + "-" + tierName + "-" + index} className="flex items-center justify-between gap-3 py-2">
-                                  <div className="min-w-0">
-                                    <p className="truncate text-[11px] font-medium text-[color:var(--text-primary)]">{tierName}</p>
-                                    <p className="mt-0.5 text-[10px] text-[color:var(--text-muted)]">{stat.attempts} {lt("attempts")} • {stat.best}</p>
+                            {skill.comboRows.length === 0 ? (
+                              <p className="py-2 text-[11px] text-[color:var(--text-muted)]">{lt("No workout combinations logged yet.")}</p>
+                            ) : (
+                              skill.comboRows.map((row) => {
+                                const subParts = [row.variantName, row.machineName].filter(Boolean);
+                                const subLabel = subParts.length > 0 ? subParts.join(" • ") : lt("Base");
+                                return (
+                                  <div key={skill.id + "-" + row.key} className="flex items-center justify-between gap-3 py-2">
+                                    <div className="min-w-0">
+                                      <p className="truncate text-[11px] font-medium text-[color:var(--text-primary)]">{row.progressionName}</p>
+                                      <p className="mt-0.5 truncate text-[10px] text-[color:var(--text-secondary)]">{subLabel}</p>
+                                      <p className="mt-0.5 text-[10px] text-[color:var(--text-muted)]">{row.attempts} {lt("attempts")} • {row.best}</p>
+                                    </div>
+                                    <span className="shrink-0 text-[10px] text-[color:var(--text-secondary)]">{formatDate(row.lastPerformedAt, settings.dateFormat || "dd-mmm-yyyy", lt, settings.timeZone)}</span>
                                   </div>
-                                  <span className="shrink-0 text-[10px] text-[color:var(--text-secondary)]">{formatDate(stat.lastPerformedAt, settings.dateFormat || "dd-mmm-yyyy", lt, settings.timeZone)}</span>
-                                </div>
-                              );
-                            })}
+                                );
+                              })
+                            )}
                           </div>
 
                           <div className="mt-3 flex gap-2">
