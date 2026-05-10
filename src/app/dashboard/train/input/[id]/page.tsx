@@ -343,30 +343,33 @@ export default function TrainInputCanvasPage() {
     if (!draftKey) return;
     if (!draftHydrated) return;
     if (typeof window === "undefined") return;
-    try {
-      window.localStorage.setItem(
-        draftKey,
-        JSON.stringify({
-          inputMode,
-          valueMode,
-          weightUnit,
-          timedUnit,
-          searchTerm,
-          selectedExerciseId,
-          customExerciseName,
-          selectedLevel,
-          selectedVariant,
-          modifierKg,
-          trainingDate,
-          notes,
-          sets,
-          activePanel,
-          confirmedPanels,
-        }),
-      );
-    } catch {
-      /* ignore quota / private mode */
-    }
+    const handle = window.setTimeout(() => {
+      try {
+        window.localStorage.setItem(
+          draftKey,
+          JSON.stringify({
+            inputMode,
+            valueMode,
+            weightUnit,
+            timedUnit,
+            searchTerm,
+            selectedExerciseId,
+            customExerciseName,
+            selectedLevel,
+            selectedVariant,
+            modifierKg,
+            trainingDate,
+            notes,
+            sets,
+            activePanel,
+            confirmedPanels,
+          }),
+        );
+      } catch {
+        /* ignore quota / private mode */
+      }
+    }, 350);
+    return () => window.clearTimeout(handle);
   }, [
     draftKey,
     draftHydrated,

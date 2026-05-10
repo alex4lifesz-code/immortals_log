@@ -371,18 +371,21 @@ function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendD
     );
   }
 
-  // Group by calendar day
-  const grouped: Record<string, FeedLog[]> = {};
-  for (const log of logs) {
-    const day = log.createdAt.slice(0, 10);
-    if (!grouped[day]) grouped[day] = [];
-    grouped[day].push(log);
-  }
+  // Group by calendar day (memoized so we don't rebuild on every unrelated render
+  // such as expand/collapse toggles).
+  const groupedDays = useMemo(() => {
+    const grouped: Record<string, FeedLog[]> = {};
+    for (const log of logs) {
+      const day = log.createdAt.slice(0, 10);
+      if (!grouped[day]) grouped[day] = [];
+      grouped[day].push(log);
+    }
+    return Object.entries(grouped).slice(0, 14);
+  }, [logs]);
 
   return (
     <div className="space-y-4">
-      {Object.entries(grouped)
-        .slice(0, 14)
+      {groupedDays
         .map(([day, dayLogs], groupIndex) => {
           // Group by user + exercise within the day
           const exerciseGroups: Record<string, { exerciseName: string; userName: string; userId: string; logs: FeedLog[] }> = {};

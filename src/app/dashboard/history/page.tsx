@@ -626,6 +626,15 @@ export default function HistoryPage() {
   useEffect(() => {
     if (!mobileQuickCheckinOpen || !userId) return;
 
+    // If we already loaded today's check-in state on mount, just hydrate the
+    // editable inputs from the cached values instead of refetching.
+    if (mobileQuickCheckinStateReady) {
+      setMobileQuickCheckinWeight(mobileQuickCheckinTodayWeight != null ? String(mobileQuickCheckinTodayWeight) : "");
+      setMobileQuickCheckinNote(mobileQuickCheckinTodayNote);
+      setMobileQuickCheckinLoading(false);
+      return;
+    }
+
     let cancelled = false;
     const loadQuickCheckinDefaults = async () => {
       try {
@@ -672,7 +681,7 @@ export default function HistoryPage() {
     return () => {
       cancelled = true;
     };
-  }, [getTodayDateKey, mobileQuickCheckinOpen, userId]);
+  }, [getTodayDateKey, mobileQuickCheckinOpen, mobileQuickCheckinStateReady, mobileQuickCheckinTodayNote, mobileQuickCheckinTodayWeight, userId]);
 
   useEffect(() => {
     if (librarySheetRequested) {
