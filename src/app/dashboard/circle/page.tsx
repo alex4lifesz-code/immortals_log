@@ -352,6 +352,19 @@ function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendD
       cancelled = true; };
   }, [feedScope, lt]);
 
+  // Group by calendar day (memoized so we don't rebuild on every unrelated render
+  // such as expand/collapse toggles). Must be declared before any early returns
+  // to keep hook order stable across renders.
+  const groupedDays = useMemo(() => {
+    const grouped: Record<string, FeedLog[]> = {};
+    for (const log of logs) {
+      const day = log.createdAt.slice(0, 10);
+      if (!grouped[day]) grouped[day] = [];
+      grouped[day].push(log);
+    }
+    return Object.entries(grouped).slice(0, 14);
+  }, [logs]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -370,18 +383,6 @@ function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendD
       </div>
     );
   }
-
-  // Group by calendar day (memoized so we don't rebuild on every unrelated render
-  // such as expand/collapse toggles).
-  const groupedDays = useMemo(() => {
-    const grouped: Record<string, FeedLog[]> = {};
-    for (const log of logs) {
-      const day = log.createdAt.slice(0, 10);
-      if (!grouped[day]) grouped[day] = [];
-      grouped[day].push(log);
-    }
-    return Object.entries(grouped).slice(0, 14);
-  }, [logs]);
 
   return (
     <div className="space-y-4">
