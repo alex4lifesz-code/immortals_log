@@ -233,13 +233,14 @@ function parseMarkdownTable(rawTable: string, mode: "cali" | "yoga" | "gym"): Ca
 
     if (mode === "gym") {
       if (cols.length < 6) continue;
+      const equipmentList = parseList(cols[3]);
       rows.push({
         category: cols[0],
         exercise: cols[1],
         muscleGroup: cols[2],
         equipmentOrProps: cols[3],
         setupOptions: parseList(cols[4]),
-        progression: ["Standard"],
+        progression: equipmentList.length > 0 ? equipmentList : ["Standard"],
         variations: parseList(cols[5]),
       });
       continue;
@@ -355,8 +356,8 @@ async function main() {
         muscleGroup: "Shoulders, Traps",
         equipmentOrProps: "EZ bar, Barbell, Dumbbell, Cable",
         setupOptions: ["Standard", "Wide", "Close"],
-        progression: ["Standard"],
-        variations: ["EZ bar", "Barbell", "Dumbbell", "Cable"],
+        progression: ["EZ bar", "Barbell", "Dumbbell", "Cable"],
+        variations: ["Standing", "Seated", "Single arm"],
       },
     ];
 
@@ -545,6 +546,7 @@ async function main() {
         }
 
         catalogExerciseIds.push(exercise.id);
+        existingByName.set(row.exercise.toLowerCase(), exercise.id);
         createdExercises++;
       }
     }

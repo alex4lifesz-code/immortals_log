@@ -1584,8 +1584,10 @@ export default function HistoryPage() {
 
   const mobileLogFabRows = useMemo(() => {
     const rows: Array<{
+      rowKey: string;
       exerciseId: string;
       exerciseName: string;
+      parentExerciseName: string;
       date: string | null;
       logId: string | null;
       progression: string;
@@ -1593,6 +1595,7 @@ export default function HistoryPage() {
       category: string;
       isDeleted: boolean;
       recent24hCount: number;
+      isVariantRow?: boolean;
     }> = [];
 
     const now = Date.now();
@@ -1614,8 +1617,10 @@ export default function HistoryPage() {
       }, 0);
 
       rows.push({
+        rowKey: exercise.id,
         exerciseId: exercise.id,
         exerciseName: deletedExercise ? getDeletedExerciseLabel(exercise) : exercise.name,
+        parentExerciseName: deletedExercise ? getDeletedExerciseLabel(exercise) : exercise.name,
         date: latestLog?.createdAt ?? null,
         logId: latestLog?.id ?? null,
         progression: progressionName,
@@ -1645,9 +1650,43 @@ export default function HistoryPage() {
       return haystack.includes(query);
     });
 
+    // When searching, also surface variation entries as "<Variation> <parent name>" rows
+    // (e.g. typing "lateral" reveals "Lateral shoulder raise" sourced from Shoulder raise).
+    type FabRow = (typeof mobileLogFabRows)[number];
+    const variantRows: FabRow[] = [];
+    if (query) {
+      const baseRowByExerciseId = new Map(mobileLogFabRows.map((row) => [row.exerciseId, row] as const));
+      for (const exercise of exercises) {
+        const baseRow = baseRowByExerciseId.get(exercise.id);
+        if (!baseRow) continue;
+        if (mobileLogFabCategory !== "all" && baseRow.category !== mobileLogFabCategory) continue;
+        const variations = exercise.variations ?? [];
+        for (const variation of variations) {
+          const variationName = variation?.name?.trim();
+          if (!variationName) continue;
+          if (!variationName.toLowerCase().includes(query)) continue;
+          const parentLower = baseRow.exerciseName.charAt(0).toLowerCase() + baseRow.exerciseName.slice(1);
+          variantRows.push({
+            ...baseRow,
+            rowKey: `${exercise.id}::variant::${variationName}`,
+            exerciseName: `${variationName} ${parentLower}`,
+            variant: variationName,
+            isVariantRow: true,
+            // Variant rows are synthesized; don't carry the parent's last-logged date
+            // so they don't masquerade as recent history.
+            date: null,
+            logId: null,
+            recent24hCount: 0,
+          });
+        }
+      }
+    }
+
+    const combined = [...filtered, ...variantRows];
+
     if (mobileLogFabSort === "relevant" && query) {
       return rankExerciseSearchResults(
-        filtered.map((row) => ({
+        combined.map((row) => ({
           ...row,
           exerciseId: row.exerciseId,
           displayLabel: row.exerciseName,
@@ -1655,13 +1694,13 @@ export default function HistoryPage() {
           searchLabel: `${row.exerciseName} ${row.progression} ${row.variant} ${row.category}`,
           hasHistory: Boolean(row.date),
           lastLoggedAt: row.date,
-          matchSource: "name" as const,
+          matchSource: row.isVariantRow ? ("variant" as const) : ("name" as const),
         })),
         query,
       );
     }
 
-    const sorted = [...filtered];
+    const sorted = [...combined];
     if (mobileLogFabSort === "oldest") {
       sorted.sort((a, b) => {
         const left = a.date ? new Date(a.date).getTime() : Number.POSITIVE_INFINITY;
@@ -1684,7 +1723,7 @@ export default function HistoryPage() {
       });
     }
     return sorted;
-  }, [mobileLogFabRows, mobileLogFabCategory, mobileLogFabSearchQuery, mobileLogFabSort]);
+  }, [exercises, mobileLogFabRows, mobileLogFabCategory, mobileLogFabSearchQuery, mobileLogFabSort]);
 
   const dayExerciseCounts = dayAssignmentSummary.remainingCounts;
   const dayAssignmentCounts = dayAssignmentSummary.assignedCounts;
@@ -2787,7 +2826,7 @@ export default function HistoryPage() {
                   ) : (
                     filteredMobileLogFabRows.map((row) => (
                       <button
-                        key={`mobile-log-fab-row-${row.exerciseId}`}
+                        key={`mobile-log-fab-row-${row.rowKey}`}
                         type="button"
                         className="mx-1 my-0.5 block w-[calc(100%-0.5rem)] rounded-md px-3 py-2.5 text-left"
                         style={{
@@ -2795,7 +2834,8 @@ export default function HistoryPage() {
                         }}
                         onClick={() => {
                           const pathId = `${row.exerciseId}-quick`;
-                          const href = `/dashboard/train/input/${encodeURIComponent(pathId)}?prefillExerciseId=${encodeURIComponent(row.exerciseId)}&prefillExercise=${encodeURIComponent(row.exerciseName)}&prefillProgression=${encodeURIComponent(row.progression)}&prefillVariant=${encodeURIComponent(row.variant || "")}`;
+                          const exerciseNameForUrl = row.parentExerciseName || row.exerciseName;
+                          const href = `/dashboard/train/input/${encodeURIComponent(pathId)}?prefillExerciseId=${encodeURIComponent(row.exerciseId)}&prefillExercise=${encodeURIComponent(exerciseNameForUrl)}&prefillProgression=${encodeURIComponent(row.progression)}&prefillVariant=${encodeURIComponent(row.variant || "")}`;
                           setLibrarySheetOpen(false);
                           router.push(href);
                         }}

@@ -1547,7 +1547,8 @@ function TrainingLogTable({
 
       for (const variant of row.variantNames) {
         if (!variant.toLowerCase().includes(query)) continue;
-        const contextual = `(${variant}) ${row.displayName}`;
+        const parentLower = row.displayName.charAt(0).toLowerCase() + row.displayName.slice(1);
+        const contextual = `${variant} ${parentLower}`;
         pushUnique({
           exercise: row.exercise,
           displayLabel: contextual,
