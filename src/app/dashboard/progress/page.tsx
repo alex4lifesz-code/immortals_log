@@ -137,7 +137,7 @@ export default function ProgressPage() {
           const sortedTiers = (exercise.tiers ?? []).slice().sort((a, b) => a.level - b.level);
           const tierLookup = new Map<number, string>();
           sortedTiers.forEach((tier) => {
-            tierLookup.set(tier.level, String(tier.name || `${lt("Progression")} ${tier.level}`).trim());
+            tierLookup.set(tier.level, String(tier.name || `Lv ${tier.level}`).trim());
           });
 
           // Catalog size: every (progression × variant × machine) combination counts
@@ -169,7 +169,7 @@ export default function ProgressPage() {
                   .map((log) => log.createdAt)
                   .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0]
               : null;
-            const progressionName = tierLookup.get(entry.level) || `${lt("Progression")} ${entry.level || 1}`;
+            const progressionName = tierLookup.get(entry.level) || `Lv ${entry.level || 1}`;
             return {
               key,
               progressionName,
