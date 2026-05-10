@@ -5,7 +5,7 @@ export const defaultExercises: SimpleExercise[] = [
   {
     id: 'bench-press',
     name: 'Bench Press',
-    category: 'GYM',
+    category: 'Gym',
     exerciseType: 'weighted',
     muscleGroups: ['Chest', 'Triceps', 'Shoulders'],
     equipment: ['Barbell', 'Bench'],
@@ -15,7 +15,7 @@ export const defaultExercises: SimpleExercise[] = [
   {
     id: 'squat',
     name: 'Squat',
-    category: 'GYM',
+    category: 'Gym',
     exerciseType: 'weighted',
     muscleGroups: ['Quads', 'Glutes', 'Hamstrings'],
     equipment: ['Barbell', 'Squat Rack'],
@@ -25,7 +25,7 @@ export const defaultExercises: SimpleExercise[] = [
   {
     id: 'deadlift',
     name: 'Deadlift',
-    category: 'GYM',
+    category: 'Gym',
     exerciseType: 'weighted',
     muscleGroups: ['Back', 'Hamstrings', 'Glutes'],
     equipment: ['Barbell'],
@@ -35,7 +35,7 @@ export const defaultExercises: SimpleExercise[] = [
   {
     id: 'overhead-press',
     name: 'Overhead Press',
-    category: 'GYM',
+    category: 'Gym',
     exerciseType: 'weighted',
     muscleGroups: ['Shoulders', 'Triceps'],
     equipment: ['Barbell'],
@@ -45,7 +45,7 @@ export const defaultExercises: SimpleExercise[] = [
   {
     id: 'barbell-row',
     name: 'Barbell Row',
-    category: 'GYM',
+    category: 'Gym',
     exerciseType: 'weighted',
     muscleGroups: ['Back', 'Biceps'],
     equipment: ['Barbell'],
@@ -55,7 +55,7 @@ export const defaultExercises: SimpleExercise[] = [
   {
     id: 'incline-dumbbell-press',
     name: 'Incline Dumbbell Press',
-    category: 'GYM',
+    category: 'Gym',
     exerciseType: 'weighted',
     muscleGroups: ['Chest', 'Shoulders', 'Triceps'],
     equipment: ['Dumbbells', 'Bench'],
@@ -65,7 +65,7 @@ export const defaultExercises: SimpleExercise[] = [
   {
     id: 'lat-pulldown',
     name: 'Lat Pulldown',
-    category: 'GYM',
+    category: 'Gym',
     exerciseType: 'weighted',
     muscleGroups: ['Back', 'Biceps'],
     equipment: ['Cable', 'Machine'],
@@ -75,7 +75,7 @@ export const defaultExercises: SimpleExercise[] = [
   {
     id: 'leg-press',
     name: 'Leg Press',
-    category: 'GYM',
+    category: 'Gym',
     exerciseType: 'weighted',
     muscleGroups: ['Quads', 'Glutes'],
     equipment: ['Machine'],

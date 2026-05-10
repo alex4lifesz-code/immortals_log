@@ -87,6 +87,7 @@ export type DayOfWeek = (typeof DAYS_OF_WEEK)[number];
 export type DayAssignmentDetail = {
   progression?: string;
   variant?: string;
+  setupOption?: string;
 };
 
 type DayAssignmentPayload = {
@@ -100,13 +101,15 @@ function normalizeDayList(days: number[]): number[] {
 
 function sanitizeDayAssignmentDetail(rawDetail: unknown): DayAssignmentDetail | null {
   if (!rawDetail || typeof rawDetail !== "object") return null;
-  const detail = rawDetail as { progression?: unknown; variant?: unknown };
+  const detail = rawDetail as { progression?: unknown; variant?: unknown; setupOption?: unknown };
   const progression = typeof detail.progression === "string" ? detail.progression.trim() : "";
   const variant = typeof detail.variant === "string" ? detail.variant.trim() : "";
-  if (!progression && !variant) return null;
+  const setupOption = typeof detail.setupOption === "string" ? detail.setupOption.trim() : "";
+  if (!progression && !variant && !setupOption) return null;
   return {
     progression: progression || undefined,
     variant: variant || undefined,
+    setupOption: setupOption || undefined,
   };
 }
 
@@ -118,7 +121,7 @@ function normalizeDetailList(rawDetail: unknown): DayAssignmentDetail[] {
   for (const entry of rawList) {
     const detail = sanitizeDayAssignmentDetail(entry);
     if (!detail) continue;
-    const key = `${detail.progression || ""}::${detail.variant || ""}`;
+    const key = `${detail.progression || ""}::${detail.variant || ""}::${detail.setupOption || ""}`;
     if (seen.has(key)) continue;
     seen.add(key);
     result.push(detail);

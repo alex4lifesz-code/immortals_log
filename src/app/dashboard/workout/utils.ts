@@ -85,8 +85,9 @@ export function parseModifierWithBand(modifier: string | null | undefined): {
   resistanceBandKg: number | null;
   modifierWeightKg: number | null;
   displayLevelOverride: number | null;
+  setupOption: string | null;
 } {
-  if (!modifier) return { baseModifier: null, resistanceBandKg: null, modifierWeightKg: null, displayLevelOverride: null };
+  if (!modifier) return { baseModifier: null, resistanceBandKg: null, modifierWeightKg: null, displayLevelOverride: null, setupOption: null };
 
   const parts = modifier
     .split("|")
@@ -96,6 +97,7 @@ export function parseModifierWithBand(modifier: string | null | undefined): {
   let resistanceBandKg: number | null = null;
   let modifierWeightKg: number | null = null;
   let displayLevelOverride: number | null = null;
+  let setupOption: string | null = null;
   const baseParts: string[] = [];
 
   for (const part of parts) {
@@ -117,6 +119,11 @@ export function parseModifierWithBand(modifier: string | null | undefined): {
       if (Number.isFinite(val) && val > 0) modifierWeightKg = val;
       continue;
     }
+    if (/^setup\s*:/i.test(part)) {
+      const value = part.replace(/^setup\s*:/i, "").trim();
+      if (value) setupOption = value;
+      continue;
+    }
     baseParts.push(part);
   }
 
@@ -125,6 +132,7 @@ export function parseModifierWithBand(modifier: string | null | undefined): {
     resistanceBandKg,
     modifierWeightKg,
     displayLevelOverride,
+    setupOption,
   };
 }
 
@@ -214,10 +222,10 @@ export function isGymCategoryExercise(exercise: ProgressionExercise): boolean {
   return tags.some((tag) => /\bgym\b/i.test(tag.replace(/[_-]+/g, " ")));
 }
 
-export function getExerciseCategoryLabel(exercise: ProgressionExercise | undefined): "GYM" | "Yoga" | "Cardio" | "Cali" {
+export function getExerciseCategoryLabel(exercise: ProgressionExercise | undefined): "Gym" | "Yoga" | "Cardio" | "Cali" {
   if (!exercise) return "Cali";
   const tags = parseCategoryTags(exercise.category).map((t) => t.toLowerCase().trim());
-  if (isGymCategoryExercise(exercise)) return "GYM";
+  if (isGymCategoryExercise(exercise)) return "Gym";
   if (tags.some((t) => t.includes("yoga") || t.includes("stretching"))) return "Yoga";
   if (tags.some((t) => t.includes("cardio"))) return "Cardio";
   return "Cali";

@@ -3,6 +3,7 @@ export type TrainComboExerciseItem = {
   name: string;
   progressionLevel?: number;
   variant?: string;
+  setupOption?: string;
 };
 
 export type TrainComboLog = {
@@ -22,9 +23,11 @@ function normalizeExerciseItem(value: unknown): TrainComboExerciseItem | null {
   const rawName = "name" in value ? value.name : null;
   const rawProgressionLevel = "progressionLevel" in value ? value.progressionLevel : null;
   const rawVariant = "variant" in value ? value.variant : null;
+  const rawSetupOption = "setupOption" in value ? value.setupOption : null;
   const exerciseId = typeof rawId === "string" ? rawId.trim() : "";
   const name = typeof rawName === "string" ? rawName.trim() : "";
   const variant = typeof rawVariant === "string" ? rawVariant.trim() : "";
+  const setupOption = typeof rawSetupOption === "string" ? rawSetupOption.trim() : "";
   const progressionLevel = typeof rawProgressionLevel === "number" && Number.isFinite(rawProgressionLevel)
     ? Math.max(1, Math.trunc(rawProgressionLevel))
     : null;
@@ -35,6 +38,7 @@ function normalizeExerciseItem(value: unknown): TrainComboExerciseItem | null {
     name: name.slice(0, 200),
     ...(progressionLevel ? { progressionLevel } : {}),
     ...(variant ? { variant: variant.slice(0, 120) } : {}),
+    ...(setupOption ? { setupOption: setupOption.slice(0, 120) } : {}),
   };
 }
 

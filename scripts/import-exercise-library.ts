@@ -25,6 +25,7 @@ type SeedExercise = {
   primaryMuscles: string;
   progression: string[];
   variations: string[];
+  modifiers?: string[];
 };
 
 type SeedData = {
@@ -32,7 +33,7 @@ type SeedData = {
   exercises: SeedExercise[];
 };
 
-const TARGET_USERNAME = process.argv[2] || "admin";
+const TARGET_USERNAME = process.argv[2] || "__app_exercise_library__";
 
 function createPrismaClient() {
   const databaseUrl = process.env.DATABASE_URL || "file:./dev.db";
@@ -80,6 +81,7 @@ async function main() {
     for (const row of seedData.exercises) {
       const progression = dedupe(row.progression);
       const variations = dedupe(row.variations);
+      const modifiers = dedupe(row.modifiers ?? []);
 
       try {
         const existing = await prisma.progressionExercise.findFirst({
@@ -174,7 +176,23 @@ async function main() {
           });
         }
 
-        // Ensure UserProgressionLevel exists
+        // Rebuild modifiers (used for grip/props/setup selections)
+        await prisma.progressionModifier.deleteMany({ where: { exerciseId } });
+        if (modifiers.length > 0) {
+          await prisma.progressionModifier.createMany({
+            data: modifiers.map((type) => ({
+              exerciseId,
+              type,
+              available: true,
+              difficultyMod: 0,
+              notes: "",
+              method: "",
+              difficultyIncrease: "",
+            })),
+          });
+        }
+
+        // Ensure owner has a baseline progression row so history/joins stay stable.
         await prisma.userProgressionLevel.upsert({
           where: {
             userId_exerciseId: {

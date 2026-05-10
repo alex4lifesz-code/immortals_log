@@ -62,8 +62,8 @@ function abbreviateVariantText(text: string): string {
   return `${compact.slice(0, 1).toUpperCase()}${compact.slice(1, 6).toLowerCase()}`;
 }
 
-function getCategoryTone(categoryLabel: "GYM" | "Yoga" | "Cardio" | "Cali"): { color: string; borderColor: string; backgroundColor: string } {
-  const baseColor = categoryLabel === "GYM"
+function getCategoryTone(categoryLabel: "Gym" | "Yoga" | "Cardio" | "Cali"): { color: string; borderColor: string; backgroundColor: string } {
+  const baseColor = categoryLabel === "Gym"
     ? "var(--category-gym)"
     : categoryLabel === "Yoga"
       ? "var(--category-yoga)"

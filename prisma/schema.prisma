@@ -308,6 +308,7 @@ model ProgressionLog {
   reps                Int?      // legacy single reps field
   modifier            String?   // selected modifier type (e.g. "rings", "weighted")
   variant             String?   // selected variation name
+  setupOption         String?   // selected grip / setup option (e.g. "Pronated", "Neutral")
   notes               String?
   completed           Boolean   @default(false)  // marked level as completed
   createdAt           DateTime  @default(now())

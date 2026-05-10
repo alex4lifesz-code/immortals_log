@@ -89,6 +89,7 @@ export const POST = withAuth(async (request, { auth, params }) => {
         reps: body.reps != null ? Number(body.reps) : null,
         modifier: body.modifier ? String(body.modifier).trim().slice(0, 100) : null,
         variant: body.variant ? String(body.variant).trim().slice(0, 200) : null,
+        setupOption: body.setupOption ? String(body.setupOption).trim().slice(0, 100) : null,
         notes: notesWithDynamicSets ? notesWithDynamicSets.slice(0, 1000) : null,
         completed: body.completed === true,
         createdAt: validCreatedAt ?? undefined,

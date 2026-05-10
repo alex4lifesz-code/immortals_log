@@ -50,6 +50,7 @@ export interface ProgressionLog {
   reps: number | null;
   modifier: string | null;
   variant: string | null;
+  setupOption?: string | null;
   notes: string | null;
   dynamicSetRows?: DynamicSetRow[];
   completed: boolean;

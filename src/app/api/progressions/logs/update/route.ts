@@ -18,6 +18,7 @@ interface LogUpdate {
   holdTime3: number | null;
   modifier: string | null;
   variant: string | null;
+  setupOption: string | null;
   notes: string | null;
 }
 
@@ -141,6 +142,7 @@ export const POST = withAuth(async (request, { auth }) => {
           holdTime3: update.holdTime3,
           modifier: update.modifier ? String(update.modifier).trim().slice(0, 100) : null,
           variant: update.variant ? String(update.variant).trim().slice(0, 200) : null,
+          setupOption: update.setupOption ? String(update.setupOption).trim().slice(0, 100) : null,
           notes: update.notes ? String(update.notes).trim().slice(0, 1000) : null,
         },
       });

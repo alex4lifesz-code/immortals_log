@@ -10,6 +10,7 @@ import { formatDateWithPreference } from "@/lib/constants";
 import { translateEnglishToLanguage } from "@/lib/language";
 import { formatSetValue, type TimedUnitPref, type WeightUnit } from "@/lib/unit-conversion";
 import type { ProgressionExercise, ProgressionLog } from "../../types";
+import { parseModifierWithBand } from "../../utils";
 
 type WorkoutMetricRow = { weight: string; reps: string };
 
@@ -203,12 +204,15 @@ export default function WorkoutHistoryDetailPage() {
                   const progressionValue = detail.progressionLabel?.trim() || "-";
                   const parentValue = detail.exerciseName?.trim() || "-";
                   const variationValue = detail.log.variant?.trim() || "-";
-                  const modValue = detail.log.modifier?.trim() || "";
+                  const parsedModifier = parseModifierWithBand(detail.log.modifier);
+                  const setupValue = (detail.log.setupOption || "").trim() || (parsedModifier.setupOption || "").trim() || "-";
+                  const modValue = (parsedModifier.baseModifier || "").trim();
                   const notesValue = detail.log.notes?.trim() || "";
                   const leftDetailRows = [
                     { label: `${lt("Parent")}:`, value: parentValue, valueColor: "var(--cloud-white)" },
                     { label: `${lt("Progression")}:`, value: progressionValue, valueColor: "var(--jade-light)" },
                     { label: `${lt("Variant")}:`, value: variationValue, valueColor: "var(--mountain-blue-glow)" },
+                    { label: `${lt("Grip / Props")}:`, value: setupValue, valueColor: "var(--gold-glow)" },
                     { label: `${lt("Mod")}:`, value: modValue, valueColor: "var(--gold-glow)" },
                     { label: `${lt("Notes")}:`, value: notesValue, valueColor: "var(--text-secondary)" },
                   ];

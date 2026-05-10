@@ -44,7 +44,7 @@ async function main() {
         data: {
           name: "Upright row",
           wuxiaName: "Upright row",
-          category: "GYM",
+          category: "Gym",
           equipmentType: "",
           bodyweight: false,
           weighted: true,
@@ -77,7 +77,7 @@ async function main() {
       await prisma.progressionExercise.update({
         where: { id: exerciseId },
         data: {
-          category: "GYM",
+          category: "Gym",
           bodyweight: false,
           weighted: true,
           primaryMuscles: "Shoulders",

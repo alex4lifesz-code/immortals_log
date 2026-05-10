@@ -7,7 +7,7 @@ const KG_TO_LBS = 2.20462;
 export type WeightUnit = "kg" | "lbs";
 export type TimedUnitPref = "seconds" | "minutes";
 export type ExerciseType = "weighted" | "timed" | "bodyweight";
-export type TrainingCategory = "Calisthenics" | "GYM" | "Yoga" | "Cardio" | "Other";
+export type TrainingCategory = "Calisthenics" | "Gym" | "Yoga" | "Cardio" | "Other";
 
 export function lbsToKg(lbs: number): number {
   return Math.round(lbs * LBS_TO_KG * 10) / 10;

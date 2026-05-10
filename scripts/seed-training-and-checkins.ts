@@ -219,6 +219,22 @@ function normalizeKey(s: string): string {
   return s.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
+function remapAdminExercise(inputExercise: string, inputVariant?: string): { exercise: string; variant?: string } {
+  const name = normalizeKey(inputExercise);
+  const variant = (inputVariant || "").trim();
+
+  if (name === "chest press") return { exercise: "Chest press machine", variant: variant || "Flat" };
+  if (name === "hamstring curl") return { exercise: "Leg curl", variant: variant || "Seated" };
+  if (name === "lateral raise") return { exercise: "Shoulder raise", variant: "Lateral" };
+  if (name === "front raise") return { exercise: "Shoulder raise", variant: "Front" };
+  if (name === "rear delt fly") return { exercise: "Shoulder raise", variant: "Rear" };
+  if (name === "hip abduction") return { exercise: "Abductor machine", variant: variant || "Weighted" };
+  if (name === "cable kickback") return { exercise: "Glute kickback machine", variant: variant || "Cable" };
+  if (name === "bike") return { exercise: "Stationary bike", variant: variant || "Steady state" };
+
+  return { exercise: inputExercise, variant: inputVariant };
+}
+
 async function main() {
   const client = createClient({ url: DB_URL });
 
@@ -266,9 +282,10 @@ async function main() {
     let logSkipped = 0;
 
     for (const entry of ADMIN_LOGS) {
-      const exerciseId = exerciseByName.get(normalizeKey(entry.exercise));
+      const remapped = remapAdminExercise(entry.exercise, entry.variant);
+      const exerciseId = exerciseByName.get(normalizeKey(remapped.exercise));
       if (!exerciseId) {
-        console.log(`  ⚠ Exercise "${entry.exercise}" not found — skipping`);
+        console.log(`  ⚠ Exercise "${entry.exercise}" (mapped: "${remapped.exercise}") not found — skipping`);
         continue;
       }
 
@@ -311,7 +328,7 @@ async function main() {
       }
 
       // Resolve variant
-      let variant: string | null = entry.variant ?? null;
+      let variant: string | null = remapped.variant ?? null;
       if (variant) {
         const vars = varsByExercise.get(exerciseId) ?? [];
         const match = vars.find((v) => normalizeKey(v) === normalizeKey(variant!));

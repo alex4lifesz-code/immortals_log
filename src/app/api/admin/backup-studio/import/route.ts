@@ -115,6 +115,7 @@ type BackupPackage = {
     holdTime3?: number | null;
     modifier?: string | null;
     variant?: string | null;
+    setupOption?: string | null;
     notes?: string | null;
     completed?: boolean;
     createdAt?: string | null;
@@ -709,6 +710,7 @@ export const POST = withAdmin(async (request, { auth }) => {
           holdTime3: parseNullableInt(log?.holdTime3),
           modifier: log?.modifier ? clampText(log.modifier, 100) : null,
           variant: log?.variant ? clampText(log.variant, 200) : null,
+          setupOption: log?.setupOption ? clampText(log.setupOption, 100) : null,
           notes: log?.notes ? clampText(log.notes, 2000) : null,
           completed: log?.completed !== false,
           createdAt,

@@ -79,6 +79,7 @@ export const GET = withAuth(async (request, { auth }) => {
     const logLimit = resolveLogLimit(searchParams.get("logLimit"));
     const exerciseLimit = resolveExerciseLimit(searchParams.get("exerciseLimit"));
     const exerciseCursor = decodeExerciseCursor(searchParams.get("cursor"));
+    const requestedExerciseId = (searchParams.get("exerciseId") || "").trim();
     const targetUserId = searchParams.get("targetUserId");
     const libraryOwnerId = await ensureAppExerciseLibraryOwner();
     let userId = auth.userId;
@@ -95,17 +96,25 @@ export const GET = withAuth(async (request, { auth }) => {
       userId = targetUserId;
     }
 
-    const page = await prisma.progressionExercise.findMany({
-      where: exerciseCursor
+    const visibilityWhere = {
+      OR: [
+        { userId: libraryOwnerId },
+        { userId },
+        { userProgress: { some: { userId } } },
+      ],
+    };
+
+    const whereClause = requestedExerciseId
+      ? {
+          AND: [
+            visibilityWhere,
+            { id: requestedExerciseId },
+          ],
+        }
+      : exerciseCursor
         ? {
             AND: [
-              {
-                OR: [
-                  { userId: libraryOwnerId },
-                  { userId },
-                  { userProgress: { some: { userId } } },
-                ],
-              },
+              visibilityWhere,
               {
                 OR: [
                   { createdAt: { lt: exerciseCursor.createdAt } },
@@ -117,13 +126,10 @@ export const GET = withAuth(async (request, { auth }) => {
               },
             ],
           }
-        : {
-            OR: [
-              { userId: libraryOwnerId },
-              { userId },
-              { userProgress: { some: { userId } } },
-            ],
-          },
+        : visibilityWhere;
+
+    const page = await prisma.progressionExercise.findMany({
+      where: whereClause,
       select: {
         id: true,
         name: true,
@@ -200,6 +206,7 @@ export const GET = withAuth(async (request, { auth }) => {
                 reps: true,
                 modifier: true,
                 variant: true,
+                setupOption: true,
                 notes: true,
                 completed: true,
                 createdAt: true,
@@ -211,10 +218,10 @@ export const GET = withAuth(async (request, { auth }) => {
         },
       },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-      take: exerciseLimit + 1,
+      take: requestedExerciseId ? 1 : exerciseLimit + 1,
     });
 
-    const hasMore = page.length > exerciseLimit;
+    const hasMore = !requestedExerciseId && page.length > exerciseLimit;
     const exercises = (hasMore ? page.slice(0, exerciseLimit) : page).map((exercise) => ({
       ...exercise,
       userProgress: exercise.userProgress.map((progress) => ({

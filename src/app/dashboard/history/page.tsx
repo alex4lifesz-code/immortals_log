@@ -26,6 +26,7 @@ import { formatSetValue, type TimedUnitPref, type WeightUnit } from "@/lib/unit-
 import { normalizeTrainComboLogs, type TrainComboLog } from "@/lib/train-combo";
 import type { UserPhysiqueSettings } from "@/lib/user-physique";
 import type { ProgressionExercise, ProgressionLog } from "../workout/types";
+import { parseModifierWithBand } from "../workout/utils";
 
 type WorkoutMetricRow = { weight: string; reps: string };
 type TrainMode = "train" | "combo";
@@ -127,14 +128,73 @@ function formatRelativeRecentDate(
 function getVariantDisplayValue(variant: string | null | undefined): string {
   const trimmed = variant?.trim() || "";
   if (!trimmed) return "Default";
-  if (trimmed === "-" || trimmed.toLowerCase() === "default") return "Default";
+  const normalized = trimmed.toLowerCase();
+  if (trimmed === "-" || normalized === "default" || normalized === "standard") return "Default";
   return trimmed;
+}
+
+function normalizeGripLikeValue(value: string | null | undefined): string {
+  const normalized = String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+  if (!normalized) return "";
+  if (normalized.includes("neutral")) return "Neutral";
+  if (normalized.includes("underhand") || normalized.includes("supinated") || normalized.includes("chin up")) return "Underhand";
+  if (normalized.includes("overhand") || normalized.includes("pronated")) return "Overhand";
+  if (normalized.includes("wide")) return "Wide";
+  if (normalized.includes("close") || normalized.includes("narrow")) return "Close";
+  if (normalized.includes("false")) return "False";
+  if (normalized.includes("mixed")) return "Mixed";
+  if (normalized.includes("ring")) return "Rings";
+  if (normalized.includes("grip")) {
+    return normalized
+      .split(" ")
+      .filter((part) => part !== "grip")
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+  }
+  return "";
+}
+
+function getHistoryLogDisplayValues(log: Pick<ProgressionLog, "variant" | "modifier" | "setupOption">): {
+  variationValue: string;
+  setupValue: string;
+  modValue: string;
+} {
+  const parsedModifier = parseModifierWithBand(log.modifier);
+  const setupFromColumn = (log.setupOption || "").trim();
+  const setupFromModifier = normalizeGripLikeValue(parsedModifier.setupOption);
+  const setupFromVariant = normalizeGripLikeValue(log.variant);
+  const setupValue = setupFromColumn || setupFromModifier || setupFromVariant;
+  const variationValue = setupFromVariant ? "Default" : getVariantDisplayValue(log.variant);
+  const modValue = (parsedModifier.baseModifier || "").trim();
+  return { variationValue, setupValue, modValue };
 }
 
 function getTextDisplayValue(value: string | null | undefined, emptyLabel: string): string {
   const trimmed = value?.trim() || "";
   if (!trimmed || trimmed === "-") return emptyLabel;
   return trimmed;
+}
+
+function isGymExerciseCategory(category: string | null | undefined): boolean {
+  return String(category ?? "").trim().toLowerCase() === "gym";
+}
+
+function shouldUseParentExerciseTitle(category: string | null | undefined): boolean {
+  const normalizedCategory = String(category ?? "").trim().toLowerCase();
+  return normalizedCategory === "gym" || normalizedCategory === "calisthenics";
+}
+
+function getProgressionDisplayName(log: Pick<ProgressionLog, "level">, exercise: Pick<ProgressionExercise, "tiers"> | null | undefined): string {
+  return exercise?.tiers.find((tier) => tier.level === log.level)?.name ?? `Progression ${log.level}`;
+}
+
+function getPrimaryHistoryLabel(log: Pick<ProgressionLog, "level" | "variant">, exercise: Pick<ProgressionExercise, "category" | "tiers"> | null | undefined): string {
+  return getProgressionDisplayName(log, exercise);
 }
 
 function getRecentExerciseTextColor(dateLike: string | null | undefined, isSelected = false): string {
@@ -165,10 +225,11 @@ function TrainExerciseListRow({
 }: {
   row: TrainExerciseRow;
   isSelected: boolean;
-  onActivate: (row: TrainExerciseRow) => void;
+  onActivate?: (row: TrainExerciseRow) => void;
   dateFormat: "dd-mm-yyyy" | "dd-mmm-yyyy" | "dd-mm-yy" | "dd-mmm-yy";
   timeZone?: string;
 }) {
+  const interactive = typeof onActivate === "function";
   return (
     <article
       className="mx-1 my-0.5 rounded-md px-3 py-2.5"
@@ -177,17 +238,17 @@ function TrainExerciseListRow({
         border: isSelected ? "1px solid color-mix(in srgb, var(--accent) 62%, var(--ink-light))" : undefined,
         backgroundColor: isSelected ? "color-mix(in srgb, var(--accent) 14%, var(--ink-deep))" : "transparent",
         boxShadow: isSelected ? "inset 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent), 0 0 14px color-mix(in srgb, var(--accent) 24%, transparent)" : "none",
-        cursor: "pointer",
+        cursor: interactive ? "pointer" : "default",
       }}
-      role="button"
-      tabIndex={0}
-      onClick={() => onActivate(row)}
-      onKeyDown={(event) => {
+      role={interactive ? "button" : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      onClick={interactive ? () => onActivate?.(row) : undefined}
+      onKeyDown={interactive ? (event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
-          onActivate(row);
+          onActivate?.(row);
         }
-      }}
+      } : undefined}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
@@ -311,11 +372,13 @@ export default function HistoryPage() {
   const mobileHistorySortPreferenceRef = useRef<"recent" | "oldest" | "name-az">("recent");
   const mobileLogFabSortPreferenceRef = useRef<"recent" | "oldest" | "name-az">("recent");
   const modeTouchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const fullHistoryLoadedExerciseIdsRef = useRef<Set<string>>(new Set());
 
   const userId = user?.id ?? "";
   const targetUserId = searchParams.get("targetUserId") || "";
   const rawFriendView = searchParams.get("friendView") || "history";
   const friendView = rawFriendView === "chart" || rawFriendView === "checkin" ? rawFriendView : "history";
+  const targetUserNameParam = (searchParams.get("friendName") || "").trim();
   const activeUserId = targetUserId || userId;
   const hideEmptyTrainDaysStorageKey = useMemo(
     () => (userId ? `cultivateos-history-hide-empty-days:${userId}` : null),
@@ -325,6 +388,7 @@ export default function HistoryPage() {
   const prefillExerciseName = searchParams.get("prefillExercise");
   const prefillProgression = searchParams.get("prefillProgression");
   const prefillVariant = searchParams.get("prefillVariant");
+  const historyExerciseId = searchParams.get("historyExerciseId");
   const requestedTrainMode: TrainMode = searchParams.get("trainMode") === "combo" ? "combo" : "train";
   const librarySheetRequested = searchParams.get("library") === "1" && !targetUserId && !searchParams.get("friendView");
 
@@ -741,6 +805,21 @@ export default function HistoryPage() {
   }, [pathname, prefillExerciseId, prefillExerciseName, prefillProgression, prefillVariant, router, searchParams]);
 
   useEffect(() => {
+    if (!historyExerciseId) return;
+    if (!exercises.some((exercise) => exercise.id === historyExerciseId)) return;
+
+    if (!targetUserId) {
+      setMobileLastSelectedExerciseId(historyExerciseId);
+      setMobileExerciseDrawerExerciseId(historyExerciseId);
+    }
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("historyExerciseId");
+    const next = params.toString();
+    router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
+  }, [exercises, historyExerciseId, pathname, router, searchParams, targetUserId]);
+
+  useEffect(() => {
     if (!userId) return;
     let cancelled = false;
     const loadUsers = async () => {
@@ -772,7 +851,7 @@ export default function HistoryPage() {
   const fetchExercises = useCallback(async () => {
     if (!userId) return;
     try {
-      const params = new URLSearchParams({ logLimit: "200", exerciseLimit: "5000" });
+      const params = new URLSearchParams({ logLimit: "40", exerciseLimit: "5000" });
       if (targetUserId) params.set("targetUserId", targetUserId);
       const data = await api.get<{ exercises: ProgressionExercise[] }>(`/api/progressions/history?${params.toString()}`);
       setExercises(data.exercises || []);
@@ -800,6 +879,45 @@ export default function HistoryPage() {
     };
   }, [fetchExercises]);
 
+  useEffect(() => {
+    if (!mobileExerciseDrawerExerciseId) return;
+    if (!userId) return;
+    if (fullHistoryLoadedExerciseIdsRef.current.has(mobileExerciseDrawerExerciseId)) return;
+
+    const selectedExercise = exercises.find((exercise) => exercise.id === mobileExerciseDrawerExerciseId);
+    if (!selectedExercise) return;
+
+    let cancelled = false;
+    const hydrateFullExerciseHistory = async () => {
+      try {
+        const params = new URLSearchParams({
+          exerciseId: mobileExerciseDrawerExerciseId,
+          logLimit: "200",
+          exerciseLimit: "1",
+        });
+        if (targetUserId) params.set("targetUserId", targetUserId);
+
+        const data = await api.get<{ exercises: ProgressionExercise[] }>(`/api/progressions/history?${params.toString()}`);
+        if (cancelled) return;
+
+        const detailedExercise = data.exercises?.[0];
+        if (!detailedExercise) return;
+
+        fullHistoryLoadedExerciseIdsRef.current.add(mobileExerciseDrawerExerciseId);
+        setExercises((prev) => prev.map((exercise) => (
+          exercise.id === detailedExercise.id ? detailedExercise : exercise
+        )));
+      } catch (error) {
+        console.error("Failed to hydrate full exercise history:", error);
+      }
+    };
+
+    void hydrateFullExerciseHistory();
+    return () => {
+      cancelled = true;
+    };
+  }, [exercises, mobileExerciseDrawerExerciseId, targetUserId, userId]);
+
   const orderedVisibleUsers = useMemo(() => {
     if (!userId) return visibleUsers;
 
@@ -815,10 +933,11 @@ export default function HistoryPage() {
   const targetUserDisplayName = useMemo(() => {
     if (!targetUserId) return undefined;
     if (targetUserId === userId) return lt("Me");
+    if (targetUserNameParam) return targetUserNameParam;
     const target = orderedVisibleUsers.find((u) => u.id === targetUserId);
     if (!target) return undefined;
     return (target.name || target.username || "").trim() || undefined;
-  }, [orderedVisibleUsers, targetUserId, userId]);
+  }, [orderedVisibleUsers, targetUserId, targetUserNameParam, userId]);
 
   const activeUserProfile = useMemo(() => {
     const fallbackName = user?.name || user?.username || lt("Me");
@@ -1315,9 +1434,17 @@ export default function HistoryPage() {
     const params = new URLSearchParams(searchParams.toString());
     if (!nextUserId || nextUserId === userId) {
       params.delete("targetUserId");
+      params.delete("friendName");
     } else {
+      const nextUser = orderedVisibleUsers.find((userEntry) => userEntry.id === nextUserId);
+      const nextUserName = (nextUser?.name || nextUser?.username || "").trim();
       params.set("targetUserId", nextUserId);
       params.set("friendView", "history");
+      if (nextUserName) {
+        params.set("friendName", nextUserName);
+      } else {
+        params.delete("friendName");
+      }
     }
     const current = searchParams.toString();
     const next = params.toString();
@@ -1569,23 +1696,35 @@ export default function HistoryPage() {
     return [...logs].sort(compareLogRecency);
   }, [selectedMobileExercise]);
 
+  const selectedMobileExerciseUsesEquipmentLabel = useMemo(
+    () => isGymExerciseCategory(selectedMobileExercise?.category),
+    [selectedMobileExercise?.category],
+  );
+
+  const mobileDrawerHeaderTitle = useMemo(() => {
+    const baseLabel = selectedMobileExercise?.name || lt("Exercise");
+    return targetUserId
+      ? `${targetUserDisplayName || lt("Friend")}: ${baseLabel}`
+      : baseLabel;
+  }, [selectedMobileExercise, targetUserId, targetUserDisplayName]);
+
   const mobileDrawerLevelOptions = useMemo(() => {
     return Array.from(
       new Set(
-        selectedMobileExerciseLogs.map((log) => selectedMobileExercise?.tiers.find((tier) => tier.level === log.level)?.name ?? `Progression ${log.level}`),
+        selectedMobileExerciseLogs.map((log) => getPrimaryHistoryLabel(log, selectedMobileExercise)),
       ),
     ).sort((a, b) => a.localeCompare(b));
   }, [selectedMobileExercise, selectedMobileExerciseLogs]);
 
   const mobileDrawerVariantOptions = useMemo(() => {
-    return Array.from(new Set(selectedMobileExerciseLogs.map((log) => getVariantDisplayValue(log.variant)))).sort((a, b) => a.localeCompare(b));
+    return Array.from(new Set(selectedMobileExerciseLogs.map((log) => getHistoryLogDisplayValues(log).variationValue))).sort((a, b) => a.localeCompare(b));
   }, [selectedMobileExerciseLogs]);
 
   const filteredSelectedMobileExerciseLogs = useMemo(() => {
     const query = mobileDrawerSearchQuery.trim().toLowerCase();
     const filtered = selectedMobileExerciseLogs.filter((log) => {
-      const progressionName = selectedMobileExercise?.tiers.find((tier) => tier.level === log.level)?.name ?? `Progression ${log.level}`;
-      const variationValue = getVariantDisplayValue(log.variant);
+      const progressionName = getPrimaryHistoryLabel(log, selectedMobileExercise);
+      const { variationValue, setupValue } = getHistoryLogDisplayValues(log);
       const metricRows = getWorkoutMetricRows(log, weightUnit, timedUnit);
       const hasWeightedValue = metricRows.some((row) => row.weight !== "-" && !row.weight.endsWith("s"));
       const reps = metricRows
@@ -1593,7 +1732,7 @@ export default function HistoryPage() {
         .filter((value): value is number => Number.isFinite(value) && value > 0);
       const maxReps = reps.length > 0 ? Math.max(...reps) : null;
 
-      const matchesQuery = !query || `${progressionName} ${variationValue} ${log.modifier || ""} ${log.notes || ""}`.toLowerCase().includes(query);
+      const matchesQuery = !query || `${progressionName} ${variationValue} ${setupValue} ${log.modifier || ""} ${log.notes || ""}`.toLowerCase().includes(query);
       const matchesProgression = mobileDrawerLevelFilter === "all" || progressionName === mobileDrawerLevelFilter;
       const matchesVariant = mobileDrawerVariantFilter === "all" || variationValue === mobileDrawerVariantFilter;
       const matchesWeight = mobileDrawerWeightFilter === "all"
@@ -1611,15 +1750,29 @@ export default function HistoryPage() {
     if (mobileDrawerSort === "oldest") {
       sorted.sort((a, b) => compareLogRecency(b, a));
     } else if (mobileDrawerSort === "progression-asc") {
-      sorted.sort((a, b) => a.level - b.level || compareLogRecency(a, b));
+      if (selectedMobileExerciseUsesEquipmentLabel) {
+        sorted.sort((a, b) => {
+          const labelDiff = getPrimaryHistoryLabel(a, selectedMobileExercise).localeCompare(getPrimaryHistoryLabel(b, selectedMobileExercise));
+          return labelDiff || compareLogRecency(a, b);
+        });
+      } else {
+        sorted.sort((a, b) => a.level - b.level || compareLogRecency(a, b));
+      }
     } else if (mobileDrawerSort === "progression-desc") {
-      sorted.sort((a, b) => b.level - a.level || compareLogRecency(a, b));
+      if (selectedMobileExerciseUsesEquipmentLabel) {
+        sorted.sort((a, b) => {
+          const labelDiff = getPrimaryHistoryLabel(b, selectedMobileExercise).localeCompare(getPrimaryHistoryLabel(a, selectedMobileExercise));
+          return labelDiff || compareLogRecency(a, b);
+        });
+      } else {
+        sorted.sort((a, b) => b.level - a.level || compareLogRecency(a, b));
+      }
     } else {
       sorted.sort(compareLogRecency);
     }
 
     return sorted;
-  }, [mobileDrawerLevelFilter, mobileDrawerRepsFilter, mobileDrawerSearchQuery, mobileDrawerSort, mobileDrawerVariantFilter, mobileDrawerWeightFilter, selectedMobileExercise, selectedMobileExerciseLogs, weightUnit]);
+  }, [mobileDrawerLevelFilter, mobileDrawerRepsFilter, mobileDrawerSearchQuery, mobileDrawerSort, mobileDrawerVariantFilter, mobileDrawerWeightFilter, selectedMobileExercise, selectedMobileExerciseLogs, selectedMobileExerciseUsesEquipmentLabel, weightUnit]);
 
   useEffect(() => {
     setMobileDrawerSearchOpen(false);
@@ -1966,7 +2119,7 @@ export default function HistoryPage() {
                                       const variantLabel = (entry.variant || "").trim() || lt("Default");
                                       return (
                                         <p key={`combo-log-entry-${log.id}-${entry.exerciseId}-${index}`}>
-                                          {`${index + 1}. ${entry.name} • ${progressionLabel} • ${lt("Variation")}: ${variantLabel}`}
+                                          {`${index + 1}. ${entry.name} • ${progressionLabel} • ${lt("Grip / Props")}: ${(entry.setupOption || "").trim() || lt("Default")} • ${lt("Variation")}: ${variantLabel}`}
                                         </p>
                                       );
                                     })}
@@ -1996,7 +2149,7 @@ export default function HistoryPage() {
                               isSelected={isPreviouslySelected}
                               dateFormat={settings.dateFormat || "dd-mmm-yyyy"}
                               timeZone={settings.timeZone}
-                              onActivate={(selectedRow) => {
+                              onActivate={targetUserId ? undefined : (selectedRow) => {
                                 setMobileLastSelectedExerciseId(selectedRow.exerciseId);
                                 setMobileExerciseDrawerExerciseId(selectedRow.exerciseId);
                               }}
@@ -2667,7 +2820,7 @@ export default function HistoryPage() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {mobileExerciseDrawerExerciseId ? (
+        {mobileExerciseDrawerExerciseId && !targetUserId ? (
           <>
             <motion.div
               key="mobile-exercise-drawer-backdrop"
@@ -2731,7 +2884,7 @@ export default function HistoryPage() {
                         className="truncate text-sm font-semibold"
                         style={{ color: getRecentExerciseTextColor(selectedMobileExerciseLogs[0]?.createdAt, true) }}
                       >
-                        {selectedMobileExercise?.name || lt("Exercise")}
+                        {mobileDrawerHeaderTitle}
                       </h3>
                       <p className="mt-0.5 text-[9px] uppercase tracking-[0.1em]" style={{ color: "var(--mist-light)" }}>
                         {lt("Workout History")}
@@ -2883,7 +3036,9 @@ export default function HistoryPage() {
                         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4" style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: "contain" }}>
                           <div className="space-y-4">
                             <div>
-                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">{lt("Progression")}</label>
+                              <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                                {selectedMobileExerciseUsesEquipmentLabel ? lt("Equipment") : lt("Progression")}
+                              </label>
                               <select
                                 value={mobileDrawerLevelFilter}
                                 onChange={(event) => setMobileDrawerLevelFilter(event.target.value)}
@@ -2894,7 +3049,7 @@ export default function HistoryPage() {
                                   color: "var(--text-primary)",
                                 }}
                               >
-                                <option value="all">{lt("All progressions")}</option>
+                                <option value="all">{selectedMobileExerciseUsesEquipmentLabel ? lt("All equipment") : lt("All progressions")}</option>
                                 {mobileDrawerLevelOptions.map((progressionName) => (
                                   <option key={`drawer-progression-${progressionName}`} value={progressionName}>{progressionName}</option>
                                 ))}
@@ -2971,8 +3126,8 @@ export default function HistoryPage() {
                               >
                                 <option value="recent">{lt("Recent first")}</option>
                                 <option value="oldest">{lt("Oldest first")}</option>
-                                <option value="progression-asc">{lt("Progression ascending")}</option>
-                                <option value="progression-desc">{lt("Progression descending")}</option>
+                                <option value="progression-asc">{selectedMobileExerciseUsesEquipmentLabel ? lt("Equipment A-Z") : lt("Progression ascending")}</option>
+                                <option value="progression-desc">{selectedMobileExerciseUsesEquipmentLabel ? lt("Equipment Z-A") : lt("Progression descending")}</option>
                               </select>
                             </div>
 
@@ -3019,23 +3174,81 @@ export default function HistoryPage() {
                   ) : (
                     <>
                       {filteredSelectedMobileExerciseLogs.map((log) => {
-                      const tierName = selectedMobileExercise?.tiers.find((tier) => tier.level === log.level)?.name ?? `Progression ${log.level}`;
+                      const tierName = getPrimaryHistoryLabel(log, selectedMobileExercise);
                       const comboRoutineName = comboRoutineNameByLogId.get(log.id);
-                      const titleLabel = comboRoutineName || tierName;
-                      const variationValue = getVariantDisplayValue(log.variant);
-                      const modValue = (log.modifier || "").trim();
+                      const { variationValue, setupValue, modValue } = getHistoryLogDisplayValues(log);
+                      const usesEquipmentLabel = isGymExerciseCategory(selectedMobileExercise?.category);
+                      const categoryValue = selectedMobileExercise?.category || "Uncategorized";
+                      const hasMeaningfulVariation = Boolean(variationValue && variationValue !== "Default");
+                      const titleLabel = comboRoutineName || (selectedMobileExercise?.name || lt("Exercise"));
+                      const friendTitleLabel = targetUserId
+                        ? `${targetUserDisplayName || lt("Friend")}: ${titleLabel}`
+                        : titleLabel;
                       const notesValue = (log.notes || "").trim();
                       const alignedMetricRows = getWorkoutMetricRows(log, weightUnit, timedUnit);
                       const openEditorField = (step: string, field: string) => {
                         const params = new URLSearchParams({ step, field });
                         router.push(`/dashboard/workout-history/input/${log.id}?${params.toString()}`);
                       };
-                      const leftDetailRows = [
-                        { label: `${lt("Variation")}:`, value: variationValue, valueColor: "var(--mountain-blue-glow)", step: "details", field: "variation" },
-                        { label: `${lt("Mod")}:`, value: modValue, valueColor: "var(--gold-glow)", step: "session", field: "modifier" },
-                        { label: `${lt("Notes")}:`, value: notesValue, valueColor: "var(--text-secondary)", step: "notes", field: "notes" },
-                      ];
-                      const alignedDetailRowCount = Math.max(leftDetailRows.length, alignedMetricRows.length);
+                      const leftDetailRows: Array<{
+                        label: string;
+                        value: string;
+                        valueColor: string;
+                        step: string;
+                        field: string;
+                      }> = [];
+
+                      if (usesEquipmentLabel) {
+                        leftDetailRows.push({
+                          label: `${lt("Equipment")}:`,
+                          value: tierName || lt("Unknown"),
+                          valueColor: "var(--mountain-blue-glow)",
+                          step: "details",
+                          field: "progression",
+                        });
+                        leftDetailRows.push({
+                          label: `${lt("Variation")}:`,
+                          value: variationValue || "Default",
+                          valueColor: "var(--mountain-blue-glow)",
+                          step: "details",
+                          field: "variation",
+                        });
+                        leftDetailRows.push({ label: `${lt("Grip / Props")}:`, value: setupValue, valueColor: "var(--gold-glow)", step: "details", field: "setup" });
+                        leftDetailRows.push({ label: `${lt("Mod")}:`, value: modValue, valueColor: "var(--gold-glow)", step: "session", field: "modifier" });
+                      } else {
+                        leftDetailRows.push({
+                          label: `${lt("Progression")}:`,
+                          value: tierName || `Progression ${log.level}`,
+                          valueColor: "var(--mountain-blue-glow)",
+                          step: "details",
+                          field: "progression",
+                        });
+                        leftDetailRows.push({
+                          label: `${lt("Variation")}:`,
+                          value: hasMeaningfulVariation ? variationValue : "Default",
+                          valueColor: "var(--mountain-blue-glow)",
+                          step: "details",
+                          field: "variation",
+                        });
+                        leftDetailRows.push({
+                          label: `${lt("Grip / Props")}:`,
+                          value: setupValue,
+                          valueColor: "var(--gold-glow)",
+                          step: "details",
+                          field: "setup",
+                        });
+                        leftDetailRows.push({
+                          label: `${lt("Mod")}:`,
+                          value: modValue,
+                          valueColor: "var(--gold-glow)",
+                          step: "session",
+                          field: "modifier",
+                        });
+                      }
+
+                      leftDetailRows.push({ label: `${lt("Category")}:`, value: categoryValue, valueColor: "var(--mist-light)", step: "details", field: "category" });
+                      leftDetailRows.push({ label: `${lt("Notes")}:`, value: notesValue, valueColor: "var(--text-secondary)", step: "notes", field: "notes" });
+                      const alignedDetailRowCount = leftDetailRows.length;
                       return (
                         <article
                           key={`mobile-drawer-log-${log.id}`}
@@ -3048,7 +3261,7 @@ export default function HistoryPage() {
                             <div className="flex min-w-0 items-start gap-1.5">
                               {targetUserId ? (
                                 <p className="min-w-0 text-sm font-semibold leading-tight" style={{ color: "var(--jade-light)" }}>
-                                  {titleLabel}
+                                  {friendTitleLabel}
                                 </p>
                               ) : (
                                 <button
@@ -3057,7 +3270,7 @@ export default function HistoryPage() {
                                   className="cursor-pointer text-left text-sm font-semibold leading-tight transition-colors hover:opacity-90"
                                   style={{ color: "var(--jade-light)" }}
                                 >
-                                  {titleLabel}
+                                  {friendTitleLabel}
                                 </button>
                               )}
                               {comboSourceLogIds.has(log.id) ? (
@@ -3073,9 +3286,11 @@ export default function HistoryPage() {
                                 </span>
                               ) : null}
                             </div>
-                            <span className="shrink-0 text-[11px]" style={{ color: "var(--text-muted)" }}>
-                              {formatRelativeRecentDate(log.createdAt, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone)}
-                            </span>
+                            <div className="flex shrink-0 items-center gap-1.5">
+                              <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>
+                                {formatRelativeRecentDate(log.createdAt, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone)}
+                              </span>
+                            </div>
                           </div>
                           <div className="mt-1.5 space-y-0.5 text-[11px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
                             {Array.from({ length: alignedDetailRowCount }, (_, index) => {
@@ -3086,9 +3301,11 @@ export default function HistoryPage() {
                                   <div className="min-w-0">
                                     {left ? (
                                       targetUserId ? (
-                                        <div className="truncate">
-                                          <span style={{ color: "var(--text-muted)" }}>{left.label}</span>{" "}
-                                          <span style={{ color: left.valueColor }}>{left.value}</span>
+                                        <div className="flex w-full min-w-0 items-baseline gap-1 text-left">
+                                          <span className="shrink-0" style={{ color: "var(--text-muted)" }}>{left.label}</span>
+                                          <span className="min-w-0 truncate" style={{ color: left.valueColor }}>
+                                            {left.value}
+                                          </span>
                                         </div>
                                       ) : (
                                         <button
@@ -3112,9 +3329,9 @@ export default function HistoryPage() {
                                   <div className="min-w-0 grid grid-cols-2 gap-x-3">
                                     {metric.weight !== "-" ? (
                                       targetUserId ? (
-                                        <span className="truncate" style={{ color: "var(--mountain-blue-glow)" }}>
+                                        <div className="truncate text-left" style={{ color: "var(--mountain-blue-glow)" }}>
                                           <span style={{ color: "var(--text-muted)" }}>{lt("Weight")}: </span>{metric.weight}
-                                        </span>
+                                        </div>
                                       ) : (
                                         <button
                                           type="button"
@@ -3133,9 +3350,9 @@ export default function HistoryPage() {
                                     )}
                                     {metric.reps !== "-" ? (
                                       targetUserId ? (
-                                        <span className="truncate" style={{ color: "var(--forest)" }}>
+                                        <div className="truncate text-left" style={{ color: "var(--forest)" }}>
                                           <span style={{ color: "var(--text-muted)" }}>{lt("Reps")}: </span>{metric.reps}
-                                        </span>
+                                        </div>
                                       ) : (
                                         <button
                                           type="button"

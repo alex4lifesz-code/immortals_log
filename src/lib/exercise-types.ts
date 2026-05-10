@@ -6,7 +6,7 @@ export type SimpleExerciseType = string;
 export type MuscleGroup = string;
 export type Difficulty = 'Beginner' | 'Intermediate' | 'Advanced';
 
-export const ALL_TRAINING_CATEGORIES: TrainingCategory[] = ['Calisthenics', 'GYM', 'Yoga', 'Cardio', 'Stretching', 'Other'];
+export const ALL_TRAINING_CATEGORIES: TrainingCategory[] = ['Calisthenics', 'Gym', 'Yoga', 'Cardio', 'Stretching', 'Other'];
 export const ALL_EXERCISE_TYPES: SimpleExerciseType[] = ['weighted', 'timed', 'bodyweight'];
 export const ALL_MUSCLE_GROUPS: MuscleGroup[] = [
   'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Forearms',
@@ -33,6 +33,7 @@ export interface SimpleExercise {
     name: string;
   }>;
   equipment?: string[];
+  setupOptions?: string[];
   difficulty?: Difficulty;
   description?: string;
   instructions?: string[];
@@ -106,7 +107,7 @@ export function mapProgressionToSimpleExercise(pe: {
 
 function inferCategory(cat: string): TrainingCategory {
   const lower = (cat || '').toLowerCase();
-  if (lower.includes('gym')) return 'GYM';
+  if (lower.includes('gym')) return 'Gym';
   if (lower.includes('calisthenics') || lower.includes('cali')) return 'Calisthenics';
   if (lower.includes('yoga')) return 'Yoga';
   if (lower.includes('cardio')) return 'Cardio';

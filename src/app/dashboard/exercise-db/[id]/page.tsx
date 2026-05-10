@@ -60,7 +60,7 @@ export default function ExerciseDetailPage() {
   const [status, setStatus] = useState("");
 
   const [name, setName] = useState("");
-  const [category, setCategory] = useState<TrainingCategory>("GYM");
+  const [category, setCategory] = useState<TrainingCategory>("Gym");
   const [exerciseType, setExerciseType] = useState<SimpleExerciseType>("weighted");
   const [muscleGroups, setMuscleGroups] = useState<MuscleGroup[]>([]);
   const [progression, setProgression] = useState<string[]>([]);

@@ -20,6 +20,7 @@ type ImportedLog = {
   holdTime3?: number | null;
   modifier?: string | null;
   variant?: string | null;
+  setupOption?: string | null;
   notes?: string | null;
   completed?: boolean;
   createdAt?: string;
@@ -100,7 +101,7 @@ function inferImportedExerciseShape(log: ImportedLog) {
 
   if (hasWeightedData) {
     return {
-      category: "Imported, GYM",
+      category: "Imported, Gym",
       equipmentType: "machine, barbell, dumbbell",
       bodyweight: false,
       weighted: true,
@@ -389,7 +390,7 @@ export const POST = withAuth(async (request, { auth }) => {
           wuxiaName: trimmedName.slice(0, 200),
           difficulty: inferred.difficulty,
           wuxiaDifficulty: inferred.wuxiaDifficulty,
-          type: inferred.category.includes("GYM") ? "Heaven and Earth United" : "",
+          type: inferred.category.includes("Gym") ? "Heaven and Earth United" : "",
           wuxiaType: inferred.wuxiaType,
           story: "Imported from training log",
           category: inferred.category,
@@ -481,6 +482,7 @@ export const POST = withAuth(async (request, { auth }) => {
       holdTime3: number | null;
       modifier: string | null;
       variant: string | null;
+      setupOption: string | null;
       notes: string | null;
       completed: boolean;
       createdAt: Date;
@@ -565,6 +567,7 @@ export const POST = withAuth(async (request, { auth }) => {
         holdTime3: normalizeNullableInt(rawLog.holdTime3, 0, 9999),
         modifier: rawLog.modifier ? String(rawLog.modifier).trim().slice(0, 100) : null,
         variant: rawLog.variant ? String(rawLog.variant).trim().slice(0, 200) : null,
+        setupOption: rawLog.setupOption ? String(rawLog.setupOption).trim().slice(0, 100) : null,
         notes: rawLog.notes ? String(rawLog.notes).trim().slice(0, 1000) : null,
         completed: Boolean(rawLog.completed),
         createdAt: parseCreatedAt(rawLog.createdAt),

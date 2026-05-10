@@ -406,8 +406,8 @@ function inferMapping(sourceExercise: string, notes: string): Inference | null {
 
   if (name.includes("machine shoulder press")) return { canonicalExercise: "Shoulder press", progressionHint: "Machine" };
   if (name.includes("db shoulder press")) return { canonicalExercise: "Shoulder press", progressionHint: "Dumbbell" };
-  if (name.includes("db lateral raise")) return { canonicalExercise: "Lateral raise", progressionHint: "Dumbbell" };
-  if (name.includes("front raise")) return { canonicalExercise: "Front raise", progressionHint: "Dumbbell" };
+  if (name.includes("db lateral raise")) return { canonicalExercise: "Shoulder raise", progressionHint: "Dumbbell", variantHint: "Lateral" };
+  if (name.includes("front raise")) return { canonicalExercise: "Shoulder raise", progressionHint: "Dumbbell", variantHint: "Front" };
 
   if (name.includes("1 arm cable tricep pushdown")) return { canonicalExercise: "Tricep pushdown", progressionHint: "Cable", variantHint: "Single arm" };
   if (name.includes("cable tricep pushdown")) {
@@ -416,13 +416,13 @@ function inferMapping(sourceExercise: string, notes: string): Inference | null {
     return { canonicalExercise: "Tricep pushdown", progressionHint: "Cable", variantHint: "Bar" };
   }
 
-  if (name.includes("cable rear delt")) return { canonicalExercise: "Rear delt fly", progressionHint: "Cable" };
-  if (name.includes("rear delt fly")) return { canonicalExercise: "Rear delt fly", progressionHint: "Dumbbell" };
+  if (name.includes("cable rear delt")) return { canonicalExercise: "Shoulder raise", progressionHint: "Cable", variantHint: "Rear" };
+  if (name.includes("rear delt fly")) return { canonicalExercise: "Shoulder raise", progressionHint: "Dumbbell", variantHint: "Rear" };
 
   if (name.includes("hamstring curl")) return { canonicalExercise: "Leg curl", progressionHint: "Seated" };
 
   if (name.includes("bb squat")) return { canonicalExercise: "Squat", progressionHint: "Barbell", variantHint: "Back" };
-  if (name.includes("pendulum squat")) return { canonicalExercise: "Squat", progressionHint: "Weighted", variantHint: "Pendulum" };
+  if (name.includes("pendulum squat")) return { canonicalExercise: "Squat", progressionHint: "Standard", variantHint: "Hack" };
 
   if (name.includes("single leg extension")) return { canonicalExercise: "Leg extension", progressionHint: "Seated", variantHint: "Single leg" };
   if (name.includes("seated leg extension")) {
@@ -436,27 +436,27 @@ function inferMapping(sourceExercise: string, notes: string): Inference | null {
   }
 
   if (name.includes("hip abduction")) {
-    if (name.includes("leaning back")) return { canonicalExercise: "Hip abduction", progressionHint: "Machine", variantHint: "Leaning back" };
-    if (name.includes("leaning forward")) return { canonicalExercise: "Hip abduction", progressionHint: "Machine", variantHint: "Leaning forward" };
-    if (name.includes("pulses")) return { canonicalExercise: "Hip abduction", progressionHint: "Machine", variantHint: "Pulses" };
-    return { canonicalExercise: "Hip abduction", progressionHint: "Machine" };
+    if (name.includes("leaning back")) return { canonicalExercise: "Abductor machine", progressionHint: "Weighted", variantHint: "Weighted", noteSuffix: "Leaning back" };
+    if (name.includes("leaning forward")) return { canonicalExercise: "Abductor machine", progressionHint: "Weighted", variantHint: "Weighted", noteSuffix: "Leaning forward" };
+    if (name.includes("pulses")) return { canonicalExercise: "Abductor machine", progressionHint: "Weighted", variantHint: "Weighted", noteSuffix: "Pulses" };
+    return { canonicalExercise: "Abductor machine", progressionHint: "Weighted" };
   }
 
-  if (name.includes("hanging leg raise")) return { canonicalExercise: "Leg raise", progressionHint: "Hanging", variantHint: "Straight" };
+  if (name.includes("hanging leg raise")) return { canonicalExercise: "Hanging leg raise", progressionHint: "Standard", variantHint: "Full" };
   if (name.includes("leg press")) return { canonicalExercise: "Leg press", progressionHint: "Standard" };
 
   if (name.includes("db bench press")) return { canonicalExercise: "Bench press", progressionHint: "Dumbbell", variantHint: "Flat" };
   if (name.includes("incline db bench press")) return { canonicalExercise: "Bench press", progressionHint: "Dumbbell", variantHint: "Incline" };
 
   if (name.includes("chest fly")) return { canonicalExercise: "Chest fly", progressionHint: "Machine" };
-  if (name.includes("chest press")) return { canonicalExercise: "Chest press", progressionHint: "Machine", variantHint: "Flat" };
+  if (name.includes("chest press")) return { canonicalExercise: "Chest press machine", progressionHint: "Standard", variantHint: "Flat" };
 
   if (name.includes("db hammer curl")) return { canonicalExercise: "Bicep curl", variantHint: "Hammer" };
 
   if (name.includes("b stance rdl")) return { canonicalExercise: "Deadlift", progressionHint: "Romanian", variantHint: "Single leg", noteSuffix: "B stance" };
-  if (name.includes("romanian deadlift")) return { canonicalExercise: "Deadlift", progressionHint: "Romanian" };
+  if (name.includes("romanian deadlift")) return { canonicalExercise: "Romanian deadlift", progressionHint: "Standard" };
 
-  if (name.includes("cable kickback")) return { canonicalExercise: "Glute kickback", progressionHint: "Cable", variantHint: note.includes("each leg") ? "Single leg" : undefined };
+  if (name.includes("cable kickback")) return { canonicalExercise: "Glute kickback machine", progressionHint: "Standard", variantHint: note.includes("each leg") ? "Single leg" : "Cable" };
 
   if (name.includes("eb upright row") || name.includes("upright row")) return { canonicalExercise: "Upright row", progressionHint: "EZ bar" };
 

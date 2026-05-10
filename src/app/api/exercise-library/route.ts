@@ -104,6 +104,10 @@ function mapDbToSimpleExercise(pe: {
     id: string;
     name: string;
   }>;
+  modifiers?: Array<{
+    id: string;
+    type: string;
+  }>;
 }, options: { categories: string[]; muscles: string[]; types: string[] }): SimpleExercise {
   const category = inferCategory(pe.category, options.categories);
   const exerciseType = inferExerciseType(pe, options.types);
@@ -133,6 +137,9 @@ function mapDbToSimpleExercise(pe: {
     })),
     progression,
     equipment,
+    setupOptions: (pe.modifiers ?? [])
+      .map((modifier) => String(modifier.type || "").trim())
+      .filter(Boolean),
     difficulty,
     description: stripExerciseStatusMarkers(pe.story) || undefined,
     isCustom: true,
@@ -148,7 +155,7 @@ function inferCategory(cat: string, categories: string[]): TrainingCategory {
   if (direct) return direct;
 
   const lower = (cat || '').toLowerCase();
-  if (lower.includes('gym')) return 'GYM';
+  if (lower.includes('gym')) return 'Gym';
   if (lower.includes('calisthenics') || lower.includes('cali')) return 'Calisthenics';
   if (lower.includes('yoga')) return 'Yoga';
   if (lower.includes('cardio')) return 'Cardio';
@@ -205,6 +212,12 @@ export const GET = withAuth(async (_req, { auth }) => {
             difficulty: true,
           },
           orderBy: { name: "asc" },
+        },
+        modifiers: {
+          select: {
+            id: true,
+            type: true,
+          },
         },
       },
       orderBy: { name: "asc" },

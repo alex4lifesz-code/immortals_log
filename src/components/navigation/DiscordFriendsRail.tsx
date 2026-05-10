@@ -10,6 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
 import { formatDateLocal, formatDateWithPreference } from "@/lib/constants";
 import { translateEnglishToLanguage } from "@/lib/language";
+import { parseModifierWithBand } from "@/app/dashboard/workout/utils";
 import type { ProgressionExercise, ProgressionLog } from "@/app/dashboard/workout/types";
 
 interface FriendsPayload {
@@ -126,6 +127,66 @@ function getWorkoutMetricRows(log: ProgressionLog): Array<{ weight: string; reps
   return rows.length > 0 ? rows : [{ weight: "-", reps: "-" }];
 }
 
+function getVariantDisplayValue(variant: string | null | undefined): string {
+  const trimmed = variant?.trim() || "";
+  if (!trimmed) return "Default";
+  const normalized = trimmed.toLowerCase();
+  if (trimmed === "-" || normalized === "default" || normalized === "standard") return "Default";
+  return trimmed;
+}
+
+function normalizeGripLikeValue(value: string | null | undefined): string {
+  const normalized = String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+  if (!normalized) return "";
+  if (normalized.includes("neutral")) return "Neutral";
+  if (normalized.includes("underhand") || normalized.includes("supinated") || normalized.includes("chin up")) return "Underhand";
+  if (normalized.includes("overhand") || normalized.includes("pronated")) return "Overhand";
+  if (normalized.includes("wide")) return "Wide";
+  if (normalized.includes("close") || normalized.includes("narrow")) return "Close";
+  if (normalized.includes("false")) return "False";
+  if (normalized.includes("mixed")) return "Mixed";
+  if (normalized.includes("ring")) return "Rings";
+  if (normalized.includes("grip")) {
+    return normalized
+      .split(" ")
+      .filter((part) => part !== "grip")
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+  }
+  return "";
+}
+
+function getHistoryLogDisplayValues(log: Pick<ProgressionLog, "variant" | "modifier">): {
+  variationValue: string;
+  setupValue: string;
+  modValue: string;
+} {
+  const parsedModifier = parseModifierWithBand(log.modifier);
+  const setupFromModifier = normalizeGripLikeValue(parsedModifier.setupOption);
+  const setupFromVariant = normalizeGripLikeValue(log.variant);
+  const setupValue = setupFromModifier || setupFromVariant;
+  const variationValue = setupFromVariant ? "Default" : getVariantDisplayValue(log.variant);
+  const modValue = (parsedModifier.baseModifier || "").trim();
+  return { variationValue, setupValue, modValue };
+}
+
+function isGymExerciseCategory(category: string | null | undefined): boolean {
+  return String(category ?? "").trim().toLowerCase() === "gym";
+}
+
+function getProgressionDisplayName(log: Pick<ProgressionLog, "level">, exercise: Pick<ProgressionExercise, "tiers"> | null | undefined): string {
+  return exercise?.tiers.find((tier) => tier.level === log.level)?.name ?? `Progression ${log.level}`;
+}
+
+function getPrimaryHistoryLabel(log: Pick<ProgressionLog, "level">, exercise: Pick<ProgressionExercise, "tiers"> | null | undefined): string {
+  return getProgressionDisplayName(log, exercise);
+}
+
 type FriendViewMode = "" | "history" | "chart" | "checkin" | "chat";
 
 function DiscordFriendsRail({
@@ -148,7 +209,6 @@ function DiscordFriendsRail({
   const isActive = pathname === DASHBOARD_ROUTES.circle || pathname?.startsWith(`${DASHBOARD_ROUTES.circle}/`);
   const [drawerFriendId, setDrawerFriendId] = useState("");
   const [friendViewMode, setFriendViewMode] = useState<FriendViewMode>("");
-  const [selectedFriendExerciseId, setSelectedFriendExerciseId] = useState("");
   const [friends, setFriends] = useState<Array<{
     id: string;
     name: string;
@@ -208,17 +268,11 @@ function DiscordFriendsRail({
   const [friendHistoryFilterOpen, setFriendHistoryFilterOpen] = useState(false);
   const [friendHistorySort, setFriendHistorySort] = useState<"recent" | "oldest" | "name-az">("recent");
   const [friendHistoryRecency, setFriendHistoryRecency] = useState<"all" | "7d" | "30d">("all");
-  const [friendExerciseSearchOpen, setFriendExerciseSearchOpen] = useState(false);
-  const [friendExerciseSearchQuery, setFriendExerciseSearchQuery] = useState("");
-  const [friendExerciseFilterOpen, setFriendExerciseFilterOpen] = useState(false);
-  const [friendExerciseProgressionFilter, setFriendExerciseProgressionFilter] = useState("all");
-  const [friendExerciseVariantFilter, setFriendExerciseVariantFilter] = useState("all");
-  const [friendExerciseWeightFilter, setFriendExerciseWeightFilter] = useState<"all" | "weighted" | "bodyweight">("all");
-  const [friendExerciseRepsFilter, setFriendExerciseRepsFilter] = useState<"all" | "1-5" | "6-10" | "11+">("all");
-  const [friendExerciseSort, setFriendExerciseSort] = useState<"recent" | "oldest" | "progression-asc" | "progression-desc">("recent");
+  const [friendHistoryExerciseId, setFriendHistoryExerciseId] = useState("");
+  const [friendHistoryExerciseData, setFriendHistoryExerciseData] = useState<ProgressionExercise | null>(null);
+  const [friendHistoryExerciseLoading, setFriendHistoryExerciseLoading] = useState(false);
   const railWidthPx = isMobile ? 64 : 76;
   const friendHistorySearchInputRef = useRef<HTMLInputElement | null>(null);
-  const friendExerciseSearchInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined" || !friendHistorySearchOpen) return;
@@ -228,15 +282,6 @@ function DiscordFriendsRail({
     });
     return () => window.cancelAnimationFrame(frame);
   }, [friendHistorySearchOpen]);
-
-  useEffect(() => {
-    if (typeof window === "undefined" || !friendExerciseSearchOpen) return;
-    const frame = window.requestAnimationFrame(() => {
-      friendExerciseSearchInputRef.current?.focus();
-      friendExerciseSearchInputRef.current?.select();
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [friendExerciseSearchOpen]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -352,12 +397,11 @@ function DiscordFriendsRail({
 
   const setDrawerState = (
     friendId: string | null,
-    options: { view?: FriendViewMode | null; exerciseId?: string | null } = {},
+    options: { view?: FriendViewMode | null } = {},
   ) => {
-    const { view = null, exerciseId = null } = options;
+    const { view = null } = options;
     setDrawerFriendId(friendId || "");
     setFriendViewMode(view || "");
-    setSelectedFriendExerciseId(exerciseId || "");
   };
 
   const closeFriendPanels = (resetTrainView = true) => {
@@ -423,7 +467,6 @@ function DiscordFriendsRail({
       const customEvent = event as CustomEvent<{
         friendId?: string;
         view?: FriendViewMode | null;
-        exerciseId?: string | null;
       }>;
       const friendId = (customEvent.detail?.friendId || "").trim();
       if (!friendId) return;
@@ -432,8 +475,7 @@ function DiscordFriendsRail({
       if (!targetFriend) return;
 
       const view = customEvent.detail?.view ?? null;
-      const exerciseId = customEvent.detail?.exerciseId ?? null;
-      setDrawerState(friendId, { view, exerciseId });
+      setDrawerState(friendId, { view });
       setFriendActionsOpen(!view);
     };
 
@@ -605,86 +647,69 @@ function DiscordFriendsRail({
     return sorted;
   }, [friendHistoryRecency, friendHistoryRows, friendHistorySearchQuery, friendHistorySort]);
 
-  const selectedFriendExercise = useMemo(() => {
-    if (!selectedFriendExerciseId) return null;
-    return friendHistoryExercises.find((exercise) => exercise.id === selectedFriendExerciseId) ?? null;
-  }, [friendHistoryExercises, selectedFriendExerciseId]);
-
-  const selectedFriendExerciseLogs = useMemo(() => {
-    const logs = selectedFriendExercise?.userProgress?.[0]?.logs ?? [];
-    return [...logs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [selectedFriendExercise]);
-
-  const friendExerciseProgressionOptions = useMemo(() => {
-    return Array.from(
-      new Set(
-        selectedFriendExerciseLogs.map((log) => selectedFriendExercise?.tiers.find((tier) => tier.level === log.level)?.name ?? `Progression ${log.level}`),
-      ),
-    ).sort((a, b) => a.localeCompare(b));
-  }, [selectedFriendExercise, selectedFriendExerciseLogs]);
-
-  const friendExerciseVariantOptions = useMemo(() => {
-    return Array.from(new Set(selectedFriendExerciseLogs.map((log) => log.variant?.trim() || "-"))).sort((a, b) => a.localeCompare(b));
-  }, [selectedFriendExerciseLogs]);
-
-  const filteredSelectedFriendExerciseLogs = useMemo(() => {
-    const query = friendExerciseSearchQuery.trim().toLowerCase();
-    const filtered = selectedFriendExerciseLogs.filter((log) => {
-      const progressionName = selectedFriendExercise?.tiers.find((tier) => tier.level === log.level)?.name ?? `Progression ${log.level}`;
-      const variationValue = log.variant?.trim() || "-";
-      const metricRows = getWorkoutMetricRows(log);
-      const hasWeightedValue = metricRows.some((row) => row.weight !== "-" && !row.weight.endsWith("s"));
-      const reps = metricRows
-        .map((row) => Number.parseInt(row.reps, 10))
-        .filter((value): value is number => Number.isFinite(value) && value > 0);
-      const maxReps = reps.length > 0 ? Math.max(...reps) : null;
-
-      const matchesQuery = !query || `${progressionName} ${variationValue} ${log.modifier || ""} ${log.notes || ""}`.toLowerCase().includes(query);
-      const matchesProgression = friendExerciseProgressionFilter === "all" || progressionName === friendExerciseProgressionFilter;
-      const matchesVariant = friendExerciseVariantFilter === "all" || variationValue === friendExerciseVariantFilter;
-      const matchesWeight = friendExerciseWeightFilter === "all"
-        || (friendExerciseWeightFilter === "weighted" && hasWeightedValue)
-        || (friendExerciseWeightFilter === "bodyweight" && !hasWeightedValue);
-      const matchesReps = friendExerciseRepsFilter === "all"
-        || (friendExerciseRepsFilter === "1-5" && maxReps != null && maxReps >= 1 && maxReps <= 5)
-        || (friendExerciseRepsFilter === "6-10" && maxReps != null && maxReps >= 6 && maxReps <= 10)
-        || (friendExerciseRepsFilter === "11+" && maxReps != null && maxReps >= 11);
-
-      return matchesQuery && matchesProgression && matchesVariant && matchesWeight && matchesReps;
-    });
-
-    const sorted = [...filtered];
-    if (friendExerciseSort === "oldest") {
-      sorted.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-    } else if (friendExerciseSort === "progression-asc") {
-      sorted.sort((a, b) => a.level - b.level || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    } else if (friendExerciseSort === "progression-desc") {
-      sorted.sort((a, b) => b.level - a.level || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    } else {
-      sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    }
-
-    return sorted;
-  }, [friendExerciseProgressionFilter, friendExerciseRepsFilter, friendExerciseSearchQuery, friendExerciseSort, friendExerciseVariantFilter, friendExerciseWeightFilter, selectedFriendExercise, selectedFriendExerciseLogs]);
-
   useEffect(() => {
     setFriendHistorySearchOpen(false);
     setFriendHistorySearchQuery("");
     setFriendHistoryFilterOpen(false);
     setFriendHistorySort("recent");
     setFriendHistoryRecency("all");
+    setFriendHistoryExerciseId("");
+    setFriendHistoryExerciseData(null);
+    setFriendHistoryExerciseLoading(false);
   }, [activeFriend?.id]);
 
   useEffect(() => {
-    setFriendExerciseSearchOpen(false);
-    setFriendExerciseSearchQuery("");
-    setFriendExerciseFilterOpen(false);
-    setFriendExerciseProgressionFilter("all");
-    setFriendExerciseVariantFilter("all");
-    setFriendExerciseWeightFilter("all");
-    setFriendExerciseRepsFilter("all");
-    setFriendExerciseSort("recent");
-  }, [selectedFriendExerciseId]);
+    if (friendViewMode !== "history" || !activeFriend?.id) {
+      setFriendHistoryExerciseId("");
+      setFriendHistoryExerciseData(null);
+      setFriendHistoryExerciseLoading(false);
+    }
+  }, [activeFriend?.id, friendViewMode]);
+
+  useEffect(() => {
+    if (!friendHistoryExerciseId || !activeFriend?.id || friendViewMode !== "history") {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadFriendExerciseHistory = async () => {
+      setFriendHistoryExerciseLoading(true);
+      try {
+        const params = new URLSearchParams({ targetUserId: activeFriend.id });
+        const payload = await api.get<{ exercise: ProgressionExercise }>(`/api/progressions/${encodeURIComponent(friendHistoryExerciseId)}?${params.toString()}`);
+        if (!cancelled) {
+          setFriendHistoryExerciseData(payload.exercise ?? null);
+        }
+      } catch {
+        if (!cancelled) {
+          setFriendHistoryExerciseData(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setFriendHistoryExerciseLoading(false);
+        }
+      }
+    };
+
+    void loadFriendExerciseHistory();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeFriend?.id, friendHistoryExerciseId, friendViewMode]);
+
+  const friendExerciseLogs = useMemo(() => {
+    const logs = friendHistoryExerciseData?.userProgress?.[0]?.logs ?? [];
+    return [...logs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [friendHistoryExerciseData]);
+
+  const friendExerciseHistoryStats = useMemo(() => {
+    const totalLogs = friendExerciseLogs.length;
+    const completedLogs = friendExerciseLogs.filter((entry) => entry.completed).length;
+    const completionRate = totalLogs > 0 ? Math.round((completedLogs / totalLogs) * 100) : 0;
+    return { totalLogs, completedLogs, completionRate };
+  }, [friendExerciseLogs]);
 
   const selectedRailFriendId = drawerFriendId || activeFriend?.id || "";
   const hasFriendDrawerOpen = Boolean(friendActionsOpen || friendViewMode || drawerFriendId || activeFriend?.id);
@@ -1208,12 +1233,19 @@ function DiscordFriendsRail({
                         </div>
                       ) : (
                         <div className="pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)]">
-                          {filteredFriendHistoryRows.map((row) => (
+                          {filteredFriendHistoryRows.map((row) => {
+                            const isSelectedHistoryExercise = friendHistoryExerciseId === row.exerciseId;
+                            return (
                             <button
                               key={`friend-history-row-${row.exerciseId}`}
                               type="button"
-                              onClick={() => setDrawerState(activeFriend.id, { view: "history", exerciseId: row.exerciseId })}
+                              onClick={() => setFriendHistoryExerciseId(row.exerciseId)}
                               className="mx-1 my-0.5 block w-[calc(100%-0.5rem)] rounded-md border-0 bg-transparent px-3 py-2.5 text-left"
+                              style={{
+                                backgroundColor: isSelectedHistoryExercise
+                                  ? "color-mix(in srgb, var(--accent) 12%, transparent)"
+                                  : "transparent",
+                              }}
                             >
                               <div className="flex items-start justify-between gap-2">
                                 <p className="text-sm font-semibold leading-tight" style={{ color: getRecentExerciseTextColor(row.date) }}>
@@ -1228,16 +1260,13 @@ function DiscordFriendsRail({
                                   {formatRelativeRecentDate(row.date, dateFormat, timeZone)}
                                 </span>
                               </div>
-                              <div className="mt-0.5 flex items-start justify-between gap-2">
-                                <p className="min-w-0 text-[11px] italic" style={{ color: "var(--text-muted)" }}>
+                              <div className="mt-0.5">
+                                <p className="text-[11px] italic" style={{ color: "var(--text-muted)" }}>
                                   {`${lt("Recent")}: ${row.variant ? `${row.variant} ` : ""}${row.progression} ${row.exerciseName}`}
                                 </p>
-                                <span className="shrink-0 text-[12px]" style={{ color: "var(--mist-light)" }}>
-                                  ›
-                                </span>
                               </div>
                             </button>
-                          ))}
+                          );})}
                         </div>
                       )
                     ) : (
@@ -1364,369 +1393,170 @@ function DiscordFriendsRail({
                         </>
                       ) : null}
                     </AnimatePresence>
-                  </div>
-                </div>
-              </motion.aside>
-            )}
-
-            {friendViewMode === "history" && selectedFriendExercise && (
-              <motion.aside
-                initial={{ x: "100%" }}
-                animate={{ x: "0%" }}
-                exit={{ x: "100%" }}
-                transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-                className="fixed inset-y-0 right-0 z-[73] overflow-hidden safe-area-top safe-area-bottom safe-area-right"
-                style={{
-                  left: `${railWidthPx}px`,
-                  backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))",
-                }}
-              >
-                <div
-                  className="h-full overflow-hidden"
-                  style={{
-                    backgroundColor: "color-mix(in srgb, var(--ink-mid) 20%, var(--ink-deep))",
-                  }}
-                >
-                  <div
-                    data-mobile-scroll-container="true"
-                    className="h-full overflow-y-auto scrollbar-hide overflow-x-hidden pb-[calc(var(--mobile-nav-offset)+max(env(safe-area-inset-bottom,0px),12px))]"
-                    style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorY: "auto", touchAction: "pan-y" }}
-                  >
-                    <div
-                      className="sticky top-0 z-10 px-3 py-2.5"
-                      style={{
-                        backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))",
-                      }}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-start gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setDrawerState(activeFriend.id, { view: "history" })}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-md"
-                            style={{ color: "var(--mist-light)", backgroundColor: "transparent" }}
-                            aria-label={lt("Back to friend history")}
-                          >
-                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                            </svg>
-                          </button>
-                          <div className="min-w-0">
-                            <h3 className="truncate text-sm font-semibold" style={{ color: getRecentExerciseTextColor(selectedFriendExerciseLogs[0]?.createdAt, true) }}>
-                              {selectedFriendExercise.name || lt("Exercise")}
-                            </h3>
-                            <p className="mt-0.5 text-[9px] uppercase tracking-[0.1em]" style={{ color: "var(--mist-light)" }}>
-                              {lt("Workout History")}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3 pt-0.5">
-                          <button
-                            type="button"
-                            onClick={() => setFriendExerciseSearchOpen((prev) => !prev)}
-                            className="inline-flex h-8 items-center justify-center text-[#b5bac1] transition-colors hover:text-[#f2f3f5]"
-                            aria-label={friendExerciseSearchOpen ? lt("Close log search") : lt("Open log search")}
-                            aria-expanded={friendExerciseSearchOpen}
-                          >
-                            <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-4.35-4.35m1.85-5.15a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
-                            </svg>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setFriendExerciseFilterOpen(true)}
-                            className="relative inline-flex h-8 items-center justify-center text-[#b5bac1] transition-colors hover:text-[#f2f3f5]"
-                            aria-label={lt("Open log filters")}
-                          >
-                            <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M3 5h18M6 12h12m-9 7h6" />
-                            </svg>
-                            {(friendExerciseProgressionFilter !== "all" || friendExerciseVariantFilter !== "all" || friendExerciseWeightFilter !== "all" || friendExerciseRepsFilter !== "all" || friendExerciseSort !== "recent") ? (
-                              <span className="absolute right-0.5 top-1 h-2 w-2 rounded-full bg-[#5865f2]" />
-                            ) : null}
-                          </button>
-                        </div>
-                      </div>
-
-                      <AnimatePresence initial={false}>
-                        {friendExerciseSearchOpen ? (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0, y: -6 }}
-                            animate={{ height: "auto", opacity: 1, y: 0 }}
-                            exit={{ height: 0, opacity: 0, y: -6 }}
-                            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-                            className="overflow-hidden"
-                          >
-                            <input
-                              ref={friendExerciseSearchInputRef}
-                              autoFocus
-                              type="text"
-                              value={friendExerciseSearchQuery}
-                              onChange={(event) => setFriendExerciseSearchQuery(event.target.value)}
-                              placeholder={lt("Search logs")}
-                              className="mt-2 h-8 w-full rounded-md border px-2.5 text-sm outline-none"
-                              style={{
-                                borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                                backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
-                                color: "var(--cloud-white)",
-                              }}
-                            />
-                          </motion.div>
-                        ) : null}
-                      </AnimatePresence>
-                    </div>
 
                     <AnimatePresence>
-                      {friendExerciseFilterOpen ? (
+                      {friendViewMode === "history" && Boolean(friendHistoryExerciseId) ? (
                         <>
                           <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-[74]"
+                            className="fixed inset-0 z-[73]"
                             style={{ left: `${railWidthPx}px`, backgroundColor: "color-mix(in srgb, var(--void-black) 74%, transparent)" }}
-                            onClick={() => setFriendExerciseFilterOpen(false)}
+                            onClick={() => {
+                              setFriendHistoryExerciseId("");
+                              setFriendHistoryExerciseData(null);
+                            }}
                           />
                           <motion.aside
                             initial={{ x: "100%" }}
                             animate={{ x: "0%" }}
                             exit={{ x: "100%" }}
                             transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-                            className="fixed inset-y-0 right-0 z-[75] w-[min(320px,88vw)] border-l overflow-hidden safe-area-top safe-area-bottom safe-area-right"
+                            className="fixed inset-y-0 right-0 z-[74] overflow-hidden safe-area-top safe-area-bottom safe-area-right"
                             style={{
-                              borderLeftColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
+                              left: `${railWidthPx}px`,
+                              borderLeft: "1px solid color-mix(in srgb, var(--ink-light) 72%, transparent)",
                               backgroundColor: "color-mix(in srgb, var(--ink-deep) 97%, var(--ink-mid))",
                             }}
                           >
                             <div className="flex h-full min-h-0 flex-col overflow-hidden">
-                              <div className="border-b px-3 py-2.5" style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)" }}>
-                                <div className="flex items-center justify-between gap-2">
-                                  <h2 className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--mist-light)" }}>
-                                    {lt("Log Filters")}
-                                  </h2>
+                              <div className="border-b px-3 pt-[calc(env(safe-area-inset-top,0px)+10px)] pb-2.5" style={{ borderBottomColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)" }}>
+                                <div className="flex items-center gap-2">
                                   <button
                                     type="button"
-                                    onClick={() => setFriendExerciseFilterOpen(false)}
-                                    className="h-8 w-8 rounded-md border text-sm"
-                                    style={{
-                                      borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                                      color: "var(--mist-light)",
-                                      backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
+                                    onClick={() => {
+                                      setFriendHistoryExerciseId("");
+                                      setFriendHistoryExerciseData(null);
                                     }}
-                                    aria-label={lt("Close log filters")}
+                                    className="inline-flex h-9 w-9 items-center justify-center rounded-md"
+                                    style={{ color: "var(--mist-light)", backgroundColor: "transparent" }}
+                                    aria-label={lt("Back to friend history")}
                                   >
-                                    x
+                                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                                    </svg>
                                   </button>
+                                  <div className="min-w-0">
+                                    <h2 className="truncate text-sm font-semibold" style={{ color: "var(--jade-light)" }}>
+                                      {friendHistoryExerciseData?.name || lt("Exercise")}
+                                    </h2>
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--text-secondary)" }}>
+                                      {lt("Workout History")}
+                                    </p>
+                                  </div>
                                 </div>
                               </div>
 
-                              <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 space-y-3">
-                                <div>
-                                  <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">{lt("Progression")}</label>
-                                  <select
-                                    value={friendExerciseProgressionFilter}
-                                    onChange={(event) => setFriendExerciseProgressionFilter(event.target.value)}
-                                    className="h-9 w-full rounded-md border px-2.5 text-sm outline-none"
-                                    style={{
-                                      borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                                      backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
-                                      color: "var(--cloud-white)",
-                                    }}
-                                  >
-                                    <option value="all">{lt("All progressions")}</option>
-                                    {friendExerciseProgressionOptions.map((progressionName) => (
-                                      <option key={`friend-progression-${progressionName}`} value={progressionName}>{progressionName}</option>
-                                    ))}
-                                  </select>
-                                </div>
+                              <div className="min-h-0 flex-1 overflow-y-auto">
+                                {friendHistoryExerciseLoading ? (
+                                  <div className="px-3 py-5 text-center text-xs" style={{ color: "var(--text-muted)" }}>
+                                    {lt("Loading history...")}
+                                  </div>
+                                ) : !friendHistoryExerciseData ? (
+                                  <div className="px-3 py-5 text-center text-xs" style={{ color: "var(--text-muted)" }}>
+                                    {lt("Unable to load exercise history.")}
+                                  </div>
+                                ) : friendExerciseLogs.length === 0 ? (
+                                  <div className="px-3 py-5 text-center text-xs" style={{ color: "var(--text-muted)" }}>
+                                    {lt("No workout history for this exercise yet.")}
+                                  </div>
+                                ) : (
+                                  <>
+                                    {friendExerciseLogs.map((log) => {
+                                      const tierName = getPrimaryHistoryLabel(log, friendHistoryExerciseData);
+                                      const { variationValue, setupValue, modValue } = getHistoryLogDisplayValues(log);
+                                      const usesEquipmentLabel = isGymExerciseCategory(friendHistoryExerciseData?.category);
+                                      const categoryValue = friendHistoryExerciseData?.category || "Uncategorized";
+                                      const hasMeaningfulVariation = Boolean(variationValue && variationValue !== "Default");
+                                      const notesValue = (log.notes || "").trim();
+                                      const alignedMetricRows = getWorkoutMetricRows(log);
+                                      const leftDetailRows: Array<{ label: string; value: string; valueColor: string }> = [];
 
-                                <div>
-                                  <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">{lt("Variation")}</label>
-                                  <select
-                                    value={friendExerciseVariantFilter}
-                                    onChange={(event) => setFriendExerciseVariantFilter(event.target.value)}
-                                    className="h-9 w-full rounded-md border px-2.5 text-sm outline-none"
-                                    style={{
-                                      borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                                      backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
-                                      color: "var(--cloud-white)",
-                                    }}
-                                  >
-                                    <option value="all">{lt("All variations")}</option>
-                                    {friendExerciseVariantOptions.map((variant) => (
-                                      <option key={`friend-variant-${variant}`} value={variant}>{variant === "-" ? lt("No variation") : variant}</option>
-                                    ))}
-                                  </select>
-                                </div>
+                                      if (usesEquipmentLabel) {
+                                        leftDetailRows.push({ label: `${lt("Equipment")}:`, value: tierName || lt("Unknown"), valueColor: "var(--mountain-blue-glow)" });
+                                        leftDetailRows.push({ label: `${lt("Variation")}:`, value: variationValue || "Default", valueColor: "var(--mountain-blue-glow)" });
+                                        leftDetailRows.push({ label: `${lt("Grip / Props")}:`, value: setupValue || "-", valueColor: "var(--gold-glow)" });
+                                        leftDetailRows.push({ label: `${lt("Mod")}:`, value: modValue || "-", valueColor: "var(--gold-glow)" });
+                                      } else {
+                                        leftDetailRows.push({ label: `${lt("Progression")}:`, value: tierName || `${lt("Progression")} ${log.level}`, valueColor: "var(--mountain-blue-glow)" });
+                                        leftDetailRows.push({ label: `${lt("Variation")}:`, value: hasMeaningfulVariation ? variationValue : "Default", valueColor: "var(--mountain-blue-glow)" });
+                                        leftDetailRows.push({ label: `${lt("Grip / Props")}:`, value: setupValue || "-", valueColor: "var(--gold-glow)" });
+                                        leftDetailRows.push({ label: `${lt("Mod")}:`, value: modValue || "-", valueColor: "var(--gold-glow)" });
+                                      }
 
-                                <div>
-                                  <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">{lt("Weight")}</label>
-                                  <select
-                                    value={friendExerciseWeightFilter}
-                                    onChange={(event) => setFriendExerciseWeightFilter(event.target.value as "all" | "weighted" | "bodyweight")}
-                                    className="h-9 w-full rounded-md border px-2.5 text-sm outline-none"
-                                    style={{
-                                      borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                                      backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
-                                      color: "var(--cloud-white)",
-                                    }}
-                                  >
-                                    <option value="all">{lt("All loads")}</option>
-                                    <option value="weighted">{lt("Weighted")}</option>
-                                    <option value="bodyweight">{lt("Bodyweight")}</option>
-                                  </select>
-                                </div>
+                                      leftDetailRows.push({ label: `${lt("Category")}:`, value: categoryValue, valueColor: "var(--mist-light)" });
+                                      leftDetailRows.push({ label: `${lt("Notes")}:`, value: notesValue, valueColor: "var(--text-secondary)" });
 
-                                <div>
-                                  <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">{lt("Reps")}</label>
-                                  <select
-                                    value={friendExerciseRepsFilter}
-                                    onChange={(event) => setFriendExerciseRepsFilter(event.target.value as "all" | "1-5" | "6-10" | "11+")}
-                                    className="h-9 w-full rounded-md border px-2.5 text-sm outline-none"
-                                    style={{
-                                      borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                                      backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
-                                      color: "var(--cloud-white)",
-                                    }}
-                                  >
-                                    <option value="all">{lt("All rep ranges")}</option>
-                                    <option value="1-5">{lt("1–5 reps")}</option>
-                                    <option value="6-10">{lt("6–10 reps")}</option>
-                                    <option value="11+">{lt("11+ reps")}</option>
-                                  </select>
-                                </div>
+                                      const alignedDetailRowCount = leftDetailRows.length;
 
-                                <div>
-                                  <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[#949ba4]">{lt("Sort")}</label>
-                                  <select
-                                    value={friendExerciseSort}
-                                    onChange={(event) => setFriendExerciseSort(event.target.value as "recent" | "oldest" | "progression-asc" | "progression-desc")}
-                                    className="h-9 w-full rounded-md border px-2.5 text-sm outline-none"
-                                    style={{
-                                      borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                                      backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
-                                      color: "var(--cloud-white)",
-                                    }}
-                                  >
-                                    <option value="recent">{lt("Recent first")}</option>
-                                    <option value="oldest">{lt("Oldest first")}</option>
-                                    <option value="progression-asc">{lt("Progression ascending")}</option>
-                                    <option value="progression-desc">{lt("Progression descending")}</option>
-                                  </select>
-                                </div>
-                              </div>
+                                      return (
+                                        <article
+                                          key={`friend-history-log-${log.id}`}
+                                          className="px-3 py-2.5"
+                                          style={{ borderTop: "1px solid color-mix(in srgb, var(--ink-light) 72%, transparent)" }}
+                                        >
+                                          <div className="flex items-start justify-between gap-2">
+                                            <p className="min-w-0 text-sm font-semibold leading-tight" style={{ color: "var(--jade-light)" }}>
+                                              {friendHistoryExerciseData.name}
+                                            </p>
+                                            <span className="shrink-0 text-[11px]" style={{ color: "var(--text-muted)" }}>
+                                              {formatRelativeRecentDate(log.createdAt, dateFormat, timeZone)}
+                                            </span>
+                                          </div>
 
-                              <div className="border-t px-3 py-3" style={{ borderTopColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)" }}>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setFriendExerciseProgressionFilter("all");
-                                    setFriendExerciseVariantFilter("all");
-                                    setFriendExerciseWeightFilter("all");
-                                    setFriendExerciseRepsFilter("all");
-                                    setFriendExerciseSort("recent");
-                                    setFriendExerciseFilterOpen(false);
-                                  }}
-                                  className="w-full rounded-md border px-3 py-2 text-sm font-semibold"
-                                  style={{
-                                    borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                                    backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
-                                    color: "var(--mist-light)",
-                                  }}
-                                >
-                                  {lt("Clear filters")}
-                                </button>
+                                          <div className="mt-1.5 space-y-0.5 text-[11px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                                            {Array.from({ length: alignedDetailRowCount }, (_, index) => {
+                                              const left = leftDetailRows[index];
+                                              const metric = alignedMetricRows[index] ?? { weight: "-", reps: "-" };
+                                              return (
+                                                <div key={`friend-detail-row-${log.id}-${index}`} className="grid grid-cols-2 gap-x-3">
+                                                  <div className="min-w-0">
+                                                    {left ? (
+                                                      <div className="flex w-full min-w-0 items-baseline gap-1 text-left">
+                                                        <span className="shrink-0" style={{ color: "var(--text-muted)" }}>{left.label}</span>
+                                                        <span className="min-w-0 truncate" style={{ color: left.valueColor }}>{left.value}</span>
+                                                      </div>
+                                                    ) : (
+                                                      <span aria-hidden="true">&nbsp;</span>
+                                                    )}
+                                                  </div>
+                                                  <div className="min-w-0 grid grid-cols-2 gap-x-3">
+                                                    {metric.weight !== "-" ? (
+                                                      <div className="truncate text-left" style={{ color: "var(--mountain-blue-glow)" }}>
+                                                        <span style={{ color: "var(--text-muted)" }}>{lt("Weight")}: </span>{metric.weight}
+                                                      </div>
+                                                    ) : (
+                                                      <span aria-hidden="true" />
+                                                    )}
+                                                    {metric.reps !== "-" ? (
+                                                      <div className="truncate text-left" style={{ color: "var(--forest)" }}>
+                                                        <span style={{ color: "var(--text-muted)" }}>{lt("Reps")}: </span>{metric.reps}
+                                                      </div>
+                                                    ) : (
+                                                      <span aria-hidden="true" />
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        </article>
+                                      );
+                                    })}
+                                  </>
+                                )}
                               </div>
                             </div>
                           </motion.aside>
                         </>
                       ) : null}
                     </AnimatePresence>
-
-                    <div>
-                      {selectedFriendExerciseLogs.length === 0 ? (
-                        <div className="px-3 py-4 text-center text-xs" style={{ color: "var(--text-muted)" }}>
-                          No workout history for this exercise yet.
-                        </div>
-                      ) : filteredSelectedFriendExerciseLogs.length === 0 ? (
-                        <div className="px-3 py-4 text-center text-xs" style={{ color: "var(--text-muted)" }}>
-                          No logs match your search or filters.
-                        </div>
-                      ) : (
-                        <>
-                          {filteredSelectedFriendExerciseLogs.map((log) => {
-                            const tierName = selectedFriendExercise.tiers.find((tier) => tier.level === log.level)?.name ?? `${lt("Progression")} ${log.level}`;
-                            const variationValue = log.variant?.trim() || "-";
-                            const modValue = log.modifier?.trim() || "-";
-                            const notesValue = log.notes?.trim() || "-";
-                            const alignedMetricRows = getWorkoutMetricRows(log);
-                            const leftDetailRows = [
-                              { label: `${lt("Variation")}:`, value: variationValue, valueColor: "var(--mountain-blue-glow)" },
-                              { label: `${lt("Mod")}:`, value: modValue, valueColor: "var(--gold-glow)" },
-                              { label: `${lt("Notes")}:`, value: notesValue, valueColor: "var(--text-secondary)" },
-                            ];
-                            const alignedDetailRowCount = Math.max(leftDetailRows.length, alignedMetricRows.length);
-
-                            return (
-                              <article
-                                key={`friend-exercise-log-${log.id}`}
-                                className="px-3 py-2.5"
-                                style={{ borderTop: "1px solid color-mix(in srgb, var(--ink-light) 72%, transparent)" }}
-                              >
-                                <div className="flex items-start justify-between gap-2">
-                                  <p className="text-sm font-semibold leading-tight" style={{ color: "var(--jade-light)" }}>
-                                    {tierName}
-                                  </p>
-                                  <span className="shrink-0 text-[11px]" style={{ color: "var(--text-muted)" }}>
-                                    {formatRelativeRecentDate(log.createdAt, dateFormat, timeZone)}
-                                  </span>
-                                </div>
-                                <div className="mt-1.5 space-y-0.5 text-[11px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-                                  {Array.from({ length: alignedDetailRowCount }, (_, index) => {
-                                    const left = leftDetailRows[index];
-                                    const metric = alignedMetricRows[index] ?? { weight: "-", reps: "-" };
-                                    return (
-                                      <div key={`friend-detail-row-${log.id}-${index}`} className="grid grid-cols-2 gap-x-3">
-                                        <div className="min-w-0 truncate">
-                                          {left ? (
-                                            <>
-                                              <span style={{ color: "var(--text-muted)" }}>{left.label}</span>{" "}
-                                              <span style={{ color: left.valueColor }}>{left.value}</span>
-                                            </>
-                                          ) : (
-                                            <span aria-hidden="true">&nbsp;</span>
-                                          )}
-                                        </div>
-                                        <div className="min-w-0 grid grid-cols-2 gap-x-3">
-                                          {metric.weight !== "-" ? (
-                                            <span className="truncate" style={{ color: "var(--mountain-blue-glow)" }}>
-                                              <span style={{ color: "var(--text-muted)" }}>{lt("Weight")}: </span>{metric.weight}
-                                            </span>
-                                          ) : (
-                                            <span aria-hidden="true" />
-                                          )}
-                                          {metric.reps !== "-" ? (
-                                            <span className="truncate" style={{ color: "var(--forest)" }}>
-                                              <span style={{ color: "var(--text-muted)" }}>{lt("Reps")}: </span>{metric.reps}
-                                            </span>
-                                          ) : (
-                                            <span aria-hidden="true" />
-                                          )}
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </article>
-                            );
-                          })}
-                        </>
-                      )}
-                    </div>
                   </div>
                 </div>
               </motion.aside>
             )}
+
           </>
         )}
       </AnimatePresence>

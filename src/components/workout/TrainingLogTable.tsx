@@ -114,6 +114,7 @@ interface UnifiedFlatLogEntry {
   reps2: number | null;
   reps3: number | null;
   modifier: string | null;
+  setupOption: string | null;
   resistanceBandKg: number | null;
   modifierWeightKg: number | null;
   variant: string | null;
@@ -196,6 +197,7 @@ function flattenLogsUnified(exercises: ProgressionExercise[]): UnifiedFlatLogEnt
           if (netModifierKg !== 0) return formatSignedModifierKg(netModifierKg);
           return parsed.baseModifier;
         })(),
+        setupOption: parsed.setupOption,
         resistanceBandKg: parsed.resistanceBandKg,
         modifierWeightKg: parsed.modifierWeightKg,
         variant: log.variant,
@@ -325,6 +327,7 @@ const TrainingLogMobileCard = memo(function TrainingLogMobileCard({
   const hasAverageWeight = averageValue !== null;
   const hasAverageReps = averageReps !== null;
   const hasWeight = Boolean(entry.modifier);
+  const hasSetupOption = Boolean(entry.setupOption);
   const isDeletedEntry = entryDisplayName.toLowerCase().startsWith("deleted exercise");
 
   return (
@@ -409,6 +412,20 @@ const TrainingLogMobileCard = memo(function TrainingLogMobileCard({
             title={entry.variant}
           >
             {entry.variant}
+          </span>
+        )}
+        {hasSetupOption && (
+          <span
+            className={badgeClassName}
+            style={{
+              borderColor: "color-mix(in srgb, var(--gold) 52%, var(--border))",
+              backgroundColor: "color-mix(in srgb, var(--gold) 16%, var(--surface))",
+              color: "var(--gold-glow)",
+              boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--gold) 18%, transparent)",
+            }}
+            title={entry.setupOption || undefined}
+          >
+            {entry.setupOption}
           </span>
         )}
         {sourceType === "combo" && (

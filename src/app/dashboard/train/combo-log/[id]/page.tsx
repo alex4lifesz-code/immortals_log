@@ -42,6 +42,21 @@ const TIMED_VALUE_STEP = 1;
 const REPS_STEP = 1;
 const SUMMARY_STEP_KEY = "__combo-summary-step__";
 
+function formatSignedModifierKg(value: number): string {
+  const normalized = Math.round(value * 10) / 10;
+  const absValue = Math.abs(normalized);
+  const display = Number.isInteger(absValue) ? String(absValue) : absValue.toFixed(1).replace(/\.0$/, "");
+  return `${normalized >= 0 ? "+" : "-"}${display}kg`;
+}
+
+function buildModifierPayload(input: { modifierKg: number; setupOption: string; valueMode: LoggerValueMode }): string | null {
+  const setup = input.setupOption.trim();
+  const weightPart = input.valueMode === "weight" && input.modifierKg !== 0 ? formatSignedModifierKg(input.modifierKg) : "";
+  const setupPart = setup ? `Setup: ${setup}` : "";
+  const merged = [setupPart, weightPart].filter(Boolean).join(" | ");
+  return merged || null;
+}
+
 function normalizeSetRows(rows: LoggerSetRow[] | undefined): LoggerSetRow[] {
   const safeRows = Array.isArray(rows)
     ? rows.map((row) => ({
@@ -309,7 +324,11 @@ export default function ComboLoggerPage() {
             metric: state.valueMode === "timed" ? "time" : "weight",
           })),
           variant: stop.variant?.trim() || null,
-          modifier: null,
+          modifier: buildModifierPayload({
+            modifierKg: parseNumber(state.modifier, false) ?? 0,
+            setupOption: stop.setupOption || "",
+            valueMode: state.valueMode,
+          }),
           notes: routine.notes || null,
           completed: false,
           createdAt,
@@ -327,6 +346,7 @@ export default function ComboLoggerPage() {
           name: stop.name,
           progressionLevel: typeof stop.progressionLevel === "number" ? Math.max(1, Math.trunc(stop.progressionLevel)) : 1,
           variant: stop.variant || "",
+          setupOption: stop.setupOption || "",
         })),
       });
 
@@ -634,6 +654,9 @@ export default function ComboLoggerPage() {
                         </p>
                         <p className="mt-0.5 text-[11px]" style={{ color: "var(--text-secondary)" }}>
                           {`${lt("Progression")}: ${getProgressionLabel(activeStop.exerciseId, activeStop.progressionLevel)}`}
+                        </p>
+                        <p className="text-[11px]" style={{ color: "var(--text-secondary)" }}>
+                          {`${lt("Grip / Props")}: ${activeStop.setupOption?.trim() || lt("Default")}`}
                         </p>
                         <p className="text-[11px]" style={{ color: "var(--text-secondary)" }}>
                           {`${lt("Variant")}: ${activeStop.variant?.trim() || lt("Default")}`}

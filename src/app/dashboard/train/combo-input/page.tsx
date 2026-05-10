@@ -20,6 +20,7 @@ type ComboStop = {
   name: string;
   progressionLevel: number;
   variant: string;
+  setupOption: string;
   isCollapsed: boolean;
 };
 
@@ -171,6 +172,10 @@ export default function TrainComboInputPage() {
     return stop.variant.trim() || lt("Default");
   };
 
+  const getStopSetupLabel = (stop: ComboStop): string => {
+    return stop.setupOption.trim() || lt("Default");
+  };
+
   const getDefaultProgressionLevel = (exercise: ProgressionExercise): number => {
     const currentLevel = exercise.userProgress?.[0]?.currentLevel;
     if (typeof currentLevel === "number" && Number.isFinite(currentLevel) && currentLevel > 0) {
@@ -191,6 +196,7 @@ export default function TrainComboInputPage() {
         name: exercise.name,
         progressionLevel: getDefaultProgressionLevel(exercise),
         variant: "",
+        setupOption: "",
         isCollapsed: false,
       },
     ]);
@@ -216,6 +222,12 @@ export default function TrainComboInputPage() {
   const updateStopVariant = (indexToUpdate: number, variant: string) => {
     setStops((prev) => prev.map((stop, index) => (index === indexToUpdate
       ? { ...stop, variant }
+      : stop)));
+  };
+
+  const updateStopSetupOption = (indexToUpdate: number, setupOption: string) => {
+    setStops((prev) => prev.map((stop, index) => (index === indexToUpdate
+      ? { ...stop, setupOption }
       : stop)));
   };
 
@@ -256,6 +268,7 @@ export default function TrainComboInputPage() {
         name: stop.name,
         progressionLevel: typeof stop.progressionLevel === "number" ? stop.progressionLevel : 1,
         variant: stop.variant || "",
+        setupOption: stop.setupOption || "",
         isCollapsed: true,
       })),
     );
@@ -327,6 +340,7 @@ export default function TrainComboInputPage() {
           name: stop.name,
           progressionLevel: stop.progressionLevel,
           variant: stop.variant,
+          setupOption: stop.setupOption,
         })),
       };
 
@@ -710,13 +724,16 @@ export default function TrainComboInputPage() {
                             const parentExercise = exerciseById.get(stop.exerciseId);
                             const tiers = parentExercise?.tiers ?? [];
                             const variations = parentExercise?.variations ?? [];
+                            const setupOptions = (parentExercise?.modifiers ?? []).map((modifier) => modifier.type).filter(Boolean);
                             const progressionLabel = getStopProgressionLabel(stop);
                             const variantLabel = getStopVariantLabel(stop);
+                            const setupLabel = getStopSetupLabel(stop);
 
                             if (stop.isCollapsed) {
                               return (
                                 <div className="mt-2 space-y-0.5 text-[11px]" style={{ color: "var(--text-secondary)" }}>
                                   <p>{`${lt("Progression")}: ${progressionLabel}`}</p>
+                                  <p>{`${lt("Grip / Props")}: ${setupLabel}`}</p>
                                   <p>{`${lt("Variant")}: ${variantLabel}`}</p>
                                 </div>
                               );
@@ -726,10 +743,11 @@ export default function TrainComboInputPage() {
                               <div className="mt-2 space-y-2">
                                 <div className="space-y-0.5 text-[11px]" style={{ color: "var(--text-secondary)" }}>
                                   <p>{`${lt("Progression")}: ${progressionLabel}`}</p>
+                                  <p>{`${lt("Grip / Props")}: ${setupLabel}`}</p>
                                   <p>{`${lt("Variant")}: ${variantLabel}`}</p>
                                 </div>
 
-                                <div className="grid gap-2 sm:grid-cols-2">
+                                <div className="grid gap-2 sm:grid-cols-3">
                                   <label className="block">
                                     <span className="mb-1 block text-[10px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>
                                       {lt("Progression")}
@@ -752,6 +770,30 @@ export default function TrainComboInputPage() {
                                       )) : (
                                         <option value={String(stop.progressionLevel)}>{`${lt("Progression")} ${stop.progressionLevel}`}</option>
                                       )}
+                                    </select>
+                                  </label>
+
+                                  <label className="block">
+                                    <span className="mb-1 block text-[10px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>
+                                      {lt("Grip / Props")}
+                                    </span>
+                                    <select
+                                      value={stop.setupOption}
+                                      onChange={(event) => updateStopSetupOption(index, event.target.value)}
+                                      className="h-8 w-full rounded-md border px-2 text-xs outline-none"
+                                      style={{
+                                        borderColor: "color-mix(in srgb, var(--ink-light) 60%, transparent)",
+                                        backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
+                                        color: "var(--cloud-white)",
+                                      }}
+                                      aria-label={lt("Grip / Props")}
+                                    >
+                                      <option value="">{lt("Default")}</option>
+                                      {setupOptions.map((setupOption) => (
+                                        <option key={`${stop.exerciseId}-setup-${setupOption}`} value={setupOption}>
+                                          {setupOption}
+                                        </option>
+                                      ))}
                                     </select>
                                   </label>
 
@@ -831,6 +873,7 @@ export default function TrainComboInputPage() {
                       <div key={`review-stop-${stop.exerciseId}-${index}`} className="space-y-0.5">
                         <p style={{ color: "var(--text-primary)" }}>{`${index + 1}. ${stop.name}`}</p>
                         <p>{`${lt("Progression")}: ${getStopProgressionLabel(stop)}`}</p>
+                        <p>{`${lt("Grip / Props")}: ${getStopSetupLabel(stop)}`}</p>
                         <p>{`${lt("Variant")}: ${getStopVariantLabel(stop)}`}</p>
                       </div>
                     ))}

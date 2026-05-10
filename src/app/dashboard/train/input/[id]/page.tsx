@@ -43,6 +43,7 @@ type ExistingLogPayload = {
   holdTime3: number | null;
   modifier: string | null;
   variant: string | null;
+  setupOption: string | null;
   notes: string | null;
   createdAt: string;
 };
@@ -130,6 +131,7 @@ function buildEditSnapshot(input: {
   customExerciseName: string;
   selectedLevel: string;
   selectedVariant: string;
+  selectedSetupOption: string;
   modifierKg: number;
   trainingDate: string;
   notes: string;
@@ -144,6 +146,7 @@ function buildEditSnapshot(input: {
     customExerciseName: input.customExerciseName.trim(),
     selectedLevel: input.selectedLevel || "",
     selectedVariant: input.selectedVariant || "",
+    selectedSetupOption: input.selectedSetupOption || "",
     modifierKg: Math.round(input.modifierKg * 10) / 10,
     trainingDate: input.trainingDate,
     notes: input.notes.trim(),
@@ -195,6 +198,7 @@ export default function TrainInputCanvasPage() {
   const [customExerciseName, setCustomExerciseName] = useState(prefillExerciseName);
   const [selectedLevel, setSelectedLevel] = useState("");
   const [selectedVariant, setSelectedVariant] = useState(prefillVariant);
+  const [selectedSetupOption, setSelectedSetupOption] = useState("");
   const [modifierKg, setModifierKg] = useState(0);
   const [isModifierPanelOpen, setIsModifierPanelOpen] = useState(false);
   const [trainingDate, setTrainingDate] = useState(getTodayInputValue(settings.timeZone));
@@ -477,6 +481,7 @@ export default function TrainInputCanvasPage() {
         const nextCustomExerciseName = "";
         const nextSelectedLevel = String(log.level || 1);
         const nextSelectedVariant = log.variant || "";
+        const nextSelectedSetupOption = log.setupOption || "";
         const nextModifierKg = parseSignedModifierKg(log.modifier) ?? 0;
         const nextTrainingDate = new Date(log.createdAt).toISOString().slice(0, 10);
         const nextNotes = log.notes || "";
@@ -505,6 +510,7 @@ export default function TrainInputCanvasPage() {
         setCustomExerciseName(nextCustomExerciseName);
         setSelectedLevel(nextSelectedLevel);
         setSelectedVariant(nextSelectedVariant);
+        setSelectedSetupOption(nextSelectedSetupOption);
         setModifierKg(nextModifierKg);
         setIsModifierPanelOpen(nextModifierKg !== 0);
         setTrainingDate(nextTrainingDate);
@@ -520,6 +526,7 @@ export default function TrainInputCanvasPage() {
           customExerciseName: nextCustomExerciseName,
           selectedLevel: nextSelectedLevel,
           selectedVariant: nextSelectedVariant,
+          selectedSetupOption: nextSelectedSetupOption,
           modifierKg: nextModifierKg,
           trainingDate: nextTrainingDate,
           notes: nextNotes,
@@ -708,6 +715,14 @@ export default function TrainInputCanvasPage() {
       if (prefillVariant && selectedExercise.variations.some((variation) => variation.name === prefillVariant)) return prefillVariant;
       return "";
     });
+
+    setSelectedSetupOption((prev) => {
+      const options = (selectedExercise.modifiers ?? [])
+        .map((modifier) => String(modifier.type || "").trim())
+        .filter(Boolean);
+      if (prev && options.includes(prev)) return prev;
+      return "";
+    });
   }, [exercises, prefillCustomExercise, prefillExerciseId, prefillExerciseName, prefillProgression, prefillVariant, selectedExercise]);
 
   useEffect(() => {
@@ -768,6 +783,7 @@ export default function TrainInputCanvasPage() {
     setCustomExerciseName("");
     setSelectedLevel("");
     setSelectedVariant("");
+    setSelectedSetupOption("");
     setModifierKg(0);
     setIsModifierPanelOpen(false);
     setTrainingDate(getTodayInputValue(settings.timeZone));
@@ -794,6 +810,7 @@ export default function TrainInputCanvasPage() {
     setCustomExerciseName(prefillName.trim());
     setSelectedLevel("1");
     setSelectedVariant("");
+    setSelectedSetupOption("");
     setMessage(null);
   };
 
@@ -887,6 +904,7 @@ export default function TrainInputCanvasPage() {
               holdTime3: toStoredSeconds(primarySets[2]?.value ?? null),
               modifier: valueMode === "weight" && modifierKg !== 0 ? formatSignedModifierKg(modifierKg) : null,
               variant: targetVariant,
+              setupOption: selectedSetupOption.trim() || null,
               notes: mergedNotes || null,
             },
           ],
@@ -911,6 +929,7 @@ export default function TrainInputCanvasPage() {
           })),
           variant: targetVariant,
           modifier: valueMode === "weight" && modifierKg !== 0 ? formatSignedModifierKg(modifierKg) : null,
+          setupOption: selectedSetupOption.trim() || null,
           notes: mergedNotes || null,
           completed: false,
           createdAt,
@@ -1032,6 +1051,9 @@ export default function TrainInputCanvasPage() {
     : Boolean(selectedExerciseId);
   const hasDetailSelection = Boolean(selectedExercise || customExerciseName.trim() || selectedLevel);
   const hasFormatChoice = valueMode === "weight" || valueMode === "timed";
+  const selectedExerciseUsesEquipmentLabel = String(selectedExercise?.category ?? "").trim().toLowerCase() === "gym";
+  const hasVariationOptions = (selectedExercise?.variations?.length ?? 0) > 0;
+  const hasGripOptions = (selectedExercise?.modifiers?.length ?? 0) > 0;
   const filledSetCount = sets.filter((set) => set.value.trim() !== "" || set.reps.trim() !== "").length;
   const hasNotes = notes.trim().length > 0;
   const hasConfirmedSetEntry = sets.some((set) => set.value.trim() !== "" && set.reps.trim() !== "");
@@ -1076,12 +1098,13 @@ export default function TrainInputCanvasPage() {
       customExerciseName,
       selectedLevel,
       selectedVariant,
+      selectedSetupOption,
       modifierKg,
       trainingDate,
       notes,
       sets,
     });
-  }, [customExerciseName, inputMode, isEditingExistingLog, modifierKg, notes, selectedExerciseId, selectedLevel, selectedVariant, sets, timedUnit, trainingDate, valueMode, weightUnit]);
+  }, [customExerciseName, inputMode, isEditingExistingLog, modifierKg, notes, selectedExerciseId, selectedLevel, selectedSetupOption, selectedVariant, sets, timedUnit, trainingDate, valueMode, weightUnit]);
   const hasPendingEditChanges = Boolean(
     isEditingExistingLog
       && editLogHydrated
@@ -1507,7 +1530,7 @@ export default function TrainInputCanvasPage() {
 
                         <div className="mt-4 grid gap-3 lg:grid-cols-2">
                           <div id="editor-field-progression" className="rounded-lg px-1 py-1" style={getFieldHighlightStyle("progression")}>
-                            <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Progression")}</label>
+                            <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{selectedExerciseUsesEquipmentLabel ? lt("Equipment") : lt("Progression")}</label>
                             <select
                               value={selectedLevel}
                               onChange={(event) => setSelectedLevel(event.target.value)}
@@ -1515,7 +1538,7 @@ export default function TrainInputCanvasPage() {
                               className="h-10 w-full rounded-md border px-3 text-sm font-semibold outline-none"
                               style={{ borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--label-progression)", opacity: isDayAssignment || inputMode !== "existing" || !selectedExercise ? 0.6 : 1, cursor: isDayAssignment ? "not-allowed" : undefined }}
                             >
-                              {(selectedExercise?.tiers.length ? selectedExercise.tiers : [{ level: 1, name: `${lt("Progression")} 1` }]).map((tier) => (
+                              {(selectedExercise?.tiers.length ? selectedExercise.tiers : [{ level: 1, name: `${selectedExerciseUsesEquipmentLabel ? lt("Equipment") : lt("Progression")} 1` }]).map((tier) => (
                                 <option key={`${tier.level}-${tier.name}`} value={String(tier.level)}>
                                   {tier.name}
                                 </option>
@@ -1523,6 +1546,7 @@ export default function TrainInputCanvasPage() {
                             </select>
                           </div>
 
+                          {hasVariationOptions ? (
                           <div id="editor-field-variation" className="rounded-lg px-1 py-1" style={getFieldHighlightStyle("variation")}>
                             <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Variant")}</label>
                             <select
@@ -1540,6 +1564,27 @@ export default function TrainInputCanvasPage() {
                               ))}
                             </select>
                           </div>
+                          ) : null}
+
+                          {hasGripOptions ? (
+                          <div id="editor-field-setup" className="rounded-lg px-1 py-1" style={getFieldHighlightStyle("setup")}>
+                            <label className="mb-1 block text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Grip")}</label>
+                            <select
+                              value={selectedSetupOption}
+                              onChange={(event) => setSelectedSetupOption(event.target.value)}
+                              disabled={isDayAssignment || inputMode !== "existing" || !selectedExercise}
+                              className="h-10 w-full rounded-md border px-3 text-sm font-semibold outline-none"
+                              style={{ borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--gold-glow)", opacity: isDayAssignment || inputMode !== "existing" || !selectedExercise ? 0.6 : 1, cursor: isDayAssignment ? "not-allowed" : undefined }}
+                            >
+                              <option value="">{lt("Default")}</option>
+                              {(selectedExercise?.modifiers || []).map((modifier) => (
+                                <option key={modifier.id} value={modifier.type}>
+                                  {modifier.type}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          ) : null}
                         </div>
                       </div>
                       {renderPanelActions()}

@@ -146,7 +146,7 @@ export default function WorkoutHistoryDetailPage() {
   }, [exercise, lt]);
 
   const categoryColor = useMemo(() => {
-    if (categoryLabel === "GYM") return "var(--category-gym)";
+    if (categoryLabel === "Gym") return "var(--category-gym)";
     if (categoryLabel === "Yoga") return "var(--category-yoga)";
     if (categoryLabel === "Cardio") return "var(--category-cardio)";
     return "var(--category-cali)";

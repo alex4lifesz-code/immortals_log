@@ -468,6 +468,7 @@ export async function restoreDeletedUser(archiveId: string): Promise<DeletedUser
             reps: typeof logData.reps === "number" ? logData.reps : null,
             modifier: asNullableString(logData.modifier),
             variant: asNullableString(logData.variant),
+            setupOption: asNullableString(logData.setupOption),
             notes: asNullableString(logData.notes),
             completed: asBoolean(logData.completed),
             createdAt: safeDate(logData.createdAt),

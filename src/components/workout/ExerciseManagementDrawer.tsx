@@ -38,6 +38,7 @@ interface Exercise {
   story?: string;
   tiers?: Array<{ level: number; name: string }>;
   variations?: Array<{ id: string; name: string }>;
+  modifiers?: Array<{ id: string; type: string }>;
 }
 
 interface ExerciseManagementDrawerProps {
@@ -68,6 +69,7 @@ function ExerciseAllocationRow({
   const displayName = getExerciseDisplayName(exercise, settings.terminologyMode, settings.showExerciseForeignLanguage);
   const [selectedProgression, setSelectedProgression] = useState("");
   const [selectedVariant, setSelectedVariant] = useState("");
+  const [selectedSetup, setSelectedSetup] = useState("");
   const [selectedDayDraft, setSelectedDayDraft] = useState<string>(focusedDay == null ? "" : String(focusedDay));
   const assigned = parseDayAssignments(exercise.assignedDays || "");
   const isAllocated = assigned.length > 0;
@@ -88,6 +90,14 @@ function ExerciseAllocationRow({
     const variations = Array.isArray(exercise.variations) ? exercise.variations : [];
     return variations.map((variation) => ({ value: variation.name, label: variation.name }));
   }, [exercise.variations]);
+
+  const setupOptions = useMemo(() => {
+    const modifiers = Array.isArray(exercise.modifiers) ? exercise.modifiers : [];
+    return modifiers
+      .map((modifier) => (modifier.type || "").trim())
+      .filter((type) => type.length > 0)
+      .map((type) => ({ value: type, label: type }));
+  }, [exercise.modifiers]);
 
   const resolveProgressionOption = (rawProgression?: string) => {
     if (!rawProgression) return null;
@@ -112,12 +122,16 @@ function ExerciseAllocationRow({
     ? (progressionOptions.find((option) => option.label === firstAssignmentDetail.progression || option.value === firstAssignmentDetail.progression)?.value || "")
     : "";
   const defaultVariantValue = typeof firstAssignmentDetail?.variant === "string" ? firstAssignmentDetail.variant : "";
+  const defaultSetupValue = typeof firstAssignmentDetail?.setupOption === "string" ? firstAssignmentDetail.setupOption : "";
   const selectedProgressionValue = selectedProgression || defaultProgressionValue;
   const selectedVariantValue = selectedVariant || defaultVariantValue;
+  const selectedSetupValue = selectedSetup || defaultSetupValue;
   const selectedCombinationAssigned = isComboRoutine
     ? (selectedDayNumber != null && assigned.includes(selectedDayNumber))
     : selectedAssignmentsForDay.some(
-      (entry) => getProgressionValue(entry.progression) === selectedProgressionValue && (entry.variant || "") === selectedVariantValue,
+      (entry) => getProgressionValue(entry.progression) === selectedProgressionValue
+        && (entry.variant || "") === selectedVariantValue
+        && (entry.setupOption || "") === selectedSetupValue,
     );
 
   const handleApply = async () => {
@@ -147,11 +161,12 @@ function ExerciseAllocationRow({
     const selectedEntry = {
       progression: progressionLabel,
       variant: selectedVariantValue || undefined,
+      setupOption: selectedSetupValue || undefined,
     };
 
     if (!shouldAssign) {
       const confirmed = window.confirm(
-        `Remove ${displayName} (${selectedVariant || "Default"}${progressionLabel ? `, ${progressionLabel}` : ""}) from ${DAYS_OF_WEEK[selectedDayNumber]}?`,
+        `Remove ${displayName} (${selectedVariant || "Default"}${progressionLabel ? `, ${progressionLabel}` : ""}${selectedSetupValue ? `, ${selectedSetupValue}` : ""}) from ${DAYS_OF_WEEK[selectedDayNumber]}?`,
       );
       if (!confirmed) return;
     }
@@ -166,7 +181,11 @@ function ExerciseAllocationRow({
       details[selectedDayNumber] = dayEntries;
     } else {
       const nextEntries = dayEntries.filter(
-        (entry) => !(getProgressionValue(entry.progression) === selectedProgressionForCompare && (entry.variant || "") === (selectedEntry.variant || "")),
+        (entry) => !(
+          getProgressionValue(entry.progression) === selectedProgressionForCompare
+          && (entry.variant || "") === (selectedEntry.variant || "")
+          && (entry.setupOption || "") === (selectedEntry.setupOption || "")
+        ),
       );
 
       if (nextEntries.length === 0) {
@@ -280,6 +299,31 @@ function ExerciseAllocationRow({
                 </div>
               ) : null}
 
+              {!isComboRoutine ? (
+                <div>
+                <label className="mb-1 block text-[10px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>
+                  Grip / Props
+                </label>
+                <select
+                  value={selectedSetupValue}
+                  onChange={(event) => setSelectedSetup(event.target.value)}
+                  className="h-9 w-full rounded-md border px-2 text-xs outline-none"
+                  style={{
+                    borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                    backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
+                    color: "var(--cloud-white)",
+                  }}
+                >
+                  <option value="">Default</option>
+                  {setupOptions.map((setup) => (
+                    <option key={`${exercise.id}-setup-${setup.value}`} value={setup.value}>
+                      {setup.label}
+                    </option>
+                  ))}
+                </select>
+                </div>
+              ) : null}
+
               <div>
                 <label className="mb-1 block text-[10px] uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>
                   Training day
@@ -310,7 +354,7 @@ function ExerciseAllocationRow({
                 <button
                   type="button"
                   onClick={() => void handleApply()}
-                  disabled={isUpdating || selectedDayNumber == null || (!isComboRoutine && !selectedProgressionValue && !selectedVariantValue)}
+                  disabled={isUpdating || selectedDayNumber == null || (!isComboRoutine && !selectedProgressionValue && !selectedVariantValue && !selectedSetupValue)}
                   className="inline-flex h-9 shrink-0 items-center justify-center rounded-md border px-3 text-xs font-semibold transition-colors disabled:opacity-60"
                   style={{
                     borderColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
@@ -336,9 +380,11 @@ function ExerciseAllocationRow({
                     <div className="flex flex-wrap gap-1.5">
                       {selectedAssignmentsForDay.map((entry, index) => {
                         const progressionLabel = getProgressionLabel(entry.progression);
-                        const label = `${entry.variant || "Default"}${progressionLabel ? ` • ${progressionLabel}` : ""}`;
+                        const setupLabel = (entry.setupOption || "").trim();
+                        const label = `${entry.variant || "Default"}${progressionLabel ? ` • ${progressionLabel}` : ""}${setupLabel ? ` • ${setupLabel}` : ""}`;
                         const isActive = getProgressionValue(entry.progression) === selectedProgressionValue
-                          && (entry.variant || "") === selectedVariantValue;
+                          && (entry.variant || "") === selectedVariantValue
+                          && (entry.setupOption || "") === selectedSetupValue;
                         return (
                           <button
                             key={`${exercise.id}-assigned-entry-${selectedDayNumber}-${index}`}
@@ -347,6 +393,7 @@ function ExerciseAllocationRow({
                               const matched = resolveProgressionOption(entry.progression);
                               setSelectedProgression(matched?.value || "");
                               setSelectedVariant(entry.variant || "");
+                              setSelectedSetup(entry.setupOption || "");
                             }}
                             className="inline-flex items-center rounded-md border px-2 py-1 text-[10px] font-medium"
                             style={{

@@ -51,6 +51,7 @@ export const GET = withAuth(async (_request, { auth, params }) => {
         holdTime3: log.holdTime3,
         modifier: log.modifier,
         variant: log.variant,
+        setupOption: log.setupOption,
         notes: log.notes,
         completed: log.completed,
         createdAt: log.createdAt,

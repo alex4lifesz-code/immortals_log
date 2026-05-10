@@ -14,6 +14,7 @@ type SnapshotLog = {
   reps: number | null;
   modifier: string | null;
   variant: string | null;
+  setupOption: string | null;
   notes: string | null;
   completed: boolean;
   createdAt: string;
@@ -75,6 +76,7 @@ export async function snapshotExerciseDbUserProgress() {
       reps: log.reps ?? null,
       modifier: log.modifier ?? null,
       variant: log.variant ?? null,
+      setupOption: log.setupOption ?? null,
       notes: log.notes ?? null,
       completed: Boolean(log.completed),
       createdAt: log.createdAt.toISOString(),
@@ -171,6 +173,7 @@ export async function restoreExerciseDbUserProgressFromSnapshot() {
           reps: log.reps,
           modifier: log.modifier,
           variant: log.variant,
+          setupOption: log.setupOption ?? null,
           notes: log.notes,
           completed: log.completed,
           createdAt: new Date(log.createdAt),
