@@ -1,11 +1,18 @@
 import { apiSuccess, ApiErrors } from "@/lib/api";
-import { prisma } from "@/lib/prisma";
 import {
   ALL_DIFFICULTIES,
 } from "@/lib/exercise-types";
 import { withAdmin } from "@/lib/auth/middleware";
 import { getExerciseDbOptionsFromAppPrefs } from "@/lib/exercise-db-settings";
 import { resolveVietnameseValue } from "@/lib/auto-vietnamese";
+import {
+  findAllExerciseNames,
+  findExerciseById,
+  findUserSettingsPinnedNav,
+  updateExerciseStoryById,
+  updateExerciseWithRelations,
+  upsertExerciseTranslationById,
+} from "@/lib/repositories/exercise-library.repository";
 import {
   isPendingExerciseDescription,
   markPendingExerciseAsEdited,
@@ -28,10 +35,7 @@ function parseJsonObject(value: string | null | undefined): Record<string, unkno
 }
 
 async function getUserExerciseDbOptions(userId: string) {
-  const settings = await prisma.userSettings.findUnique({
-    where: { userId },
-    select: { pinnedNavItems: true },
-  });
+  const settings = await findUserSettingsPinnedNav(userId);
   const appPrefs = parseJsonObject(settings?.pinnedNavItems) ?? {};
   return getExerciseDbOptionsFromAppPrefs(appPrefs);
 }
@@ -71,9 +75,7 @@ export const PATCH = withAdmin(async (req, { auth, params }) => {
       variations,
     } = body;
 
-    const existing = await prisma.progressionExercise.findUnique({
-      where: { id },
-    });
+    const existing = await findExerciseById(id);
     if (!existing) {
       return ApiErrors.notFound("Exercise not found");
     }
@@ -88,9 +90,7 @@ export const PATCH = withAdmin(async (req, { auth, params }) => {
       if (trimmedName.length < 2) {
         return ApiErrors.badRequest("Name must be at least 2 characters");
       }
-      const allUserExercises = await prisma.progressionExercise.findMany({
-        select: { id: true, name: true },
-      });
+      const allUserExercises = await findAllExerciseNames();
       const duplicate = allUserExercises.find(
         (ex) =>
           ex.id !== id && ex.name.toLowerCase() === trimmedName.toLowerCase()
@@ -191,116 +191,35 @@ export const PATCH = withAdmin(async (req, { auth, params }) => {
       updateData.story = markPendingExerciseAsEdited(markExerciseAsPending(nextDescription));
     }
 
-    const updated = await prisma.$transaction(async (tx) => {
-      if (normalizedVariations !== undefined) {
-        await tx.progressionVariation.deleteMany({
-          where: { exerciseId: id },
-        });
+    const updated = await updateExerciseWithRelations({
+      id,
+      updateData,
+      variations: normalizedVariations,
+      existing: {
+        id: existing.id,
+        name: existing.name,
+        wuxiaName: existing.wuxiaName,
+        difficulty: existing.difficulty,
+        wuxiaDifficulty: existing.wuxiaDifficulty,
+        type: existing.type,
+        wuxiaType: existing.wuxiaType,
+        story: existing.story,
+      },
+    });
 
-        if (normalizedVariations.length > 0) {
-          await tx.progressionVariation.createMany({
-            data: normalizedVariations.map((variationName) => ({
-              exerciseId: id,
-              name: variationName,
-              wuxiaName: variationName,
-            })),
-          });
-
-          const createdVariations = await tx.progressionVariation.findMany({
-            where: { exerciseId: id },
-            select: { id: true, name: true, description: true, difficulty: true },
-          });
-
-          if (createdVariations.length > 0) {
-            await tx.progressionVariationTranslation.createMany({
-              data: createdVariations.map((variation) => ({
-                id: variation.id,
-                englishName: variation.name,
-                vietnameseName: variation.name,
-                englishDescription: variation.description,
-                vietnameseDescription: variation.description,
-                englishDifficulty: variation.difficulty,
-                vietnameseDifficulty: variation.difficulty,
-              })),
-            });
-          }
-        }
-      }
-
-      const next = await tx.progressionExercise.update({
-        where: { id },
-        data: updateData,
-        include: {
-          variations: {
-            select: {
-              id: true,
-              name: true,
-            },
-            orderBy: { name: "asc" },
-          },
-        },
-      });
-
-      await tx.progressionExerciseTranslation.upsert({
-        where: { id },
-        create: {
-          id,
-          englishName: String(updateData.name ?? existing.name),
-          vietnameseName: resolveVietnameseValue(
-            String(updateData.name ?? existing.name),
-            String(updateData.wuxiaName ?? (existing.wuxiaName || updateData.name || existing.name)),
-          ),
-          englishStory: String(updateData.story ?? existing.story),
-          vietnameseStory: resolveVietnameseValue(String(updateData.story ?? existing.story), null),
-          englishDifficulty: String(updateData.difficulty ?? existing.difficulty),
-          vietnameseDifficulty: resolveVietnameseValue(
-            String(updateData.difficulty ?? existing.difficulty),
-            String(updateData.wuxiaDifficulty ?? (existing.wuxiaDifficulty || updateData.difficulty || existing.difficulty)),
-          ),
-          englishType: String(updateData.type ?? existing.type),
-          vietnameseType: resolveVietnameseValue(
-            String(updateData.type ?? existing.type),
-            String(updateData.wuxiaType ?? (existing.wuxiaType || updateData.type || existing.type)),
-          ),
-        },
-        update: {
-          ...(updateData.name !== undefined ? { englishName: String(updateData.name) } : {}),
-          ...(updateData.wuxiaName !== undefined
-            ? {
-                vietnameseName: resolveVietnameseValue(
-                  String(updateData.name ?? existing.name),
-                  String(updateData.wuxiaName || updateData.name || existing.name),
-                ),
-              }
-            : {}),
-          ...(updateData.story !== undefined
-            ? {
-                englishStory: String(updateData.story),
-                vietnameseStory: resolveVietnameseValue(String(updateData.story), null),
-              }
-            : {}),
-          ...(updateData.difficulty !== undefined ? { englishDifficulty: String(updateData.difficulty) } : {}),
-          ...(updateData.wuxiaDifficulty !== undefined
-            ? {
-                vietnameseDifficulty: resolveVietnameseValue(
-                  String(updateData.difficulty ?? existing.difficulty),
-                  String(updateData.wuxiaDifficulty || updateData.difficulty || existing.difficulty),
-                ),
-              }
-            : {}),
-          ...(updateData.type !== undefined ? { englishType: String(updateData.type) } : {}),
-          ...(updateData.wuxiaType !== undefined
-            ? {
-                vietnameseType: resolveVietnameseValue(
-                  String(updateData.type ?? existing.type),
-                  String(updateData.wuxiaType || updateData.type || existing.type),
-                ),
-              }
-            : {}),
-        },
-      });
-
-      return next;
+    await upsertExerciseTranslationById({
+      id,
+      existing: {
+        name: existing.name,
+        wuxiaName: existing.wuxiaName,
+        story: existing.story,
+        difficulty: existing.difficulty,
+        wuxiaDifficulty: existing.wuxiaDifficulty,
+        type: existing.type,
+        wuxiaType: existing.wuxiaType,
+      },
+      updateData,
+      resolveVietnameseValue,
     });
 
     return apiSuccess({ exercise: updated });
@@ -315,25 +234,12 @@ export const DELETE = withAdmin(async (_req, { auth, params }) => {
   try {
     const id = params.id as string;
 
-    const existing = await prisma.progressionExercise.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        name: true,
-        story: true,
-        userId: true,
-      },
-    });
+    const existing = await findExerciseById(id);
     if (!existing) {
       return ApiErrors.notFound("Exercise not found");
     }
 
-    await prisma.progressionExercise.update({
-      where: { id },
-      data: {
-        story: markExerciseAsDeleted(existing.story),
-      },
-    });
+    await updateExerciseStoryById(id, markExerciseAsDeleted(existing.story));
 
     return apiSuccess({ message: `${existing.name} was moved to the recycle bin.` });
   } catch (error) {

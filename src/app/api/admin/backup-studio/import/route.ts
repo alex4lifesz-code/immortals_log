@@ -1,8 +1,29 @@
 import { apiSuccess, ApiErrors } from "@/lib/api";
 import { buildDateFromDateKey, normalizeDateOnlyKey } from "@/lib/constants";
-import { prisma } from "@/lib/prisma";
 import { withAdmin } from "@/lib/auth/middleware";
 import { ensureAppExerciseLibraryOwner } from "@/lib/exercise-library-owner";
+import {
+  clearBackupImportDataForUser,
+  createBackupImportProgressionLog,
+  createCheckinForBackupImport,
+  createFallbackExerciseForBackupImport,
+  deleteCheckinById,
+  findBackupUserById,
+  listBackupImportExerciseIdentities,
+  listBackupImportExistingLogs,
+  listBackupImportUserProgressionLevels,
+  listCheckinsForBackupImport,
+  purgeBackupDataForUser,
+  replaceBackupImportExerciseRelations,
+  saveBackupImportExercise,
+  updateBackupUserCore,
+  updateCheckinById,
+  updateCheckinMergeById,
+  upsertBackupUserProfile,
+  upsertBackupUserProgressionLevel,
+  upsertBackupUserSettings,
+  upsertCheckinNoteForBackupImport,
+} from "@/lib/repositories/backup-studio.repository";
 
 type BackupPackage = {
   version?: number;
@@ -192,7 +213,7 @@ export const POST = withAdmin(async (request, { auth }) => {
         ? backup.user.id
         : auth.userId;
 
-    const targetUser = await prisma.user.findUnique({ where: { id: targetUserId } });
+    const targetUser = await findBackupUserById(targetUserId);
     if (!targetUser) {
       return ApiErrors.notFound("Target user not found");
     }
@@ -200,80 +221,47 @@ export const POST = withAdmin(async (request, { auth }) => {
     const replaceExisting = body.replaceExisting === true;
 
     if (replaceExisting) {
-      await prisma.progressionLog.deleteMany({ where: { userProgression: { userId: targetUserId } } });
-      await prisma.userProgressionLevel.deleteMany({ where: { userId: targetUserId } });
-      await prisma.checkInNote.deleteMany({ where: { userId: targetUserId } });
-      await prisma.checkIn.deleteMany({ where: { userId: targetUserId } });
+      await clearBackupImportDataForUser(targetUserId);
     }
 
     if (backup.user?.name) {
-      await prisma.user.update({
-        where: { id: targetUserId },
-        data: {
-          name: clampText(backup.user.name, 100) || targetUser.name,
-          onboardingCompleted: Boolean(backup.user.onboardingCompleted),
-          onboardingSkipped: Boolean(backup.user.onboardingSkipped),
-          onboardingStep: Number.isFinite(Number(backup.user.onboardingStep)) ? Number(backup.user.onboardingStep) : targetUser.onboardingStep,
-        },
+      await updateBackupUserCore({
+        userId: targetUserId,
+        name: clampText(backup.user.name, 100) || targetUser.name,
+        onboardingCompleted: Boolean(backup.user.onboardingCompleted),
+        onboardingSkipped: Boolean(backup.user.onboardingSkipped),
+        onboardingStep: Number.isFinite(Number(backup.user.onboardingStep)) ? Number(backup.user.onboardingStep) : targetUser.onboardingStep,
       });
     }
 
     if (backup.settings) {
-      await prisma.userSettings.upsert({
-        where: { userId: targetUserId },
-        update: {
-          dualPageView: Boolean(backup.settings.dualPageView),
-          pinnedNavItems: clampText(backup.settings.pinnedNavItems || "[]", 10000) || "[]",
-          hiddenNavItems: clampText(backup.settings.hiddenNavItems || "[]", 10000) || "[]",
-          panelPosition: clampText(backup.settings.panelPosition || "left", 50) || "left",
-          combinedView: Boolean(backup.settings.combinedView),
-        },
-        create: {
-          userId: targetUserId,
-          dualPageView: Boolean(backup.settings.dualPageView),
-          pinnedNavItems: clampText(backup.settings.pinnedNavItems || "[]", 10000) || "[]",
-          hiddenNavItems: clampText(backup.settings.hiddenNavItems || "[]", 10000) || "[]",
-          panelPosition: clampText(backup.settings.panelPosition || "left", 50) || "left",
-          combinedView: Boolean(backup.settings.combinedView),
-        },
+      await upsertBackupUserSettings({
+        userId: targetUserId,
+        dualPageView: Boolean(backup.settings.dualPageView),
+        pinnedNavItems: clampText(backup.settings.pinnedNavItems || "[]", 10000) || "[]",
+        hiddenNavItems: clampText(backup.settings.hiddenNavItems || "[]", 10000) || "[]",
+        panelPosition: clampText(backup.settings.panelPosition || "left", 50) || "left",
+        combinedView: Boolean(backup.settings.combinedView),
       });
     }
 
     if (backup.profile) {
-      await prisma.userProfile.upsert({
-        where: { userId: targetUserId },
-        update: {
-          fitnessBackground: backup.profile.fitnessBackground ? clampText(backup.profile.fitnessBackground, 50) : null,
-          primaryGoal: backup.profile.primaryGoal ? clampText(backup.profile.primaryGoal, 50) : null,
-          trainingDaysPerWeek: parseNullableInt(backup.profile.trainingDaysPerWeek),
-          assessmentAnswers: backup.profile.assessmentAnswers ? clampText(backup.profile.assessmentAnswers, 10000) : null,
-          recommendedTier: backup.profile.recommendedTier ? clampText(backup.profile.recommendedTier, 100) : null,
-          currentTier: backup.profile.currentTier ? clampText(backup.profile.currentTier, 100) : null,
-          publicProfile: Boolean(backup.profile.publicProfile),
-          displayName: backup.profile.displayName ? clampText(backup.profile.displayName, 100) : null,
-          gettingStartedDismissed: Boolean(backup.profile.gettingStartedDismissed),
-          gettingStartedTasks: backup.profile.gettingStartedTasks ? clampText(backup.profile.gettingStartedTasks, 10000) : "{}",
-        },
-        create: {
-          userId: targetUserId,
-          fitnessBackground: backup.profile.fitnessBackground ? clampText(backup.profile.fitnessBackground, 50) : null,
-          primaryGoal: backup.profile.primaryGoal ? clampText(backup.profile.primaryGoal, 50) : null,
-          trainingDaysPerWeek: parseNullableInt(backup.profile.trainingDaysPerWeek),
-          assessmentAnswers: backup.profile.assessmentAnswers ? clampText(backup.profile.assessmentAnswers, 10000) : null,
-          recommendedTier: backup.profile.recommendedTier ? clampText(backup.profile.recommendedTier, 100) : null,
-          currentTier: backup.profile.currentTier ? clampText(backup.profile.currentTier, 100) : null,
-          publicProfile: Boolean(backup.profile.publicProfile),
-          displayName: backup.profile.displayName ? clampText(backup.profile.displayName, 100) : null,
-          gettingStartedDismissed: Boolean(backup.profile.gettingStartedDismissed),
-          gettingStartedTasks: backup.profile.gettingStartedTasks ? clampText(backup.profile.gettingStartedTasks, 10000) : "{}",
-        },
+      await upsertBackupUserProfile({
+        userId: targetUserId,
+        fitnessBackground: backup.profile.fitnessBackground ? clampText(backup.profile.fitnessBackground, 50) : null,
+        primaryGoal: backup.profile.primaryGoal ? clampText(backup.profile.primaryGoal, 50) : null,
+        trainingDaysPerWeek: parseNullableInt(backup.profile.trainingDaysPerWeek),
+        assessmentAnswers: backup.profile.assessmentAnswers ? clampText(backup.profile.assessmentAnswers, 10000) : null,
+        recommendedTier: backup.profile.recommendedTier ? clampText(backup.profile.recommendedTier, 100) : null,
+        currentTier: backup.profile.currentTier ? clampText(backup.profile.currentTier, 100) : null,
+        publicProfile: Boolean(backup.profile.publicProfile),
+        displayName: backup.profile.displayName ? clampText(backup.profile.displayName, 100) : null,
+        gettingStartedDismissed: Boolean(backup.profile.gettingStartedDismissed),
+        gettingStartedTasks: backup.profile.gettingStartedTasks ? clampText(backup.profile.gettingStartedTasks, 10000) : "{}",
       });
     }
 
-    const existingCheckins = await prisma.checkIn.findMany({
-      where: { userId: targetUserId },
-      orderBy: [{ date: "asc" }, { createdAt: "asc" }],
-    });
+    const existingCheckins = await listCheckinsForBackupImport(targetUserId);
 
     const existingCheckinByDay = new Map<string, { id: string; present: boolean; weight: number | null; comment: string | null }>();
     for (const row of existingCheckins) {
@@ -295,15 +283,13 @@ export const POST = withAdmin(async (request, { auth }) => {
       const mergedWeight = row.weight ?? existing.weight;
       const mergedComment = row.comment?.trim() ? row.comment : existing.comment;
 
-      await prisma.checkIn.update({
-        where: { id: existing.id },
-        data: {
-          present: mergedPresent,
-          weight: mergedWeight,
-          comment: mergedComment,
-        },
+      await updateCheckinMergeById({
+        id: existing.id,
+        present: mergedPresent,
+        weight: mergedWeight,
+        comment: mergedComment,
       });
-      await prisma.checkIn.delete({ where: { id: row.id } });
+      await deleteCheckinById(row.id);
 
       existingCheckinByDay.set(dayKey, {
         id: existing.id,
@@ -328,25 +314,20 @@ export const POST = withAdmin(async (request, { auth }) => {
         : Boolean(existing?.present);
 
       if (existing) {
-        await prisma.checkIn.update({
-          where: { id: existing.id },
-          data: {
-            date: storedDate,
-            weight: nextWeight,
-            comment: nextComment,
-            present: nextPresent,
-          },
+        await updateCheckinById({
+          id: existing.id,
+          date: storedDate,
+          weight: nextWeight,
+          comment: nextComment,
+          present: nextPresent,
         });
       } else {
-        const created = await prisma.checkIn.create({
-          data: {
-            date: storedDate,
-            userId: targetUserId,
-            weight: nextWeight,
-            comment: nextComment,
-            present: nextPresent,
-          },
-          select: { id: true },
+        const created = await createCheckinForBackupImport({
+          date: storedDate,
+          userId: targetUserId,
+          weight: nextWeight,
+          comment: nextComment,
+          present: nextPresent,
         });
 
         existingCheckinByDay.set(dayKey, {
@@ -364,30 +345,16 @@ export const POST = withAdmin(async (request, { auth }) => {
     for (const entry of Array.isArray(backup.checkInNotes) ? backup.checkInNotes : []) {
       const noteDate = clampText(entry?.date, 20);
       if (!noteDate) continue;
-      await prisma.checkInNote.upsert({
-        where: {
-          date_userId: {
-            date: noteDate,
-            userId: targetUserId,
-          },
-        },
-        update: {
-          content: clampText(entry?.content, 5000),
-          pinned: Boolean(entry?.pinned),
-        },
-        create: {
-          date: noteDate,
-          userId: targetUserId,
-          content: clampText(entry?.content, 5000),
-          pinned: Boolean(entry?.pinned),
-        },
+      await upsertCheckinNoteForBackupImport({
+        date: noteDate,
+        userId: targetUserId,
+        content: clampText(entry?.content, 5000),
+        pinned: Boolean(entry?.pinned),
       });
       importedNotes++;
     }
 
-    const existingExercises = await prisma.progressionExercise.findMany({
-      select: { id: true, name: true, wuxiaName: true },
-    });
+    const existingExercises = await listBackupImportExerciseIdentities();
 
     const exerciseMap = new Map<string, string>();
     const exerciseIdMap = new Map<string, string>();
@@ -437,25 +404,15 @@ export const POST = withAdmin(async (request, { auth }) => {
       const existingId = (sourceExerciseId && exerciseIdMap.get(sourceExerciseId))
         || exerciseMap.get(normalizeText(rawName))
         || exerciseMap.get(normalizeText(exercise?.wuxiaName));
-      const savedExercise = existingId
-        ? await prisma.progressionExercise.update({
-            where: { id: existingId },
-            data: payload,
-            select: { id: true },
-          })
-        : await prisma.progressionExercise.create({
-            data: payload,
-            select: { id: true },
-          });
+      const savedExercise = await saveBackupImportExercise({
+        existingId: existingId ?? null,
+        payload,
+      });
 
       exerciseIdMap.set(savedExercise.id, savedExercise.id);
       exerciseMap.set(normalizeText(rawName), savedExercise.id);
       const wuxiaKey = normalizeText(exercise?.wuxiaName);
       if (wuxiaKey) exerciseMap.set(wuxiaKey, savedExercise.id);
-
-      await prisma.progressionTier.deleteMany({ where: { exerciseId: savedExercise.id } });
-      await prisma.progressionVariation.deleteMany({ where: { exerciseId: savedExercise.id } });
-      await prisma.progressionModifier.deleteMany({ where: { exerciseId: savedExercise.id } });
 
       const tierRows = Array.isArray(exercise?.tiers) && exercise.tiers.length > 0
         ? exercise.tiers.map((tier, index) => ({
@@ -485,8 +442,6 @@ export const POST = withAdmin(async (request, { auth }) => {
             targetRepsText: "",
           }];
 
-      await prisma.progressionTier.createMany({ data: tierRows });
-
       const variationRows = (Array.isArray(exercise?.variations) ? exercise.variations : [])
         .map((variation) => ({
           exerciseId: savedExercise.id,
@@ -499,10 +454,6 @@ export const POST = withAdmin(async (request, { auth }) => {
         }))
         .filter((entry) => entry.name.length > 0);
 
-      if (variationRows.length > 0) {
-        await prisma.progressionVariation.createMany({ data: variationRows });
-      }
-
       const modifierRows = (Array.isArray(exercise?.modifiers) ? exercise.modifiers : [])
         .map((modifier) => ({
           exerciseId: savedExercise.id,
@@ -514,41 +465,23 @@ export const POST = withAdmin(async (request, { auth }) => {
           difficultyIncrease: clampText(modifier?.difficultyIncrease, 500),
         }));
 
-      if (modifierRows.length > 0) {
-        await prisma.progressionModifier.createMany({ data: modifierRows });
-      }
+      await replaceBackupImportExerciseRelations({
+        exerciseId: savedExercise.id,
+        tiers: tierRows,
+        variations: variationRows,
+        modifiers: modifierRows,
+      });
 
-      await prisma.userProgressionLevel.upsert({
-        where: {
-          userId_exerciseId: {
-            userId: targetUserId,
-            exerciseId: savedExercise.id,
-          },
-        },
-        update: {
-          currentLevel: Number.isFinite(Number(exercise?.currentLevel)) ? Number(exercise.currentLevel) : 1,
-        },
-        create: {
-          userId: targetUserId,
-          exerciseId: savedExercise.id,
-          currentLevel: Number.isFinite(Number(exercise?.currentLevel)) ? Number(exercise.currentLevel) : 1,
-        },
+      await upsertBackupUserProgressionLevel({
+        userId: targetUserId,
+        exerciseId: savedExercise.id,
+        currentLevel: Number.isFinite(Number(exercise?.currentLevel)) ? Number(exercise.currentLevel) : 1,
       });
 
       importedExercises++;
     }
 
-    const progressionLevels = await prisma.userProgressionLevel.findMany({
-      where: { userId: targetUserId },
-      include: {
-        exercise: {
-          select: {
-            name: true,
-            wuxiaName: true,
-          },
-        },
-      },
-    });
+    const progressionLevels = await listBackupImportUserProgressionLevels(targetUserId);
 
     const levelMap = new Map<string, string>();
     for (const level of progressionLevels) {
@@ -560,24 +493,7 @@ export const POST = withAdmin(async (request, { auth }) => {
 
     const existingLogSignatures = new Set<string>();
     if (!replaceExisting) {
-      const existingLogs = await prisma.progressionLog.findMany({
-        where: {
-          userProgression: {
-            userId: targetUserId,
-          },
-        },
-        include: {
-          userProgression: {
-            include: {
-              exercise: {
-                select: {
-                  name: true,
-                },
-              },
-            },
-          },
-        },
-      });
+      const existingLogs = await listBackupImportExistingLogs(targetUserId);
 
       for (const entry of existingLogs) {
         existingLogSignatures.add(
@@ -608,50 +524,10 @@ export const POST = withAdmin(async (request, { auth }) => {
           || exerciseMap.get(normalizeText(exerciseName));
 
         if (!resolvedExerciseId) {
-          const createdExercise = await prisma.progressionExercise.create({
-            data: {
-              userId: libraryOwnerId,
-              name: exerciseName,
-              wuxiaName: exerciseName,
-              difficulty: "",
-              wuxiaDifficulty: "",
-              type: "",
-              wuxiaType: "",
-              story: "",
-              category: "Other",
-              equipmentType: "bodyweight",
-              bodyweight: true,
-              weighted: false,
-              rings: false,
-              primaryMuscles: "Other",
-              secondaryMuscles: "",
-              tips: "[]",
-              prerequisites: "[]",
-              cues: "[]",
-              commonMistakes: "[]",
-              breathing: "",
-              safetyConsiderations: "[]",
-              competitionStandards: "{}",
-              progression: JSON.stringify([exerciseName]),
-              assignedDays: "",
-            },
-            select: { id: true },
-          });
-
-          await prisma.progressionTier.create({
-            data: {
-              exerciseId: createdExercise.id,
-              level: Number.isFinite(Number(log?.level)) ? Number(log.level) : 1,
-              name: exerciseName,
-              wuxiaName: exerciseName,
-              difficulty: "",
-              wuxiaDifficulty: "",
-              wuxiaType: "",
-              description: "",
-              targetHold: null,
-              targetReps: null,
-              targetRepsText: "",
-            },
+          const createdExercise = await createFallbackExerciseForBackupImport({
+            userId: libraryOwnerId,
+            exerciseName,
+            level: Number.isFinite(Number(log?.level)) ? Number(log.level) : 1,
           });
 
           resolvedExerciseId = createdExercise.id;
@@ -659,22 +535,10 @@ export const POST = withAdmin(async (request, { auth }) => {
           exerciseMap.set(normalizeText(exerciseName), createdExercise.id);
         }
 
-        const levelRecord = await prisma.userProgressionLevel.upsert({
-          where: {
-            userId_exerciseId: {
-              userId: targetUserId,
-              exerciseId: resolvedExerciseId,
-            },
-          },
-          update: {
-            currentLevel: Number.isFinite(Number(log?.level)) ? Number(log.level) : 1,
-          },
-          create: {
-            userId: targetUserId,
-            exerciseId: resolvedExerciseId,
-            currentLevel: Number.isFinite(Number(log?.level)) ? Number(log.level) : 1,
-          },
-          select: { id: true },
+        const levelRecord = await upsertBackupUserProgressionLevel({
+          userId: targetUserId,
+          exerciseId: resolvedExerciseId,
+          currentLevel: Number.isFinite(Number(log?.level)) ? Number(log.level) : 1,
         });
 
         progressionId = levelRecord.id;
@@ -695,26 +559,24 @@ export const POST = withAdmin(async (request, { auth }) => {
         continue;
       }
 
-      await prisma.progressionLog.create({
-        data: {
-          userProgressionId: progressionId,
-          level: Number.isFinite(Number(log?.level)) ? Number(log?.level) : 1,
-          weight1: parseNullableFloat(log?.weight1),
-          reps1: parseNullableInt(log?.reps1),
-          weight2: parseNullableFloat(log?.weight2),
-          reps2: parseNullableInt(log?.reps2),
-          weight3: parseNullableFloat(log?.weight3),
-          reps3: parseNullableInt(log?.reps3),
-          holdTime: parseNullableInt(log?.holdTime),
-          holdTime2: parseNullableInt(log?.holdTime2),
-          holdTime3: parseNullableInt(log?.holdTime3),
-          modifier: log?.modifier ? clampText(log.modifier, 100) : null,
-          variant: log?.variant ? clampText(log.variant, 200) : null,
-          setupOption: log?.setupOption ? clampText(log.setupOption, 100) : null,
-          notes: log?.notes ? clampText(log.notes, 2000) : null,
-          completed: log?.completed !== false,
-          createdAt,
-        },
+      await createBackupImportProgressionLog({
+        userProgressionId: progressionId,
+        level: Number.isFinite(Number(log?.level)) ? Number(log?.level) : 1,
+        weight1: parseNullableFloat(log?.weight1),
+        reps1: parseNullableInt(log?.reps1),
+        weight2: parseNullableFloat(log?.weight2),
+        reps2: parseNullableInt(log?.reps2),
+        weight3: parseNullableFloat(log?.weight3),
+        reps3: parseNullableInt(log?.reps3),
+        holdTime: parseNullableInt(log?.holdTime),
+        holdTime2: parseNullableInt(log?.holdTime2),
+        holdTime3: parseNullableInt(log?.holdTime3),
+        modifier: log?.modifier ? clampText(log.modifier, 100) : null,
+        variant: log?.variant ? clampText(log.variant, 200) : null,
+        setupOption: log?.setupOption ? clampText(log.setupOption, 100) : null,
+        notes: log?.notes ? clampText(log.notes, 2000) : null,
+        completed: log?.completed !== false,
+        createdAt,
       });
 
       existingLogSignatures.add(signature);
@@ -747,17 +609,12 @@ export const DELETE = withAdmin(async (request, { auth }) => {
       return ApiErrors.badRequest("Confirmation is required before purging user backup data");
     }
 
-    const targetUser = await prisma.user.findUnique({ where: { id: targetUserId } });
+    const targetUser = await findBackupUserById(targetUserId);
     if (!targetUser) {
       return ApiErrors.notFound("Target user not found");
     }
 
-    await prisma.progressionLog.deleteMany({ where: { userProgression: { userId: targetUserId } } });
-    await prisma.userProgressionLevel.deleteMany({ where: { userId: targetUserId } });
-    await prisma.checkInNote.deleteMany({ where: { userId: targetUserId } });
-    await prisma.checkIn.deleteMany({ where: { userId: targetUserId } });
-    await prisma.userProfile.deleteMany({ where: { userId: targetUserId } });
-    await prisma.userSettings.deleteMany({ where: { userId: targetUserId } });
+    await purgeBackupDataForUser(targetUserId);
 
     return apiSuccess({
       message: `Purged backup-related user data for ${targetUser.name}. Exercise DB records were preserved.`,

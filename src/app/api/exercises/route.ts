@@ -1,28 +1,23 @@
 import { apiSuccess, ApiErrors } from "@/lib/api";
-import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 import {
   applyExerciseTranslation,
   getUserLanguageMode,
 } from "@/lib/exercise-translation-db";
 import { resolveVietnameseValue } from "@/lib/auto-vietnamese";
-
-const ARCHIVED_TARGET_GROUP = "__archived__";
+import {
+  ARCHIVED_TARGET_GROUP,
+  deleteNonArchivedExercises,
+  findArchivedExerciseByName,
+  getActiveExercisesWithTranslations,
+  upsertExerciseFromArchivedMatch,
+  upsertExerciseTranslation,
+} from "@/lib/repositories/exercise.repository";
 
 export const GET = withAuth(async (_req, { auth }) => {
   try {
     const languageMode = await getUserLanguageMode(auth.userId);
-    const exercises = await prisma.exercise.findMany({
-      where: {
-        NOT: {
-          targetGroup: ARCHIVED_TARGET_GROUP,
-        },
-      },
-      include: {
-        translation: true,
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const exercises = await getActiveExercisesWithTranslations();
 
     const localizedExercises = exercises.map(({ translation, ...exercise }) =>
       applyExerciseTranslation(exercise, translation, languageMode)
@@ -64,56 +59,30 @@ export const POST = withAuth(async (req, { auth }) => {
     }
 
     // SQLite doesn't support mode:"insensitive", so fetch candidates and filter in JS
-    const archivedCandidates = await prisma.exercise.findMany({
-      where: { targetGroup: ARCHIVED_TARGET_GROUP },
-    });
-    const archivedMatch =
-      archivedCandidates.find(
-        (ex) => ex.name.toLowerCase() === name.toLowerCase()
-      ) ?? null;
+    const archivedMatch = await findArchivedExerciseByName(name);
 
-    const exercise = archivedMatch
-      ? await prisma.exercise.update({
-          where: { id: archivedMatch.id },
-          data: {
-            wuxiaName: wuxiaName || null,
-            difficulty,
-            type,
-            story,
-            targetGroup: targetGroup || null,
-          },
-        })
-      : await prisma.exercise.create({
-          data: {
-            name,
-            wuxiaName: wuxiaName || null,
-            difficulty,
-            type,
-            story,
-            targetGroup,
-          },
-        });
+    const exercise = await upsertExerciseFromArchivedMatch(
+      archivedMatch?.id ?? null,
+      {
+        name,
+        wuxiaName: wuxiaName || null,
+        difficulty,
+        type,
+        story,
+        targetGroup,
+      }
+    );
 
-    await prisma.exerciseTranslation.upsert({
-      where: { id: exercise.id },
-      create: {
-        id: exercise.id,
-        englishName: name,
-        vietnameseName: resolveVietnameseValue(name, wuxiaName || null),
-        englishStory: story || null,
-        vietnameseStory: story || null,
-        englishDifficulty: difficulty,
-        vietnameseDifficulty: resolveVietnameseValue(difficulty, null),
-        englishType: type,
-        vietnameseType: resolveVietnameseValue(type, null),
-      },
-      update: {
-        englishName: name,
-        vietnameseName: resolveVietnameseValue(name, wuxiaName || null),
-        englishStory: story || null,
-        englishDifficulty: difficulty,
-        englishType: type,
-      },
+    await upsertExerciseTranslation({
+      id: exercise.id,
+      englishName: name,
+      vietnameseName: resolveVietnameseValue(name, wuxiaName || null),
+      englishStory: story || null,
+      vietnameseStory: story || null,
+      englishDifficulty: difficulty,
+      vietnameseDifficulty: resolveVietnameseValue(difficulty, null),
+      englishType: type,
+      vietnameseType: resolveVietnameseValue(type, null),
     });
 
     return apiSuccess({ exercise });
@@ -129,13 +98,7 @@ export const DELETE = withAuth(async (_req, { auth }) => {
       return ApiErrors.forbidden("Admin privileges required");
     }
 
-    const deleteResult = await prisma.exercise.deleteMany({
-      where: {
-        NOT: {
-          targetGroup: ARCHIVED_TARGET_GROUP,
-        },
-      },
-    });
+    const deleteResult = await deleteNonArchivedExercises();
 
     return apiSuccess({
       message: `Library purged. ${deleteResult.count} technique(s) deleted.`,

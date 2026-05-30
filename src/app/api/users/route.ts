@@ -1,10 +1,14 @@
 import { apiSuccess, ApiErrors } from "@/lib/api";
-import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { withAuth } from "@/lib/auth/middleware";
 import { validatePassword, validateUsername } from "@/lib/validation";
 import { CONFIG } from "@/lib/config";
 import { generateUniqueImmortalFriendCode } from "@/lib/friend-code";
+import {
+  createUser,
+  findUserByUsername,
+  getUsersWithProgressionCounts,
+} from "@/lib/repositories/user.repository";
 
 function parseJsonObject(value: string | null | undefined): Record<string, unknown> | null {
   if (!value) return null;
@@ -25,38 +29,7 @@ export const GET = withAuth(async (_request, { auth }) => {
       return ApiErrors.forbidden("Admin access required");
     }
 
-    const [users, progressionLevels] = await Promise.all([
-      prisma.user.findMany({
-        select: {
-          id: true,
-          username: true,
-          name: true,
-          role: true,
-          createdAt: true,
-          settings: {
-            select: {
-              pinnedNavItems: true,
-            },
-          },
-          _count: {
-            select: {
-              checkIns: true,
-            },
-          },
-        },
-        orderBy: { createdAt: "asc" },
-      }),
-      prisma.userProgressionLevel.findMany({
-        select: {
-          userId: true,
-          _count: {
-            select: {
-              logs: true,
-            },
-          },
-        },
-      }),
-    ]);
+    const { users, progressionLevels } = await getUsersWithProgressionCounts();
 
     const progressionLogCounts = new Map<string, number>();
     for (const level of progressionLevels) {
@@ -119,7 +92,7 @@ export const POST = withAuth(async (request, { auth }) => {
       return ApiErrors.validationError(passwordValidation.errors.join(". "));
     }
 
-    const existing = await prisma.user.findUnique({ where: { username } });
+    const existing = await findUserByUsername(username);
     if (existing) {
       return ApiErrors.conflict("Dao name already taken");
     }
@@ -127,21 +100,12 @@ export const POST = withAuth(async (request, { auth }) => {
     const hashedPassword = await bcrypt.hash(password, CONFIG.auth.bcryptRounds);
     const friendCode = await generateUniqueImmortalFriendCode();
 
-    const user = await prisma.user.create({
-      data: {
-        username,
-        password: hashedPassword,
-        name,
-        role: "user",
-        friendCode,
-      },
-      select: {
-        id: true,
-        username: true,
-        name: true,
-        role: true,
-        createdAt: true,
-      },
+    const user = await createUser({
+      username,
+      password: hashedPassword,
+      name,
+      role: "user",
+      friendCode,
     });
 
     return apiSuccess({ user }, undefined, { status: 201 });

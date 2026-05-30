@@ -1,10 +1,20 @@
 import { NextResponse } from "next/server";
 import { apiSuccess, ApiErrors } from "@/lib/api";
-import { prisma } from "@/lib/prisma";
 import { withAdmin } from "@/lib/auth/middleware";
 import { ensureAppExerciseLibraryOwner } from "@/lib/exercise-library-owner";
 import { restoreExerciseDbUserProgressFromSnapshot, snapshotExerciseDbUserProgress } from "@/lib/exercise-db-recovery";
 import { isDeletedExerciseDescription } from "@/lib/pending-exercises";
+import {
+  countAllExercises,
+  countDeletedExercises,
+  countProgressionLogs,
+  countUserProgressionLevels,
+  findAllExerciseNameEntries,
+  listExercisesForStudioExport,
+  purgeAllExercises,
+  replaceStudioExerciseRelations,
+  saveStudioExerciseById,
+} from "@/lib/repositories/exercise-library.repository";
 
 function clampText(value: unknown, max: number): string {
   return String(value || "").trim().slice(0, max);
@@ -39,14 +49,7 @@ function getProgressionList(exercise: Record<string, unknown>): string[] {
 
 export const GET = withAdmin(async () => {
   try {
-    const exercises = await prisma.progressionExercise.findMany({
-      include: {
-        tiers: { orderBy: { level: "asc" } },
-        variations: { orderBy: { name: "asc" } },
-        modifiers: true,
-      },
-      orderBy: { name: "asc" },
-    });
+    const exercises = await listExercisesForStudioExport();
 
     const visibleExercises = exercises.filter((exercise) => !isDeletedExerciseDescription(exercise.story));
 
@@ -150,6 +153,7 @@ export const POST = withAdmin(async (request) => {
     let updated = 0;
     let skipped = 0;
     const libraryOwnerId = await ensureAppExerciseLibraryOwner();
+    const existingCandidates = await findAllExerciseNameEntries();
 
     for (const exercise of exercises) {
       const rawName = clampText(exercise.name, 200);
@@ -159,9 +163,6 @@ export const POST = withAdmin(async (request) => {
       }
 
       const progression = getProgressionList(exercise);
-      const existingCandidates = await prisma.progressionExercise.findMany({
-        select: { id: true, name: true },
-      });
       const existing = existingCandidates.find(
         (entry) => entry.name.trim().toLowerCase() === rawName.toLowerCase(),
       );
@@ -198,20 +199,10 @@ export const POST = withAdmin(async (request) => {
         assignedDays: clampText(exercise.assignedDays, 200),
       };
 
-      const saved = existing
-        ? await prisma.progressionExercise.update({
-            where: { id: existing.id },
-            data: payload,
-            select: { id: true },
-          })
-        : await prisma.progressionExercise.create({
-            data: payload,
-            select: { id: true },
-          });
-
-      await prisma.progressionTier.deleteMany({ where: { exerciseId: saved.id } });
-      await prisma.progressionVariation.deleteMany({ where: { exerciseId: saved.id } });
-      await prisma.progressionModifier.deleteMany({ where: { exerciseId: saved.id } });
+      const saved = await saveStudioExerciseById({
+        existingId: existing?.id ?? null,
+        payload,
+      });
 
       const tiers = Array.isArray(exercise.tiers) ? exercise.tiers : [];
       const tierRows = tiers.length > 0
@@ -245,8 +236,6 @@ export const POST = withAdmin(async (request) => {
             targetRepsText: "",
           }];
 
-      await prisma.progressionTier.createMany({ data: tierRows });
-
       const variations = Array.isArray(exercise.variations) ? exercise.variations : [];
       const variationRows = variations
         .map((variation) => {
@@ -263,10 +252,6 @@ export const POST = withAdmin(async (request) => {
         })
         .filter((entry) => entry.name.length > 0);
 
-      if (variationRows.length > 0) {
-        await prisma.progressionVariation.createMany({ data: variationRows });
-      }
-
       const modifiers = Array.isArray(exercise.modifiers) ? exercise.modifiers : [];
       const modifierRows = modifiers.map((modifier) => {
         const modifierData = modifier as Record<string, unknown>;
@@ -281,8 +266,15 @@ export const POST = withAdmin(async (request) => {
         };
       });
 
-      if (modifierRows.length > 0) {
-        await prisma.progressionModifier.createMany({ data: modifierRows });
+      await replaceStudioExerciseRelations({
+        exerciseId: saved.id,
+        tiers: tierRows,
+        variations: variationRows,
+        modifiers: modifierRows,
+      });
+
+      if (!existing) {
+        existingCandidates.push({ id: saved.id, name: rawName });
       }
 
       if (existing) {
@@ -317,23 +309,15 @@ export const DELETE = withAdmin(async (request) => {
     }
 
     const [exerciseCount, deletedCount, levelCount, logCount] = await Promise.all([
-      prisma.progressionExercise.count(),
-      prisma.progressionExercise.count({
-        where: {
-          story: {
-            startsWith: "[DELETED_EXERCISE]",
-          },
-        },
-      }),
-      prisma.userProgressionLevel.count(),
-      prisma.progressionLog.count(),
+      countAllExercises(),
+      countDeletedExercises(),
+      countUserProgressionLevels(),
+      countProgressionLogs(),
     ]);
 
     const recovery = await snapshotExerciseDbUserProgress();
 
-    await prisma.$transaction(async (tx) => {
-      await tx.progressionExercise.deleteMany({});
-    });
+    await purgeAllExercises();
 
     return apiSuccess({
       message: `Exercise DB purged successfully: ${exerciseCount} exercises cleared. Saved ${recovery.levelCount} progression records and ${recovery.logCount} logs for automatic restore after the next library import.`,

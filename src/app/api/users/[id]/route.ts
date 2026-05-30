@@ -1,10 +1,15 @@
 import { apiSuccess, ApiErrors } from "@/lib/api";
-import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 import { archiveUserAndDelete } from "@/lib/user-recycle-bin";
 import { validatePassword } from "@/lib/validation";
 import { CONFIG } from "@/lib/config";
 import bcrypt from "bcryptjs";
+import {
+  countUsersByRole,
+  findUserById,
+  findUserIdAndRoleById,
+  updateUserById,
+} from "@/lib/repositories/user.repository";
 
 export const PATCH = withAuth(async (req, { auth, params }) => {
   try {
@@ -46,7 +51,7 @@ export const PATCH = withAuth(async (req, { auth, params }) => {
       return ApiErrors.badRequest("Role must be 'admin' or 'user'");
     }
 
-    const targetUser = await prisma.user.findUnique({ where: { id }, select: { id: true, role: true } });
+    const targetUser = await findUserIdAndRoleById(id);
     if (!targetUser) {
       return ApiErrors.notFound("User not found");
     }
@@ -58,7 +63,7 @@ export const PATCH = withAuth(async (req, { auth, params }) => {
 
     // Prevent demoting the last remaining admin
     if (isRoleChange && targetUser.role === "admin" && normalizedRole !== "admin") {
-      const adminCount = await prisma.user.count({ where: { role: "admin" } });
+      const adminCount = await countUsersByRole("admin");
       if (adminCount <= 1) {
         return ApiErrors.badRequest("Cannot demote the last remaining admin");
       }
@@ -82,11 +87,7 @@ export const PATCH = withAuth(async (req, { auth, params }) => {
       data.role = normalizedRole;
     }
 
-    const user = await prisma.user.update({
-      where: { id },
-      data,
-      select: { id: true, username: true, name: true, role: true },
-    });
+    const user = await updateUserById(id, data);
 
     return apiSuccess({ user, passwordChanged: isPasswordChange });
   } catch (error) {
@@ -109,7 +110,7 @@ export const DELETE = withAuth(async (_req, { auth, params }) => {
       return ApiErrors.forbidden("Cannot delete your own account");
     }
 
-    const targetUser = await prisma.user.findUnique({ where: { id } });
+    const targetUser = await findUserById(id);
     if (!targetUser) {
       return ApiErrors.notFound("User not found");
     }

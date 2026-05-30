@@ -1,5 +1,4 @@
 import { apiSuccess, ApiErrors } from "@/lib/api";
-import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 import {
   getDefaultExerciseDbOptions,
@@ -7,6 +6,14 @@ import {
   mergeExerciseDbOptionsIntoAppPrefs,
   type ExerciseDbOptions,
 } from "@/lib/exercise-db-settings";
+import {
+  findExerciseMusclesByUser,
+  findUserSettingsPinnedNav,
+  renameExerciseCategoriesForUser,
+  renameExerciseVariationsForUser,
+  updateExerciseMusclesById,
+  upsertUserSettingsPinnedNav,
+} from "@/lib/repositories/exercise-library.repository";
 
 type RenamePair = { from: string; to: string };
 type RenamePayload = {
@@ -65,24 +72,11 @@ function renameInCsv(csv: string, renames: RenamePair[]): string {
 
 async function applyRenamePropagation(userId: string, renames: Required<RenamePayload>) {
   for (const rename of renames.categories) {
-    await prisma.$executeRawUnsafe(
-      `
-      UPDATE ProgressionExercise
-      SET category = ?
-      WHERE userId = ?
-        AND LOWER(TRIM(category)) = LOWER(TRIM(?))
-      `,
-      rename.to,
-      userId,
-      rename.from,
-    );
+    await renameExerciseCategoriesForUser(userId, rename.from, rename.to);
   }
 
   if (renames.muscles.length > 0) {
-    const exercises = await prisma.progressionExercise.findMany({
-      where: { userId },
-      select: { id: true, primaryMuscles: true, secondaryMuscles: true },
-    });
+    const exercises = await findExerciseMusclesByUser(userId);
 
     for (const exercise of exercises) {
       const nextPrimary = renameInCsv(exercise.primaryMuscles || "", renames.muscles);
@@ -90,33 +84,12 @@ async function applyRenamePropagation(userId: string, renames: Required<RenamePa
       if (nextPrimary === (exercise.primaryMuscles || "") && nextSecondary === (exercise.secondaryMuscles || "")) {
         continue;
       }
-      await prisma.progressionExercise.update({
-        where: { id: exercise.id },
-        data: {
-          primaryMuscles: nextPrimary,
-          secondaryMuscles: nextSecondary,
-        },
-      });
+      await updateExerciseMusclesById(exercise.id, nextPrimary, nextSecondary);
     }
   }
 
   for (const rename of renames.variants) {
-    await prisma.$executeRawUnsafe(
-      `
-      UPDATE ProgressionVariation
-      SET name = ?, wuxiaName = ?
-      WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))
-        AND exerciseId IN (
-          SELECT id
-          FROM ProgressionExercise
-          WHERE userId = ?
-        )
-      `,
-      rename.to,
-      rename.to,
-      rename.from,
-      userId,
-    );
+    await renameExerciseVariationsForUser(userId, rename.from, rename.to);
   }
 
   // Type labels are UI labels derived from boolean flags; no direct column to rename.
@@ -124,10 +97,7 @@ async function applyRenamePropagation(userId: string, renames: Required<RenamePa
 
 export const GET = withAuth(async (_req, { auth }) => {
   try {
-    const existing = await prisma.userSettings.findUnique({
-      where: { userId: auth.userId },
-      select: { pinnedNavItems: true, hiddenNavItems: true, panelPosition: true, dualPageView: true, combinedView: true },
-    });
+    const existing = await findUserSettingsPinnedNav(auth.userId);
 
     const appPrefs = parseJsonObject(existing?.pinnedNavItems) ?? {};
     const options = getExerciseDbOptionsFromAppPrefs(appPrefs);
@@ -137,19 +107,13 @@ export const GET = withAuth(async (_req, { auth }) => {
       const normalizedPrefs = mergeExerciseDbOptionsIntoAppPrefs(appPrefs, options);
       const normalizedSerialized = JSON.stringify(normalizedPrefs);
       if (normalizedSerialized !== existing.pinnedNavItems) {
-        await prisma.userSettings.upsert({
-          where: { userId: auth.userId },
-          create: {
-            userId: auth.userId,
-            pinnedNavItems: normalizedSerialized,
-            hiddenNavItems: existing.hiddenNavItems ?? "{}",
-            panelPosition: existing.panelPosition ?? "left",
-            dualPageView: existing.dualPageView ?? false,
-            combinedView: existing.combinedView ?? false,
-          },
-          update: {
-            pinnedNavItems: normalizedSerialized,
-          },
+        await upsertUserSettingsPinnedNav({
+          userId: auth.userId,
+          pinnedNavItems: normalizedSerialized,
+          hiddenNavItems: existing.hiddenNavItems ?? "{}",
+          panelPosition: existing.panelPosition ?? "left",
+          dualPageView: existing.dualPageView ?? false,
+          combinedView: existing.combinedView ?? false,
         });
       }
     }
@@ -177,27 +141,19 @@ export const PUT = withAuth(async (req, { auth }) => {
       variants: normalizeRenames(renamePayload.variants),
     };
 
-    const existing = await prisma.userSettings.findUnique({
-      where: { userId: auth.userId },
-    });
+    const existing = await findUserSettingsPinnedNav(auth.userId);
 
     const existingPrefs = parseJsonObject(existing?.pinnedNavItems) ?? {};
     const mergedPrefs = mergeExerciseDbOptionsIntoAppPrefs(existingPrefs, incoming);
     const options = getExerciseDbOptionsFromAppPrefs(mergedPrefs);
 
-    await prisma.userSettings.upsert({
-      where: { userId: auth.userId },
-      create: {
-        userId: auth.userId,
-        pinnedNavItems: JSON.stringify(mergedPrefs),
-        hiddenNavItems: existing?.hiddenNavItems ?? "{}",
-        panelPosition: existing?.panelPosition ?? "left",
-        dualPageView: existing?.dualPageView ?? false,
-        combinedView: existing?.combinedView ?? false,
-      },
-      update: {
-        pinnedNavItems: JSON.stringify(mergedPrefs),
-      },
+    await upsertUserSettingsPinnedNav({
+      userId: auth.userId,
+      pinnedNavItems: JSON.stringify(mergedPrefs),
+      hiddenNavItems: existing?.hiddenNavItems ?? "{}",
+      panelPosition: existing?.panelPosition ?? "left",
+      dualPageView: existing?.dualPageView ?? false,
+      combinedView: existing?.combinedView ?? false,
     });
 
     await applyRenamePropagation(auth.userId, renames);

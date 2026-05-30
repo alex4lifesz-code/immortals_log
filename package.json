@@ -12,7 +12,9 @@
     "deploy:portainer:localhost": "sh ./scripts/deploy-portainer.sh portainer-stack-localhost.yml",
     "lint": "eslint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "scripts": "tsx scripts/cli.ts",
+    "add-friends": "tsx scripts/cli.ts data add-friends"
   },
   "dependencies": {
     "@libsql/client": "^0.17.0",

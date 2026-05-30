@@ -1,4 +1,9 @@
-import { prisma } from "@/lib/prisma";
+import {
+  findAcceptedFriendRelation,
+  findFriendRequestRelationBetweenUsers,
+  getAcceptedFriendRows,
+  getAllUserIds,
+} from "@/lib/repositories/friend.repository";
 
 function isMissingFriendRequestTableError(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
@@ -41,16 +46,7 @@ export function normalizeScope(
 export async function getAcceptedFriendIds(userId: string): Promise<string[]> {
   let rows: Array<{ requesterId: string; receiverId: string }> = [];
   try {
-    rows = await prisma.friendRequest.findMany({
-      where: {
-        status: FRIEND_STATUS.ACCEPTED,
-        OR: [{ requesterId: userId }, { receiverId: userId }],
-      },
-      select: {
-        requesterId: true,
-        receiverId: true,
-      },
-    });
+    rows = await getAcceptedFriendRows(userId);
   } catch (error) {
     if (isMissingFriendRequestTableError(error)) {
       return [];
@@ -70,16 +66,7 @@ export async function areUsersFriends(userId: string, otherUserId: string): Prom
   if (userId === otherUserId) return true;
   let relation: { id: string } | null = null;
   try {
-    relation = await prisma.friendRequest.findFirst({
-      where: {
-        status: FRIEND_STATUS.ACCEPTED,
-        OR: [
-          { requesterId: userId, receiverId: otherUserId },
-          { requesterId: otherUserId, receiverId: userId },
-        ],
-      },
-      select: { id: true },
-    });
+    relation = await findAcceptedFriendRelation(userId, otherUserId);
   } catch (error) {
     if (isMissingFriendRequestTableError(error)) {
       return false;
@@ -109,15 +96,13 @@ export async function getVisibleSocialUserIds(params: {
 
   if (viewerRole === "admin") {
     if (scope === "community") {
-      const users = await prisma.user.findMany({ select: { id: true } });
-      return users.map((user) => user.id);
+      return getAllUserIds();
     }
     return [viewerId, ...(await getAcceptedFriendIds(viewerId))];
   }
 
   if (scope === "community") {
-    const users = await prisma.user.findMany({ select: { id: true } });
-    return users.map((user) => user.id);
+    return getAllUserIds();
   }
 
   return [viewerId, ...(await getAcceptedFriendIds(viewerId))];
@@ -125,18 +110,7 @@ export async function getVisibleSocialUserIds(params: {
 
 export async function getFriendRequestBetweenUsers(userA: string, userB: string) {
   try {
-    return await prisma.friendRequest.findFirst({
-      where: {
-        OR: [
-          { requesterId: userA, receiverId: userB },
-          { requesterId: userB, receiverId: userA },
-        ],
-      },
-      include: {
-        requester: { select: { id: true, name: true, username: true } },
-        receiver: { select: { id: true, name: true, username: true } },
-      },
-    });
+    return await findFriendRequestRelationBetweenUsers(userA, userB);
   } catch (error) {
     if (isMissingFriendRequestTableError(error)) {
       return null;

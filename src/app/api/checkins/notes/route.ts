@@ -1,7 +1,15 @@
-import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 import { getVisibleSocialUserIds, normalizeScope } from "@/lib/friends";
 import { apiSuccess, ApiErrors } from "@/lib/api";
+import {
+  createCheckinNote,
+  deleteCheckinNoteById,
+  findCheckinNoteByDateAndUser,
+  findCheckinNoteById,
+  findCheckinNotes,
+  updateCheckinNoteContent,
+  updateCheckinNotePinned,
+} from "@/lib/repositories/checkin.repository";
 
 // GET /api/checkins/notes?date=YYYY-MM-DD  — fetch current user's notes for a date (or all if no date)
 // GET /api/checkins/notes?future=true — fetch notes for dates beyond today
@@ -22,26 +30,21 @@ export const GET = withAuth(async (request, { auth }) => {
       scope,
     });
 
-    let where: Record<string, unknown> = {
-      userId: {
-        in: visibleUserIds,
-      },
-    };
+    let dateFilter: string | undefined;
+    let futureToday: string | undefined;
     if (future === "true") {
       const todayStr = clientToday && /^\d{4}-\d{2}-\d{2}$/.test(clientToday)
         ? clientToday
         : (() => { const today = new Date(); return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`; })();
-      where = { ...where, date: { gt: todayStr } };
+      futureToday = todayStr;
     } else if (date) {
-      where = { ...where, date };
+      dateFilter = date;
     }
 
-    const notes = await prisma.checkInNote.findMany({
-      where,
-      include: {
-        user: { select: { id: true, name: true, username: true } },
-      },
-      orderBy: [{ pinned: "desc" }, { updatedAt: "desc" }],
+    const notes = await findCheckinNotes({
+      userIds: visibleUserIds,
+      date: dateFilter,
+      futureToday,
     });
 
     return apiSuccess({ notes });
@@ -68,27 +71,14 @@ export const POST = withAuth(async (request, { auth }) => {
 
     const trimmedContent = String(content).trim().slice(0, 2000);
 
-    const existing = await prisma.checkInNote.findFirst({
-      where: { date, userId },
-    });
+    const existing = await findCheckinNoteByDateAndUser(date, userId);
 
     const note = existing
-      ? await prisma.checkInNote.update({
-          where: { id: existing.id },
-          data: { content: trimmedContent },
-          include: {
-            user: { select: { id: true, name: true, username: true } },
-          },
-        })
-      : await prisma.checkInNote.create({
-          data: {
-            date,
-            userId,
-            content: trimmedContent,
-          },
-          include: {
-            user: { select: { id: true, name: true, username: true } },
-          },
+      ? await updateCheckinNoteContent(existing.id, trimmedContent)
+      : await createCheckinNote({
+          date,
+          userId,
+          content: trimmedContent,
         });
 
     return apiSuccess({ note, updated: Boolean(existing) });
@@ -108,21 +98,13 @@ export const PATCH = withAuth(async (request, { auth }) => {
     }
 
     // Verify ownership
-    const existing = await prisma.checkInNote.findUnique({
-      where: { id: noteId },
-    });
+    const existing = await findCheckinNoteById(noteId);
 
     if (!existing || existing.userId !== auth.userId) {
       return ApiErrors.forbidden("Note not found or not owned by user");
     }
 
-    const note = await prisma.checkInNote.update({
-      where: { id: noteId },
-      data: { pinned: typeof pinned === "boolean" ? pinned : !existing.pinned },
-      include: {
-        user: { select: { id: true, name: true, username: true } },
-      },
-    });
+    const note = await updateCheckinNotePinned(noteId, typeof pinned === "boolean" ? pinned : !existing.pinned);
 
     return apiSuccess({ note });
   } catch (error) {
@@ -141,15 +123,13 @@ export const DELETE = withAuth(async (request, { auth }) => {
     }
 
     // Verify ownership
-    const existing = await prisma.checkInNote.findUnique({
-      where: { id: noteId },
-    });
+    const existing = await findCheckinNoteById(noteId);
 
     if (!existing || existing.userId !== auth.userId) {
       return ApiErrors.forbidden("Note not found or not owned by user");
     }
 
-    await prisma.checkInNote.delete({ where: { id: noteId } });
+    await deleteCheckinNoteById(noteId);
 
     return apiSuccess({ deleted: true });
   } catch (error) {

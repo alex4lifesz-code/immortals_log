@@ -1,8 +1,8 @@
 import { apiSuccess, ApiErrors } from "@/lib/api";
-import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 import { canViewUserData } from "@/lib/friends";
 import { ensureAppExerciseLibraryOwner } from "@/lib/exercise-library-owner";
+import { getProgressionHistoryPage } from "@/lib/repositories/progression.repository";
 
 function resolveLogLimit(raw: string | null): number {
   if (raw === null || raw === "") return 200;
@@ -128,96 +128,10 @@ export const GET = withAuth(async (request, { auth }) => {
           }
         : visibilityWhere;
 
-    const page = await prisma.progressionExercise.findMany({
+    const page = await getProgressionHistoryPage({
       where: whereClause,
-      select: {
-        id: true,
-        name: true,
-        wuxiaName: true,
-        difficulty: true,
-        wuxiaDifficulty: true,
-        type: true,
-        wuxiaType: true,
-        story: true,
-        tips: true,
-        category: true,
-        equipmentType: true,
-        bodyweight: true,
-        weighted: true,
-        rings: true,
-        primaryMuscles: true,
-        secondaryMuscles: true,
-        assignedDays: true,
-        createdAt: true,
-        tiers: {
-          select: {
-            id: true,
-            level: true,
-            name: true,
-            wuxiaName: true,
-            difficulty: true,
-            wuxiaDifficulty: true,
-            wuxiaType: true,
-            description: true,
-            targetHold: true,
-            targetReps: true,
-            targetRepsText: true,
-          },
-          orderBy: { level: "asc" },
-        },
-        variations: {
-          select: {
-            id: true,
-            name: true,
-            wuxiaName: true,
-            difficulty: true,
-            description: true,
-            wuxiaDifficulty: true,
-            wuxiaType: true,
-          },
-        },
-        modifiers: {
-          select: {
-            id: true,
-            type: true,
-            available: true,
-            difficultyMod: true,
-            notes: true,
-          },
-        },
-        userProgress: {
-          where: { userId },
-          select: {
-            id: true,
-            currentLevel: true,
-            logs: {
-              select: {
-                id: true,
-                level: true,
-                weight1: true,
-                reps1: true,
-                weight2: true,
-                reps2: true,
-                weight3: true,
-                reps3: true,
-                holdTime: true,
-                holdTime2: true,
-                holdTime3: true,
-                reps: true,
-                modifier: true,
-                variant: true,
-                setupOption: true,
-                notes: true,
-                completed: true,
-                createdAt: true,
-              },
-              orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-              take: logLimit,
-            },
-          },
-        },
-      },
-      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      userId,
+      logLimit,
       take: requestedExerciseId ? 1 : exerciseLimit + 1,
     });
 

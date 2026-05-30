@@ -1,23 +1,16 @@
 import { apiSuccess, ApiErrors } from "@/lib/api";
-import { prisma } from "@/lib/prisma";
 import { withAdmin } from "@/lib/auth/middleware";
 import { isDeletedExerciseDescription, stripDeletedExerciseMarker, stripExerciseStatusMarkers } from "@/lib/pending-exercises";
+import {
+  deleteExerciseById,
+  findExerciseByIdLight,
+  findRecycleBinExercises,
+  updateExerciseStoryById,
+} from "@/lib/repositories/exercise-library.repository";
 
 export const GET = withAdmin(async (_request) => {
   try {
-    const deletedExercises = await prisma.progressionExercise.findMany({
-      where: {},
-      include: {
-        variations: {
-          select: {
-            id: true,
-            name: true,
-          },
-          orderBy: { name: "asc" },
-        },
-      },
-      orderBy: { name: "asc" },
-    });
+    const deletedExercises = await findRecycleBinExercises();
 
     const recycleBin = deletedExercises
       .filter((exercise) => isDeletedExerciseDescription(exercise.story))
@@ -46,22 +39,13 @@ export const POST = withAdmin(async (request) => {
       return ApiErrors.badRequest("Exercise id is required");
     }
 
-    const existing = await prisma.progressionExercise.findUnique({
-      where: { id },
-      select: { id: true, name: true, story: true, userId: true },
-    });
+    const existing = await findExerciseByIdLight(id);
 
     if (!existing) {
       return ApiErrors.notFound("Exercise not found");
     }
 
-    const restored = await prisma.progressionExercise.update({
-      where: { id },
-      data: {
-        story: stripDeletedExerciseMarker(existing.story),
-      },
-      select: { id: true, name: true },
-    });
+    const restored = await updateExerciseStoryById(id, stripDeletedExerciseMarker(existing.story));
 
     return apiSuccess({ message: `${restored.name} was restored from the recycle bin.`, exercise: restored });
   } catch (error) {
@@ -83,16 +67,13 @@ export const DELETE = withAdmin(async (request) => {
       return ApiErrors.badRequest("Permanent delete requires confirmation");
     }
 
-    const existing = await prisma.progressionExercise.findUnique({
-      where: { id },
-      select: { id: true, name: true, userId: true },
-    });
+    const existing = await findExerciseByIdLight(id);
 
     if (!existing) {
       return ApiErrors.notFound("Exercise not found");
     }
 
-    await prisma.progressionExercise.delete({ where: { id } });
+    await deleteExerciseById(id);
 
     return apiSuccess({ message: `${existing.name} was permanently deleted from the recycle bin.` });
   } catch (error) {

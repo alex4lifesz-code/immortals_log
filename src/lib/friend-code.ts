@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { findUserIdByFriendCode } from "@/lib/repositories/user.repository";
 
 export const IMMORTAL_FRIEND_CODE_REGEX = /^immortal\d{4}$/;
 
@@ -18,12 +18,9 @@ export function createImmortalFriendCodeCandidate(): string {
 export async function generateUniqueImmortalFriendCode(maxAttempts = 30): Promise<string> {
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     const candidate = createImmortalFriendCodeCandidate();
-    const existing = await prisma.user.findUnique({
-      where: { friendCode: candidate },
-      select: { id: true },
-    });
+    const existingId = await findUserIdByFriendCode(candidate);
 
-    if (!existing) {
+    if (!existingId) {
       return candidate;
     }
   }

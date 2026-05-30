@@ -1,8 +1,24 @@
 import { apiSuccess, ApiErrors } from "@/lib/api";
-import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 import { FRIEND_STATUS, getAcceptedFriendIds, getFriendRequestBetweenUsers, isMissingFriendSchemaError } from "@/lib/friends";
 import { generateUniqueImmortalFriendCode, isImmortalFriendCode, normalizeFriendCode } from "@/lib/friend-code";
+import {
+  cancelFriendRequest,
+  createFriendRequest,
+  deleteFriendRequest,
+  findFriendRequestById,
+  findFriendUserById,
+  findUserIdByLegacyIdentifier,
+  getFriendsWithStats,
+  getPendingIncomingRequests,
+  getPendingOutgoingRequests,
+  getUserIdentityById,
+  isUniqueConstraintError,
+  resendFriendRequest,
+  updateFriendRequestStatus,
+  updateUserFriendCode,
+  getBasicUsers,
+} from "@/lib/repositories/friend.repository";
 
 const IMMORTAL_FRIEND_CODE_FORMAT_EXAMPLE = "immortal1234";
 
@@ -22,19 +38,9 @@ function parseJsonObject(value: string | null | undefined): Record<string, unkno
   }
 }
 
-function isUniqueConstraintError(error: unknown): boolean {
-  const maybeCode = typeof error === "object" && error !== null && "code" in error
-    ? (error as { code?: unknown }).code
-    : undefined;
-
-  return maybeCode === "P2002";
-}
 async function getShareableIdentity(userId: string) {
   try {
-    const current = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true, friendCode: true },
-    });
+    const current = await getUserIdentityById(userId);
 
     if (!current) {
       return { id: userId, friendCode: userId };
@@ -43,11 +49,7 @@ async function getShareableIdentity(userId: string) {
     const normalizedCurrentFriendCode = normalizeFriendCode(current.friendCode);
     if (isImmortalFriendCode(normalizedCurrentFriendCode)) {
       if (current.friendCode !== normalizedCurrentFriendCode) {
-        const normalized = await prisma.user.update({
-          where: { id: userId },
-          data: { friendCode: normalizedCurrentFriendCode },
-          select: { id: true, friendCode: true },
-        });
+        const normalized = await updateUserFriendCode(userId, normalizedCurrentFriendCode);
         return { id: normalized.id, friendCode: normalized.friendCode || normalizedCurrentFriendCode };
       }
 
@@ -57,11 +59,7 @@ async function getShareableIdentity(userId: string) {
     for (let attempt = 0; attempt < 30; attempt += 1) {
       const nextFriendCode = await generateUniqueImmortalFriendCode();
       try {
-        const updated = await prisma.user.update({
-          where: { id: userId },
-          data: { friendCode: nextFriendCode },
-          select: { id: true, friendCode: true },
-        });
+        const updated = await updateUserFriendCode(userId, nextFriendCode);
 
         return { id: updated.id, friendCode: updated.friendCode || nextFriendCode };
       } catch (error) {
@@ -87,25 +85,7 @@ async function findTargetUserId(identifier: string) {
     return null;
   }
 
-  try {
-    const user = await prisma.user.findFirst({
-      where: {
-        friendCode: normalizedIdentifier,
-      },
-      select: { id: true },
-    });
-
-    return user?.id || null;
-  } catch (error) {
-    if (isMissingFriendSchemaError(error)) {
-      const user = await prisma.user.findUnique({
-        where: { id: identifier },
-        select: { id: true },
-      });
-      return user?.id || null;
-    }
-    throw error;
-  }
+  return findUserIdByLegacyIdentifier(normalizedIdentifier || identifier);
 }
 
 export const GET = withAuth(async (_request, { auth }) => {
@@ -121,20 +101,8 @@ export const GET = withAuth(async (_request, { auth }) => {
     try {
       [friendIds, incoming, outgoing] = await Promise.all([
         getAcceptedFriendIds(userId),
-        prisma.friendRequest.findMany({
-          where: { receiverId: userId, status: FRIEND_STATUS.PENDING },
-          include: {
-            requester: { select: { id: true, name: true, username: true } },
-          },
-          orderBy: { createdAt: "desc" },
-        }),
-        prisma.friendRequest.findMany({
-          where: { requesterId: userId, status: FRIEND_STATUS.PENDING },
-          include: {
-            receiver: { select: { id: true, name: true, username: true } },
-          },
-          orderBy: { createdAt: "desc" },
-        }),
+        getPendingIncomingRequests(userId),
+        getPendingOutgoingRequests(userId),
       ]);
     } catch (error) {
       if (!isMissingFriendSchemaError(error)) {
@@ -159,55 +127,7 @@ export const GET = withAuth(async (_request, { auth }) => {
     }> = [];
     if (friendIds.length) {
       try {
-        const [friendUsers, progressionLevels] = await Promise.all([
-          prisma.user.findMany({
-            where: { id: { in: friendIds } },
-            select: {
-              id: true,
-              name: true,
-              username: true,
-              friendCode: true,
-              createdAt: true,
-              updatedAt: true,
-              settings: {
-                select: {
-                  pinnedNavItems: true,
-                },
-              },
-              checkIns: {
-                select: {
-                  date: true,
-                },
-                orderBy: { date: "desc" },
-                take: 1,
-              },
-              _count: {
-                select: {
-                  checkIns: true,
-                },
-              },
-            },
-            orderBy: { name: "asc" },
-          }),
-          prisma.userProgressionLevel.findMany({
-            where: { userId: { in: friendIds } },
-            select: {
-              userId: true,
-              logs: {
-                select: {
-                  createdAt: true,
-                },
-                orderBy: { createdAt: "desc" },
-                take: 1,
-              },
-              _count: {
-                select: {
-                  logs: true,
-                },
-              },
-            },
-          }),
-        ]);
+        const { friendUsers, progressionLevels } = await getFriendsWithStats(friendIds);
 
         const progressionLogCounts = new Map<string, number>();
         const lastWorkoutAtByUser = new Map<string, Date>();
@@ -242,11 +162,7 @@ export const GET = withAuth(async (_request, { auth }) => {
         });
       } catch (error) {
         if (isMissingFriendSchemaError(error)) {
-          friends = await prisma.user.findMany({
-            where: { id: { in: friendIds } },
-            select: { id: true, name: true, username: true, createdAt: true, updatedAt: true },
-            orderBy: { name: "asc" },
-          });
+          friends = await getBasicUsers(friendIds);
         } else {
           throw error;
         }
@@ -291,7 +207,7 @@ export const POST = withAuth(async (request, { auth }) => {
       return ApiErrors.badRequest("You cannot send a request to yourself");
     }
 
-    const target = await prisma.user.findUnique({ where: { id: targetUserId }, select: { id: true } });
+    const target = await findFriendUserById(targetUserId);
     if (!target) {
       return ApiErrors.notFound("User not found");
     }
@@ -306,35 +222,12 @@ export const POST = withAuth(async (request, { auth }) => {
         return ApiErrors.conflict("A pending request already exists");
       }
 
-      const updated = await prisma.friendRequest.update({
-        where: { id: existing.id },
-        data: {
-          requesterId: auth.userId,
-          receiverId: targetUserId,
-          status: FRIEND_STATUS.PENDING,
-          createdAt: new Date(),
-          respondedAt: null,
-        },
-        include: {
-          requester: { select: { id: true, name: true, username: true } },
-          receiver: { select: { id: true, name: true, username: true } },
-        },
-      });
+      const updated = await resendFriendRequest(existing.id, auth.userId, targetUserId);
 
       return apiSuccess({ request: updated, resent: true });
     }
 
-    const created = await prisma.friendRequest.create({
-      data: {
-        requesterId: auth.userId,
-        receiverId: targetUserId,
-        status: FRIEND_STATUS.PENDING,
-      },
-      include: {
-        requester: { select: { id: true, name: true, username: true } },
-        receiver: { select: { id: true, name: true, username: true } },
-      },
-    });
+    const created = await createFriendRequest(auth.userId, targetUserId);
 
     return apiSuccess({ request: created, resent: false });
   } catch (error) {
@@ -351,7 +244,7 @@ export const PATCH = withAuth(async (request, { auth }) => {
       return ApiErrors.badRequest("requestId is required");
     }
 
-    const requestRow = await prisma.friendRequest.findUnique({ where: { id: requestId } });
+    const requestRow = await findFriendRequestById(requestId);
     if (!requestRow) {
       return ApiErrors.notFound("Request not found");
     }
@@ -367,17 +260,7 @@ export const PATCH = withAuth(async (request, { auth }) => {
     const normalizedAction = sanitizeAction(action);
     const nextStatus = normalizedAction === "accept" ? FRIEND_STATUS.ACCEPTED : FRIEND_STATUS.REJECTED;
 
-    const updated = await prisma.friendRequest.update({
-      where: { id: requestId },
-      data: {
-        status: nextStatus,
-        respondedAt: new Date(),
-      },
-      include: {
-        requester: { select: { id: true, name: true, username: true } },
-        receiver: { select: { id: true, name: true, username: true } },
-      },
-    });
+    const updated = await updateFriendRequestStatus(requestId, nextStatus);
 
     return apiSuccess({ request: updated });
   } catch (error) {
@@ -393,7 +276,7 @@ export const DELETE = withAuth(async (request, { auth }) => {
     const friendUserId = typeof body.friendUserId === "string" ? body.friendUserId : null;
 
     if (requestId) {
-      const row = await prisma.friendRequest.findUnique({ where: { id: requestId } });
+      const row = await findFriendRequestById(requestId);
       if (!row) {
         return ApiErrors.notFound("Request not found");
       }
@@ -404,12 +287,9 @@ export const DELETE = withAuth(async (request, { auth }) => {
       }
 
       if (row.status === FRIEND_STATUS.ACCEPTED) {
-        await prisma.friendRequest.delete({ where: { id: requestId } });
+        await deleteFriendRequest(requestId);
       } else {
-        await prisma.friendRequest.update({
-          where: { id: requestId },
-          data: { status: FRIEND_STATUS.CANCELLED, respondedAt: new Date() },
-        });
+        await cancelFriendRequest(requestId);
       }
 
       return apiSuccess({ success: true });
@@ -425,12 +305,9 @@ export const DELETE = withAuth(async (request, { auth }) => {
     }
 
     if (relation.status === FRIEND_STATUS.ACCEPTED) {
-      await prisma.friendRequest.delete({ where: { id: relation.id } });
+      await deleteFriendRequest(relation.id);
     } else {
-      await prisma.friendRequest.update({
-        where: { id: relation.id },
-        data: { status: FRIEND_STATUS.CANCELLED, respondedAt: new Date() },
-      });
+      await cancelFriendRequest(relation.id);
     }
 
     return apiSuccess({ success: true });

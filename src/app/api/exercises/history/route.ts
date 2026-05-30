@@ -1,7 +1,7 @@
 import { apiSuccess, ApiErrors } from "@/lib/api";
-import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 import { canViewUserData } from "@/lib/friends";
+import { getExerciseHistoryLogsPage } from "@/lib/repositories/progression.repository";
 
 function resolveLimit(raw: string | null): number {
   if (raw === null || raw === "") return 50;
@@ -60,28 +60,11 @@ export const GET = withAuth(async (req, { auth }) => {
       return ApiErrors.badRequest("Exercise ID is required");
     }
 
-    const page = await prisma.progressionLog.findMany({
-      where: {
-        userProgression: {
-          userId,
-          exerciseId,
-        },
-        ...(progressionLevel != null && Number.isFinite(progressionLevel) && progressionLevel > 0
-          ? { level: progressionLevel }
-          : {}),
-        ...(cursor
-          ? {
-              OR: [
-                { createdAt: { lt: cursor.createdAt } },
-                {
-                  createdAt: cursor.createdAt,
-                  id: { lt: cursor.id },
-                },
-              ],
-            }
-          : {}),
-      },
-      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    const page = await getExerciseHistoryLogsPage({
+      userId,
+      exerciseId,
+      progressionLevel,
+      cursor,
       take: limit + 1,
     });
 

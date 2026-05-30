@@ -1,7 +1,11 @@
 import { apiSuccess, ApiErrors } from "@/lib/api";
-import { prisma } from "@/lib/prisma";
 import { withAdmin } from "@/lib/auth/middleware";
 import { FRIEND_STATUS } from "@/lib/friends";
+import {
+  findFriendRequestById,
+  listFriendRequestsByStatus,
+  updateFriendRequestStatus,
+} from "@/lib/repositories/friend.repository";
 
 export const GET = withAdmin(async (request) => {
   try {
@@ -9,14 +13,7 @@ export const GET = withAdmin(async (request) => {
     const statusParam = searchParams.get("status");
     const status = typeof statusParam === "string" && statusParam.trim() ? statusParam.trim() : FRIEND_STATUS.PENDING;
 
-    const requests = await prisma.friendRequest.findMany({
-      where: { status },
-      include: {
-        requester: { select: { id: true, name: true, username: true } },
-        receiver: { select: { id: true, name: true, username: true } },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const requests = await listFriendRequestsByStatus(status);
 
     return apiSuccess({ requests });
   } catch (error) {
@@ -37,22 +34,12 @@ export const PATCH = withAdmin(async (request) => {
       return ApiErrors.badRequest("Invalid status");
     }
 
-    const existing = await prisma.friendRequest.findUnique({ where: { id: requestId } });
+    const existing = await findFriendRequestById(requestId);
     if (!existing) {
       return ApiErrors.notFound("Request not found");
     }
 
-    const updated = await prisma.friendRequest.update({
-      where: { id: requestId },
-      data: {
-        status,
-        respondedAt: new Date(),
-      },
-      include: {
-        requester: { select: { id: true, name: true, username: true } },
-        receiver: { select: { id: true, name: true, username: true } },
-      },
-    });
+    const updated = await updateFriendRequestStatus(requestId, status);
 
     return apiSuccess({ request: updated });
   } catch (error) {

@@ -1,7 +1,12 @@
 import { apiSuccess, ApiErrors } from "@/lib/api";
-import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 import { isDeletedExerciseDescription } from "@/lib/pending-exercises";
+import {
+  findProgressionExerciseLightById,
+  findProgressionLogsWithOwnerByIds,
+  updateProgressionLogById,
+  upsertUserProgressionForExercise,
+} from "@/lib/repositories/progression.repository";
 
 interface LogUpdate {
   id: string;
@@ -69,10 +74,7 @@ export const POST = withAuth(async (request, { auth }) => {
 
     // Verify ownership: users can only edit their own logs
     const logIds = updates.map(u => u.id);
-    const logs = await prisma.progressionLog.findMany({
-      where: { id: { in: logIds } },
-      include: { userProgression: true },
-    });
+    const logs = await findProgressionLogsWithOwnerByIds(logIds);
 
     if (logs.length !== logIds.length) {
       return ApiErrors.notFound("One or more log records not found");
@@ -95,10 +97,7 @@ export const POST = withAuth(async (request, { auth }) => {
       let nextUserProgressionId: string | undefined;
       const requestedExerciseId = typeof update.exerciseId === "string" ? update.exerciseId.trim() : "";
       if (requestedExerciseId) {
-        const requestedExercise = await prisma.progressionExercise.findUnique({
-          where: { id: requestedExerciseId },
-          select: { id: true, story: true },
-        });
+        const requestedExercise = await findProgressionExerciseLightById(requestedExerciseId);
 
         if (!requestedExercise || isDeletedExerciseDescription(requestedExercise.story)) {
           return ApiErrors.notFound("Exercise not found");
@@ -106,45 +105,32 @@ export const POST = withAuth(async (request, { auth }) => {
 
         const currentExerciseId = existingLog.userProgression.exerciseId;
         if (currentExerciseId !== requestedExerciseId) {
-          const linkedProgression = await prisma.userProgressionLevel.upsert({
-            where: {
-              userId_exerciseId: {
-                userId: callerUserId,
-                exerciseId: requestedExerciseId,
-              },
-            },
-            update: {},
-            create: {
-              userId: callerUserId,
-              exerciseId: requestedExerciseId,
-              currentLevel: update.level != null ? Math.max(1, Math.floor(update.level)) : existingLog.level,
-            },
-            select: { id: true },
+          const linkedProgression = await upsertUserProgressionForExercise({
+            userId: callerUserId,
+            exerciseId: requestedExerciseId,
+            currentLevel: update.level != null ? Math.max(1, Math.floor(update.level)) : existingLog.level,
           });
 
           nextUserProgressionId = linkedProgression.id;
         }
       }
 
-      await prisma.progressionLog.update({
-        where: { id: update.id },
-        data: {
-          userProgressionId: nextUserProgressionId,
-          level: update.level != null ? Math.floor(update.level) : undefined,
-          weight1: update.weight1,
-          reps1: update.reps1,
-          weight2: update.weight2,
-          reps2: update.reps2,
-          weight3: update.weight3,
-          reps3: update.reps3,
-          holdTime: update.holdTime,
-          holdTime2: update.holdTime2,
-          holdTime3: update.holdTime3,
-          modifier: update.modifier ? String(update.modifier).trim().slice(0, 100) : null,
-          variant: update.variant ? String(update.variant).trim().slice(0, 200) : null,
-          setupOption: update.setupOption ? String(update.setupOption).trim().slice(0, 100) : null,
-          notes: update.notes ? String(update.notes).trim().slice(0, 1000) : null,
-        },
+      await updateProgressionLogById(update.id, {
+        userProgressionId: nextUserProgressionId,
+        level: update.level != null ? Math.floor(update.level) : undefined,
+        weight1: update.weight1,
+        reps1: update.reps1,
+        weight2: update.weight2,
+        reps2: update.reps2,
+        weight3: update.weight3,
+        reps3: update.reps3,
+        holdTime: update.holdTime,
+        holdTime2: update.holdTime2,
+        holdTime3: update.holdTime3,
+        modifier: update.modifier ? String(update.modifier).trim().slice(0, 100) : null,
+        variant: update.variant ? String(update.variant).trim().slice(0, 200) : null,
+        setupOption: update.setupOption ? String(update.setupOption).trim().slice(0, 100) : null,
+        notes: update.notes ? String(update.notes).trim().slice(0, 1000) : null,
       });
     }
 

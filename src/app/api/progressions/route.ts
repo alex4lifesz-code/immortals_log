@@ -1,35 +1,19 @@
 import { apiSuccess, ApiErrors } from "@/lib/api";
-import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 import { isDeletedExerciseDescription } from "@/lib/pending-exercises";
 import { ensureAppExerciseLibraryOwner } from "@/lib/exercise-library-owner";
+import {
+  deleteUserProgressionLevels,
+  getVisibleProgressionExercises,
+} from "@/lib/repositories/progression.repository";
 
 // GET /api/progressions — fetch shared progression exercises plus requesting user's progress
 export const GET = withAuth(async (_request, { auth }) => {
   try {
     const libraryOwnerId = await ensureAppExerciseLibraryOwner();
-    const exercises = await prisma.progressionExercise.findMany({
-      where: {
-        OR: [
-          { userId: libraryOwnerId },
-          { userId: auth.userId },
-          { userProgress: { some: { userId: auth.userId } } },
-        ],
-      },
-      include: {
-        tiers: {
-          orderBy: { level: "asc" },
-        },
-        variations: true,
-        modifiers: true,
-        userProgress: {
-          where: { userId: auth.userId },
-          include: {
-            logs: { orderBy: { createdAt: "desc" } },
-          },
-        },
-      },
-      orderBy: { createdAt: "desc" },
+    const exercises = await getVisibleProgressionExercises({
+      libraryOwnerId,
+      userId: auth.userId,
     });
 
     const visibleExercises = exercises.filter((exercise) => !isDeletedExerciseDescription(exercise.story));
@@ -45,7 +29,7 @@ export const GET = withAuth(async (_request, { auth }) => {
 export const DELETE = withAuth(async (_request, { auth }) => {
   try {
     // Delete user progression levels (logs cascade)
-    await prisma.userProgressionLevel.deleteMany({ where: { userId: auth.userId } });
+    await deleteUserProgressionLevels(auth.userId);
 
     return apiSuccess({ success: true });
   } catch (error) {

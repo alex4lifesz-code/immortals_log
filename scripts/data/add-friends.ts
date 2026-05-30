@@ -1,24 +1,11 @@
-/**
- * Add Friends
- * 
- * Creates an accepted friendship between two users
- * 
- * Usage: node scripts/add-friends.js <username1> <username2>
- * Example: node scripts/add-friends.js admin judy
- */
+import "dotenv/config";
+import { prisma } from "../lib/prisma";
 
-import { PrismaClient } from '../src/generated/prisma/client.ts';
-import { PrismaLibSql } from '@prisma/adapter-libsql';
-import 'dotenv/config';
+export async function runAddFriends(args: string[]) {
+  const [user1Name, user2Name] = args;
 
-const adapter = new PrismaLibSql({ url: process.env.DATABASE_URL });
-const prisma = new PrismaClient({ adapter });
-
-async function main() {
-  const [, , user1Name, user2Name] = process.argv;
-  
   if (!user1Name || !user2Name) {
-    console.log('Usage: node scripts/add-friends.js <username1> <username2>');
+    console.log("Usage: npm run add-friends -- <username1> <username2>");
     process.exit(1);
   }
 
@@ -37,7 +24,6 @@ async function main() {
     process.exit(1);
   }
 
-  // Check if they're already friends
   const existing = await prisma.friendRequest.findFirst({
     where: {
       OR: [
@@ -47,22 +33,20 @@ async function main() {
     },
   });
 
-  if (existing && existing.status === 'accepted') {
-    console.log(`✓ ${user1Name} and ${user2Name} are already friends`);
-    process.exit(0);
+  if (existing && existing.status === "accepted") {
+    console.log(`OK: ${user1Name} and ${user2Name} are already friends`);
+    return;
   }
 
   if (existing) {
-    // Delete any existing non-accepted request
     await prisma.friendRequest.delete({ where: { id: existing.id } });
   }
 
-  // Create accepted friend request
   const friendRequest = await prisma.friendRequest.create({
     data: {
       requesterId: user1.id,
       receiverId: user2.id,
-      status: 'accepted',
+      status: "accepted",
       respondedAt: new Date(),
     },
     include: {
@@ -71,15 +55,8 @@ async function main() {
     },
   });
 
-  console.log(`✓ Successfully made ${user1Name} and ${user2Name} friends!`);
+  console.log(`OK: Successfully made ${user1Name} and ${user2Name} friends!`);
   console.log(`  Request ID: ${friendRequest.id}`);
   console.log(`  From: ${friendRequest.requester.username}`);
   console.log(`  To: ${friendRequest.receiver.username}`);
 }
-
-main().catch(err => {
-  console.error(err);
-  process.exit(1);
-}).finally(() => {
-  prisma.$disconnect();
-});

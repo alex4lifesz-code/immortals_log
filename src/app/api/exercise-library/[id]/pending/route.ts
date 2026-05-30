@@ -1,11 +1,14 @@
 import { apiSuccess, ApiErrors } from "@/lib/api";
-import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 import {
   isPendingExerciseDescription,
   markExerciseAsDeleted,
   stripExerciseStatusMarkers,
 } from "@/lib/pending-exercises";
+import {
+  findPendingExerciseById,
+  updateExerciseStoryById,
+} from "@/lib/repositories/exercise-library.repository";
 
 export const POST = withAuth(async (request, { params }) => {
   try {
@@ -17,14 +20,7 @@ export const POST = withAuth(async (request, { params }) => {
       return ApiErrors.badRequest("Invalid action");
     }
 
-    const existing = await prisma.progressionExercise.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        name: true,
-        story: true,
-      },
-    });
+    const existing = await findPendingExerciseById(id);
 
     if (!existing) {
       return ApiErrors.notFound("Exercise not found");
@@ -35,24 +31,12 @@ export const POST = withAuth(async (request, { params }) => {
     }
 
     if (action === "append") {
-      const updated = await prisma.progressionExercise.update({
-        where: { id },
-        data: {
-          story: stripExerciseStatusMarkers(existing.story),
-        },
-        select: { id: true, name: true },
-      });
+      const updated = await updateExerciseStoryById(id, stripExerciseStatusMarkers(existing.story));
 
       return apiSuccess({ success: true, exercise: updated });
     }
 
-    const updated = await prisma.progressionExercise.update({
-      where: { id },
-      data: {
-        story: markExerciseAsDeleted(existing.story),
-      },
-      select: { id: true, name: true },
-    });
+    const updated = await updateExerciseStoryById(id, markExerciseAsDeleted(existing.story));
 
     return apiSuccess({ success: true, exercise: updated });
   } catch (error) {

@@ -2,8 +2,14 @@ import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import { ApiErrors } from "@/lib/api";
 import { normalizeDateOnlyKey } from "@/lib/constants";
-import { prisma } from "@/lib/prisma";
 import { withAdmin } from "@/lib/auth/middleware";
+import {
+  findBackupTargetUser,
+  listBackupCheckinsByUser,
+  listBackupCheckInNotesByUser,
+  listBackupExercisesForUser,
+  listBackupProgressionLogsByUser,
+} from "@/lib/repositories/backup-studio.repository";
 
 function toIsoString(value: Date | string | null | undefined): string | null {
   if (!value) return null;
@@ -17,64 +23,17 @@ export const GET = withAdmin(async (request, { auth }) => {
     const targetUserId = searchParams.get("targetUserId") || auth.userId;
     const format = (searchParams.get("format") || "json").toLowerCase();
 
-    const user = await prisma.user.findUnique({
-      where: { id: targetUserId },
-      include: {
-        settings: true,
-        profile: true,
-      },
-    });
+    const user = await findBackupTargetUser(targetUserId);
 
     if (!user) {
       return ApiErrors.notFound("Target user not found");
     }
 
     const [checkins, checkInNotes, exercises, logs] = await Promise.all([
-      prisma.checkIn.findMany({
-        where: { userId: targetUserId },
-        orderBy: { date: "asc" },
-      }),
-      prisma.checkInNote.findMany({
-        where: { userId: targetUserId },
-        orderBy: { date: "asc" },
-      }),
-      prisma.progressionExercise.findMany({
-        where: {
-          userProgress: {
-            some: { userId: targetUserId },
-          },
-        },
-        include: {
-          tiers: { orderBy: { level: "asc" } },
-          variations: true,
-          modifiers: true,
-          userProgress: {
-            where: { userId: targetUserId },
-            select: { currentLevel: true },
-          },
-        },
-        orderBy: { name: "asc" },
-      }),
-      prisma.progressionLog.findMany({
-        where: {
-          userProgression: {
-            userId: targetUserId,
-          },
-        },
-        include: {
-          userProgression: {
-            include: {
-              exercise: {
-                select: {
-                  id: true,
-                  name: true,
-                },
-              },
-            },
-          },
-        },
-        orderBy: { createdAt: "asc" },
-      }),
+      listBackupCheckinsByUser(targetUserId),
+      listBackupCheckInNotesByUser(targetUserId),
+      listBackupExercisesForUser(targetUserId),
+      listBackupProgressionLogsByUser(targetUserId),
     ]);
 
     const payload = {

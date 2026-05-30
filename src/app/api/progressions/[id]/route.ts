@@ -4,6 +4,11 @@ import { serializeDayAssignments } from "@/lib/constants";
 import { withAuth } from "@/lib/auth/middleware";
 import { canViewUserData } from "@/lib/friends";
 import { resolveVietnameseValue } from "@/lib/auto-vietnamese";
+import {
+  deleteProgressionById,
+  findProgressionById,
+  findProgressionForUser,
+} from "@/lib/repositories/progression.repository";
 
 function normalizeAssignedDaysInput(input: unknown): string | null {
   if (Array.isArray(input)) {
@@ -36,28 +41,7 @@ export const GET = withAuth(async (request, { auth, params }) => {
       userId = targetUserId;
     }
 
-    const exercise = await prisma.progressionExercise.findFirst({
-      where: {
-        id,
-        OR: [
-          { userId },
-          { userProgress: { some: { userId } } },
-        ],
-      },
-      include: {
-        tiers: {
-          orderBy: { level: "asc" },
-        },
-        variations: true,
-        modifiers: true,
-        userProgress: {
-          where: { userId },
-          include: {
-            logs: { orderBy: { createdAt: "desc" } },
-          },
-        },
-      },
-    });
+    const exercise = await findProgressionForUser(id, userId);
 
     if (!exercise) {
       return ApiErrors.notFound("Exercise not found");
@@ -75,15 +59,13 @@ export const DELETE = withAuth(async (_request, { auth, params }) => {
   try {
     const id = params.id as string;
 
-    const exercise = await prisma.progressionExercise.findUnique({
-      where: { id },
-    });
+    const exercise = await findProgressionById(id);
 
     if (!exercise) {
       return ApiErrors.notFound("Exercise not found");
     }
 
-    await prisma.progressionExercise.delete({ where: { id } });
+    await deleteProgressionById(id);
 
     return apiSuccess({ success: true });
   } catch (error) {

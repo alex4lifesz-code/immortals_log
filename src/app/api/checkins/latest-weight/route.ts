@@ -1,17 +1,10 @@
-import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 import { apiSuccess, ApiErrors } from "@/lib/api";
+import { findLatestWeightByUserId } from "@/lib/repositories/checkin.repository";
 
 export const GET = withAuth(async (_request, { auth }) => {
   try {
-    const latest = await prisma.checkIn.findFirst({
-      where: {
-        userId: auth.userId,
-        weight: { not: null },
-      },
-      orderBy: { date: "desc" },
-      select: { weight: true, date: true },
-    });
+    const latest = await findLatestWeightByUserId(auth.userId);
 
     if (!latest || latest.weight == null) {
       return apiSuccess({ weight: null, date: null });

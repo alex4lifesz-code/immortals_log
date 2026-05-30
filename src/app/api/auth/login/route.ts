@@ -1,10 +1,10 @@
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { createToken, setAuthCookie } from "@/lib/auth";
 import { loginLimiter } from "@/lib/auth/rate-limiters";
 import { getClientIdentifier } from "@/lib/rate-limit";
 import { apiSuccess, ApiErrors } from "@/lib/api";
+import { findUserForLoginByUsernameInsensitive } from "@/lib/repositories/user.repository";
 
 export async function POST(req: NextRequest) {
   try {
@@ -31,15 +31,7 @@ export async function POST(req: NextRequest) {
     }
 
     const trimmedUsername = username.trim();
-    const users = await prisma.$queryRaw<
-      Array<{ id: string; username: string; password: string; name: string; role: string; onboardingCompleted: number; onboardingSkipped: number }>
-    >`
-      SELECT id, username, password, name, role, onboardingCompleted, onboardingSkipped
-      FROM "User"
-      WHERE lower(username) = lower(${trimmedUsername})
-      LIMIT 1
-    `;
-    const user = users[0] ?? null;
+    const user = await findUserForLoginByUsernameInsensitive(trimmedUsername);
     if (!user) {
       return ApiErrors.notFound("Cultivator not found in the sect records");
     }

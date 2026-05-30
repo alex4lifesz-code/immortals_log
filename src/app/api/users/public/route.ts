@@ -1,7 +1,7 @@
 import { apiSuccess, ApiErrors } from "@/lib/api";
-import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 import { getVisibleSocialUserIds, normalizeScope } from "@/lib/friends";
+import { findUsersPublicByIds } from "@/lib/repositories/user.repository";
 
 // GET /api/users/public — fetch visible users (public info only)
 // Non-admin users are restricted to friends scope; admins can request community scope.
@@ -19,25 +19,7 @@ export const GET = withAuth(async (request, { auth }) => {
       scope,
     });
 
-    const usersRaw = await prisma.user.findMany({
-      where: {
-        id: {
-          in: visibleUserIds,
-        },
-      },
-      select: {
-        id: true,
-        username: true,
-        name: true,
-        createdAt: true,
-        settings: {
-          select: {
-            pinnedNavItems: true,
-          },
-        },
-      },
-      orderBy: { createdAt: "asc" },
-    });
+    const usersRaw = await findUsersPublicByIds(visibleUserIds);
 
     const users = usersRaw.map((u) => {
       let cultivatorColor: string | undefined;

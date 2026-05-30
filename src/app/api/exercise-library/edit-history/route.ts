@@ -1,6 +1,14 @@
 import { apiSuccess, ApiErrors } from "@/lib/api";
-import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
+import {
+  ensureExerciseEditHistoryTable,
+  findUserDisplayNameById,
+  findUsersForHistoryBackfill,
+  insertExerciseEditHistoryRow,
+  listExerciseEditHistoryExerciseIds,
+  listExerciseEditHistoryRows,
+  listProgressionExercisesForHistoryBackfill,
+} from "@/lib/repositories/exercise-library.repository";
 
 type DbHistoryRow = {
   id: string;
@@ -15,73 +23,34 @@ type DbHistoryRow = {
 };
 
 async function ensureHistoryTable() {
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS ExerciseEditHistory (
-      id TEXT PRIMARY KEY,
-      exerciseId TEXT NOT NULL,
-      exerciseName TEXT NOT NULL,
-      userId TEXT NOT NULL,
-      userName TEXT NOT NULL,
-      field TEXT NOT NULL,
-      beforeValue TEXT,
-      afterValue TEXT,
-      editedAt TEXT NOT NULL
-    )
-  `);
-
-  await prisma.$executeRawUnsafe(
-    "CREATE INDEX IF NOT EXISTS idx_exercise_edit_history_editedAt ON ExerciseEditHistory(editedAt DESC)",
-  );
-
-  await prisma.$executeRawUnsafe(
-    "CREATE INDEX IF NOT EXISTS idx_exercise_edit_history_exerciseId ON ExerciseEditHistory(exerciseId)",
-  );
+  await ensureExerciseEditHistoryTable();
 }
 
 async function backfillMissingCreatedHistoryEntries() {
-  const existingHistoryRows = await prisma.$queryRawUnsafe<Array<{ exerciseId: string }>>(`
-    SELECT DISTINCT exerciseId
-    FROM ExerciseEditHistory
-  `);
+  const existingHistoryRows = await listExerciseEditHistoryExerciseIds();
 
   const existingHistoryIds = new Set(existingHistoryRows.map((row) => row.exerciseId));
-  const exercises = await prisma.progressionExercise.findMany({
-    select: {
-      id: true,
-      name: true,
-      userId: true,
-      createdAt: true,
-    },
-  });
+  const exercises = await listProgressionExercisesForHistoryBackfill();
 
   const missingExercises = exercises.filter((exercise) => !existingHistoryIds.has(exercise.id));
   if (missingExercises.length === 0) return;
 
   const userIds = Array.from(new Set(missingExercises.map((exercise) => exercise.userId).filter(Boolean)));
-  const users = userIds.length > 0
-    ? await prisma.user.findMany({
-        where: { id: { in: userIds } },
-        select: { id: true, name: true, username: true },
-      })
-    : [];
+  const users = userIds.length > 0 ? await findUsersForHistoryBackfill(userIds) : [];
   const userNameById = new Map(users.map((user) => [user.id, (user.name || user.username || "Unknown").slice(0, 120)]));
 
   for (const exercise of missingExercises) {
-    await prisma.$executeRawUnsafe(
-      `
-        INSERT OR IGNORE INTO ExerciseEditHistory (id, exerciseId, exerciseName, userId, userName, field, beforeValue, afterValue, editedAt)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `,
-      `seed-${exercise.id}`,
-      exercise.id,
-      exercise.name,
-      exercise.userId,
-      userNameById.get(exercise.userId) ?? "Unknown",
-      "Created",
-      "—",
-      "Exercise existed before history tracking",
-      exercise.createdAt.toISOString(),
-    );
+    await insertExerciseEditHistoryRow({
+      id: `seed-${exercise.id}`,
+      exerciseId: exercise.id,
+      exerciseName: exercise.name,
+      userId: exercise.userId,
+      userName: userNameById.get(exercise.userId) ?? "Unknown",
+      field: "Created",
+      beforeValue: "—",
+      afterValue: "Exercise existed before history tracking",
+      editedAt: exercise.createdAt.toISOString(),
+    });
   }
 }
 
@@ -90,12 +59,7 @@ export const GET = withAuth(async () => {
     await ensureHistoryTable();
     await backfillMissingCreatedHistoryEntries();
 
-    const rows = await prisma.$queryRawUnsafe<DbHistoryRow[]>(`
-      SELECT id, exerciseId, exerciseName, userId, userName, field, beforeValue, afterValue, editedAt
-      FROM ExerciseEditHistory
-      ORDER BY editedAt DESC
-      LIMIT 200
-    `);
+    const rows = await listExerciseEditHistoryRows(200) as DbHistoryRow[];
 
     const history = rows.map((row) => ({
       id: row.id,
@@ -137,30 +101,23 @@ export const POST = withAuth(async (req, { auth }) => {
       return ApiErrors.badRequest("exerciseId, exerciseName, and field are required");
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: auth.userId },
-      select: { name: true, username: true },
-    });
+    const user = await findUserDisplayNameById(auth.userId);
 
     const userName = (user?.name || user?.username || "Unknown").slice(0, 120);
     const editedAt = new Date().toISOString();
     const id = crypto.randomUUID();
 
-    await prisma.$executeRawUnsafe(
-      `
-        INSERT INTO ExerciseEditHistory (id, exerciseId, exerciseName, userId, userName, field, beforeValue, afterValue, editedAt)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `,
+    await insertExerciseEditHistoryRow({
       id,
       exerciseId,
       exerciseName,
-      auth.userId,
+      userId: auth.userId,
       userName,
       field,
       beforeValue,
       afterValue,
       editedAt,
-    );
+    });
 
     return apiSuccess({
       entry: {

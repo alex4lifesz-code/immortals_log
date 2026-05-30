@@ -1,7 +1,10 @@
 import { apiSuccess, ApiErrors } from "@/lib/api";
 import { withAuth } from "@/lib/auth/middleware";
-import { prisma } from "@/lib/prisma";
 import { normalizeTrainComboLogs, type TrainComboExerciseItem, type TrainComboLog } from "@/lib/train-combo";
+import {
+  findUserSettingsNavPrefs,
+  upsertUserSettingsPinnedNavPrefs,
+} from "@/lib/repositories/user.repository";
 
 function parseJsonObject(value: string | null | undefined): Record<string, unknown> {
   if (!value) return {};
@@ -62,10 +65,7 @@ function normalizeCreatedAt(value: unknown): string {
 
 export const GET = withAuth(async (_request, { auth }) => {
   try {
-    const settings = await prisma.userSettings.findUnique({
-      where: { userId: auth.userId },
-      select: { pinnedNavItems: true },
-    });
+    const settings = await findUserSettingsNavPrefs(auth.userId);
 
     const appPrefs = parseJsonObject(settings?.pinnedNavItems);
     const logs = normalizeTrainComboLogs(appPrefs.trainComboLogs);
@@ -80,11 +80,13 @@ export const GET = withAuth(async (_request, { auth }) => {
         trainComboLogs: [],
       };
 
-      await prisma.userSettings.update({
-        where: { userId: auth.userId },
-        data: {
-          pinnedNavItems: JSON.stringify(nextAppPrefs),
-        },
+      await upsertUserSettingsPinnedNavPrefs({
+        userId: auth.userId,
+        pinnedNavItems: JSON.stringify(nextAppPrefs),
+        hiddenNavItems: settings.hiddenNavItems ?? "{}",
+        panelPosition: settings.panelPosition ?? "left",
+        dualPageView: settings.dualPageView ?? false,
+        combinedView: settings.combinedView ?? false,
       });
 
       return apiSuccess({ logs: [], routines: logs });
@@ -120,10 +122,7 @@ export const POST = withAuth(async (request, { auth }) => {
       return ApiErrors.badRequest("At least one exercise is required");
     }
 
-    const settings = await prisma.userSettings.findUnique({
-      where: { userId: auth.userId },
-      select: { pinnedNavItems: true, hiddenNavItems: true, panelPosition: true, dualPageView: true, combinedView: true },
-    });
+    const settings = await findUserSettingsNavPrefs(auth.userId);
 
     const appPrefs = parseJsonObject(settings?.pinnedNavItems);
     const existingRoutines = normalizeTrainComboLogs(appPrefs.trainComboRoutines);
@@ -147,19 +146,13 @@ export const POST = withAuth(async (request, { auth }) => {
       trainComboLogs: nextLogs,
     };
 
-    await prisma.userSettings.upsert({
-      where: { userId: auth.userId },
-      create: {
-        userId: auth.userId,
-        pinnedNavItems: JSON.stringify(nextAppPrefs),
-        hiddenNavItems: settings?.hiddenNavItems ?? "{}",
-        panelPosition: settings?.panelPosition ?? "left",
-        dualPageView: settings?.dualPageView ?? false,
-        combinedView: settings?.combinedView ?? false,
-      },
-      update: {
-        pinnedNavItems: JSON.stringify(nextAppPrefs),
-      },
+    await upsertUserSettingsPinnedNavPrefs({
+      userId: auth.userId,
+      pinnedNavItems: JSON.stringify(nextAppPrefs),
+      hiddenNavItems: settings?.hiddenNavItems ?? "{}",
+      panelPosition: settings?.panelPosition ?? "left",
+      dualPageView: settings?.dualPageView ?? false,
+      combinedView: settings?.combinedView ?? false,
     });
 
     return apiSuccess({ entry, entryType, routines: nextRoutines, logs: nextLogs });
@@ -195,10 +188,7 @@ export const PUT = withAuth(async (request, { auth }) => {
       return ApiErrors.badRequest("At least one exercise is required");
     }
 
-    const settings = await prisma.userSettings.findUnique({
-      where: { userId: auth.userId },
-      select: { pinnedNavItems: true, hiddenNavItems: true, panelPosition: true, dualPageView: true, combinedView: true },
-    });
+    const settings = await findUserSettingsNavPrefs(auth.userId);
 
     const appPrefs = parseJsonObject(settings?.pinnedNavItems);
     const existingRoutines = normalizeTrainComboLogs(appPrefs.trainComboRoutines);
@@ -228,19 +218,13 @@ export const PUT = withAuth(async (request, { auth }) => {
       trainComboRoutines: nextRoutines,
     };
 
-    await prisma.userSettings.upsert({
-      where: { userId: auth.userId },
-      create: {
-        userId: auth.userId,
-        pinnedNavItems: JSON.stringify(nextAppPrefs),
-        hiddenNavItems: settings?.hiddenNavItems ?? "{}",
-        panelPosition: settings?.panelPosition ?? "left",
-        dualPageView: settings?.dualPageView ?? false,
-        combinedView: settings?.combinedView ?? false,
-      },
-      update: {
-        pinnedNavItems: JSON.stringify(nextAppPrefs),
-      },
+    await upsertUserSettingsPinnedNavPrefs({
+      userId: auth.userId,
+      pinnedNavItems: JSON.stringify(nextAppPrefs),
+      hiddenNavItems: settings?.hiddenNavItems ?? "{}",
+      panelPosition: settings?.panelPosition ?? "left",
+      dualPageView: settings?.dualPageView ?? false,
+      combinedView: settings?.combinedView ?? false,
     });
 
     return apiSuccess({ routine: updated, routines: nextRoutines });
@@ -268,10 +252,7 @@ export const DELETE = withAuth(async (request, { auth }) => {
       return ApiErrors.badRequest("Routine id is required");
     }
 
-    const settings = await prisma.userSettings.findUnique({
-      where: { userId: auth.userId },
-      select: { pinnedNavItems: true, hiddenNavItems: true, panelPosition: true, dualPageView: true, combinedView: true },
-    });
+    const settings = await findUserSettingsNavPrefs(auth.userId);
 
     const appPrefs = parseJsonObject(settings?.pinnedNavItems);
     const existingRoutines = normalizeTrainComboLogs(appPrefs.trainComboRoutines);
@@ -286,19 +267,13 @@ export const DELETE = withAuth(async (request, { auth }) => {
       trainComboRoutines: nextRoutines,
     };
 
-    await prisma.userSettings.upsert({
-      where: { userId: auth.userId },
-      create: {
-        userId: auth.userId,
-        pinnedNavItems: JSON.stringify(nextAppPrefs),
-        hiddenNavItems: settings?.hiddenNavItems ?? "{}",
-        panelPosition: settings?.panelPosition ?? "left",
-        dualPageView: settings?.dualPageView ?? false,
-        combinedView: settings?.combinedView ?? false,
-      },
-      update: {
-        pinnedNavItems: JSON.stringify(nextAppPrefs),
-      },
+    await upsertUserSettingsPinnedNavPrefs({
+      userId: auth.userId,
+      pinnedNavItems: JSON.stringify(nextAppPrefs),
+      hiddenNavItems: settings?.hiddenNavItems ?? "{}",
+      panelPosition: settings?.panelPosition ?? "left",
+      dualPageView: settings?.dualPageView ?? false,
+      combinedView: settings?.combinedView ?? false,
     });
 
     return apiSuccess({ routines: nextRoutines });

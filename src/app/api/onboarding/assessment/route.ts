@@ -2,8 +2,11 @@
 
 import { NextRequest } from "next/server";
 import { getAuthFromRequest } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import { apiSuccess, ApiErrors } from "@/lib/api";
+import {
+  updateOnboardingStep,
+  upsertUserAssessmentProfile,
+} from "@/lib/repositories/user.repository";
 
 const VALID_BACKGROUNDS = ["new", "beginner", "intermediate", "advanced"];
 const VALID_GOALS = ["strength", "skills", "consistency", "compete"];
@@ -63,32 +66,18 @@ export async function POST(request: NextRequest) {
     : recommended;
 
   // Upsert the user profile
-  await prisma.userProfile.upsert({
-    where: { userId: auth.userId },
-    create: {
-      userId: auth.userId,
-      fitnessBackground,
-      primaryGoal,
-      trainingDaysPerWeek,
-      assessmentAnswers: JSON.stringify(benchmarkAnswers ?? {}),
-      recommendedTier: recommended,
-      currentTier: tier,
-    },
-    update: {
-      fitnessBackground,
-      primaryGoal,
-      trainingDaysPerWeek,
-      assessmentAnswers: JSON.stringify(benchmarkAnswers ?? {}),
-      recommendedTier: recommended,
-      currentTier: tier,
-    },
+  await upsertUserAssessmentProfile({
+    userId: auth.userId,
+    fitnessBackground,
+    primaryGoal,
+    trainingDaysPerWeek,
+    assessmentAnswers: JSON.stringify(benchmarkAnswers ?? {}),
+    recommendedTier: recommended,
+    currentTier: tier,
   });
 
   // Update onboarding step to 2 (past assessment)
-  await prisma.user.update({
-    where: { id: auth.userId },
-    data: { onboardingStep: 2 },
-  });
+  await updateOnboardingStep(auth.userId, 2);
 
   return apiSuccess({ recommendedTier: recommended, currentTier: tier });
 }

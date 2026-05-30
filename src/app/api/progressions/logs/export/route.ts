@@ -1,7 +1,7 @@
 import { apiSuccess, ApiErrors } from "@/lib/api";
-import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 import { canViewUserData } from "@/lib/friends";
+import { getProgressionLogsForUserExport } from "@/lib/repositories/progression.repository";
 
 // GET /api/progressions/logs/export?targetUserId=<id>  (admin only)
 // GET /api/progressions/logs/export                     (own data)
@@ -23,24 +23,7 @@ export const GET = withAuth(async (request, { auth }) => {
       userId = targetUserId;
     }
 
-    const logs = await prisma.progressionLog.findMany({
-      where: {
-        userProgression: { userId },
-      },
-      include: {
-        userProgression: {
-          include: {
-            exercise: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
-          },
-        },
-      },
-      orderBy: { createdAt: "asc" },
-    });
+    const logs = await getProgressionLogsForUserExport(userId);
 
     const payload = {
       version: 1,

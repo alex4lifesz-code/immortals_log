@@ -1,9 +1,21 @@
 import { apiSuccess, ApiErrors } from "@/lib/api";
-import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 import { importLimiter } from "@/lib/auth/rate-limiters";
 import { ensureAppExerciseLibraryOwner } from "@/lib/exercise-library-owner";
 import { getClientIdentifier } from "@/lib/rate-limit";
+import {
+  createManyProgressionLogs,
+  createProgressionExerciseForImport,
+  createProgressionTierForImport,
+  createProgressionVariationForImport,
+  createUserProgressionLevelForImport,
+  deleteProgressionLogsByUser,
+  findLibraryExercisesForImport,
+  findProgressionExercisesForImportByUser,
+  findSourceProgressionExercisesForImportByIds,
+  findUserProgressionLevelsForImport,
+  updateUserProgressionLevelCurrentById,
+} from "@/lib/repositories/progression.repository";
 
 type ImportedLog = {
   exerciseId?: string;
@@ -184,9 +196,7 @@ export const POST = withAuth(async (request, { auth }) => {
 
     // If replaceExisting and no logs, just purge
     if (replaceExisting && logs.length === 0) {
-      await prisma.progressionLog.deleteMany({
-        where: { userProgression: { userId } },
-      });
+      await deleteProgressionLogsByUser(userId);
       return apiSuccess({ success: true, imported: 0, skipped: 0, replaced: true });
     }
 
@@ -194,19 +204,7 @@ export const POST = withAuth(async (request, { auth }) => {
       return ApiErrors.badRequest("logs must be a non-empty array");
     }
 
-    const exercises = await prisma.progressionExercise.findMany({
-      where: { userId },
-      select: {
-        id: true,
-        name: true,
-        wuxiaName: true,
-        difficulty: true,
-        wuxiaDifficulty: true,
-        wuxiaType: true,
-        tiers: { select: { level: true } },
-        variations: { select: { name: true, wuxiaName: true } },
-      },
-    });
+    const exercises = await findProgressionExercisesForImportByUser(userId);
 
     const exerciseById = new Map<string, TargetExercise>();
     const exerciseByName = new Map<string, TargetExercise>();
@@ -242,42 +240,13 @@ export const POST = withAuth(async (request, { auth }) => {
     );
     const sourceById = new Map<string, SourceProgressionExercise>();
     if (sourceIds.length > 0) {
-      const sourceExercises = await prisma.progressionExercise.findMany({
-        where: { id: { in: sourceIds } },
-        select: {
-          id: true,
-          name: true,
-          wuxiaName: true,
-          difficulty: true,
-          wuxiaDifficulty: true,
-          type: true,
-          wuxiaType: true,
-          story: true,
-          category: true,
-          equipmentType: true,
-          bodyweight: true,
-          weighted: true,
-          rings: true,
-          primaryMuscles: true,
-          secondaryMuscles: true,
-        },
-      });
+      const sourceExercises = await findSourceProgressionExercisesForImportByIds(sourceIds);
       for (const src of sourceExercises) {
         sourceById.set(src.id, src);
       }
     }
 
-    const library = await prisma.exercise.findMany({
-      select: {
-        id: true,
-        name: true,
-        wuxiaName: true,
-        difficulty: true,
-        type: true,
-        story: true,
-        targetGroup: true,
-      },
-    });
+    const library = await findLibraryExercisesForImport();
     const libraryByName = new Map<string, LibraryExercise>();
     for (const lib of library) {
       const keys = [lib.name, lib.wuxiaName || ""].map(normalizeText).filter(Boolean);
@@ -286,16 +255,11 @@ export const POST = withAuth(async (request, { auth }) => {
       }
     }
 
-    const existingLevels = await prisma.userProgressionLevel.findMany({
-      where: { userId },
-      select: { id: true, exerciseId: true, currentLevel: true },
-    });
+    const existingLevels = await findUserProgressionLevelsForImport(userId);
     const levelByExerciseId = new Map(existingLevels.map((l) => [l.exerciseId, { id: l.id, currentLevel: l.currentLevel }]));
 
     if (replaceExisting) {
-      await prisma.progressionLog.deleteMany({
-        where: { userProgression: { userId } },
-      });
+      await deleteProgressionLogsByUser(userId);
     }
 
     let imported = 0;
@@ -307,25 +271,22 @@ export const POST = withAuth(async (request, { auth }) => {
     const skippedDetails: string[] = [];
 
     const createTargetExerciseFromLibrary = async (lib: LibraryExercise): Promise<TargetExercise> => {
-      const created = await prisma.progressionExercise.create({
-        data: {
-          userId: libraryOwnerId,
-          name: lib.name,
-          wuxiaName: lib.wuxiaName || "",
-          difficulty: lib.difficulty || "",
-          wuxiaDifficulty: lib.difficulty || "",
-          type: lib.type || "",
-          wuxiaType: lib.type || "",
-          story: lib.story || "",
-          category: (lib.targetGroup || "Uncategorized").slice(0, 100),
-          equipmentType: "bodyweight",
-          bodyweight: true,
-          weighted: false,
-          rings: false,
-          primaryMuscles: "",
-          secondaryMuscles: "",
-        },
-        select: { id: true, name: true, wuxiaName: true, difficulty: true, wuxiaDifficulty: true, wuxiaType: true },
+      const created = await createProgressionExerciseForImport({
+        userId: libraryOwnerId,
+        name: lib.name,
+        wuxiaName: lib.wuxiaName || "",
+        difficulty: lib.difficulty || "",
+        wuxiaDifficulty: lib.difficulty || "",
+        type: lib.type || "",
+        wuxiaType: lib.type || "",
+        story: lib.story || "",
+        category: (lib.targetGroup || "Uncategorized").slice(0, 100),
+        equipmentType: "bodyweight",
+        bodyweight: true,
+        weighted: false,
+        rings: false,
+        primaryMuscles: "",
+        secondaryMuscles: "",
       });
       const target = {
         id: created.id,
@@ -343,25 +304,22 @@ export const POST = withAuth(async (request, { auth }) => {
     };
 
     const createTargetExerciseFromSource = async (src: SourceProgressionExercise): Promise<TargetExercise> => {
-      const created = await prisma.progressionExercise.create({
-        data: {
-          userId: libraryOwnerId,
-          name: src.name,
-          wuxiaName: src.wuxiaName || "",
-          difficulty: src.difficulty || "",
-          wuxiaDifficulty: src.wuxiaDifficulty || src.difficulty || "",
-          type: src.type || "",
-          wuxiaType: src.wuxiaType || src.type || "",
-          story: src.story || "",
-          category: (src.category || "Uncategorized").slice(0, 100),
-          equipmentType: src.equipmentType || "bodyweight",
-          bodyweight: src.bodyweight,
-          weighted: src.weighted,
-          rings: src.rings,
-          primaryMuscles: src.primaryMuscles || "",
-          secondaryMuscles: src.secondaryMuscles || "",
-        },
-        select: { id: true, name: true, wuxiaName: true, difficulty: true, wuxiaDifficulty: true, wuxiaType: true },
+      const created = await createProgressionExerciseForImport({
+        userId: libraryOwnerId,
+        name: src.name,
+        wuxiaName: src.wuxiaName || "",
+        difficulty: src.difficulty || "",
+        wuxiaDifficulty: src.wuxiaDifficulty || src.difficulty || "",
+        type: src.type || "",
+        wuxiaType: src.wuxiaType || src.type || "",
+        story: src.story || "",
+        category: (src.category || "Uncategorized").slice(0, 100),
+        equipmentType: src.equipmentType || "bodyweight",
+        bodyweight: src.bodyweight,
+        weighted: src.weighted,
+        rings: src.rings,
+        primaryMuscles: src.primaryMuscles || "",
+        secondaryMuscles: src.secondaryMuscles || "",
       });
       const target = {
         id: created.id,
@@ -383,25 +341,22 @@ export const POST = withAuth(async (request, { auth }) => {
       if (!trimmedName) return null;
 
       const inferred = inferImportedExerciseShape(rawLog);
-      const created = await prisma.progressionExercise.create({
-        data: {
-          userId: libraryOwnerId,
-          name: trimmedName.slice(0, 200),
-          wuxiaName: trimmedName.slice(0, 200),
-          difficulty: inferred.difficulty,
-          wuxiaDifficulty: inferred.wuxiaDifficulty,
-          type: inferred.category.includes("Gym") ? "Heaven and Earth United" : "",
-          wuxiaType: inferred.wuxiaType,
-          story: "Imported from training log",
-          category: inferred.category,
-          equipmentType: inferred.equipmentType,
-          bodyweight: inferred.bodyweight,
-          weighted: inferred.weighted,
-          rings: inferred.rings,
-          primaryMuscles: "",
-          secondaryMuscles: "",
-        },
-        select: { id: true, name: true, wuxiaName: true, difficulty: true, wuxiaDifficulty: true, wuxiaType: true },
+      const created = await createProgressionExerciseForImport({
+        userId: libraryOwnerId,
+        name: trimmedName.slice(0, 200),
+        wuxiaName: trimmedName.slice(0, 200),
+        difficulty: inferred.difficulty,
+        wuxiaDifficulty: inferred.wuxiaDifficulty,
+        type: inferred.category.includes("Gym") ? "Heaven and Earth United" : "",
+        wuxiaType: inferred.wuxiaType,
+        story: "Imported from training log",
+        category: inferred.category,
+        equipmentType: inferred.equipmentType,
+        bodyweight: inferred.bodyweight,
+        weighted: inferred.weighted,
+        rings: inferred.rings,
+        primaryMuscles: "",
+        secondaryMuscles: "",
       });
 
       const target = {
@@ -424,16 +379,17 @@ export const POST = withAuth(async (request, { auth }) => {
       const existingLevelsForExercise = tierLevelsByExerciseId.get(exercise.id) ?? new Set<number>();
       if (existingLevelsForExercise.has(normalizedLevel)) return;
 
-      await prisma.progressionTier.create({
-        data: {
-          exerciseId: exercise.id,
-          level: normalizedLevel,
-          name: normalizedLevel === 1 ? exercise.name : `${exercise.name} Tier ${normalizedLevel}`,
-          wuxiaName: normalizedLevel === 1 ? (exercise.wuxiaName || exercise.name) : `${exercise.wuxiaName || exercise.name} Tier ${normalizedLevel}`,
-          difficulty: exercise.difficulty || "",
-          wuxiaDifficulty: exercise.wuxiaDifficulty || exercise.difficulty || "",
-          wuxiaType: exercise.wuxiaType || "",
-        },
+      await createProgressionTierForImport({
+        exerciseId: exercise.id,
+        level: normalizedLevel,
+        name: normalizedLevel === 1 ? exercise.name : `${exercise.name} Tier ${normalizedLevel}`,
+        wuxiaName:
+          normalizedLevel === 1
+            ? exercise.wuxiaName || exercise.name
+            : `${exercise.wuxiaName || exercise.name} Tier ${normalizedLevel}`,
+        difficulty: exercise.difficulty || "",
+        wuxiaDifficulty: exercise.wuxiaDifficulty || exercise.difficulty || "",
+        wuxiaType: exercise.wuxiaType || "",
       });
 
       existingLevelsForExercise.add(normalizedLevel);
@@ -451,16 +407,14 @@ export const POST = withAuth(async (request, { auth }) => {
       const existingVariationKeys = variationKeysByExerciseId.get(exercise.id) ?? new Set<string>();
       if (existingVariationKeys.has(normalizedVariant)) return;
 
-      await prisma.progressionVariation.create({
-        data: {
-          exerciseId: exercise.id,
-          name: trimmedVariant.slice(0, 200),
-          wuxiaName: trimmedVariant.slice(0, 200),
-          difficulty: exercise.difficulty || "",
-          wuxiaDifficulty: exercise.wuxiaDifficulty || exercise.difficulty || "",
-          wuxiaType: exercise.wuxiaType || "",
-          description: "Imported from training log",
-        },
+      await createProgressionVariationForImport({
+        exerciseId: exercise.id,
+        name: trimmedVariant.slice(0, 200),
+        wuxiaName: trimmedVariant.slice(0, 200),
+        difficulty: exercise.difficulty || "",
+        wuxiaDifficulty: exercise.wuxiaDifficulty || exercise.difficulty || "",
+        wuxiaType: exercise.wuxiaType || "",
+        description: "Imported from training log",
       });
 
       existingVariationKeys.add(normalizedVariant);
@@ -532,23 +486,17 @@ export const POST = withAuth(async (request, { auth }) => {
 
       let userProgression = levelByExerciseId.get(exercise.id);
       if (!userProgression) {
-        const createdLevel = await prisma.userProgressionLevel.create({
-          data: {
-            userId,
-            exerciseId: exercise.id,
-            currentLevel: level,
-          },
-          select: { id: true, currentLevel: true },
+        const createdLevel = await createUserProgressionLevelForImport({
+          userId,
+          exerciseId: exercise.id,
+          currentLevel: level,
         });
         userProgression = createdLevel;
         levelByExerciseId.set(exercise.id, createdLevel);
       }
 
       if (userProgression.currentLevel < level) {
-        await prisma.userProgressionLevel.update({
-          where: { id: userProgression.id },
-          data: { currentLevel: level },
-        });
+        await updateUserProgressionLevelCurrentById(userProgression.id, level);
         userProgression = { ...userProgression, currentLevel: level };
         levelByExerciseId.set(exercise.id, userProgression);
       }
@@ -579,9 +527,7 @@ export const POST = withAuth(async (request, { auth }) => {
     // Batch-insert all logs in chunks of 500 to avoid SQLite parameter limits
     const BATCH_SIZE = 500;
     for (let i = 0; i < logCreateBatch.length; i += BATCH_SIZE) {
-      await prisma.progressionLog.createMany({
-        data: logCreateBatch.slice(i, i + BATCH_SIZE),
-      });
+      await createManyProgressionLogs(logCreateBatch.slice(i, i + BATCH_SIZE));
     }
 
     return apiSuccess({

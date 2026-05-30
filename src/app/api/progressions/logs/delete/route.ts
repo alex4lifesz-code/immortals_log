@@ -1,6 +1,9 @@
 import { apiSuccess, ApiErrors } from "@/lib/api";
-import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
+import {
+  deleteProgressionLogById,
+  findProgressionLogWithOwner,
+} from "@/lib/repositories/progression.repository";
 
 export const POST = withAuth(async (request, { auth }) => {
   try {
@@ -11,10 +14,7 @@ export const POST = withAuth(async (request, { auth }) => {
     }
 
     // Find the log and verify ownership
-    const log = await prisma.progressionLog.findUnique({
-      where: { id: logId },
-      include: { userProgression: true },
-    });
+    const log = await findProgressionLogWithOwner(logId);
 
     if (!log) {
       return ApiErrors.notFound("Log record not found");
@@ -24,7 +24,7 @@ export const POST = withAuth(async (request, { auth }) => {
       return ApiErrors.forbidden("Unauthorized");
     }
 
-    await prisma.progressionLog.delete({ where: { id: logId } });
+    await deleteProgressionLogById(logId);
 
     return apiSuccess({ success: true, message: "Log record deleted successfully" });
   } catch (error) {

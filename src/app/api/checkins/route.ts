@@ -1,9 +1,16 @@
-import { prisma } from "@/lib/prisma";
 import { withAuth, withAdmin } from "@/lib/auth/middleware";
 import { getAcceptedFriendIds, getVisibleSocialUserIds, normalizeScope } from "@/lib/friends";
 import { apiSuccess, ApiErrors } from "@/lib/api";
 import { buildDateFromDateKey } from "@/lib/constants";
 import { buildAutoCheckInDates, mergeCheckinsWithWorkoutDates } from "@/lib/checkins-autoPresence";
+import {
+  deleteAllCheckins,
+  deleteCheckinNotesByDate,
+  deleteCheckinsByDate,
+  getAllUserIdsForCheckins,
+  getCheckinsAndWorkoutLogsForUsers,
+  upsertCheckinsByDate,
+} from "@/lib/repositories/checkin.repository";
 
 export const GET = withAuth(async (request, { auth }) => {
   try {
@@ -22,39 +29,11 @@ export const GET = withAuth(async (request, { auth }) => {
     } catch (visibilityError) {
       console.error("CheckIn visibility resolution error:", visibilityError);
       if (auth.role === "admin") {
-        const users = await prisma.user.findMany({ select: { id: true } });
-        visibleUserIds = users.map((user) => user.id);
+        visibleUserIds = await getAllUserIdsForCheckins();
       }
     }
 
-    const [checkins, workoutLogs] = await Promise.all([
-      prisma.checkIn.findMany({
-        where: {
-          userId: {
-            in: visibleUserIds,
-          },
-        },
-        include: { user: { select: { id: true, name: true } } },
-        orderBy: { date: "desc" },
-      }),
-      prisma.progressionLog.findMany({
-        where: {
-          userProgression: {
-            userId: {
-              in: visibleUserIds,
-            },
-          },
-        },
-        select: {
-          createdAt: true,
-          userProgression: {
-            select: {
-              userId: true,
-            },
-          },
-        },
-      }),
-    ]);
+    const { checkins, workoutLogs } = await getCheckinsAndWorkoutLogsForUsers(visibleUserIds);
 
     const workoutDatesByUser = buildAutoCheckInDates(
       workoutLogs.map((log) => ({
@@ -118,40 +97,10 @@ export const POST = withAuth(async (request, { auth }) => {
       }
     }
 
-    // Upsert each entry with validation
-    const operations = Object.entries(entries as Record<string, { present?: boolean; weight?: number | string | null; comment?: string | null }>).map(
-      ([userId, data]) => {
-        const parsedWeight =
-          data.weight === undefined || data.weight === null || String(data.weight).trim() === ""
-            ? null
-            : parseFloat(String(data.weight));
-        const weight = parsedWeight !== null && !Number.isNaN(parsedWeight) && parsedWeight >= 0 && parsedWeight <= 1000
-          ? parsedWeight
-          : null;
-        const comment = data.comment == null ? null : String(data.comment).slice(0, 500);
-        const presentUpdate = typeof data.present === "boolean" ? { present: data.present } : {};
-
-        return prisma.checkIn.upsert({
-          where: {
-            date_userId: { date: dateObj, userId },
-          },
-          create: {
-            date: dateObj,
-            userId,
-            present: typeof data.present === "boolean" ? data.present : false,
-            weight,
-            comment,
-          },
-          update: {
-            ...presentUpdate,
-            weight,
-            comment,
-          },
-        });
-      }
-    );
-
-    await Promise.all(operations);
+    await upsertCheckinsByDate({
+      date: dateObj,
+      entries: entries as Record<string, { present?: boolean; weight?: number | string | null; comment?: string | null }>,
+    });
     return apiSuccess({ saved: true });
   } catch (error) {
     console.error("CheckIn save error:", error);
@@ -173,15 +122,15 @@ export const DELETE = withAdmin(async (request) => {
         return ApiErrors.badRequest("Invalid date");
       }
       // Also delete notes for this date
-      await prisma.checkInNote.deleteMany({ where: { date } });
-      const result = await prisma.checkIn.deleteMany({ where: { date: dateObj } });
+      await deleteCheckinNotesByDate(date);
+      const result = await deleteCheckinsByDate(dateObj);
       return apiSuccess({
         message: `Removed ${result.count} check-in record(s) for ${date}`,
         count: result.count,
       });
     }
 
-    const result = await prisma.checkIn.deleteMany({});
+    const result = await deleteAllCheckins();
     return apiSuccess({
       message: `Removed ${result.count} check-in record(s)`,
       count: result.count,

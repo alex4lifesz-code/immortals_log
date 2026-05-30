@@ -1,11 +1,16 @@
 import { apiSuccess, ApiErrors } from "@/lib/api";
-import { prisma } from "@/lib/prisma";
 import type { SimpleExercise, TrainingCategory, SimpleExerciseType, MuscleGroup, Difficulty } from "@/lib/exercise-types";
 import { ALL_DIFFICULTIES } from "@/lib/exercise-types";
 import { withAuth } from "@/lib/auth/middleware";
 import { getExerciseDbOptionsFromAppPrefs } from "@/lib/exercise-db-settings";
 import { ensureAppExerciseLibraryOwner } from "@/lib/exercise-library-owner";
 import { resolveVietnameseValue } from "@/lib/auto-vietnamese";
+import {
+  createExerciseLibraryExercise,
+  findAllExerciseNameEntries,
+  findUserSettingsPinnedNav,
+  listExerciseLibraryExercises,
+} from "@/lib/repositories/exercise-library.repository";
 import {
   isDeletedExerciseDescription,
   isPendingExerciseEditedDescription,
@@ -28,10 +33,7 @@ function parseJsonObject(value: string | null | undefined): Record<string, unkno
 }
 
 async function getUserExerciseDbOptions(userId: string) {
-  const settings = await prisma.userSettings.findUnique({
-    where: { userId },
-    select: { pinnedNavItems: true },
-  });
+  const settings = await findUserSettingsPinnedNav(userId);
   const appPrefs = parseJsonObject(settings?.pinnedNavItems) ?? {};
   return getExerciseDbOptionsFromAppPrefs(appPrefs);
 }
@@ -193,35 +195,7 @@ function inferDifficulty(diff?: string): Difficulty | undefined {
 /** GET /api/exercise-library — Fetch shared exercise library */
 export const GET = withAuth(async (_req, { auth }) => {
   try {
-    const dbExercises = await prisma.progressionExercise.findMany({
-      include: {
-        tiers: {
-          select: {
-            name: true,
-            level: true,
-            description: true,
-            difficulty: true,
-          },
-          orderBy: { level: "asc" },
-        },
-        variations: {
-          select: {
-            id: true,
-            name: true,
-            description: true,
-            difficulty: true,
-          },
-          orderBy: { name: "asc" },
-        },
-        modifiers: {
-          select: {
-            id: true,
-            type: true,
-          },
-        },
-      },
-      orderBy: { name: "asc" },
-    });
+    const dbExercises = await listExerciseLibraryExercises();
 
     // Use the signed-in user's DB options to preserve custom category and muscle labels.
     const dbOptions = await getUserExerciseDbOptions(auth.userId);
@@ -315,9 +289,7 @@ export const POST = withAuth(async (req, { auth }) => {
     const progressionStages = normalizedProgression.length > 0 ? normalizedProgression : [trimmedName];
 
     // Check for duplicate name across shared exercises
-    const existing = await prisma.progressionExercise.findMany({
-      select: { name: true },
-    });
+    const existing = await findAllExerciseNameEntries();
     const duplicate = existing.find(ex => ex.name.toLowerCase() === trimmedName.toLowerCase());
     if (duplicate) {
       return ApiErrors.conflict("An exercise with this name already exists");
@@ -329,119 +301,29 @@ export const POST = withAuth(async (req, { auth }) => {
     const isBodyweight = normalizedType === 'bodyweight' || normalizedType === 'timed';
     const isWeighted = normalizedType === 'weighted';
 
-    const dbExercise = await prisma.progressionExercise.create({
-      data: {
-        name: trimmedName,
-        wuxiaName: trimmedName,
-        category: dbCategory,
-        equipmentType: Array.isArray(equipment) ? equipment.join(', ') : '',
-        bodyweight: isBodyweight,
-        weighted: isWeighted,
-        rings: false,
-        primaryMuscles: normalizedMuscles.join(', '),
-        secondaryMuscles: '',
-        difficulty: difficulty ? String(difficulty).trim() : '',
-        wuxiaDifficulty: difficulty ? String(difficulty).trim() : '',
-        story: (() => {
-          const baseDescription = description ? String(description).trim().slice(0, 2000) : "";
-          return pendingReview === true ? markExerciseAsPending(baseDescription) : baseDescription;
-        })(),
-        tips: instructions ? JSON.stringify(instructions) : '[]',
-        progression: JSON.stringify(progressionStages),
-        userId: libraryOwnerId,
-        variations: normalizedVariations.length > 0
-          ? {
-              create: normalizedVariations.map((variationName) => ({
-                name: variationName,
-                wuxiaName: variationName,
-              })),
-            }
-          : undefined,
-      },
-      include: {
-        translation: true,
-        tiers: {
-          select: {
-            name: true,
-            level: true,
-          },
-          orderBy: { level: "asc" },
-        },
-        variations: {
-          select: {
-            id: true,
-            name: true,
-          },
-          orderBy: { name: "asc" },
-        },
-      },
-    });
-
-    // Create progression tiers so the exercise works with the logging system.
-    await prisma.progressionTier.createMany({
-      data: progressionStages.map((stageName, index) => ({
-        exerciseId: dbExercise.id,
-        level: index + 1,
-        name: stageName,
-        wuxiaName: stageName,
-        difficulty: difficulty ? String(difficulty).trim() : '',
-      })),
-    });
-
-    await prisma.progressionExerciseTranslation.create({
-      data: {
-        id: dbExercise.id,
-        englishName: trimmedName,
-        vietnameseName: resolveVietnameseValue(trimmedName, null),
-        englishStory: stripExerciseStatusMarkers(dbExercise.story) || null,
-        vietnameseStory: resolveVietnameseValue(stripExerciseStatusMarkers(dbExercise.story) || "", null),
-        englishDifficulty: difficulty ? String(difficulty).trim() : "",
-        vietnameseDifficulty: resolveVietnameseValue(difficulty ? String(difficulty).trim() : "", null),
-        englishType: resolvedType,
-        vietnameseType: resolveVietnameseValue(resolvedType, null),
-      },
-    });
-
-    const createdTiers = await prisma.progressionTier.findMany({
-      where: { exerciseId: dbExercise.id },
-      select: { id: true, name: true, description: true, difficulty: true },
-    });
-
-    if (createdTiers.length > 0) {
-      await prisma.progressionTierTranslation.createMany({
-        data: createdTiers.map((tier) => ({
-          id: tier.id,
-          englishName: tier.name,
-          vietnameseName: tier.name,
-          englishDescription: tier.description,
-          vietnameseDescription: tier.description,
-          englishDifficulty: tier.difficulty,
-          vietnameseDifficulty: tier.difficulty,
-        })),
-      });
-    }
-
-    if (dbExercise.variations.length > 0) {
-      await prisma.progressionVariationTranslation.createMany({
-        data: dbExercise.variations.map((variation) => ({
-          id: variation.id,
-          englishName: variation.name,
-          vietnameseName: variation.name,
-          englishDescription: null,
-          vietnameseDescription: null,
-          englishDifficulty: "",
-          vietnameseDifficulty: "",
-        })),
-      });
-    }
-
-    // Create UserProgressionLevel so logging works
-    await prisma.userProgressionLevel.create({
-      data: {
-        userId: creatorUserId,
-        exerciseId: dbExercise.id,
-        currentLevel: 1,
-      },
+    const dbExercise = await createExerciseLibraryExercise({
+      creatorUserId,
+      libraryOwnerId,
+      name: trimmedName,
+      category: dbCategory,
+      equipmentType: Array.isArray(equipment) ? equipment.join(', ') : '',
+      bodyweight: isBodyweight,
+      weighted: isWeighted,
+      primaryMuscles: normalizedMuscles.join(', '),
+      difficulty: difficulty ? String(difficulty).trim() : '',
+      story: (() => {
+        const baseDescription = description ? String(description).trim().slice(0, 2000) : "";
+        return pendingReview === true ? markExerciseAsPending(baseDescription) : baseDescription;
+      })(),
+      tips: instructions ? JSON.stringify(instructions) : '[]',
+      progressionStages,
+      variations: normalizedVariations,
+      resolvedType,
+      resolveVietnameseValue: (english, vietnameseHint) =>
+        resolveVietnameseValue(
+          english,
+          vietnameseHint,
+        ),
     });
 
     const exercise = mapDbToSimpleExercise(dbExercise, dbOptions);

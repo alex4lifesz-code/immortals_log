@@ -1,12 +1,12 @@
 // src/app/api/health/route.ts — Health check endpoint (no auth required)
 
-import { prisma } from "@/lib/prisma";
 import { apiSuccess, ApiErrors } from "@/lib/api";
+import { checkDatabaseReachable } from "@/lib/repositories/system.repository";
 
 export async function GET() {
   try {
     // Quick DB connectivity check
-    await prisma.$queryRawUnsafe("SELECT 1");
+    await checkDatabaseReachable();
 
     return apiSuccess({
       status: "ok",

@@ -1,7 +1,10 @@
 import { apiSuccess, ApiErrors } from "@/lib/api";
-import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/auth/middleware";
 import type { Theme } from "@/lib/config";
+import {
+  findUserSettingsByUserId,
+  upsertUserSettings,
+} from "@/lib/repositories/user.repository";
 
 type ActivityLogEntry = {
   at: string;
@@ -62,9 +65,7 @@ export const GET = withAuth(async (_req, { auth }) => {
   try {
     const userId = auth.userId;
 
-    const existing = await prisma.userSettings.findUnique({
-      where: { userId },
-    });
+    const existing = await findUserSettingsByUserId(userId);
     if (!existing) {
       return apiSuccess({ appPrefs: null, displaySettings: null });
     }
@@ -89,9 +90,7 @@ export const PUT = withAuth(async (req, { auth }) => {
 
     const userId = auth.role === "admin" ? requestedUserId : auth.userId;
 
-    const existing = await prisma.userSettings.findUnique({
-      where: { userId },
-    });
+    const existing = await findUserSettingsByUserId(userId);
 
     const appPrefsInput = body.appPrefs;
     const displaySettingsInput = body.displaySettings;
@@ -139,20 +138,13 @@ export const PUT = withAuth(async (req, { auth }) => {
         ? (displaySettingsInput as Record<string, unknown>)
         : (parseJsonObject(existing?.hiddenNavItems) ?? null);
 
-    await prisma.userSettings.upsert({
-      where: { userId },
-      create: {
-        userId,
-        pinnedNavItems: JSON.stringify(appPrefs ?? {}),
-        hiddenNavItems: JSON.stringify(displaySettings ?? {}),
-        panelPosition: existing?.panelPosition ?? "left",
-        dualPageView: existing?.dualPageView ?? false,
-        combinedView: existing?.combinedView ?? false,
-      },
-      update: {
-        pinnedNavItems: JSON.stringify(appPrefs ?? {}),
-        hiddenNavItems: JSON.stringify(displaySettings ?? {}),
-      },
+    await upsertUserSettings({
+      userId,
+      pinnedNavItems: JSON.stringify(appPrefs ?? {}),
+      hiddenNavItems: JSON.stringify(displaySettings ?? {}),
+      panelPosition: existing?.panelPosition,
+      dualPageView: existing?.dualPageView,
+      combinedView: existing?.combinedView,
     });
 
     return apiSuccess({ success: true });
