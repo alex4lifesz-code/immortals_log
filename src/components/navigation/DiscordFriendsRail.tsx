@@ -808,11 +808,12 @@ function DiscordFriendsRail({
   return (
     <>
       <aside
-        className="flex h-full w-[64px] md:w-[76px] shrink-0"
+        className="relative isolate flex h-full w-[64px] md:w-[76px] shrink-0"
         style={{
           borderRightWidth: 0,
           borderRightColor: "transparent",
-          background: "var(--sidebar-canvas-bg)",
+          background:
+            "linear-gradient(180deg, color-mix(in srgb, var(--sidebar-canvas-bg) 88%, var(--surface) 12%) 0%, color-mix(in srgb, var(--sidebar-canvas-bg) 96%, var(--void-black) 4%) 100%)",
         }}
       >
         <div className="flex h-full w-full flex-col items-center gap-3 px-2 pt-[calc(env(safe-area-inset-top,0px)+2.25rem)] pb-[calc(env(safe-area-inset-bottom,0px)+5.5rem)] md:pt-[calc(env(safe-area-inset-top,0px)+2.5rem)] md:pb-3">
@@ -826,18 +827,18 @@ function DiscordFriendsRail({
               }}
               aria-current={isFriendsHomeActive ? "page" : undefined}
               aria-label={lt("Circle members")}
-              className="relative mx-auto flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-2xl border transition-colors duration-150"
+              className="relative mx-auto flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-2xl border transition-all duration-200 hover:-translate-y-0.5"
               style={{
                 borderColor: isFriendsHomeActive
                   ? "color-mix(in srgb, var(--accent) 62%, transparent)"
-                  : "transparent",
+                  : "color-mix(in srgb, var(--sidebar-canvas-border) 34%, transparent)",
                 backgroundColor: isFriendsHomeActive
                   ? "var(--jade)"
-                  : "color-mix(in srgb, var(--surface-hover) 92%, var(--surface))",
+                  : "color-mix(in srgb, var(--surface-hover) 84%, var(--surface))",
                 color: isFriendsHomeActive ? "var(--pure-white)" : "var(--mist-light)",
                 boxShadow: isFriendsHomeActive
                   ? "0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent), 0 10px 22px color-mix(in srgb, var(--accent) 28%, transparent)"
-                  : "none",
+                  : "0 8px 18px color-mix(in srgb, var(--void-black) 22%, transparent)",
               }}
               title={lt("Circle members")}
             >
@@ -858,7 +859,10 @@ function DiscordFriendsRail({
               {isFriendsHomeActive && (
                 <span
                   className="pointer-events-none absolute -left-1.5 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full"
-                  style={{ backgroundColor: "var(--cloud-white)" }}
+                  style={{
+                    background: "linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 54%, var(--cloud-white) 46%))",
+                    boxShadow: "0 0 12px color-mix(in srgb, var(--accent) 46%, transparent)",
+                  }}
                 />
               )}
             </motion.button>
@@ -890,24 +894,27 @@ function DiscordFriendsRail({
                   {isSelected && (
                     <span
                       className="pointer-events-none absolute -left-1.5 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full"
-                      style={{ backgroundColor: "var(--cloud-white)" }}
+                      style={{
+                        background: "linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 54%, var(--cloud-white) 46%))",
+                        boxShadow: "0 0 12px color-mix(in srgb, var(--accent) 46%, transparent)",
+                      }}
                     />
                   )}
 
                   <span
-                    className="flex h-10 w-10 items-center justify-center rounded-full border font-semibold transition-all duration-150 md:h-11 md:w-11"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border font-semibold transition-all duration-200 group-hover:-translate-y-0.5 md:h-11 md:w-11"
                     style={{
                       color: "var(--cloud-white)",
                       fontSize: "10px",
                       borderColor: isSelected
                         ? "color-mix(in srgb, var(--accent) 72%, transparent)"
-                        : "transparent",
+                        : "color-mix(in srgb, var(--sidebar-canvas-border) 34%, transparent)",
                       backgroundColor: isSelected
                         ? "color-mix(in srgb, var(--accent) 30%, var(--surface))"
-                        : "color-mix(in srgb, var(--surface-hover) 92%, var(--surface))",
+                        : "color-mix(in srgb, var(--surface-hover) 86%, var(--surface))",
                       boxShadow: isSelected
                         ? "0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent)"
-                        : "none",
+                        : "0 6px 14px color-mix(in srgb, var(--void-black) 18%, transparent)",
                     }}
                   >
                     {initials(friend.name)}
@@ -943,21 +950,27 @@ function DiscordFriendsRail({
                 {selectedRailFriendId === friend.id && hasFriendDrawerOpen && (
                   <span
                     className="pointer-events-none absolute -left-1.5 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full"
-                    style={{ backgroundColor: "var(--cloud-white)" }}
+                    style={{
+                      background: "linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 54%, var(--cloud-white) 46%))",
+                      boxShadow: "0 0 12px color-mix(in srgb, var(--accent) 46%, transparent)",
+                    }}
                   />
                 )}
                 <span
-                  className="flex h-10 w-10 items-center justify-center rounded-full border font-semibold transition-all duration-150 md:h-11 md:w-11"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border font-semibold transition-all duration-200 group-hover:-translate-y-0.5 md:h-11 md:w-11"
                   style={{
                     color: "var(--cloud-white)",
                     fontSize: "10px",
                     borderColor: selectedRailFriendId === friend.id && hasFriendDrawerOpen
                       ? "color-mix(in srgb, var(--accent) 72%, transparent)"
-                      : "color-mix(in srgb, var(--ink-light) 52%, transparent)",
+                      : "color-mix(in srgb, var(--sidebar-canvas-border) 48%, transparent)",
                     backgroundColor: selectedRailFriendId === friend.id && hasFriendDrawerOpen
                       ? "color-mix(in srgb, var(--accent) 30%, var(--surface))"
-                      : "color-mix(in srgb, var(--surface-hover) 72%, var(--surface))",
+                      : "color-mix(in srgb, var(--surface-hover) 82%, var(--surface))",
                     opacity: selectedRailFriendId === friend.id && hasFriendDrawerOpen ? 1 : 0.85,
+                    boxShadow: selectedRailFriendId === friend.id && hasFriendDrawerOpen
+                      ? "0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent)"
+                      : "0 6px 14px color-mix(in srgb, var(--void-black) 16%, transparent)",
                   }}
                 >
                   {initials(friend.name)}

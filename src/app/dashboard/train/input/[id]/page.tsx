@@ -960,7 +960,7 @@ export default function TrainInputCanvasPage() {
     } finally {
       setSaving(false);
     }
-  }, [customExerciseName, clearDraft, deleting, editLogId, inputMode, isEditingExistingLog, notes, returnHref, router, saving, selectedExerciseId, selectedLevel, selectedVariant, sets, settings.timeZone, timedUnit, trainingDate, valueMode, weightUnit]);
+  }, [customExerciseName, clearDraft, deleting, editLogId, inputMode, isEditingExistingLog, modifierKg, notes, returnHref, router, saving, selectedExerciseId, selectedLevel, selectedSetupOption, selectedVariant, sets, settings.timeZone, timedUnit, trainingDate, valueMode, weightUnit]);
 
   const handleDeleteLoggedSession = useCallback(async () => {
     if (!isEditingExistingLog || !editLogId || saving || deleting) return;

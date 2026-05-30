@@ -336,12 +336,12 @@ export default function CommunityFeedClient() {
   return (
     <PageLayout
       title="Community Feed"
-      mobileContentPaddingClass="p-3 pb-24"
+      mobileContentPaddingClass="px-2 pt-4 pb-24"
     >
       {loading ? (
         <PageSkeleton statCards={0} wideBlock rows={4} />
       ) : (
-        <div className="dashboard-modern-feed">
+        <div className="dashboard-modern-feed mx-auto w-full max-w-[1120px]">
           {allExercises.length > 0 && (
             <section className="mb-3 sm:mb-4">
               <GlowCard glow="none" hoverable={false} className="dashboard-modern-hero !p-0 overflow-hidden">
@@ -373,7 +373,7 @@ export default function CommunityFeedClient() {
             )
           ) : (
             <>
-              <div className="mt-3 space-y-2.5 sm:mt-4">
+              <div className="mt-3 space-y-2.5 sm:mt-4 md:space-y-3">
                 {groupedByMemberDay.map((member, memberIdx) => (
                   <GlowCard
                     key={`${member.userId}-${member.dateKey}`}

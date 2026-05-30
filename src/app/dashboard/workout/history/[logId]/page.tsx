@@ -74,6 +74,38 @@ function getWorkoutMetricRows(log: ProgressionLog, displayUnit: WeightUnit = "kg
   return rows.length > 0 ? rows : [{ weight: "-", reps: "-" }];
 }
 
+function normalizeGripLikeValue(value: string | null | undefined): string {
+  const normalized = String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+  if (!normalized) return "";
+  if (normalized.includes("neutral")) return "Neutral";
+  if (normalized.includes("underhand") || normalized.includes("supinated") || normalized.includes("chin up")) return "Underhand";
+  if (normalized.includes("overhand") || normalized.includes("pronated")) return "Overhand";
+  if (normalized.includes("wide")) return "Wide";
+  if (normalized.includes("close") || normalized.includes("narrow")) return "Close";
+  if (normalized.includes("false")) return "False";
+  if (normalized.includes("mixed")) return "Mixed";
+  if (normalized.includes("ring")) return "Rings";
+  if (normalized.includes("grip")) {
+    return normalized
+      .split(" ")
+      .filter((part) => part !== "grip")
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+  }
+  return "";
+}
+
+function getTextDisplayValue(value: string | null | undefined, emptyLabel = "-"): string {
+  const trimmed = value?.trim() || "";
+  if (!trimmed || trimmed === "-") return emptyLabel;
+  return trimmed;
+}
+
 export default function WorkoutHistoryDetailPage() {
   const router = useRouter();
   const params = useParams<{ logId?: string | string[] }>();
@@ -205,8 +237,15 @@ export default function WorkoutHistoryDetailPage() {
                   const parentValue = detail.exerciseName?.trim() || "-";
                   const variationValue = detail.log.variant?.trim() || "-";
                   const parsedModifier = parseModifierWithBand(detail.log.modifier);
-                  const setupValue = (detail.log.setupOption || "").trim() || (parsedModifier.setupOption || "").trim() || "-";
-                  const modValue = (parsedModifier.baseModifier || "").trim();
+                  const setupFromColumn = (detail.log.setupOption || "").trim();
+                  const setupFromModifier = normalizeGripLikeValue(parsedModifier.setupOption);
+                  const setupFromVariant = normalizeGripLikeValue(detail.log.variant);
+                  const setupFromBaseModifier = normalizeGripLikeValue(parsedModifier.baseModifier);
+                  const setupValue = getTextDisplayValue(
+                    setupFromColumn || setupFromModifier || setupFromVariant || setupFromBaseModifier,
+                    "-",
+                  );
+                  const modValue = getTextDisplayValue((parsedModifier.baseModifier || "").trim(), "-");
                   const notesValue = detail.log.notes?.trim() || "";
                   const leftDetailRows = [
                     { label: `${lt("Parent")}:`, value: parentValue, valueColor: "var(--cloud-white)" },

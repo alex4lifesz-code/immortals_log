@@ -55,11 +55,12 @@ function TrainDayRail({
 
   return (
     <aside
-      className="flex h-full w-[64px] md:w-[76px] shrink-0"
+      className="relative isolate flex h-full w-[64px] md:w-[76px] shrink-0"
       style={{
         borderRightWidth: 0,
         borderRightColor: "transparent",
-        background: "var(--sidebar-canvas-bg)",
+        background:
+          "linear-gradient(180deg, color-mix(in srgb, var(--sidebar-canvas-bg) 88%, var(--surface) 12%) 0%, color-mix(in srgb, var(--sidebar-canvas-bg) 96%, var(--void-black) 4%) 100%)",
       }}
     >
       <div className="flex h-full w-full -translate-x-px flex-col items-center gap-3 px-2 pt-[calc(env(safe-area-inset-top,0px)+2.25rem)] pb-[calc(env(safe-area-inset-bottom,0px)+5.5rem)] md:pt-[calc(env(safe-area-inset-top,0px)+2.5rem)] md:pb-3">
@@ -73,31 +74,36 @@ function TrainDayRail({
             }}
             aria-current={isOverviewActive ? "page" : undefined}
             aria-label="Open day assignment overview"
-            className="relative mx-auto flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-2xl border transition-colors duration-150"
+            className="relative mx-auto flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-2xl border transition-all duration-200 hover:-translate-y-0.5"
             style={{
               borderColor: isOverviewActive
                 ? "color-mix(in srgb, var(--accent) 62%, transparent)"
-                : "transparent",
+                : "color-mix(in srgb, var(--sidebar-canvas-border) 34%, transparent)",
               backgroundColor: isOverviewActive
                 ? "var(--jade)"
-                : "color-mix(in srgb, var(--surface-hover) 92%, var(--surface))",
+                : "color-mix(in srgb, var(--surface-hover) 84%, var(--surface))",
               color: isOverviewActive
                 ? (highContrastMonochrome ? "var(--void-black)" : "var(--pure-white)")
                 : "var(--mist-light)",
               boxShadow: isOverviewActive
                 ? "0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent), 0 10px 22px color-mix(in srgb, var(--accent) 28%, transparent)"
-                : "none",
+                : "0 8px 18px color-mix(in srgb, var(--void-black) 22%, transparent)",
             }}
             title="Overview"
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.9}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h10" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8 3v3M16 3v3" />
+              <rect x="4" y="5" width="16" height="16" rx="3" ry="3" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 10h16M9 14h6M9 17h4" />
             </svg>
 
             {isOverviewActive && (
               <span
                 className="pointer-events-none absolute -left-1.5 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full"
-                style={{ backgroundColor: "var(--cloud-white)" }}
+                style={{
+                  background: "linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 54%, var(--cloud-white) 46%))",
+                  boxShadow: "0 0 12px color-mix(in srgb, var(--accent) 46%, transparent)",
+                }}
               />
             )}
 
@@ -131,12 +137,15 @@ function TrainDayRail({
                 {isSelected && (
                   <span
                     className="pointer-events-none absolute -left-1.5 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full"
-                    style={{ backgroundColor: "var(--cloud-white)" }}
+                    style={{
+                      background: "linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 54%, var(--cloud-white) 46%))",
+                      boxShadow: "0 0 12px color-mix(in srgb, var(--accent) 46%, transparent)",
+                    }}
                   />
                 )}
 
                 <span
-                  className="relative mx-auto flex h-10 w-10 items-center justify-center rounded-full border font-semibold transition-all duration-150 md:h-11 md:w-11"
+                  className="relative mx-auto flex h-10 w-10 items-center justify-center rounded-full border font-semibold transition-all duration-200 group-hover:-translate-y-0.5 md:h-11 md:w-11"
                   style={{
                     color: isSelected
                       ? (highContrastMonochrome ? "var(--void-black)" : "var(--cloud-white)")
@@ -145,15 +154,15 @@ function TrainDayRail({
                     transform: count > 0 ? "translateX(-1px)" : "translateX(0)",
                     borderColor: isSelected
                       ? "color-mix(in srgb, var(--accent) 72%, transparent)"
-                      : "transparent",
+                      : "color-mix(in srgb, var(--sidebar-canvas-border) 34%, transparent)",
                     backgroundColor: isSelected
                       ? (highContrastMonochrome
                         ? "color-mix(in srgb, var(--surface) 76%, var(--accent))"
                         : "color-mix(in srgb, var(--accent) 30%, var(--surface))")
-                      : "color-mix(in srgb, var(--surface-hover) 92%, var(--surface))",
+                      : "color-mix(in srgb, var(--surface-hover) 86%, var(--surface))",
                     boxShadow: isSelected
                       ? "0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent)"
-                      : "none",
+                      : "0 6px 14px color-mix(in srgb, var(--void-black) 18%, transparent)",
                   }}
                 >
                   {DAY_LETTERS[dayIndex]}

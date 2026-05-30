@@ -380,11 +380,12 @@ function MobileNavBar({
         {/* ── Main Bottom Navigation Bar ── */}
         <nav
           data-mobile-bottom-nav="true"
-          className="relative mx-1 mb-1.5 flex items-end justify-around gap-0.5 rounded-t-2xl border border-b-0 px-1 pt-1 pb-1.5 shadow-[0_-10px_28px_rgba(0,0,0,0.4)] backdrop-blur-md safe-area-bottom"
+          className="mobile-bottom-nav-polish relative mx-1 mb-1.5 flex items-end justify-around gap-0.5 rounded-2xl border px-1 pt-1 pb-1.5 shadow-[0_-10px_28px_rgba(0,0,0,0.4)] backdrop-blur-md safe-area-bottom"
           style={{
             borderTopColor: "color-mix(in srgb, var(--ink-light) 72%, var(--border))",
             borderLeftColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)",
             borderRightColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)",
+            borderBottomColor: "color-mix(in srgb, var(--ink-light) 72%, var(--border))",
             background: "linear-gradient(180deg, color-mix(in srgb, var(--surface-hover) 82%, var(--surface)) 0%, color-mix(in srgb, var(--surface) 96%, black) 100%)",
           }}
         >

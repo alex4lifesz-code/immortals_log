@@ -28,26 +28,29 @@ export default function PageHeader({
 }: PageHeaderProps) {
   return (
     <div
-      className={`flex items-end justify-between gap-3 ${noBorder ? "" : "border-b"} ${className}`}
-      style={
-        noBorder
-          ? undefined
-          : {
-              borderBottomColor:
-                "color-mix(in srgb, var(--ink-light) 42%, transparent)",
-            }
-      }
+      className={`rounded-xl px-3 py-2.5 ${noBorder ? "" : "border"} flex items-end justify-between gap-3 ${className}`}
+      style={{
+        borderColor: noBorder ? "transparent" : "color-mix(in srgb, var(--ink-light) 52%, transparent)",
+        background: "linear-gradient(180deg, color-mix(in srgb, var(--surface-hover) 42%, var(--surface)) 0%, color-mix(in srgb, var(--surface) 96%, transparent) 100%)",
+      }}
     >
       <div className="min-w-0">
         <p
-          className="text-[9px] uppercase tracking-[0.1em]"
-          style={{ color: "var(--text-muted)" }}
+          className="inline-flex rounded-md border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em]"
+          style={{
+            color: "var(--text-secondary)",
+            borderColor: "color-mix(in srgb, var(--accent) 40%, transparent)",
+            backgroundColor: "color-mix(in srgb, var(--accent) 10%, transparent)",
+          }}
         >
           {eyebrow}
         </p>
         <h2
-          className="mt-0.5 text-sm font-semibold uppercase tracking-wider"
-          style={{ color: "var(--text-primary)" }}
+          className="mt-1 text-sm font-semibold uppercase tracking-[0.09em]"
+          style={{
+            color: "var(--text-primary)",
+            textShadow: "0 0 10px color-mix(in srgb, var(--accent) 16%, transparent)",
+          }}
         >
           {title}
         </h2>

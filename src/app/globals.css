@@ -1059,12 +1059,16 @@ tbody tr:hover {
 }
 
 .surface-panel {
-  background: var(--surface-panel);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--cloud-white) 2%, transparent) 0%, transparent 12%),
+    var(--surface-panel);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   border: 1px solid var(--neon-border);
   border-radius: 1rem;
-  box-shadow: var(--shadow-elev-1);
+  box-shadow:
+    var(--shadow-elev-1),
+    inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 8%, transparent);
   transition:
     transform var(--motion-fast) var(--ease-polish),
     box-shadow var(--motion-normal) var(--ease-polish),
@@ -1086,6 +1090,7 @@ tbody tr:hover {
   border-color: color-mix(in srgb, var(--accent) 25%, var(--border));
   box-shadow:
     var(--neon-glow-strong),
+    inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 12%, transparent),
     0 12px 24px color-mix(in srgb, var(--void-black) 30%, transparent);
 }
 
@@ -1100,8 +1105,12 @@ tbody tr:hover {
 .mobile-shell-card {
   border-radius: 0.9rem;
   border: 1px solid color-mix(in srgb, var(--border) 90%, transparent);
-  background: color-mix(in srgb, var(--surface) 96%, transparent);
-  box-shadow: var(--shadow-elev-1);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--cloud-white) 2%, transparent) 0%, transparent 18%),
+    color-mix(in srgb, var(--surface) 96%, transparent);
+  box-shadow:
+    var(--shadow-elev-1),
+    inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 8%, transparent);
 }
 
 .mobile-card-title {
@@ -2014,9 +2023,13 @@ html.cherry-blossom textarea:focus-visible {
 .dashboard-modern-member,
 .dashboard-modern-empty {
   border: 1px solid color-mix(in srgb, var(--border) 74%, transparent) !important;
-  border-radius: 0.8rem !important;
-  background: color-mix(in srgb, var(--surface) 92%, black) !important;
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--cloud-white) 3%, transparent) inset !important;
+  border-radius: 0.95rem !important;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--cloud-white) 2%, transparent) 0%, transparent 14%),
+    color-mix(in srgb, var(--surface) 92%, black) !important;
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--cloud-white) 3%, transparent) inset,
+    0 10px 22px color-mix(in srgb, var(--void-black) 26%, transparent) !important;
 }
 
 .dashboard-modern-member-trigger {
@@ -2027,7 +2040,7 @@ html.cherry-blossom textarea:focus-visible {
 .dashboard-modern-exercise {
   border-top: 1px solid color-mix(in srgb, var(--border) 78%, transparent) !important;
   border-radius: 0 !important;
-  background: transparent !important;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ink-mid) 26%, transparent) 0%, transparent 100%) !important;
 }
 
 .dashboard-modern-log {
@@ -2075,8 +2088,12 @@ html.cherry-blossom .completionist-modern-skill-desktop {
 .completionist-modern-skill-mobile,
 .completionist-modern-skill-desktop {
   border: 1px solid color-mix(in srgb, var(--border) 78%, transparent) !important;
-  background: color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid)) !important;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cloud-white) 2%, transparent) !important;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--cloud-white) 2%, transparent) 0%, transparent 16%),
+    color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid)) !important;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--cloud-white) 2%, transparent),
+    0 10px 22px color-mix(in srgb, var(--void-black) 25%, transparent) !important;
 }
 
 .completionist-modern-skill-mobile button[aria-expanded="true"] {

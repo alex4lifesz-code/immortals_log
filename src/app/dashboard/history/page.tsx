@@ -30,6 +30,8 @@ import { parseModifierWithBand } from "../workout/utils";
 
 type WorkoutMetricRow = { weight: string; reps: string };
 type TrainMode = "train" | "combo";
+const MOBILE_LOG_FAB_PAGE_SIZE = 60;
+
 type TrainExerciseRow = {
   rowKey: string;
   exerciseId: string;
@@ -168,7 +170,8 @@ function getHistoryLogDisplayValues(log: Pick<ProgressionLog, "variant" | "modif
   const setupFromColumn = (log.setupOption || "").trim();
   const setupFromModifier = normalizeGripLikeValue(parsedModifier.setupOption);
   const setupFromVariant = normalizeGripLikeValue(log.variant);
-  const setupValue = setupFromColumn || setupFromModifier || setupFromVariant;
+  const setupFromBaseModifier = normalizeGripLikeValue(parsedModifier.baseModifier);
+  const setupValue = setupFromColumn || setupFromModifier || setupFromVariant || setupFromBaseModifier;
   const variationValue = setupFromVariant ? "Default" : getVariantDisplayValue(log.variant);
   const modValue = (parsedModifier.baseModifier || "").trim();
   return { variationValue, setupValue, modValue };
@@ -354,6 +357,7 @@ export default function HistoryPage() {
   const [mobileLogFabSearchQuery, setMobileLogFabSearchQuery] = useState("");
   const [mobileLogFabCategory, setMobileLogFabCategory] = useState("all");
   const [mobileLogFabSort, setMobileLogFabSort] = useState<"recent" | "oldest" | "name-az" | "relevant">("recent");
+  const [mobileLogFabVisibleCount, setMobileLogFabVisibleCount] = useState(MOBILE_LOG_FAB_PAGE_SIZE);
   const [trainDayFilter, setTrainDayFilter] = useState<number | null>(null);
   const [trainDayDrawerOpen, setTrainDayDrawerOpen] = useState(false);
   const [trainRailOverviewOpen, setTrainRailOverviewOpen] = useState(false);
@@ -1912,6 +1916,29 @@ export default function HistoryPage() {
     return sorted;
   }, [exercises, mobileLogFabRows, mobileLogFabCategory, mobileLogFabSearchQuery, mobileLogFabSort]);
 
+  useEffect(() => {
+    if (!mobileLogFabOpen || trainMode !== "train") return;
+    setMobileLogFabVisibleCount(MOBILE_LOG_FAB_PAGE_SIZE);
+  }, [mobileLogFabCategory, mobileLogFabOpen, mobileLogFabSearchQuery, mobileLogFabSort, trainMode]);
+
+  const visibleMobileLogFabRows = useMemo(() => {
+    return filteredMobileLogFabRows.slice(0, mobileLogFabVisibleCount);
+  }, [filteredMobileLogFabRows, mobileLogFabVisibleCount]);
+
+  const hasMoreMobileLogFabRows = visibleMobileLogFabRows.length < filteredMobileLogFabRows.length;
+
+  const handleMobileLogFabScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
+    if (trainMode !== "train" || !mobileLogFabOpen) return;
+    const element = event.currentTarget;
+    const nearBottom = element.scrollTop + element.clientHeight >= element.scrollHeight - 160;
+    if (!nearBottom) return;
+
+    setMobileLogFabVisibleCount((prev) => {
+      if (prev >= filteredMobileLogFabRows.length) return prev;
+      return Math.min(prev + MOBILE_LOG_FAB_PAGE_SIZE, filteredMobileLogFabRows.length);
+    });
+  }, [filteredMobileLogFabRows.length, mobileLogFabOpen, trainMode]);
+
   const dayExerciseCounts = dayAssignmentSummary.remainingCounts;
   const dayAssignmentCounts = dayAssignmentSummary.assignedCounts;
 
@@ -2108,8 +2135,8 @@ export default function HistoryPage() {
         mobileScrollContainerEnabled={false}
       >
       <div
-        className="nyaa-history-page flex min-h-0 min-w-0 flex-1 flex-col px-0"
-        style={{ maxWidth: "none", margin: 0, width: "100%" }}
+        className="nyaa-history-page mx-auto flex min-h-0 min-w-0 w-full max-w-[1320px] flex-1 flex-col px-0"
+        style={{ maxWidth: "1320px", margin: "0 auto", width: "100%" }}
       >
         {loading ? (
           <GlowCard glow="jade" hoverable={false}>
@@ -2145,8 +2172,9 @@ export default function HistoryPage() {
                   <div
                     className={`border overflow-hidden flex min-h-0 flex-1 flex-col ${isFriendTrainOverlay ? "rounded-none h-full" : "rounded-tl-2xl"}`}
                     style={{
-                      borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                      backgroundColor: "color-mix(in srgb, var(--ink-mid) 20%, var(--ink-deep))",
+                      borderColor: "color-mix(in srgb, var(--ink-light) 56%, transparent)",
+                      backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))",
+                      boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--cloud-white) 2%, transparent)",
                     }}
                   >
                     <div
@@ -2180,7 +2208,7 @@ export default function HistoryPage() {
                             ) : null}
                             <div>
                               <p className="text-[9px] uppercase tracking-[0.1em]" style={{ color: "var(--text-muted)" }}>{lt("Training and Quick history")}</p>
-                              <h2 className="mt-0.5 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-primary)" }}>
+                              <h2 className="mt-0.5 text-sm font-semibold uppercase tracking-[0.09em]" style={{ color: "var(--text-primary)" }}>
                                 {trainPageTitle}
                               </h2>
                             </div>
@@ -2928,6 +2956,7 @@ export default function HistoryPage() {
                   data-mobile-scroll-container="true"
                   className="min-h-0 flex-1 overflow-y-auto scrollbar-hide overflow-x-hidden px-2 pb-[calc(env(safe-area-inset-bottom,0px)+5rem)]"
                   style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorY: "auto", touchAction: "pan-y" }}
+                  onScroll={handleMobileLogFabScroll}
                 >
                   <button
                     type="button"
@@ -3018,39 +3047,59 @@ export default function HistoryPage() {
                       {lt("No exercises match your search or filters.")}
                     </div>
                   ) : (
-                    filteredMobileLogFabRows.map((row) => (
-                      <button
-                        key={`mobile-log-fab-row-${row.rowKey}`}
-                        type="button"
-                        className="mobile-list-row polished-focus touch-manipulation mx-1 my-1 block w-[calc(100%-0.5rem)] px-3 py-2.5 text-left"
-                        onClick={() => {
-                          const pathId = `${row.exerciseId}-quick`;
-                          const exerciseNameForUrl = row.parentExerciseName || row.exerciseName;
-                          const href = `/dashboard/train/input/${encodeURIComponent(pathId)}?prefillExerciseId=${encodeURIComponent(row.exerciseId)}&prefillExercise=${encodeURIComponent(exerciseNameForUrl)}&prefillProgression=${encodeURIComponent(row.progression)}&prefillVariant=${encodeURIComponent(row.variant || "")}`;
-                          setLibrarySheetOpen(false);
-                          router.push(href);
-                        }}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="mobile-list-title" style={{ color: row.isDeleted ? "var(--crimson-light)" : getRecentExerciseTextColor(row.date) }}>
-                            {row.exerciseName}
-                            {row.recent24hCount >= 2 ? (
-                              <sup className="ml-0.5 text-[12px] font-bold leading-none" style={{ color: "var(--accent)" }}>
-                                {row.recent24hCount}
-                              </sup>
-                            ) : null}
-                          </p>
-                          <span className="mobile-list-meta shrink-0" style={{ color: "var(--text-muted)" }}>
-                            {row.date ? formatRelativeRecentDate(row.date, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone) : lt("Never")}
-                          </span>
+                    <>
+                      {visibleMobileLogFabRows.map((row) => (
+                        <button
+                          key={`mobile-log-fab-row-${row.rowKey}`}
+                          type="button"
+                          className="mobile-list-row polished-focus touch-manipulation mx-1 my-1 block w-[calc(100%-0.5rem)] px-3 py-2.5 text-left"
+                          onClick={() => {
+                            const pathId = `${row.exerciseId}-quick`;
+                            const exerciseNameForUrl = row.parentExerciseName || row.exerciseName;
+                            const href = `/dashboard/train/input/${encodeURIComponent(pathId)}?prefillExerciseId=${encodeURIComponent(row.exerciseId)}&prefillExercise=${encodeURIComponent(exerciseNameForUrl)}&prefillProgression=${encodeURIComponent(row.progression)}&prefillVariant=${encodeURIComponent(row.variant || "")}`;
+                            setLibrarySheetOpen(false);
+                            router.push(href);
+                          }}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="mobile-list-title" style={{ color: row.isDeleted ? "var(--crimson-light)" : getRecentExerciseTextColor(row.date) }}>
+                              {row.exerciseName}
+                              {row.recent24hCount >= 2 ? (
+                                <sup className="ml-0.5 text-[12px] font-bold leading-none" style={{ color: "var(--accent)" }}>
+                                  {row.recent24hCount}
+                                </sup>
+                              ) : null}
+                            </p>
+                            <span className="mobile-list-meta shrink-0" style={{ color: "var(--text-muted)" }}>
+                              {row.date ? formatRelativeRecentDate(row.date, settings.dateFormat || "dd-mmm-yyyy", settings.timeZone) : lt("Never")}
+                            </span>
+                          </div>
+                          {row.date ? (
+                            <p className="mobile-list-meta mt-0.5 italic" style={{ color: "var(--text-muted)" }}>
+                              {`${lt("Recent")}: ${row.variant ? `${row.variant} ` : ""}${row.progression} ${row.exerciseName}`}
+                            </p>
+                          ) : null}
+                        </button>
+                      ))}
+                      {hasMoreMobileLogFabRows ? (
+                        <div className="px-3 py-2.5 text-center">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMobileLogFabVisibleCount((prev) => Math.min(prev + MOBILE_LOG_FAB_PAGE_SIZE, filteredMobileLogFabRows.length));
+                            }}
+                            className="polished-focus touch-manipulation rounded-md border px-3 py-1.5 text-xs"
+                            style={{
+                              borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                              color: "var(--mist-light)",
+                              backgroundColor: "color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep))",
+                            }}
+                          >
+                            {lt("Load more")}
+                          </button>
                         </div>
-                        {row.date ? (
-                          <p className="mobile-list-meta mt-0.5 italic" style={{ color: "var(--text-muted)" }}>
-                            {`${lt("Recent")}: ${row.variant ? `${row.variant} ` : ""}${row.progression} ${row.exerciseName}`}
-                          </p>
-                        ) : null}
-                      </button>
-                    ))
+                      ) : null}
+                    </>
                   )}
                 </div>
               </div>
@@ -3469,8 +3518,8 @@ export default function HistoryPage() {
                           step: "details",
                           field: "variation",
                         });
-                        leftDetailRows.push({ label: `${lt("Grip / Props")}:`, value: setupValue, valueColor: "var(--gold-glow)", step: "details", field: "setup" });
-                        leftDetailRows.push({ label: `${lt("Mod")}:`, value: modValue, valueColor: "var(--gold-glow)", step: "session", field: "modifier" });
+                        leftDetailRows.push({ label: `${lt("Grip / Props")}:`, value: getTextDisplayValue(setupValue, "-"), valueColor: "var(--gold-glow)", step: "details", field: "setup" });
+                        leftDetailRows.push({ label: `${lt("Mod")}:`, value: getTextDisplayValue(modValue, "-"), valueColor: "var(--gold-glow)", step: "session", field: "modifier" });
                       } else {
                         leftDetailRows.push({
                           label: `${lt("Progression")}:`,
@@ -3488,14 +3537,14 @@ export default function HistoryPage() {
                         });
                         leftDetailRows.push({
                           label: `${lt("Grip / Props")}:`,
-                          value: setupValue,
+                          value: getTextDisplayValue(setupValue, "-"),
                           valueColor: "var(--gold-glow)",
                           step: "details",
                           field: "setup",
                         });
                         leftDetailRows.push({
                           label: `${lt("Mod")}:`,
-                          value: modValue,
+                          value: getTextDisplayValue(modValue, "-"),
                           valueColor: "var(--gold-glow)",
                           step: "session",
                           field: "modifier",

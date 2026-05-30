@@ -353,7 +353,7 @@ export default function ProgressPage() {
       title={lt("Progress")}
       mobileContentPaddingClass="px-2 pt-4 pb-24"
     >
-      <div className="space-y-3 px-0 py-0 sm:space-y-4 sm:py-1">
+      <div className="mx-auto w-full max-w-[1120px] space-y-3 px-0 py-0 sm:space-y-4 sm:py-1 lg:space-y-5">
         <section
           className="completionist-modern-overview overflow-hidden rounded-xl border"
           style={{
@@ -370,7 +370,7 @@ export default function ProgressPage() {
             <h2 className="mt-0.5 text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--text-primary)]">{lt("Progress overview")}</h2>
           </div>
 
-          <div className="px-3 py-3">
+          <div className="px-3 py-3 md:px-4 md:py-4">
             <div className="grid gap-4 lg:grid-cols-[150px_minmax(0,1fr)] lg:items-start">
               <div className="flex items-center justify-center lg:justify-start">
                 <div
@@ -392,7 +392,7 @@ export default function ProgressPage() {
                 </div>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-3 md:space-y-3.5">
                 <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-[color:var(--text-secondary)]">
                   <span>{lt("Progressions")}: <span className="font-semibold text-[color:var(--text-primary)]">{summary.totalExercises}</span></span>
                   <span>{lt("Logged once")}: <span className="font-semibold text-[color:var(--forest)]">{summary.loggedExercises}</span></span>
@@ -526,7 +526,7 @@ export default function ProgressPage() {
                 ) : null}
               </AnimatePresence>
 
-              <div className="space-y-2.5 p-1.5 sm:p-2">
+              <div className="space-y-2.5 p-1.5 sm:p-2 md:space-y-3 md:p-2.5">
                 {visibleSkills.map((skill) => {
                   const displayName = getExerciseDisplayName(
                     {

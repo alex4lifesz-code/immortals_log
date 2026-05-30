@@ -1,9 +1,42 @@
 .mobile-shell {
   --mobile-bottom-nav-reserve: 96px;
+  --mobile-shell-glass: color-mix(in srgb, var(--ink-deep) 88%, var(--void-black));
+  --mobile-shell-border: color-mix(in srgb, var(--ink-light) 72%, transparent);
+  --mobile-shell-accent: color-mix(in srgb, var(--accent) 26%, transparent);
+  position: relative;
+  isolation: isolate;
   padding-top: var(--safe-area-inset-top);
   padding-right: var(--safe-area-inset-right);
   padding-bottom: calc(var(--safe-area-inset-bottom) + var(--mobile-bottom-nav-reserve));
   padding-left: var(--safe-area-inset-left);
+}
+
+.mobile-shell::before,
+.mobile-shell::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.mobile-shell::before {
+  background:
+    radial-gradient(48rem 26rem at 12% -8%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 72%),
+    radial-gradient(34rem 20rem at 94% 8%, color-mix(in srgb, var(--mountain-blue-glow) 12%, transparent), transparent 68%),
+    radial-gradient(30rem 24rem at 50% 108%, color-mix(in srgb, var(--gold) 8%, transparent), transparent 70%);
+  opacity: 0.9;
+}
+
+.mobile-shell::after {
+  background-image: repeating-linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--cloud-white) 4%, transparent) 0px,
+    color-mix(in srgb, var(--cloud-white) 4%, transparent) 1px,
+    transparent 1px,
+    transparent 8px
+  );
+  opacity: 0.22;
 }
 
 .mobile-shell * {
@@ -79,6 +112,10 @@
 
 .mobile-header-polish {
   animation: mobileHeaderIn var(--mobile-motion-normal) var(--mobile-ease-out) both;
+  backdrop-filter: blur(14px) saturate(125%);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 8%, transparent),
+    0 10px 24px color-mix(in srgb, var(--void-black) 42%, transparent);
 }
 
 .mobile-header-title {
@@ -118,7 +155,10 @@
 
 .mobile-bottom-nav-polish {
   animation: mobileNavIn var(--mobile-motion-normal) var(--mobile-ease-out) both;
-  box-shadow: 0 -8px 28px color-mix(in srgb, var(--void-black) 30%, transparent);
+  box-shadow:
+    0 -10px 30px color-mix(in srgb, var(--void-black) 34%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 8%, transparent);
+  backdrop-filter: blur(14px) saturate(120%);
 }
 
 .mobile-tab-polish {

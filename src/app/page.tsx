@@ -1,7 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { memo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import GlowButton from "@/components/ui/GlowButton";
 import GlowInput from "@/components/ui/GlowInput";
@@ -10,6 +10,49 @@ import { THEME_CLASS_NAMES } from "@/lib/config";
 import ConnectivityBanner from "@/components/system/ConnectivityBanner";
 import type { LanguageMode } from "@/lib/language";
 import { translateEnglishToLanguage } from "@/lib/language";
+
+const PARTICLE_CONFIG = Array.from({ length: 6 }, (_, i) => {
+  const randomSeed = (i * 12321) % 100;
+  return {
+    id: i,
+    topOffset: 60 + (randomSeed % 20),
+    xOffset: (randomSeed % 40) - 20,
+    duration: 4 + (randomSeed % 3),
+    left: `${15 + i * 14}%`,
+    delay: i * 0.8,
+  };
+});
+
+const LoginParticles = memo(function LoginParticles() {
+  const prefersReducedMotion = useReducedMotion();
+
+  if (prefersReducedMotion) return null;
+
+  return (
+    <>
+      {PARTICLE_CONFIG.map((particle) => (
+        <motion.div
+          key={particle.id}
+          className="absolute w-1 h-1 rounded-full login-particle"
+          animate={{
+            y: [0, -100, 0],
+            x: [0, particle.xOffset, 0],
+            opacity: [0, 0.8, 0],
+          }}
+          transition={{
+            duration: particle.duration,
+            repeat: Infinity,
+            delay: particle.delay,
+          }}
+          style={{
+            left: particle.left,
+            top: `${particle.topOffset}%`,
+          }}
+        />
+      ))}
+    </>
+  );
+});
 
 export default function LoginPage() {
   const DISPLAY_SETTINGS_STORAGE_KEY = "cultivateos-display-settings";
@@ -133,34 +176,7 @@ export default function LoginPage() {
       </div>
 
       {/* Floating particles */}
-      {[...Array(6)].map((_, i) => {
-        // Use deterministic values based on index to avoid hydration mismatch
-        const randomSeed = (i * 12321) % 100;
-        const topOffset = 60 + (randomSeed % 20);
-        const xOffset = (randomSeed % 40) - 20;
-        const duration = 4 + (randomSeed % 3);
-
-        return (
-          <motion.div
-            key={i}
-            className="absolute w-1 h-1 rounded-full login-particle"
-            animate={{
-              y: [0, -100, 0],
-              x: [0, xOffset, 0],
-              opacity: [0, 0.8, 0],
-            }}
-            transition={{
-              duration: duration,
-              repeat: Infinity,
-              delay: i * 0.8,
-            }}
-            style={{
-              left: `${15 + i * 14}%`,
-              top: `${topOffset}%`,
-            }}
-          />
-        );
-      })}
+      <LoginParticles />
 
 
       {/* Login Card */}

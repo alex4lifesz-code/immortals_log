@@ -1,20 +1,22 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AppProvider, useAppContext } from "@/context/AppContext";
 import { DisplaySettingsProvider } from "@/context/DisplaySettingsContext";
 import { useAuth } from "@/context/AuthContext";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { MotionConfig, useReducedMotion } from "framer-motion";
-import MobileNavBar from "@/components/navigation/MobileNavBar";
-import FloatingMobileSidebar from "@/components/navigation/FloatingMobileSidebar";
-import SwipeNavigation from "@/components/navigation/SwipeNavigation";
-import ConnectivityBanner from "@/components/system/ConnectivityBanner";
-import AtmosphericBackground from "@/components/atmosphere/AtmosphericBackground";
 import { useIncomingFriendRequestsCount } from "@/hooks/useIncomingFriendRequestsCount";
 import { api } from "@/lib/api-client";
 import { SystemBarsProvider } from "@/providers/SystemBarsProvider";
 import { DASHBOARD_ROUTES } from "@/lib/navigation";
+
+const MobileNavBar = dynamic(() => import("@/components/navigation/MobileNavBar"));
+const FloatingMobileSidebar = dynamic(() => import("@/components/navigation/FloatingMobileSidebar"));
+const SwipeNavigation = dynamic(() => import("@/components/navigation/SwipeNavigation"));
+const ConnectivityBanner = dynamic(() => import("@/components/system/ConnectivityBanner"));
+const AtmosphericBackground = dynamic(() => import("@/components/atmosphere/AtmosphericBackground"));
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -51,6 +53,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   const isTrainRoute = pathname?.startsWith("/dashboard/train") ?? false;
   const effectiveTrainExerciseHistoryOpen = isTrainRoute && isTrainExerciseHistoryOpen;
   const lastLoggedActivityKeyRef = useRef("");
+  const searchParamsKey = searchParams.toString();
 
   const currentActivity = useMemo(() => {
     const friendView = searchParams.get("friendView");
@@ -106,7 +109,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!user?.id || !currentActivity.route) return;
 
-    const activityKey = `${currentActivity.label}:${currentActivity.route}:${searchParams.toString()}`;
+    const activityKey = `${currentActivity.label}:${currentActivity.route}:${searchParamsKey}`;
     if (lastLoggedActivityKeyRef.current === activityKey) return;
     lastLoggedActivityKeyRef.current = activityKey;
 
@@ -125,7 +128,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     }, 120);
 
     return () => window.clearTimeout(timer);
-  }, [currentActivity.label, currentActivity.route, searchParams, user?.id]);
+  }, [currentActivity.label, currentActivity.route, searchParamsKey, user?.id]);
 
   return (
     <MotionConfig transition={disableMotion ? { duration: 0 } : undefined}>
@@ -139,7 +142,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                 data-mobile-scroll-container={mobileRootScrollEnabled ? "true" : undefined}
                 className={`h-full min-w-0 ${!mobileRootScrollEnabled ? "overflow-hidden" : "overflow-y-auto"}`}
               >
-                <div key={`${pathname}-${searchParams.toString()}-${themeStyle}`} className="h-full">
+                <div className="h-full">
                   {children}
                 </div>
                 {showMobileNav && mobileRootScrollEnabled ? <div aria-hidden="true" className="h-[calc(env(safe-area-inset-bottom,0px)+4.25rem)]" /> : null}

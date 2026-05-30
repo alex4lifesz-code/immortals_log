@@ -318,8 +318,8 @@ export default function DashboardHomePage() {
     }
     let cancelled = false;
     Promise.all([
-      api.get<{ checkins: CheckIn[] }>("/api/checkins", { cache: "no-store" }),
-      api.get<{ users: PublicUser[] }>("/api/users/public?scope=friends", { cache: "no-store" }).catch(() => ({ users: [] })),
+      api.get<{ checkins: CheckIn[] }>("/api/checkins"),
+      api.get<{ users: PublicUser[] }>("/api/users/public?scope=friends").catch(() => ({ users: [] })),
     ])
       .then(([payload, usersPayload]) => {
         if (cancelled) return;
@@ -350,7 +350,7 @@ export default function DashboardHomePage() {
           .map((entry) => normalizeDateOnlyKey(entry.date ?? null))
           .filter((value): value is string => Boolean(value));
         setCheckInCount(mine.length);
-        setStreak(computeStreak(raw, user.id, todayKey));
+        setStreak(computeStreak(mine, user.id, todayKey));
         setActiveCheckinDates(new Set(mineDateKeys));
         setFriendInfoList(friendRows);
         setFriendCheckinData(new Map(friendCheckinDatesByUser));
@@ -402,7 +402,7 @@ export default function DashboardHomePage() {
         }
       });
     return () => { cancelled = true; };
-  }, [settings.calendarWeekStart, settings.timeZone, todayKey, user?.id]);
+  }, [settings.timeZone, todayKey, user?.id]);
 
   const checkedInToday = activeCheckinDates.has(todayKey);
 
@@ -540,11 +540,11 @@ export default function DashboardHomePage() {
       subtitle={`${greeting}, ${user?.name ?? "Cultivator"}`}
       mobileContentPaddingClass="px-2 pt-4 pb-24"
     >
-      <div className="space-y-3.5 px-0 py-0 sm:space-y-4 sm:py-1">
+      <div className="mx-auto w-full max-w-[1120px] space-y-4 px-0 py-0 sm:space-y-4 sm:py-1 lg:space-y-5">
 
         {/* Header context */}
         <section
-          className="mobile-shell-card relative overflow-hidden px-3 py-3"
+          className="mobile-shell-card relative overflow-hidden px-3 py-3 md:px-5 md:py-4"
           style={{
             ...shellStyle,
             background:
@@ -571,7 +571,7 @@ export default function DashboardHomePage() {
         {/* Today */}
         <section className="mobile-shell-card p-3" style={shellStyle}>
           <p className="mobile-card-title">{lt("Today")}</p>
-          <div className="mt-2 grid grid-cols-2 gap-2">
+          <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
             <div className="mobile-shell-card px-2.5 py-2" style={tileStyle}>
               <p className="mobile-card-title">{lt("Check-in")}</p>
               <p className="mobile-card-value mt-0.5" style={{ color: checkedInToday ? "var(--forest)" : "var(--text-primary)" }}>
@@ -580,7 +580,7 @@ export default function DashboardHomePage() {
             </div>
             <Link
               href={DASHBOARD_ROUTES.workoutHistory}
-              className="polished-focus touch-manipulation block rounded-lg border px-3 py-2 text-left transition-[transform,box-shadow,background-color,border-color] duration-200 hover:-translate-y-0.5"
+              className="polished-focus touch-manipulation block rounded-lg border px-3 py-2 text-left transition-[transform,box-shadow,background-color,border-color] duration-200 hover:-translate-y-0.5 md:px-4 md:py-3"
               style={{
                 borderColor: "color-mix(in srgb, var(--accent) 84%, var(--border))",
                 backgroundColor: "color-mix(in srgb, var(--accent) 18%, var(--surface))",
@@ -596,7 +596,7 @@ export default function DashboardHomePage() {
         {/* Stats */}
         <section className="mobile-shell-card p-3" style={shellStyle}>
           <p className="mobile-card-title mb-2.5">{lt("Your stats")}</p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             {statTiles.map(({ label, value, subline }) => (
               <div key={label} className="mobile-shell-card px-2.5 py-2.5" style={tileStyle}>
                 <p className="mobile-card-title">{label}</p>
@@ -610,7 +610,7 @@ export default function DashboardHomePage() {
         {/* Shared week navigator (you + friends) */}
         <section
           ref={weekSwipeRef}
-          className="mobile-shell-card mx-auto w-full max-w-[640px] p-3"
+          className="mobile-shell-card mx-auto w-full max-w-[920px] p-3 md:p-4"
           style={shellStyle}
         >
           <div className="mb-3 flex items-center justify-center gap-2">
