@@ -116,6 +116,43 @@ export const PATCH = withAuth(async (request, { auth, params }) => {
           throw new Error("Source exercise not found during fork");
         }
 
+        const tierIds = source.tiers.map((tier) => tier.id);
+        const variationIds = source.variations.map((variation) => variation.id);
+
+        const [tierTranslations, variationTranslations] = await Promise.all([
+          tierIds.length > 0
+            ? tx.progressionTierTranslation.findMany({
+                where: { id: { in: tierIds } },
+                select: {
+                  id: true,
+                  englishName: true,
+                  vietnameseName: true,
+                  englishDescription: true,
+                  vietnameseDescription: true,
+                  englishDifficulty: true,
+                  vietnameseDifficulty: true,
+                },
+              })
+            : Promise.resolve([]),
+          variationIds.length > 0
+            ? tx.progressionVariationTranslation.findMany({
+                where: { id: { in: variationIds } },
+                select: {
+                  id: true,
+                  englishName: true,
+                  vietnameseName: true,
+                  englishDescription: true,
+                  vietnameseDescription: true,
+                  englishDifficulty: true,
+                  vietnameseDifficulty: true,
+                },
+              })
+            : Promise.resolve([]),
+        ]);
+
+        const tierTranslationById = new Map(tierTranslations.map((translation) => [translation.id, translation]));
+        const variationTranslationById = new Map(variationTranslations.map((translation) => [translation.id, translation]));
+
         const forked = await tx.progressionExercise.create({
           data: {
             name: source.name,
@@ -179,7 +216,7 @@ export const PATCH = withAuth(async (request, { auth, params }) => {
               },
             });
 
-            const tierTranslation = await tx.progressionTierTranslation.findUnique({ where: { id: tier.id } });
+            const tierTranslation = tierTranslationById.get(tier.id);
             if (tierTranslation) {
               await tx.progressionTierTranslation.create({
                 data: {
@@ -210,7 +247,7 @@ export const PATCH = withAuth(async (request, { auth, params }) => {
               },
             });
 
-            const variationTranslation = await tx.progressionVariationTranslation.findUnique({ where: { id: variation.id } });
+            const variationTranslation = variationTranslationById.get(variation.id);
             if (variationTranslation) {
               await tx.progressionVariationTranslation.create({
                 data: {

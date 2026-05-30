@@ -2,6 +2,7 @@ import { apiSuccess, ApiErrors } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { serializeDayAssignments } from "@/lib/constants";
 import { withAuth } from "@/lib/auth/middleware";
+import { Prisma } from "@/generated/prisma/client";
 
 export const DELETE = withAuth(async (_req, { auth, params }) => {
   try {
@@ -16,31 +17,23 @@ export const DELETE = withAuth(async (_req, { auth, params }) => {
       return ApiErrors.notFound("Exercise not found");
     }
 
-    // Also cascade-delete matching ProgressionExercise(s) by name
-    const allProgressions = await prisma.progressionExercise.findMany({
-      select: {
-        id: true,
-        name: true,
-        wuxiaName: true,
-        translation: {
-          select: {
-            englishName: true,
-            vietnameseName: true,
-          },
-        },
-      },
-    });
-    const nameLower = existing.name.toLowerCase();
-    const wuxiaNameLower = existing.wuxiaName?.toLowerCase();
-    const matchingProgressions = allProgressions.filter((p) => {
-      return (
-        p.name.toLowerCase() === nameLower ||
-        (wuxiaNameLower && p.wuxiaName?.toLowerCase() === wuxiaNameLower) ||
-        p.translation?.englishName?.toLowerCase() === nameLower ||
-        (wuxiaNameLower &&
-          p.translation?.vietnameseName?.toLowerCase() === wuxiaNameLower)
-      );
-    });
+    // Also cascade-delete matching ProgressionExercise(s) by name (case-insensitive)
+    const wuxiaName = existing.wuxiaName?.trim();
+    const matchingProgressions = await prisma.$queryRaw<Array<{ id: string }>>(
+      Prisma.sql`
+        SELECT pe."id"
+        FROM "ProgressionExercise" pe
+        LEFT JOIN "ProgressionExerciseTranslation" pet ON pet."id" = pe."id"
+        WHERE lower(pe."name") = lower(${existing.name})
+           OR lower(pet."englishName") = lower(${existing.name})
+           ${wuxiaName
+             ? Prisma.sql`
+               OR lower(pe."wuxiaName") = lower(${wuxiaName})
+               OR lower(pet."vietnameseName") = lower(${wuxiaName})
+             `
+             : Prisma.empty}
+      `
+    );
 
     if (matchingProgressions.length > 0) {
       const progIds = matchingProgressions.map((p) => p.id);
@@ -84,13 +77,16 @@ export const PATCH = withAuth(async (req, { auth, params }) => {
       const name = String(body.name).trim().slice(0, 200);
       if (!name)
         return ApiErrors.badRequest("Name cannot be empty");
-      const allExercises = await prisma.exercise.findMany({
-        select: { id: true, name: true },
-      });
-      const duplicate = allExercises.find(
-        (e) => e.id !== id && e.name.toLowerCase() === name.toLowerCase()
+      const duplicate = await prisma.$queryRaw<Array<{ id: string }>>(
+        Prisma.sql`
+          SELECT "id"
+          FROM "Exercise"
+          WHERE "id" <> ${id}
+            AND lower("name") = lower(${name})
+          LIMIT 1
+        `
       );
-      if (duplicate)
+      if (duplicate.length > 0)
         return ApiErrors.conflict(`An exercise named "${name}" already exists`);
       data.name = name;
     }
@@ -184,26 +180,24 @@ export const PATCH = withAuth(async (req, { auth, params }) => {
 
     // Sync name/assignedDays changes to matching ProgressionExercise
     if (data.name || data.wuxiaName !== undefined || data.assignedDays !== undefined) {
-      const oldName = existing.name.toLowerCase();
-      const allProgs = await prisma.progressionExercise.findMany({
-        select: { id: true, name: true },
-      });
-      const matchingProgs = allProgs.filter(
-        (p) => p.name.toLowerCase() === oldName
+      const matchingProgs = await prisma.$queryRaw<Array<{ id: string }>>(
+        Prisma.sql`
+          SELECT "id"
+          FROM "ProgressionExercise"
+          WHERE lower("name") = lower(${existing.name})
+        `
       );
-      for (const prog of matchingProgs) {
-        const progUpdate: Record<string, unknown> = {};
-        if (data.name) progUpdate.name = data.name;
-        if (data.wuxiaName !== undefined)
-          progUpdate.wuxiaName = data.wuxiaName || "";
-        if (data.assignedDays !== undefined)
-          progUpdate.assignedDays = data.assignedDays;
-        if (Object.keys(progUpdate).length > 0) {
-          await prisma.progressionExercise.update({
-            where: { id: prog.id },
-            data: progUpdate,
-          });
-        }
+      const progUpdate: Record<string, unknown> = {};
+      if (data.name) progUpdate.name = data.name;
+      if (data.wuxiaName !== undefined)
+        progUpdate.wuxiaName = data.wuxiaName || "";
+      if (data.assignedDays !== undefined)
+        progUpdate.assignedDays = data.assignedDays;
+      if (matchingProgs.length > 0 && Object.keys(progUpdate).length > 0) {
+        await prisma.progressionExercise.updateMany({
+          where: { id: { in: matchingProgs.map((prog) => prog.id) } },
+          data: progUpdate,
+        });
       }
     }
 
