@@ -10,6 +10,8 @@ interface PageHeaderProps {
   className?: string;
   /** When true, renders without the bottom border and border-color style (embed inside a section that has its own divider) */
   noBorder?: boolean;
+  /** Use a flat background instead of the default gradient */
+  flatBackground?: boolean;
 }
 
 /**
@@ -25,13 +27,16 @@ export default function PageHeader({
   actions,
   className = "",
   noBorder = false,
+  flatBackground = false,
 }: PageHeaderProps) {
   return (
     <div
       className={`rounded-xl px-3 py-2.5 ${noBorder ? "" : "border"} flex items-end justify-between gap-3 ${className}`}
       style={{
         borderColor: noBorder ? "transparent" : "color-mix(in srgb, var(--ink-light) 52%, transparent)",
-        background: "linear-gradient(180deg, color-mix(in srgb, var(--surface-hover) 42%, var(--surface)) 0%, color-mix(in srgb, var(--surface) 96%, transparent) 100%)",
+        background: flatBackground
+          ? "var(--ink-deep)"
+          : "linear-gradient(180deg, color-mix(in srgb, var(--surface-hover) 42%, var(--surface)) 0%, color-mix(in srgb, var(--surface) 96%, transparent) 100%)",
       }}
     >
       <div className="min-w-0">

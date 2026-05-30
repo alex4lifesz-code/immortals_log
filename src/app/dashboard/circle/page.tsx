@@ -130,7 +130,7 @@ function getThemePalette(themeStyle: string | null | undefined): string[] {
 
 const tileStyle = {
   borderColor: "color-mix(in srgb, var(--ink-light) 40%, transparent)",
-  backgroundColor: "color-mix(in srgb, var(--ink-mid) 48%, var(--ink-deep))",
+  backgroundColor: "var(--ink-deep)",
 };
 
 const microTileStyle = {
@@ -461,7 +461,7 @@ function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendD
                           className="mx-1 my-0.5 rounded-md px-3 py-2.5"
                           style={{
                             border: "1px solid color-mix(in srgb, var(--ink-light) 40%, transparent)",
-                            backgroundColor: "color-mix(in srgb, var(--ink-mid) 48%, var(--ink-deep))",
+                            backgroundColor: "color-mix(in srgb, var(--ink-light) 12%, var(--ink-deep))",
                           }}
                         >
                           <div className="flex items-start justify-between gap-2">
@@ -500,7 +500,7 @@ function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendD
                         className="mx-1 my-0.5 rounded-md px-3 py-2.5"
                         style={{
                           border: "1px solid color-mix(in srgb, var(--ink-light) 40%, transparent)",
-                          backgroundColor: "color-mix(in srgb, var(--ink-mid) 48%, var(--ink-deep))",
+                          backgroundColor: "color-mix(in srgb, var(--ink-light) 12%, var(--ink-deep))",
                           cursor: "pointer",
                         }}
                         role="button"
@@ -1296,7 +1296,7 @@ export default function CirclePage() {
 
   const sectionShellStyle = {
     borderColor: "color-mix(in srgb, var(--ink-light) 56%, transparent)",
-    backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))",
+    backgroundColor: "var(--ink-deep)",
     boxShadow:
       "inset 0 0 0 1px color-mix(in srgb, var(--cloud-white) 2%, transparent)",
   };
@@ -1325,8 +1325,7 @@ export default function CirclePage() {
               <div
                 className="shrink-0 rounded-tl-2xl"
                 style={{
-                  backgroundColor:
-                    "color-mix(in srgb, var(--ink-deep) 94%, var(--ink-mid))",
+                  backgroundColor: "var(--ink-deep)",
                 }}
               >
                 <PageHeader
@@ -1334,6 +1333,7 @@ export default function CirclePage() {
                   title={tabs.find((t) => t.id === tab)?.label ?? lt("Feed")}
                   className="px-3 pt-3 pb-2.5"
                   noBorder
+                  flatBackground
                 />
                 <div
                   className="flex border-b"
