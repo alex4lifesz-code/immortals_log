@@ -380,10 +380,12 @@ function MobileNavBar({
         {/* ── Main Bottom Navigation Bar ── */}
         <nav
           data-mobile-bottom-nav="true"
-          className="relative flex items-end justify-around gap-0.5 border-t px-1 pt-1 pb-1.5 shadow-[0_-10px_28px_rgba(0,0,0,0.4)] backdrop-blur-md safe-area-bottom"
+          className="relative mx-1 mb-1.5 flex items-end justify-around gap-0.5 rounded-t-2xl border border-b-0 px-1 pt-1 pb-1.5 shadow-[0_-10px_28px_rgba(0,0,0,0.4)] backdrop-blur-md safe-area-bottom"
           style={{
             borderTopColor: "color-mix(in srgb, var(--ink-light) 72%, var(--border))",
-            backgroundColor: "color-mix(in srgb, var(--ink-deep) 95%, transparent)",
+            borderLeftColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)",
+            borderRightColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)",
+            background: "linear-gradient(180deg, color-mix(in srgb, var(--surface-hover) 82%, var(--surface)) 0%, color-mix(in srgb, var(--surface) 96%, black) 100%)",
           }}
         >
           <div
@@ -402,10 +404,12 @@ function MobileNavBar({
                 key={item.id}
                 whileTap={{ scale: 0.9 }}
                 aria-current={isActive ? "page" : undefined}
+                aria-label={t(item.label, terminologyMode)}
                 onClick={() => handleNavigate(item.path)}
-                className={`relative flex min-h-[60px] min-w-[68px] flex-col items-center justify-center gap-0.5 rounded-md pt-2 pb-1.5 transition-colors`}
+                className={`polished-focus touch-manipulation relative flex min-h-[60px] min-w-[68px] flex-col items-center justify-center gap-0.5 rounded-lg pt-2 pb-1.5 transition-[color,background-color,transform] duration-200`}
                 style={{
                   WebkitTapHighlightColor: 'transparent',
+                  backgroundColor: isActive ? "color-mix(in srgb, var(--accent) 16%, transparent)" : "transparent",
                   color: isActive ? "var(--text-primary)" : "var(--text-muted)",
                 }}
               >
@@ -437,9 +441,10 @@ function MobileNavBar({
             whileTap={{ scale: 0.9 }}
             onClick={() => handleNavigate(DASHBOARD_ROUTES.profile)}
             aria-label="Open profile"
-            className={`relative flex min-h-[60px] min-w-[68px] flex-col items-center justify-center gap-0.5 rounded-md pt-2 pb-1.5 transition-colors`}
+            className={`polished-focus touch-manipulation relative flex min-h-[60px] min-w-[68px] flex-col items-center justify-center gap-0.5 rounded-lg pt-2 pb-1.5 transition-[color,background-color,transform] duration-200`}
             style={{
               WebkitTapHighlightColor: 'transparent',
+              backgroundColor: isMeSectionActive ? "color-mix(in srgb, var(--accent) 16%, transparent)" : "transparent",
               color: isMeSectionActive ? "var(--text-primary)" : "var(--text-muted)",
             }}
           >

@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { ReactNode, useEffect, type CSSProperties } from "react";
+import { KeyboardEvent as ReactKeyboardEvent, ReactNode, useEffect, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 
@@ -30,6 +30,16 @@ export default function GlowCard({
   onClick,
   style,
 }: GlowCardProps) {
+  const isInteractive = Boolean(onClick);
+
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (!onClick) return;
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onClick();
+    }
+  };
+
   const glowBase = {
     jade: "color-mix(in srgb, var(--jade) 22%, transparent)",
     crimson: "color-mix(in srgb, var(--danger) 22%, transparent)",
@@ -41,12 +51,15 @@ export default function GlowCard({
   return (
     <div
       onClick={onClick}
+      onKeyDown={handleKeyDown}
+      role={isInteractive ? "button" : undefined}
+      tabIndex={isInteractive ? 0 : undefined}
       className={`
-        surface-panel interactive-panel p-4
-        transition-[transform,box-shadow,border-color] duration-150 ease-out
-        ${hoverable ? "hover:-translate-y-0.5 hover:scale-[1.005] active:scale-[0.985]" : ""}
+        polished-focus surface-panel interactive-panel p-4
+        transition-[transform,box-shadow,border-color,background-color] duration-200 ease-out
+        ${hoverable ? "hover:-translate-y-0.5 hover:scale-[1.005] active:scale-[0.99]" : ""}
         ${hoverable ? glowHover[glow] : ""}
-        ${onClick ? "cursor-pointer" : ""}
+        ${isInteractive ? "cursor-pointer touch-manipulation" : ""}
         ${className}
       `}
       style={{

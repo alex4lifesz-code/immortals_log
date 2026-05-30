@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import PageLayout from "@/components/layout/PageLayout";
 import { useAppContext } from "@/context/AppContext";
@@ -30,12 +30,6 @@ type PublicUser = {
 type WeightTrend = {
   deltaKg: number;
   daysBetween: number;
-};
-
-type FriendWeekSection = {
-  userId: string;
-  name: string;
-  days: Array<{ key: string; label: string; active: boolean; isToday: boolean }>;
 };
 
 function shiftDateKey(dateKey: string, deltaDays: number): string {
@@ -216,7 +210,7 @@ export default function DashboardHomePage() {
   const { user } = useAuth();
   const { settings } = useDisplaySettings();
   const weightUnit = settings.defaultWeightUnit ?? "kg";
-  const lt = (text: string) => translateEnglishToLanguage(text, settings.languageMode);
+  const lt = useCallback((text: string) => translateEnglishToLanguage(text, settings.languageMode), [settings.languageMode]);
 
   const [checkInCount, setCheckInCount] = useState<number | null>(null);
   const [streak, setStreak] = useState<number | null>(null);
@@ -250,15 +244,15 @@ export default function DashboardHomePage() {
     }),
   };
 
-  const goToPreviousWeek = () => {
+  const goToPreviousWeek = useCallback(() => {
     setWeekTransitionDirection(-1);
     setWeekOffset((previous) => Math.max(minWeekOffset, previous - 1));
-  };
+  }, [minWeekOffset]);
 
-  const goToNextWeek = () => {
+  const goToNextWeek = useCallback(() => {
     setWeekTransitionDirection(1);
     setWeekOffset((previous) => Math.min(0, previous + 1));
-  };
+  }, []);
 
   const todayKey = useMemo(() => getTodayInTimeZone(settings.timeZone), [settings.timeZone]);
 
@@ -308,7 +302,7 @@ export default function DashboardHomePage() {
       el.removeEventListener("touchmove", onMove);
       el.removeEventListener("touchend", onEnd);
     };
-  }, []);
+  }, [goToNextWeek, goToPreviousWeek]);
 
   useEffect(() => {
     if (!user?.id) {
@@ -414,8 +408,7 @@ export default function DashboardHomePage() {
 
   const weekLabel = useMemo(
     () => lt(buildWeekLabel(weekOffset, todayKey, settings.calendarWeekStart, settings.timeZone)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [weekOffset, todayKey, settings.calendarWeekStart, settings.timeZone, settings.languageMode]
+    [lt, weekOffset, todayKey, settings.calendarWeekStart, settings.timeZone]
   );
 
   const displayWeight = useMemo(() => {
@@ -431,8 +424,7 @@ export default function DashboardHomePage() {
     const unitLabel = weightUnit === "lbs" ? "lb" : "kg";
     const daysLabel = weightTrend.daysBetween === 1 ? lt("day") : lt("days");
     return `${sign}${delta.toFixed(1)} ${unitLabel} ${lt("since last check-in")} (${weightTrend.daysBetween} ${daysLabel})`;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weightTrend, weightUnit, settings.languageMode]);
+  }, [lt, weightTrend, weightUnit]);
 
   const checkInStatusLabel = checkedInToday ? lt("Checked in") : lt("Not checked in");
   const statTiles = [
@@ -548,10 +540,18 @@ export default function DashboardHomePage() {
       subtitle={`${greeting}, ${user?.name ?? "Cultivator"}`}
       mobileContentPaddingClass="px-2 pt-4 pb-24"
     >
-      <div className="space-y-3 px-0 py-0 sm:space-y-4 sm:py-1">
+      <div className="space-y-3.5 px-0 py-0 sm:space-y-4 sm:py-1">
 
         {/* Header context */}
-        <section className="rounded-xl border px-3 py-2.5" style={shellStyle}>
+        <section
+          className="mobile-shell-card relative overflow-hidden px-3 py-3"
+          style={{
+            ...shellStyle,
+            background:
+              "radial-gradient(120% 180% at 100% -40%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 58%), radial-gradient(140% 160% at -10% 120%, color-mix(in srgb, var(--gold) 16%, transparent), transparent 62%), var(--surface-panel)",
+          }}
+        >
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-px" style={{ background: "linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--accent) 38%, transparent) 50%, transparent 100%)" }} />
           <div className="flex items-end justify-between gap-3">
             <div>
               <p className="text-[10px] uppercase tracking-[0.14em]" style={{ color: "var(--text-muted)" }}>{lt("Cultivation Path")}</p>
@@ -561,7 +561,7 @@ export default function DashboardHomePage() {
             </div>
             <div className="text-right">
               <p className="text-[10px] uppercase tracking-[0.14em]" style={{ color: "var(--text-muted)" }}>{lt("Day")}</p>
-              <p className="mt-0.5 text-[22px] font-semibold leading-none" style={{ color: "var(--text-primary)" }}>
+              <p className="mt-0.5 text-[23px] font-semibold leading-none" style={{ color: "var(--text-primary)", textShadow: "0 0 12px color-mix(in srgb, var(--accent) 18%, transparent)" }}>
                 {cultivationDay ?? "-"}
               </p>
             </div>
@@ -569,18 +569,18 @@ export default function DashboardHomePage() {
         </section>
 
         {/* Today */}
-        <section className="rounded-xl border p-3" style={shellStyle}>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>{lt("Today")}</p>
+        <section className="mobile-shell-card p-3" style={shellStyle}>
+          <p className="mobile-card-title">{lt("Today")}</p>
           <div className="mt-2 grid grid-cols-2 gap-2">
-            <div className="rounded-lg border px-2.5 py-2" style={tileStyle}>
-              <p className="text-[9px] uppercase tracking-[0.1em]" style={{ color: "var(--text-muted)" }}>{lt("Check-in")}</p>
-              <p className="mt-0.5 text-[12px] font-semibold" style={{ color: checkedInToday ? "var(--forest)" : "var(--text-primary)" }}>
+            <div className="mobile-shell-card px-2.5 py-2" style={tileStyle}>
+              <p className="mobile-card-title">{lt("Check-in")}</p>
+              <p className="mobile-card-value mt-0.5" style={{ color: checkedInToday ? "var(--forest)" : "var(--text-primary)" }}>
                 {checkInStatusLabel}
               </p>
             </div>
             <Link
               href={DASHBOARD_ROUTES.workoutHistory}
-              className="block rounded-lg border px-3 py-2 text-left"
+              className="polished-focus touch-manipulation block rounded-lg border px-3 py-2 text-left transition-[transform,box-shadow,background-color,border-color] duration-200 hover:-translate-y-0.5"
               style={{
                 borderColor: "color-mix(in srgb, var(--accent) 84%, var(--border))",
                 backgroundColor: "color-mix(in srgb, var(--accent) 18%, var(--surface))",
@@ -588,20 +588,20 @@ export default function DashboardHomePage() {
               }}
             >
               <span className="block text-[13px] font-semibold" style={{ color: "var(--accent)" }}>{lt("Start workout")}</span>
-              <span className="mt-0.5 block text-[10px]" style={{ color: "var(--text-secondary)" }}>{lt("Open your training log and begin today's session")}</span>
+              <span className="mobile-card-copy mt-0.5 block">{lt("Open your training log and begin today's session")}</span>
             </Link>
           </div>
         </section>
 
         {/* Stats */}
-        <section className="rounded-xl border p-3" style={shellStyle}>
-          <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>{lt("Your stats")}</p>
+        <section className="mobile-shell-card p-3" style={shellStyle}>
+          <p className="mobile-card-title mb-2.5">{lt("Your stats")}</p>
           <div className="grid grid-cols-3 gap-2">
             {statTiles.map(({ label, value, subline }) => (
-              <div key={label} className="rounded-lg border px-2.5 py-2.5" style={tileStyle}>
-                <p className="text-[10px] uppercase tracking-[0.1em]" style={{ color: "var(--text-muted)" }}>{label}</p>
-                <p className="mt-1 text-[13px] font-semibold" style={{ color: "var(--text-primary)" }}>{value}</p>
-                <p className="mt-0.5 text-[9px]" style={{ color: "var(--text-muted)" }}>{subline}</p>
+              <div key={label} className="mobile-shell-card px-2.5 py-2.5" style={tileStyle}>
+                <p className="mobile-card-title">{label}</p>
+                <p className="mobile-card-value mt-1">{value}</p>
+                <p className="mobile-card-copy mt-0.5" style={{ color: "var(--text-muted)" }}>{subline}</p>
               </div>
             ))}
           </div>
@@ -610,14 +610,14 @@ export default function DashboardHomePage() {
         {/* Shared week navigator (you + friends) */}
         <section
           ref={weekSwipeRef}
-          className="mx-auto w-full max-w-[640px] rounded-xl border p-3"
+          className="mobile-shell-card mx-auto w-full max-w-[640px] p-3"
           style={shellStyle}
         >
           <div className="mb-3 flex items-center justify-center gap-2">
             <button
               type="button"
               onClick={goToPreviousWeek}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md border text-[16px]"
+              className="polished-focus touch-manipulation inline-flex h-9 w-9 items-center justify-center rounded-md border text-[18px]"
               style={{
                 color: "var(--text-muted)",
                 borderColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)",
@@ -650,7 +650,7 @@ export default function DashboardHomePage() {
             <button
               type="button"
               onClick={goToNextWeek}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md border text-[16px]"
+              className="polished-focus touch-manipulation inline-flex h-9 w-9 items-center justify-center rounded-md border text-[18px]"
               style={{
                 color: "var(--text-muted)",
                 borderColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)",

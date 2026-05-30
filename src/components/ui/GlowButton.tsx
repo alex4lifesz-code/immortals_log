@@ -26,9 +26,9 @@ const glowStyles = {
 };
 
 const sizeStyles = {
-  sm: "px-2.5 py-1 text-xs",
-  md: "px-4 py-2 text-sm",
-  lg: "px-6 py-3 text-base",
+  sm: "min-h-9 px-3 py-1.5 text-xs",
+  md: "min-h-11 px-4 py-2 text-sm",
+  lg: "min-h-12 px-6 py-3 text-base",
 };
 
 export default function GlowButton({
@@ -42,9 +42,10 @@ export default function GlowButton({
   return (
     <button
       className={`
-        border rounded-lg font-medium cursor-pointer
-        transition-[background-color,border-color,transform] duration-150 ease-out
-        hover:scale-[1.03] active:scale-[0.97]
+        polished-focus touch-manipulation border rounded-lg font-medium cursor-pointer
+        transition-[background-color,border-color,box-shadow,transform,color] duration-200 ease-out
+        hover:scale-[1.02] active:scale-[0.98]
+        disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100 disabled:active:scale-100
         ${variantStyles[variant]}
         ${sizeStyles[size]}
         ${glow ? glowStyles[variant] : ""}

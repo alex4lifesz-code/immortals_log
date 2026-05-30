@@ -12,11 +12,13 @@ export default function MobileThemePreview({ title, colors, active, onClick, fav
   return (
     <button
       onClick={onClick}
-      className={`rounded-2xl border p-3 text-left transition-colors ${active ? "border-jade-glow bg-ink-mid/70" : "border-border bg-ink-deep"}`}
+      className={`polished-focus touch-manipulation rounded-2xl border p-3 text-left transition-[border-color,background-color,transform] duration-200 hover:-translate-y-0.5 ${active ? "border-jade-glow bg-ink-mid/70" : "border-border bg-ink-deep"}`}
+      aria-pressed={active}
+      aria-label={`Select theme ${title}`}
     >
       <div className="mb-2 flex items-center justify-between">
         <span className="text-sm font-semibold text-cloud-white">{title}</span>
-        {favorite ? <span className="text-[10px] text-gold-glow">Preferred</span> : null}
+        {favorite ? <span className="text-[11px] text-gold-glow">Preferred</span> : null}
       </div>
       <div className="flex gap-1.5">
         {colors.map((color) => (

@@ -45,7 +45,12 @@ const SearchField = forwardRef<HTMLInputElement, SearchFieldProps>(function Sear
         type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className={`w-full rounded-md border pl-8 pr-8 outline-none ${className}`.trim()}
+        className={`polished-focus touch-manipulation h-11 w-full rounded-lg border pl-8 pr-10 text-sm transition-[border-color,box-shadow,background-color] duration-200 ${className}`.trim()}
+        style={{
+          borderColor: "color-mix(in srgb, var(--border) 88%, transparent)",
+          backgroundColor: "color-mix(in srgb, var(--surface) 94%, black)",
+          color: "var(--text-primary)",
+        }}
       />
 
       {hasValue ? (
@@ -58,11 +63,11 @@ const SearchField = forwardRef<HTMLInputElement, SearchFieldProps>(function Sear
             }
             onChange("");
           }}
-          className={`absolute inset-y-0 right-2.5 flex items-center text-[13px] font-semibold leading-none transition-colors hover:text-cloud-white ${clearButtonClassName}`.trim()}
+          className={`polished-focus touch-manipulation absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-[13px] font-semibold leading-none transition-colors hover:text-cloud-white ${clearButtonClassName}`.trim()}
           style={{ color: "var(--text-muted)" }}
           aria-label="Clear search"
         >
-          x
+          ×
         </button>
       ) : null}
     </div>
