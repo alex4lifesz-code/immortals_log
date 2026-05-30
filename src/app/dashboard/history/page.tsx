@@ -325,6 +325,7 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true);
   const [physique, setPhysique] = useState<UserPhysiqueSettings>(DEFAULT_USER_PHYSIQUE);
   const [visibleUsers, setVisibleUsers] = useState<Array<{ id: string; name: string; username: string }>>([]);
+  const [mobileToolbarSearchOpen, setMobileToolbarSearchOpen] = useState(false);
   const [mobileSearchQuery, setMobileSearchQuery] = useState("");
   const [mobileHistoryFilterOpen, setMobileHistoryFilterOpen] = useState(false);
   const [mobileHistoryCategory, setMobileHistoryCategory] = useState("all");
@@ -2087,6 +2088,7 @@ export default function HistoryPage() {
       setTrainMode("train");
       setMobileExerciseDrawerExerciseId(null);
       setMobileLogFabOpen(false);
+      setMobileToolbarSearchOpen(false);
       setMobileSearchQuery("");
       setMobileHistoryFilterOpen(false);
       setMobileHistoryCategory("all");
@@ -2251,70 +2253,110 @@ export default function HistoryPage() {
                                 </div>
                               ) : null}
 
-                              <div className="mt-2 flex items-center gap-2">
-                                <SearchField
-                                  value={trainMode === "combo" ? comboSearchQuery : mobileSearchQuery}
-                                  onChange={trainMode === "combo" ? setComboSearchQuery : setMobileSearchQuery}
-                                  placeholder={trainMode === "combo" ? lt("Search combo routines") : lt("Search exercises")}
-                                  aria-label={trainMode === "combo" ? lt("Search combo routines") : lt("Search exercises")}
-                                  wrapperClassName="min-w-0 flex-1"
-                                  className="h-8 min-w-0 text-sm"
-                                  style={{
-                                    borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
-                                    backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
-                                    color: "var(--cloud-white)",
-                                  }}
-                                />
-                                {trainMode === "train" ? (
+                              <div className="mt-2 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 overflow-hidden">
+                                <div className="min-w-0 overflow-hidden">
+                                  <AnimatePresence mode="wait" initial={false}>
+                                    {mobileToolbarSearchOpen ? (
+                                      <motion.div
+                                        key="mobile-inline-search"
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: -10 }}
+                                        transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                                        className="min-w-0"
+                                      >
+                                        <SearchField
+                                          autoFocus
+                                          value={trainMode === "combo" ? comboSearchQuery : mobileSearchQuery}
+                                          onChange={trainMode === "combo" ? setComboSearchQuery : setMobileSearchQuery}
+                                          placeholder={trainMode === "combo" ? lt("Search combo routines") : lt("Search exercises")}
+                                          aria-label={trainMode === "combo" ? lt("Search combo routines") : lt("Search exercises")}
+                                          wrapperClassName="min-w-0 w-full overflow-hidden rounded-md"
+                                          className="h-8 min-w-0 w-full rounded-md text-sm"
+                                          clearButtonClassName="h-6 w-6 text-[11px]"
+                                          style={{
+                                            borderColor: "color-mix(in srgb, var(--ink-light) 70%, transparent)",
+                                            backgroundColor: "color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep))",
+                                            color: "var(--cloud-white)",
+                                          }}
+                                        />
+                                      </motion.div>
+                                    ) : !isFriendTrainOverlay ? (
+                                      <motion.div
+                                        key="mobile-shortcuts-row"
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: -10 }}
+                                        transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                                        className="flex min-w-0 items-center gap-1.5 overflow-x-auto whitespace-nowrap pb-0.5 scrollbar-hide"
+                                        aria-label={lt("Me shortcuts")}
+                                      >
+                                        {meShortcutItems.map((item) => {
+                                          const isActive = pathname === item.path || pathname?.startsWith(`${item.path}/`);
+                                          return (
+                                            <button
+                                              key={`train-me-shortcut-${item.id}`}
+                                              type="button"
+                                              onClick={() => router.push(item.path)}
+                                              className="inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors"
+                                              style={{
+                                                borderColor: isActive
+                                                  ? "color-mix(in srgb, var(--accent) 56%, transparent)"
+                                                  : "color-mix(in srgb, var(--ink-light) 54%, transparent)",
+                                                backgroundColor: isActive
+                                                  ? "color-mix(in srgb, var(--accent) 14%, var(--ink-deep))"
+                                                  : "color-mix(in srgb, var(--ink-mid) 74%, var(--ink-deep))",
+                                                color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
+                                              }}
+                                            >
+                                              <span>{item.label}</span>
+                                            </button>
+                                          );
+                                        })}
+                                      </motion.div>
+                                    ) : (
+                                      <div key="mobile-toolbar-spacer" className="h-8" />
+                                    )}
+                                  </AnimatePresence>
+                                </div>
+
+                                <div className="shrink-0 flex items-center gap-2">
                                   <button
-                                    ref={mobileHistoryFilterTriggerRef}
                                     type="button"
-                                    onClick={() => setMobileHistoryFilterOpen(true)}
+                                    onClick={() => setMobileToolbarSearchOpen((prev) => !prev)}
                                     className="theme-control-btn relative inline-flex h-8 w-8 items-center justify-center rounded-md border transition-colors"
-                                    aria-label={lt("Open filters")}
-                                    aria-haspopup="dialog"
-                                    aria-expanded={mobileHistoryFilterOpen}
-                                    aria-controls="mobile-history-filter-drawer"
+                                    aria-label={mobileToolbarSearchOpen ? lt("Close exercise search") : lt("Open exercise search")}
+                                    aria-expanded={mobileToolbarSearchOpen}
                                   >
                                     <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 5h18M6 12h12m-9 7h6" />
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-4.35-4.35m1.85-5.15a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
                                     </svg>
-                                    {(mobileHistoryCategory !== "all" || mobileHistorySort !== "recent" || mobileHistoryRecency !== "all") ? (
+                                    {(trainMode === "combo" ? comboSearchQuery.trim().length > 0 : mobileSearchQuery.trim().length > 0) ? (
                                       <span className="absolute right-0.5 top-1 h-2 w-2 rounded-full" style={{ backgroundColor: "var(--accent)" }} />
                                     ) : null}
                                   </button>
-                                ) : null}
-                              </div>
 
-                              {!isFriendTrainOverlay && (
-                                <div
-                                  className="mt-2 flex items-center gap-1.5 overflow-x-auto whitespace-nowrap pb-0.5 scrollbar-hide"
-                                  aria-label={lt("Me shortcuts")}
-                                >
-                                  {meShortcutItems.map((item) => {
-                                    const isActive = pathname === item.path || pathname?.startsWith(`${item.path}/`);
-                                    return (
-                                      <button
-                                        key={`train-me-shortcut-${item.id}`}
-                                        type="button"
-                                        onClick={() => router.push(item.path)}
-                                        className="inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors"
-                                        style={{
-                                          borderColor: isActive
-                                            ? "color-mix(in srgb, var(--accent) 56%, transparent)"
-                                            : "color-mix(in srgb, var(--ink-light) 54%, transparent)",
-                                          backgroundColor: isActive
-                                            ? "color-mix(in srgb, var(--accent) 14%, var(--ink-deep))"
-                                            : "color-mix(in srgb, var(--ink-mid) 74%, var(--ink-deep))",
-                                          color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
-                                        }}
-                                      >
-                                        <span>{item.label}</span>
-                                      </button>
-                                    );
-                                  })}
+                                  {trainMode === "train" ? (
+                                    <button
+                                      ref={mobileHistoryFilterTriggerRef}
+                                      type="button"
+                                      onClick={() => setMobileHistoryFilterOpen(true)}
+                                      className="theme-control-btn relative inline-flex h-8 w-8 items-center justify-center rounded-md border transition-colors"
+                                      aria-label={lt("Open filters")}
+                                      aria-haspopup="dialog"
+                                      aria-expanded={mobileHistoryFilterOpen}
+                                      aria-controls="mobile-history-filter-drawer"
+                                    >
+                                      <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 5h18M6 12h12m-9 7h6" />
+                                      </svg>
+                                      {(mobileHistoryCategory !== "all" || mobileHistorySort !== "recent" || mobileHistoryRecency !== "all") ? (
+                                        <span className="absolute right-0.5 top-1 h-2 w-2 rounded-full" style={{ backgroundColor: "var(--accent)" }} />
+                                      ) : null}
+                                    </button>
+                                  ) : null}
                                 </div>
-                              )}
+                              </div>
 
 
                             </>
