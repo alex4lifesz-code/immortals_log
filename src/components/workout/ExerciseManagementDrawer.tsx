@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import ExerciseImageBox from "@/components/exercise/ExerciseImageBox";
 import SearchField from "@/components/ui/SearchField";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
+import { useDrawerA11y } from "@/hooks/useDrawerA11y";
 import {
   DAY_ABBREVIATIONS,
   DAY_LETTERS,
@@ -440,16 +441,26 @@ export default function ExerciseManagementDrawer({
   const [filterOpen, setFilterOpen] = useState(false);
   const [expandedExerciseId, setExpandedExerciseId] = useState<string | null>(null);
   const [updatingExerciseId, setUpdatingExerciseId] = useState<string | null>(null);
+  const mainDrawerRef = useRef<HTMLElement | null>(null);
+  const filterDrawerRef = useRef<HTMLElement | null>(null);
+  const mainDrawerCloseButtonRef = useRef<HTMLButtonElement | null>(null);
+  const filterTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const filterFirstFieldRef = useRef<HTMLSelectElement | null>(null);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const onEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
+  useDrawerA11y({
+    active: isOpen && !filterOpen,
+    containerRef: mainDrawerRef,
+    initialFocusRef: mainDrawerCloseButtonRef,
+    onEscape: onClose,
+  });
 
-    document.addEventListener("keydown", onEscape);
-    return () => document.removeEventListener("keydown", onEscape);
-  }, [isOpen, onClose]);
+  useDrawerA11y({
+    active: isOpen && filterOpen,
+    containerRef: filterDrawerRef,
+    initialFocusRef: filterFirstFieldRef,
+    restoreFocusRef: filterTriggerRef,
+    onEscape: () => setFilterOpen(false),
+  });
 
   const availableTypes = useMemo(() => {
     const set = new Set<string>();
@@ -589,11 +600,16 @@ export default function ExerciseManagementDrawer({
 
           <motion.aside
             key="exercise-management-panel"
+            ref={mainDrawerRef}
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
             className="fixed inset-y-0 right-0 z-[201] overflow-hidden border-l safe-area-top safe-area-bottom safe-area-right"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Exercise allocation drawer"
+            aria-hidden={filterOpen ? true : undefined}
             style={{
               left: "64px",
               borderLeftColor: "color-mix(in srgb, var(--ink-light) 72%, transparent)",
@@ -606,6 +622,7 @@ export default function ExerciseManagementDrawer({
                   <div className="px-3 pt-[calc(env(safe-area-inset-top,0px)+10px)] pb-2.5" style={{ backgroundColor: "color-mix(in srgb, var(--ink-deep) 94%, var(--ink-mid))" }}>
                     <div className="flex items-center gap-2">
                       <button
+                        ref={mainDrawerCloseButtonRef}
                         type="button"
                         onClick={onClose}
                         className="inline-flex h-9 w-9 items-center justify-center rounded-md"
@@ -636,10 +653,14 @@ export default function ExerciseManagementDrawer({
                         }}
                       />
                       <button
+                        ref={filterTriggerRef}
                         type="button"
                         onClick={() => setFilterOpen(true)}
                         className="theme-control-btn relative inline-flex h-8 w-8 items-center justify-center rounded-md border transition-colors"
                         aria-label="Open allocation filters"
+                        aria-haspopup="dialog"
+                        aria-expanded={filterOpen}
+                        aria-controls="allocation-filter-drawer"
                       >
                         <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M3 5h18M6 12h12m-9 7h6" />
@@ -726,11 +747,16 @@ export default function ExerciseManagementDrawer({
                       />
                       <motion.aside
                         key="allocation-filter-drawer"
+                        ref={filterDrawerRef}
+                        id="allocation-filter-drawer"
                         initial={{ x: "100%", opacity: 0.98 }}
                         animate={{ x: 0, opacity: 1 }}
                         exit={{ x: "100%", opacity: 0.98 }}
                         transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
                         className="fixed inset-y-0 right-0 z-[250] flex max-h-[100dvh] w-[min(22rem,92vw)] flex-col overflow-hidden border-l shadow-2xl safe-area-top safe-area-bottom safe-area-right"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="Allocation filters"
                         style={{
                           borderColor: "color-mix(in srgb, var(--jade-glow) 18%, var(--ink-light))",
                           background: "linear-gradient(180deg, color-mix(in srgb, var(--ink-dark) 98%, transparent) 0%, color-mix(in srgb, var(--ink-mid) 92%, transparent) 100%)",
@@ -763,6 +789,7 @@ export default function ExerciseManagementDrawer({
                             <div>
                               <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">Training day</label>
                               <select
+                                ref={filterFirstFieldRef}
                                 value={dayFilter == null ? "all" : String(dayFilter)}
                                 onChange={(event) => setDayFilter(event.target.value === "all" ? null : Number(event.target.value))}
                                 className="h-11 w-full rounded-xl border px-3 text-sm outline-none"

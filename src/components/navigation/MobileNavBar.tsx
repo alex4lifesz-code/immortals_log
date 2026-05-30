@@ -382,11 +382,9 @@ function MobileNavBar({
           data-mobile-bottom-nav="true"
           className="mobile-bottom-nav-polish relative mx-1 mb-1.5 flex items-end justify-around gap-0.5 rounded-2xl border px-1 pt-1 pb-1.5 shadow-[0_-10px_28px_rgba(0,0,0,0.4)] backdrop-blur-md safe-area-bottom"
           style={{
-            borderTopColor: "color-mix(in srgb, var(--ink-light) 72%, var(--border))",
-            borderLeftColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)",
-            borderRightColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)",
-            borderBottomColor: "color-mix(in srgb, var(--ink-light) 72%, var(--border))",
+            borderColor: "color-mix(in srgb, var(--ink-light) 58%, var(--border))",
             background: "linear-gradient(180deg, color-mix(in srgb, var(--surface-hover) 82%, var(--surface)) 0%, color-mix(in srgb, var(--surface) 96%, black) 100%)",
+            boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--cloud-white) 3%, transparent), 0 -10px 28px rgba(0,0,0,0.4)",
           }}
         >
           <div

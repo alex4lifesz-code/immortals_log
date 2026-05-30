@@ -27,6 +27,12 @@ type TimedUnit = TimedUnitPref;
 type WeightUnit = "kg" | "lbs";
 type SessionPanelId = "exercise" | "details" | "format" | "session" | "notes" | "review";
 type SetRow = { id: string; value: string; reps: string };
+type ValidationState = {
+  exercise?: string;
+  customExerciseName?: string;
+  setMessage?: string;
+  invalidSetIds: string[];
+};
 type ExistingLogPayload = {
   id: string;
   exerciseId: string;
@@ -48,14 +54,7 @@ type ExistingLogPayload = {
   createdAt: string;
 };
 
-const SESSION_PANELS: Array<{ id: SessionPanelId; label: string; description: string }> = [
-  { id: "exercise", label: "Exercise", description: "Pick what you trained" },
-  { id: "details", label: "Details", description: "Level and variation" },
-  { id: "format", label: "Format", description: "Weight or time" },
-  { id: "session", label: "Session", description: "Date and sets" },
-  { id: "notes", label: "Notes", description: "Optional notes" },
-  { id: "review", label: "Review", description: "Check and save" },
-];
+const SESSION_PANEL_IDS: SessionPanelId[] = ["exercise", "details", "format", "session", "notes", "review"];
 
 function createSetRow(seed: number): SetRow {
   return { id: `set-${Date.now()}-${seed}`, value: "", reps: "" };
@@ -154,10 +153,91 @@ function buildEditSnapshot(input: {
   });
 }
 
+function parseExistingNotesAndExtraSets(input: {
+  notes: string | null | undefined;
+  isTimedMode: boolean;
+  timedUnit: TimedUnit;
+  weightUnit: WeightUnit;
+  logId: string;
+}): { baseNotes: string; extraSets: SetRow[] } {
+  const rawNotes = typeof input.notes === "string" ? input.notes.trim() : "";
+  if (!rawNotes) {
+    return { baseNotes: "", extraSets: [] };
+  }
+
+  const marker = "\n\nExtra sets:";
+  const markerIndex = rawNotes.indexOf(marker);
+  const startsWithMarker = rawNotes.startsWith("Extra sets:");
+  const baseNotes = markerIndex >= 0
+    ? rawNotes.slice(0, markerIndex).trim()
+    : startsWithMarker
+      ? ""
+      : rawNotes;
+
+  const summarySource = markerIndex >= 0
+    ? rawNotes.slice(markerIndex + marker.length).trim()
+    : startsWithMarker
+      ? rawNotes.slice("Extra sets:".length).trim()
+      : "";
+
+  if (!summarySource) {
+    return { baseNotes, extraSets: [] };
+  }
+
+  const extraSets = summarySource
+    .split(" | ")
+    .map((entry, index) => {
+      const match = entry.match(/^Set\s+\d+:\s*(.*?)\s*\/\s*(.*?)$/i);
+      if (!match) return null;
+
+      const rawValueLabel = match[1]?.trim() ?? "";
+      const rawRepsLabel = match[2]?.trim() ?? "";
+
+      let nextValue = "";
+      if (rawValueLabel && rawValueLabel !== "-") {
+        if (input.isTimedMode) {
+          const secondsMatch = rawValueLabel.match(/^([+-]?[\d.]+)\s*s$/i);
+          const parsedSeconds = secondsMatch ? Number.parseFloat(secondsMatch[1]) : Number.parseFloat(rawValueLabel);
+          if (Number.isFinite(parsedSeconds)) {
+            nextValue = formatTimedInputSeconds(parsedSeconds, input.timedUnit);
+          }
+        } else {
+          const kgMatch = rawValueLabel.match(/^([+-]?[\d.]+)\s*kg$/i);
+          const parsedKg = kgMatch ? Number.parseFloat(kgMatch[1]) : Number.parseFloat(rawValueLabel);
+          if (Number.isFinite(parsedKg)) {
+            const displayValue = input.weightUnit === "lbs" ? kgToLbs(parsedKg) : parsedKg;
+            nextValue = formatInputNumber(displayValue);
+          }
+        }
+      }
+
+      const repsMatch = rawRepsLabel.match(/^([+-]?\d+)/);
+      const parsedReps = repsMatch ? Number.parseInt(repsMatch[1], 10) : Number.NaN;
+      const nextReps = Number.isFinite(parsedReps) ? String(Math.max(0, parsedReps)) : "";
+
+      return {
+        id: `${input.logId}-set-extra-${index + 4}`,
+        value: nextValue,
+        reps: nextReps,
+      } satisfies SetRow;
+    })
+    .filter((entry): entry is SetRow => Boolean(entry));
+
+  return { baseNotes, extraSets };
+}
+
 export default function TrainInputCanvasPage() {
   const { user } = useAuth();
   const { settings } = useDisplaySettings();
   const lt = (text: string) => translateEnglishToLanguage(text, settings.languageMode);
+  const sessionPanels: Array<{ id: SessionPanelId; label: string; description: string }> = [
+    { id: "exercise", label: lt("Exercise"), description: lt("Pick what you trained") },
+    { id: "details", label: lt("Details"), description: lt("Level and variation") },
+    { id: "format", label: lt("Format"), description: lt("Weight or time") },
+    { id: "session", label: lt("Session"), description: lt("Date and sets") },
+    { id: "notes", label: lt("Notes"), description: lt("Optional notes") },
+    { id: "review", label: lt("Review"), description: lt("Check and save") },
+  ];
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -209,6 +289,8 @@ export default function TrainInputCanvasPage() {
   const [highlightedSetId, setHighlightedSetId] = useState<string | null>(null);
   const [highlightedField, setHighlightedField] = useState<string | null>(null);
   const [confirmedPanels, setConfirmedPanels] = useState<SessionPanelId[]>([]);
+  const [validation, setValidation] = useState<ValidationState>({ invalidSetIds: [] });
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const previousTimedUnitRef = useRef<TimedUnit>(timedUnit);
   const prefillStepperInitializedRef = useRef(false);
 
@@ -324,11 +406,11 @@ export default function TrainInputCanvasPage() {
             .map((set) => ({ id: set.id, value: set.value, reps: set.reps }));
           if (restored.length) setSets(restored);
         }
-        if (draft.activePanel && SESSION_PANELS.some((panel) => panel.id === draft.activePanel)) {
+        if (draft.activePanel && SESSION_PANEL_IDS.some((panelId) => panelId === draft.activePanel)) {
           setActivePanel(draft.activePanel);
         }
         if (Array.isArray(draft.confirmedPanels)) {
-          setConfirmedPanels(draft.confirmedPanels.filter((id): id is SessionPanelId => SESSION_PANELS.some((panel) => panel.id === id)));
+          setConfirmedPanels(draft.confirmedPanels.filter((id): id is SessionPanelId => SESSION_PANEL_IDS.some((panelId) => panelId === id)));
         }
       }
     } catch (err) {
@@ -410,7 +492,7 @@ export default function TrainInputCanvasPage() {
   useEffect(() => {
     const step = searchParams.get("step");
     if (!step) return;
-    if (SESSION_PANELS.some((panel) => panel.id === step)) {
+    if (SESSION_PANEL_IDS.some((panelId) => panelId === step)) {
       setActivePanel(step as SessionPanelId);
     }
   }, [searchParams]);
@@ -487,9 +569,8 @@ export default function TrainInputCanvasPage() {
         const nextSelectedSetupOption = log.setupOption || "";
         const nextModifierKg = parseSignedModifierKg(log.modifier) ?? 0;
         const nextTrainingDate = new Date(log.createdAt).toISOString().slice(0, 10);
-        const nextNotes = log.notes || "";
         const nextValueMode: ValueMode = usesTimedMetrics ? "timed" : "weight";
-        const nextSets = [
+        const primarySets = [
           {
             id: `${log.id}-set-1`,
             value: usesTimedMetrics ? formatTimedInputSeconds(log.holdTime, timedUnit) : displayWeight(log.weight1),
@@ -506,6 +587,15 @@ export default function TrainInputCanvasPage() {
             reps: log.reps3 != null ? String(log.reps3) : "",
           },
         ];
+        const parsedExtra = parseExistingNotesAndExtraSets({
+          notes: log.notes,
+          isTimedMode: usesTimedMetrics,
+          timedUnit,
+          weightUnit,
+          logId: log.id,
+        });
+        const nextNotes = parsedExtra.baseNotes;
+        const nextSets = [...primarySets, ...parsedExtra.extraSets];
 
         setInputMode(nextInputMode);
         setSelectedExerciseId(nextSelectedExerciseId);
@@ -520,6 +610,7 @@ export default function TrainInputCanvasPage() {
         setNotes(nextNotes);
         setValueMode(nextValueMode);
         setSets(nextSets);
+        setValidation({ invalidSetIds: [] });
         setInitialEditSnapshot(buildEditSnapshot({
           inputMode: nextInputMode,
           valueMode: nextValueMode,
@@ -552,7 +643,7 @@ export default function TrainInputCanvasPage() {
     return () => {
       cancelled = true;
     };
-  }, [editLogId, weightUnit]);
+  }, [editLogId, timedUnit, weightUnit]);
 
   const fetchExercises = useCallback(async () => {
     if (!userId) {
@@ -755,12 +846,14 @@ export default function TrainInputCanvasPage() {
       setHighlightedSetId(nextSet.id);
       return [...prev, nextSet];
     });
+    setValidation((prev) => ({ ...prev, setMessage: undefined, invalidSetIds: [] }));
   };
 
   const updateSetRow = (id: string, field: "value" | "reps", value: string) => {
     setHighlightedSetId(null);
     setExpandedSetId(id);
     setSets((prev) => prev.map((set) => (set.id === id ? { ...set, [field]: value } : set)));
+    setValidation((prev) => ({ ...prev, setMessage: undefined, invalidSetIds: prev.invalidSetIds.filter((setId) => setId !== id) }));
   };
 
   const removeSetRow = (id: string) => {
@@ -775,10 +868,12 @@ export default function TrainInputCanvasPage() {
       }
       return nextSets;
     });
+    setValidation((prev) => ({ ...prev, setMessage: undefined, invalidSetIds: prev.invalidSetIds.filter((setId) => setId !== id) }));
   };
 
   const resetForm = () => {
     setMessage(null);
+    setValidation({ invalidSetIds: [] });
     setInputMode("existing");
     setValueMode("weight");
     setSearchTerm("");
@@ -804,6 +899,7 @@ export default function TrainInputCanvasPage() {
     setSearchTerm(exercise.name);
     setCustomExerciseName("");
     setMessage(null);
+    setValidation((prev) => ({ ...prev, exercise: undefined, customExerciseName: undefined }));
   };
 
   const handleStartCustomExercise = (prefillName = "") => {
@@ -815,26 +911,73 @@ export default function TrainInputCanvasPage() {
     setSelectedVariant("");
     setSelectedSetupOption("");
     setMessage(null);
+    setValidation((prev) => ({ ...prev, exercise: undefined, customExerciseName: undefined }));
   };
 
   const handleSave = useCallback(async () => {
     if (saving || deleting) return;
 
-    const parsedSets = sets
-      .map((set) => ({
-        value: parseNumber(set.value, false),
-        reps: parseNumber(set.reps, true),
-      }))
-      .filter((set) => set.value != null || set.reps != null);
+    const normalizedExerciseId = selectedExerciseId.trim();
+    const normalizedCustomExerciseName = customExerciseName.trim();
 
-    if (parsedSets.length === 0) {
-      setActivePanel("session");
-      setHighlightedSetId(sets[0]?.id ?? null);
-      setMessage({ type: "error", text: lt("Enter at least one set before saving.") });
+    if (inputMode === "existing" && !normalizedExerciseId) {
+      setActivePanel("exercise");
+      setValidation({
+        exercise: lt("Select an exercise before saving."),
+        invalidSetIds: [],
+      });
+      setMessage({ type: "error", text: lt("Select an exercise before saving.") });
       return;
     }
 
-    const primarySets = [parsedSets[0] ?? null, parsedSets[1] ?? null, parsedSets[2] ?? null];
+    if (inputMode === "custom" && normalizedCustomExerciseName.length < 2) {
+      setActivePanel("exercise");
+      setValidation({
+        customExerciseName: lt("Enter a custom exercise name first."),
+        invalidSetIds: [],
+      });
+      setMessage({ type: "error", text: lt("Enter a custom exercise name first.") });
+      return;
+    }
+
+    const parsedSets = sets.map((set) => ({
+      id: set.id,
+      value: parseNumber(set.value, false),
+      reps: parseNumber(set.reps, true),
+    }));
+
+    const partialSetIds = parsedSets
+      .filter((set) => (set.value == null) !== (set.reps == null))
+      .map((set) => set.id);
+    if (partialSetIds.length > 0) {
+      setActivePanel("session");
+      setExpandedSetId(partialSetIds[0] ?? null);
+      setHighlightedSetId(partialSetIds[0] ?? null);
+      setValidation({
+        setMessage: lt("Complete both value and reps for highlighted sets."),
+        invalidSetIds: partialSetIds,
+      });
+      setMessage({ type: "error", text: lt("Complete both value and reps for highlighted sets.") });
+      return;
+    }
+
+    const completeSets = parsedSets.filter((set) => set.value != null && set.reps != null);
+    if (completeSets.length === 0) {
+      const firstSetId = sets[0]?.id ?? null;
+      setActivePanel("session");
+      setExpandedSetId(firstSetId);
+      setHighlightedSetId(firstSetId);
+      setValidation({
+        setMessage: lt("Enter at least one full set before saving."),
+        invalidSetIds: firstSetId ? [firstSetId] : [],
+      });
+      setMessage({ type: "error", text: lt("Enter at least one full set before saving.") });
+      return;
+    }
+
+    setValidation({ invalidSetIds: [] });
+
+    const primarySets = [completeSets[0] ?? null, completeSets[1] ?? null, completeSets[2] ?? null];
     const mergedNotes = notes.trim();
 
     const toStoredWeightKg = (value: number | null): number | null => {
@@ -859,7 +1002,7 @@ export default function TrainInputCanvasPage() {
       let targetVariant = selectedVariant || null;
 
       if (inputMode === "custom") {
-        const nextExerciseName = customExerciseName.trim();
+        const nextExerciseName = normalizedCustomExerciseName;
         if (nextExerciseName.length < 2) {
           setMessage({ type: "error", text: lt("Enter a custom exercise name first.") });
           setSaving(false);
@@ -889,6 +1032,12 @@ export default function TrainInputCanvasPage() {
         return;
       }
 
+      const serializedSets = completeSets.map((set) => ({
+        value: valueMode === "timed" ? toStoredSeconds(set.value) : toStoredWeightKg(set.value),
+        reps: set.reps,
+        metric: valueMode === "timed" ? "time" : "weight",
+      }));
+
       if (isEditingExistingLog && editLogId) {
         await api.post("/api/progressions/logs/update", {
           updates: [
@@ -909,6 +1058,7 @@ export default function TrainInputCanvasPage() {
               variant: targetVariant,
               setupOption: selectedSetupOption.trim() || null,
               notes: mergedNotes || null,
+              sets: serializedSets,
             },
           ],
         });
@@ -925,11 +1075,7 @@ export default function TrainInputCanvasPage() {
           holdTime: toStoredSeconds(primarySets[0]?.value ?? null),
           holdTime2: toStoredSeconds(primarySets[1]?.value ?? null),
           holdTime3: toStoredSeconds(primarySets[2]?.value ?? null),
-          sets: parsedSets.map((set) => ({
-            value: valueMode === "timed" ? toStoredSeconds(set.value) : toStoredWeightKg(set.value),
-            reps: set.reps,
-            metric: valueMode === "timed" ? "time" : "weight",
-          })),
+          sets: serializedSets,
           variant: targetVariant,
           modifier: valueMode === "weight" && modifierKg !== 0 ? formatSignedModifierKg(modifierKg) : null,
           setupOption: selectedSetupOption.trim() || null,
@@ -960,11 +1106,10 @@ export default function TrainInputCanvasPage() {
     } finally {
       setSaving(false);
     }
-  }, [customExerciseName, clearDraft, deleting, editLogId, inputMode, isEditingExistingLog, modifierKg, notes, returnHref, router, saving, selectedExerciseId, selectedLevel, selectedSetupOption, selectedVariant, sets, settings.timeZone, timedUnit, trainingDate, valueMode, weightUnit]);
+  }, [clearDraft, customExerciseName, deleting, editLogId, inputMode, isEditingExistingLog, lt, modifierKg, notes, returnHref, router, saving, selectedExerciseId, selectedLevel, selectedSetupOption, selectedVariant, sets, settings.timeZone, timedUnit, trainingDate, valueMode, weightUnit]);
 
   const handleDeleteLoggedSession = useCallback(async () => {
     if (!isEditingExistingLog || !editLogId || saving || deleting) return;
-    if (typeof window !== "undefined" && !window.confirm(lt("Delete this logged session? This action cannot be undone."))) return;
 
     setDeleting(true);
     setMessage(null);
@@ -993,6 +1138,21 @@ export default function TrainInputCanvasPage() {
       setDeleting(false);
     }
   }, [clearDraft, deleting, editLogId, isEditingExistingLog, returnHref, router, saving]);
+
+  const openDeleteConfirm = useCallback(() => {
+    if (!isEditingExistingLog || saving || deleting) return;
+    setDeleteConfirmOpen(true);
+  }, [deleting, isEditingExistingLog, saving]);
+
+  const closeDeleteConfirm = useCallback(() => {
+    if (deleting) return;
+    setDeleteConfirmOpen(false);
+  }, [deleting]);
+
+  const confirmDeleteLoggedSession = useCallback(async () => {
+    setDeleteConfirmOpen(false);
+    await handleDeleteLoggedSession();
+  }, [handleDeleteLoggedSession]);
 
   const shellMinHeight = "calc(100dvh - 0.5rem)";
   const selectedExerciseMeta = inputMode === "custom"
@@ -1068,8 +1228,8 @@ export default function TrainInputCanvasPage() {
     notes: confirmedPanels.includes("notes") && hasConfirmedSetEntry,
     review: confirmedPanels.includes("review") && hasConfirmedSetEntry,
   };
-  const activePanelIndex = SESSION_PANELS.findIndex((panel) => panel.id === activePanel);
-  const completedPanelCount = SESSION_PANELS.filter((panel) => completionByPanel[panel.id]).length;
+  const activePanelIndex = sessionPanels.findIndex((panel) => panel.id === activePanel);
+  const completedPanelCount = sessionPanels.filter((panel) => completionByPanel[panel.id]).length;
   const selectedExerciseLabel = inputMode === "custom"
     ? customExerciseName.trim() || lt("Custom exercise")
     : selectedExercise?.name || lt("No exercise selected");
@@ -1137,7 +1297,7 @@ export default function TrainInputCanvasPage() {
       });
 
   const goToNextPanel = () => {
-    if (activePanelIndex >= SESSION_PANELS.length - 1) return;
+    if (activePanelIndex >= sessionPanels.length - 1) return;
 
     setConfirmedPanels((prev) => {
       const canConfirmCurrent =
@@ -1151,13 +1311,30 @@ export default function TrainInputCanvasPage() {
     });
 
     setHighlightedSetId(null);
-    setActivePanel(SESSION_PANELS[activePanelIndex + 1]?.id ?? "review");
+    setActivePanel(sessionPanels[activePanelIndex + 1]?.id ?? "review");
   };
+
+  const canAdvanceFromCurrentPanel =
+    (activePanel === "exercise" && hasExerciseChoice)
+    || (activePanel === "details" && hasDetailSelection)
+    || (activePanel === "format" && hasFormatChoice)
+    || ((activePanel === "session" || activePanel === "notes") && hasConfirmedSetEntry)
+    || activePanel === "review";
+
+  const currentPanelRequirement = !canAdvanceFromCurrentPanel
+    ? activePanel === "exercise"
+      ? lt("Select an exercise to continue.")
+      : activePanel === "details"
+        ? lt("Confirm your workout details to continue.")
+        : activePanel === "format"
+          ? lt("Choose weight or timed format to continue.")
+          : lt("Enter at least one complete set to continue.")
+    : null;
 
   const goToPreviousPanel = () => {
     if (activePanelIndex <= 0) return;
     setHighlightedSetId(null);
-    setActivePanel(SESSION_PANELS[activePanelIndex - 1]?.id ?? "exercise");
+    setActivePanel(sessionPanels[activePanelIndex - 1]?.id ?? "exercise");
   };
 
   const handleCloseOrApply = useCallback(async () => {
@@ -1189,7 +1366,7 @@ export default function TrainInputCanvasPage() {
           size="sm"
           onClick={goToPreviousPanel}
           disabled={activePanelIndex <= 0}
-          className={`h-9 min-w-[78px] justify-center rounded-lg px-3 ${activePanelIndex <= 0 ? "pointer-events-none opacity-45" : ""}`}
+          className={`h-10 min-w-[92px] justify-center rounded-lg px-3.5 ${activePanelIndex <= 0 ? "pointer-events-none opacity-45" : ""}`}
           style={{
             borderColor: "color-mix(in srgb, var(--ink-light) 56%, transparent)",
             backgroundColor: "transparent",
@@ -1206,8 +1383,8 @@ export default function TrainInputCanvasPage() {
                 variant="ghost"
                 size="sm"
                 disabled={saving || deleting}
-                onClick={() => void handleDeleteLoggedSession()}
-                className="h-9 min-w-[78px] justify-center rounded-lg px-3"
+                onClick={openDeleteConfirm}
+                className="h-10 min-w-[92px] justify-center rounded-lg px-3.5"
                 style={{
                   borderColor: "color-mix(in srgb, var(--danger) 42%, transparent)",
                   backgroundColor: "transparent",
@@ -1222,7 +1399,7 @@ export default function TrainInputCanvasPage() {
               size="sm"
               disabled={saving || deleting}
               onClick={() => void handleSave()}
-              className="h-9 min-w-[78px] justify-center rounded-lg px-3"
+              className="h-10 min-w-[92px] justify-center rounded-lg px-3.5"
               style={{
                 borderColor: "color-mix(in srgb, var(--accent) 44%, transparent)",
                 backgroundColor: "color-mix(in srgb, var(--accent) 16%, var(--ink-dark))",
@@ -1233,19 +1410,25 @@ export default function TrainInputCanvasPage() {
             </GlowButton>
           </div>
         ) : (
-          <GlowButton
-            variant="jade"
-            size="sm"
-            onClick={goToNextPanel}
-            className="h-9 min-w-[78px] justify-center rounded-lg px-3"
-            style={{
-              borderColor: "color-mix(in srgb, var(--accent) 44%, transparent)",
-              backgroundColor: "color-mix(in srgb, var(--accent) 16%, var(--ink-dark))",
-              color: "var(--text-primary)",
-            }}
-          >
-            {lt("Next")} →
-          </GlowButton>
+          <div className="flex flex-col items-end gap-1.5">
+            {currentPanelRequirement ? (
+              <p className="text-[11px] text-[color:var(--text-secondary)]" aria-live="polite">{currentPanelRequirement}</p>
+            ) : null}
+            <GlowButton
+              variant="jade"
+              size="sm"
+              onClick={goToNextPanel}
+              disabled={!canAdvanceFromCurrentPanel}
+              className={`h-10 min-w-[92px] justify-center rounded-lg px-3.5 ${!canAdvanceFromCurrentPanel ? "opacity-55" : ""}`}
+              style={{
+                borderColor: "color-mix(in srgb, var(--accent) 44%, transparent)",
+                backgroundColor: "color-mix(in srgb, var(--accent) 16%, var(--ink-dark))",
+                color: "var(--text-primary)",
+              }}
+            >
+              {lt("Next")} →
+            </GlowButton>
+          </div>
         )}
       </div>
     </div>
@@ -1291,7 +1474,7 @@ export default function TrainInputCanvasPage() {
                   </Link>
                   <div className="min-w-0">
                     <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--text-primary)]">{editorPageTitle}</h2>
-                    <p className="mt-0.5 text-[11px] text-[color:var(--text-secondary)]" aria-live="polite">{editorPageDescription}</p>
+                    <p className="mt-0.5 text-xs text-[color:var(--text-secondary)]" aria-live="polite">{editorPageDescription}</p>
                   </div>
                 </div>
 
@@ -1302,7 +1485,7 @@ export default function TrainInputCanvasPage() {
                         type="button"
                         onClick={() => void handleQuickRemoveFromAssignedDay()}
                         disabled={saving || deleting || removingFromDay}
-                        className="rounded-md border px-2.5 py-1 text-[11px] font-semibold transition-colors"
+                        className="inline-flex h-10 items-center rounded-md border px-3 text-[12px] font-semibold transition-colors"
                         style={{
                           borderColor: "color-mix(in srgb, var(--danger) 46%, transparent)",
                           backgroundColor: "color-mix(in srgb, var(--danger) 10%, transparent)",
@@ -1316,12 +1499,12 @@ export default function TrainInputCanvasPage() {
                     {isEditingExistingLog ? (
                       <button
                         type="button"
-                        onClick={() => void handleDeleteLoggedSession()}
+                        onClick={openDeleteConfirm}
                         disabled={saving || deleting}
-                        className="rounded-md border px-2.5 py-1 text-[11px] font-semibold transition-colors"
+                        className="inline-flex h-10 items-center rounded-md border px-3 text-[12px] font-semibold transition-colors"
                         style={{
                           borderColor: "color-mix(in srgb, var(--danger) 46%, transparent)",
-                          backgroundColor: "color-mix(in srgb, var(--danger) 10%, transparent)",
+                          backgroundColor: "color-mix(in srgb, var(--danger) 7%, transparent)",
                           color: "var(--danger-hover)",
                           opacity: saving || deleting ? 0.7 : 1,
                         }}
@@ -1334,7 +1517,7 @@ export default function TrainInputCanvasPage() {
                         type="button"
                         onClick={() => void handleCloseOrApply()}
                         disabled={saving || deleting}
-                        className="rounded-md border px-2.5 py-1 text-[11px] font-semibold transition-colors"
+                        className="inline-flex h-10 items-center rounded-md border px-3 text-[12px] font-semibold transition-colors"
                         style={{
                           borderColor: hasPendingEditChanges ? "color-mix(in srgb, var(--forest) 48%, transparent)" : "color-mix(in srgb, var(--ink-light) 55%, transparent)",
                           backgroundColor: hasPendingEditChanges ? "color-mix(in srgb, var(--forest) 12%, transparent)" : "color-mix(in srgb, var(--surface-hover) 36%, transparent)",
@@ -1354,6 +1537,8 @@ export default function TrainInputCanvasPage() {
               {message ? (
                 <div
                   className="rounded-lg border px-3 py-2 text-[11px]"
+                  role={message.type === "error" ? "alert" : "status"}
+                  aria-live={message.type === "error" ? "assertive" : "polite"}
                   style={{
                     borderColor: message.type === "success"
                       ? "color-mix(in srgb, var(--forest) 42%, transparent)"
@@ -1371,10 +1556,20 @@ export default function TrainInputCanvasPage() {
               <div className="flex min-h-0 flex-1 flex-row gap-2 sm:gap-3 overflow-hidden">
                 <aside className="w-[56px] shrink-0 sm:w-[60px]">
                   <div className="flex h-full min-h-0 flex-col items-center py-1">
-                    <p className="mb-2 text-[9px] uppercase tracking-[0.14em] text-[color:var(--text-muted)]">{lt("Steps")}</p>
+                    <p className="mb-2 text-[10px] uppercase tracking-[0.12em] text-[color:var(--text-muted)]">{lt("Steps")}</p>
+                    <div
+                      className="mb-2 w-full rounded-md border px-1.5 py-1 text-center"
+                      style={{
+                        borderColor: "color-mix(in srgb, var(--accent) 30%, transparent)",
+                        backgroundColor: "color-mix(in srgb, var(--accent) 10%, transparent)",
+                      }}
+                    >
+                      <p className="text-[9px] font-semibold leading-tight text-[color:var(--text-primary)]">{sessionPanels[activePanelIndex]?.label ?? lt("Step")}</p>
+                      <p className="mt-0.5 text-[10px] uppercase tracking-[0.08em] text-[color:var(--text-muted)]">{activePanelIndex + 1}/{sessionPanels.length}</p>
+                    </div>
 
                     <div className="flex min-h-0 flex-1 flex-col items-center gap-2 overflow-y-auto">
-                      {SESSION_PANELS.map((panel, index) => {
+                      {sessionPanels.map((panel, index) => {
                         const isActive = activePanel === panel.id;
                         const isComplete = completionByPanel[panel.id];
                         return (
@@ -1409,9 +1604,10 @@ export default function TrainInputCanvasPage() {
                                   : "none",
                             }}
                             aria-label={panel.label}
+                            aria-current={isActive ? "step" : undefined}
                             title={`${index + 1}. ${panel.label}`}
                           >
-                            <span className="text-[10px] font-semibold">{index + 1}</span>
+                            <span className="text-[11px] font-semibold">{index + 1}</span>
                           </button>
                         );
                       })}
@@ -1498,6 +1694,9 @@ export default function TrainInputCanvasPage() {
                               )}
                               <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">{selectedExerciseMeta}</p>
                             </div>
+                            {validation.exercise ? (
+                              <p className="mt-1.5 text-xs text-[color:var(--danger-hover)]" role="alert">{validation.exercise}</p>
+                            ) : null}
                           </>
                         ) : null}
 
@@ -1510,9 +1709,14 @@ export default function TrainInputCanvasPage() {
                                 value={customExerciseName}
                                 onChange={(event) => setCustomExerciseName(event.target.value)}
                                 placeholder={lt("Type the exercise name you want")}
+                                aria-invalid={validation.customExerciseName ? true : undefined}
+                                aria-describedby={validation.customExerciseName ? "custom-exercise-error" : undefined}
                                 className="h-10 w-full rounded-md border px-3 text-sm outline-none"
                                 style={{ borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--text-primary)" }}
                               />
+                              {validation.customExerciseName ? (
+                                <p id="custom-exercise-error" className="mt-1.5 text-xs text-[color:var(--danger-hover)]" role="alert">{validation.customExerciseName}</p>
+                              ) : null}
 
                             </div>
                           </div>
@@ -1598,7 +1802,7 @@ export default function TrainInputCanvasPage() {
                     <section className="flex flex-col overflow-hidden px-1 py-1" style={panelShellStyle}>
                       <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">
                         <div>
-                          <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Session format")}</p>
+                          <p className="text-[11px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Session format")}</p>
                           <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">{lt("Choose how you want to log this workout.")}</p>
                         </div>
 
@@ -1662,7 +1866,7 @@ export default function TrainInputCanvasPage() {
                         >
                           <div className="flex items-center justify-between gap-2">
                             <div>
-                              <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Input unit")}</p>
+                              <p className="text-[11px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Input unit")}</p>
                               <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">
                                 {valueMode === "timed" ? lt("Pick whether you want to enter seconds or minutes.") : lt("Pick the weight unit you normally use.")}
                               </p>
@@ -1761,7 +1965,7 @@ export default function TrainInputCanvasPage() {
                                 className="flex w-full items-start justify-between gap-2 text-left"
                               >
                                 <div className="min-w-0">
-                                  <p className="text-[10px] uppercase tracking-[0.08em] text-[color:var(--text-muted)]">{lt("Modifier")}</p>
+                                  <p className="text-[11px] uppercase tracking-[0.08em] text-[color:var(--text-muted)]">{lt("Modifier")}</p>
                                   <p className="mt-1 text-[10px] text-[color:var(--text-secondary)]">
                                     {lt("Using weighted reps or a resistance band?")} {lt("Expand to set the modifier value.")}
                                   </p>
@@ -1827,12 +2031,16 @@ export default function TrainInputCanvasPage() {
 
                           <div className="rounded-xl border px-3 py-3" style={{ borderColor: "color-mix(in srgb, var(--ink-light) 40%, transparent)", backgroundColor: "color-mix(in srgb, var(--ink-deep) 92%, var(--ink-mid))", boxShadow: "inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 3%, transparent)" }}>
                             <div>
-                              <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Sets")}</p>
+                              <p className="text-[11px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Sets")}</p>
+                              {validation.setMessage ? (
+                                <p className="mt-1 text-xs text-[color:var(--danger-hover)]" role="alert">{validation.setMessage}</p>
+                              ) : null}
                             </div>
 
                             <div className="mt-3 space-y-2.5">
                               {sets.map((set, index) => {
                                 const isExpanded = expandedSetId === set.id;
+                                const isInvalidSet = validation.invalidSetIds.includes(set.id);
                                 const hasSummaryValues = Boolean(set.value || set.reps);
                                 const summaryValueLabel = set.value || "—";
                                 const summaryValueUnit = valueMode === "timed" ? (timedUnit === "minutes" ? "min" : "sec") : weightUnit;
@@ -1962,6 +2170,8 @@ export default function TrainInputCanvasPage() {
                                             value={set.value}
                                             onChange={(event) => updateSetRow(set.id, "value", event.target.value)}
                                             placeholder={placeholderForSetIndex(index, "value", setValuePlaceholder)}
+                                            aria-invalid={isInvalidSet ? true : undefined}
+                                            aria-describedby={isInvalidSet ? `set-error-${set.id}` : undefined}
                                             className="h-11 w-full rounded-xl border px-3 text-sm font-semibold outline-none placeholder:font-normal placeholder:italic placeholder:opacity-40"
                                             style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--col-weight)" }}
                                           />
@@ -1975,10 +2185,17 @@ export default function TrainInputCanvasPage() {
                                             value={set.reps}
                                             onChange={(event) => updateSetRow(set.id, "reps", event.target.value)}
                                             placeholder={placeholderForSetIndex(index, "reps", lt("reps"))}
+                                            aria-invalid={isInvalidSet ? true : undefined}
+                                            aria-describedby={isInvalidSet ? `set-error-${set.id}` : undefined}
                                             className="h-11 w-full rounded-xl border px-3 text-sm font-semibold outline-none placeholder:font-normal placeholder:italic placeholder:opacity-40"
                                             style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)", color: "var(--col-reps)" }}
                                           />
                                         </label>
+                                        {isInvalidSet ? (
+                                          <p id={`set-error-${set.id}`} className="col-span-2 text-xs text-[color:var(--danger-hover)]" role="alert">
+                                            {lt("Enter both value and reps for this set.")}
+                                          </p>
+                                        ) : null}
                                       </div>
                                     ) : null}
                                   </div>
@@ -2001,7 +2218,7 @@ export default function TrainInputCanvasPage() {
                         style={getFieldHighlightStyle("notes")}
                       >
                         <div className="shrink-0">
-                          <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Notes")}</p>
+                          <p className="text-[11px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Notes")}</p>
                         </div>
 
                         <textarea
@@ -2033,35 +2250,39 @@ export default function TrainInputCanvasPage() {
                           }}
                         >
                           <div className="flex items-baseline justify-between gap-2">
-                            <p className="text-[10px] uppercase tracking-[0.12em] text-[color:var(--text-muted)]">{lt("Review")}</p>
+                            <p className="text-[11px] uppercase tracking-[0.12em] text-[color:var(--text-muted)]">{lt("Review")}</p>
 
                           </div>
 
                           <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5">
                             <div>
-                              <dt className="text-[9px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Exercise")}</dt>
+                              <dt className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Exercise")}</dt>
                               <dd className="text-[12px] font-semibold truncate" style={{ color: "var(--accent)" }}>{selectedExerciseLabel}</dd>
                             </div>
                             <div>
-                              <dt className="text-[9px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Progression")}</dt>
+                              <dt className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Progression")}</dt>
                               <dd className="text-[12px] font-semibold truncate" style={{ color: "var(--label-progression)" }}>{selectedProgressionLabel}</dd>
                             </div>
                             <div>
-                              <dt className="text-[9px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Variation")}</dt>
+                              <dt className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Variation")}</dt>
                               <dd className="text-[12px] font-semibold truncate" style={{ color: "var(--label-variant)" }}>{selectedVariant || lt("Default")}</dd>
                             </div>
                             <div>
-                              <dt className="text-[9px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Date")}</dt>
+                              <dt className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Grip")}</dt>
+                              <dd className="text-[12px] font-semibold truncate" style={{ color: "var(--gold-glow)" }}>{selectedSetupOption || lt("Default")}</dd>
+                            </div>
+                            <div>
+                              <dt className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Date")}</dt>
                               <dd className="text-[12px] font-semibold" style={{ color: "var(--text-primary)" }}>{trainingDate}</dd>
                             </div>
                             <div>
-                              <dt className="text-[9px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Format")}</dt>
+                              <dt className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Format")}</dt>
                               <dd className="text-[12px] font-semibold" style={{ color: "var(--accent)" }}>
                                 {valueMode === "timed" ? lt("Timed") : `${lt("Weight")} · ${weightUnit}`}
                               </dd>
                             </div>
                             <div>
-                              <dt className="text-[9px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Modifier")}</dt>
+                              <dt className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Modifier")}</dt>
                               <dd
                                 className="text-[12px] font-semibold"
                                 style={{ color: valueMode === "weight" && modifierKg !== 0 ? "var(--danger-hover)" : "var(--text-muted)" }}
@@ -2106,6 +2327,41 @@ export default function TrainInputCanvasPage() {
           </section>
         </div>
       )}
+
+      {deleteConfirmOpen ? (
+        <div
+          className="fixed inset-0 z-[300] flex items-end justify-center p-3 sm:items-center"
+          style={{ backgroundColor: "color-mix(in srgb, var(--void-black) 72%, transparent)" }}
+          role="dialog"
+          aria-modal="true"
+          aria-label={lt("Confirm delete logged session")}
+        >
+          <div className="w-full max-w-sm rounded-xl border p-4" style={{ borderColor: "color-mix(in srgb, var(--danger) 42%, transparent)", backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))" }}>
+            <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{lt("Delete this logged session?")}</h3>
+            <p className="mt-2 text-xs" style={{ color: "var(--text-secondary)" }}>{lt("This action cannot be undone.")}</p>
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeDeleteConfirm}
+                disabled={deleting}
+                className="inline-flex h-10 items-center rounded-md border px-3 text-xs font-semibold"
+                style={{ borderColor: "color-mix(in srgb, var(--ink-light) 55%, transparent)", backgroundColor: "transparent", color: "var(--text-primary)" }}
+              >
+                {lt("Cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={() => void confirmDeleteLoggedSession()}
+                disabled={deleting}
+                className="inline-flex h-10 items-center rounded-md border px-3 text-xs font-semibold"
+                style={{ borderColor: "color-mix(in srgb, var(--danger) 46%, transparent)", backgroundColor: "color-mix(in srgb, var(--danger) 10%, transparent)", color: "var(--danger-hover)" }}
+              >
+                {deleting ? lt("Deleting...") : lt("Delete")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </PageLayout>
   );
 }

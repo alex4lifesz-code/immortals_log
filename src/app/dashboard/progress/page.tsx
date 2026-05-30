@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import PageLayout from "@/components/layout/PageLayout";
 import { useDisplaySettings } from "@/context/DisplaySettingsContext";
+import { useDrawerA11y } from "@/hooks/useDrawerA11y";
 import { api } from "@/lib/api-client";
 import { formatDateWithPreference } from "@/lib/constants";
 import { getExerciseDisplayName } from "@/lib/exercise-name";
@@ -109,6 +110,7 @@ function getCategoryTint(category: string): string {
 
 export default function ProgressPage() {
   const { settings } = useDisplaySettings();
+  const prefersReducedMotion = useReducedMotion();
   const lt = useCallback((text: string) => translateEnglishToLanguage(text, settings.languageMode), [settings.languageMode]);
   const displayTerminologyMode = !settings.showExerciseForeignLanguage && settings.languageMode === "english"
     ? "normal"
@@ -125,6 +127,9 @@ export default function ProgressPage() {
   const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
   const [searchOpen, setSearchOpen] = useState(false);
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+  const filterDrawerRef = useRef<HTMLElement | null>(null);
+  const filterDrawerTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const filterDrawerFirstFieldRef = useRef<HTMLSelectElement | null>(null);
 
   const loadSkills = useCallback(async () => {
     setLoading(true);
@@ -251,6 +256,14 @@ export default function ProgressPage() {
     };
   }, [filterDrawerOpen]);
 
+  useDrawerA11y({
+    active: filterDrawerOpen,
+    containerRef: filterDrawerRef,
+    initialFocusRef: filterDrawerFirstFieldRef,
+    restoreFocusRef: filterDrawerTriggerRef,
+    onEscape: () => setFilterDrawerOpen(false),
+  });
+
   const categoryOptions = useMemo(() => {
     const categories = Array.from(new Set(skills.map((skill) => skill.category).filter(Boolean)));
     categories.sort((a, b) => a.localeCompare(b));
@@ -347,6 +360,35 @@ export default function ProgressPage() {
   };
 
   const filtersActive = categoryFilter !== "all" || activityFilter !== "all" || sortBy !== "name" || showLoggedOnly;
+  const sectionReveal = prefersReducedMotion
+    ? { initial: { opacity: 1, y: 0 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0 } }
+    : { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.32, ease: [0.22, 1, 0.36, 1] as const } };
+  const listReveal = prefersReducedMotion
+    ? {
+        initial: { opacity: 1 },
+        animate: { opacity: 1, transition: { duration: 0 } },
+      }
+    : {
+        initial: { opacity: 0 },
+        animate: {
+          opacity: 1,
+          transition: { staggerChildren: 0.04, delayChildren: 0.04 },
+        },
+      };
+  const cardReveal = prefersReducedMotion
+    ? {
+        initial: { opacity: 1, y: 0, scale: 1 },
+        animate: { opacity: 1, y: 0, scale: 1, transition: { duration: 0 } },
+      }
+    : {
+        initial: { opacity: 0, y: 12, scale: 0.992 },
+        animate: {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          transition: { duration: 0.28, ease: [0.22, 1, 0.36, 1] as const },
+        },
+      };
 
   return (
     <PageLayout
@@ -354,69 +396,112 @@ export default function ProgressPage() {
       mobileContentPaddingClass="px-2 pt-4 pb-24"
     >
       <div className="mx-auto w-full max-w-[1120px] space-y-3 px-0 py-0 sm:space-y-4 sm:py-1 lg:space-y-5">
-        <section
-          className="completionist-modern-overview overflow-hidden rounded-xl border"
+        <motion.section
+          initial={sectionReveal.initial}
+          animate={sectionReveal.animate}
+          transition={sectionReveal.transition}
+          className="completionist-modern-overview relative overflow-hidden rounded-2xl border"
           style={{
-            borderColor: "color-mix(in srgb, var(--ink-light) 56%, transparent)",
-            backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))",
+            borderColor: "color-mix(in srgb, var(--ink-light) 64%, transparent)",
+            background: "linear-gradient(155deg, color-mix(in srgb, var(--ink-deep) 94%, var(--ink-mid)) 0%, color-mix(in srgb, var(--ink-mid) 88%, var(--ink-deep)) 54%, color-mix(in srgb, var(--ink-dark) 96%, var(--ink-mid)) 100%)",
+            boxShadow: "0 16px 44px color-mix(in srgb, var(--void-black) 34%, transparent), inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 7%, transparent)",
           }}
         >
           <div
-            className="px-3 py-2.5"
-            style={{
-              backgroundColor: "color-mix(in srgb, var(--ink-deep) 94%, var(--ink-mid))",
-            }}
-          >
-            <h2 className="mt-0.5 text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--text-primary)]">{lt("Progress overview")}</h2>
-          </div>
+            aria-hidden
+            className="pointer-events-none absolute -top-20 -right-16 h-56 w-56 rounded-full"
+            style={{ background: "radial-gradient(circle, color-mix(in srgb, var(--forest) 30%, transparent) 0%, transparent 72%)" }}
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -bottom-24 -left-16 h-64 w-64 rounded-full"
+            style={{ background: "radial-gradient(circle, color-mix(in srgb, var(--accent) 22%, transparent) 0%, transparent 74%)" }}
+          />
 
-          <div className="px-3 py-3 md:px-4 md:py-4">
-            <div className="grid gap-4 lg:grid-cols-[150px_minmax(0,1fr)] lg:items-start">
+          <div className="relative z-[1] px-3 py-3 sm:px-4 sm:py-4 md:px-5">
+            <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--text-muted)]">{lt("Progress overview")}</p>
+                <h2 className="mt-1 text-lg font-semibold leading-tight text-[color:var(--text-primary)]">{lt("Mastery Map")}</h2>
+                <p className="mt-1 text-xs text-[color:var(--text-secondary)]">{lt("How consistently you have touched each progression family.")}</p>
+              </div>
+              <span
+                className="inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold"
+                style={{
+                  borderColor: "color-mix(in srgb, var(--forest) 36%, transparent)",
+                  backgroundColor: "color-mix(in srgb, var(--forest) 12%, transparent)",
+                  color: "color-mix(in srgb, var(--forest) 84%, white)",
+                }}
+              >
+                {summary.active14d} {lt("active in 14d")}
+              </span>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-[174px_minmax(0,1fr)] lg:items-start">
               <div className="flex items-center justify-center lg:justify-start">
                 <div
-                  className="relative h-28 w-28 rounded-full"
+                  className="relative h-32 w-32 rounded-full"
                   style={{
-                    background: `conic-gradient(var(--forest, #22c55e) 0 ${summary.coveragePct}%, var(--surface, #1f2937) ${summary.coveragePct}% 100%)`,
+                    background: `conic-gradient(var(--forest, #22c55e) 0 ${summary.coveragePct}%, color-mix(in srgb, var(--surface) 88%, black) ${summary.coveragePct}% 100%)`,
+                    boxShadow: "0 0 0 1px color-mix(in srgb, var(--ink-light) 42%, transparent)",
                   }}
                 >
                   <div
-                    className="absolute inset-[9px] flex flex-col items-center justify-center rounded-full border"
+                    className="absolute inset-[10px] flex flex-col items-center justify-center rounded-full border"
                     style={{
-                      borderColor: "color-mix(in srgb, var(--ink-light) 52%, transparent)",
-                      backgroundColor: "color-mix(in srgb, var(--ink-deep) 96%, var(--ink-mid))",
+                      borderColor: "color-mix(in srgb, var(--ink-light) 58%, transparent)",
+                      backgroundColor: "color-mix(in srgb, var(--ink-deep) 94%, var(--ink-mid))",
                     }}
                   >
-                    <span className="text-xl font-semibold text-[color:var(--text-primary)]">{summary.coveragePct}%</span>
+                    <span className="text-2xl font-semibold text-[color:var(--text-primary)]">{summary.coveragePct}%</span>
                     <span className="text-[10px] uppercase tracking-[0.12em] text-[color:var(--text-muted)]">{lt("logged once")}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-3 md:space-y-3.5">
-                <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-[color:var(--text-secondary)]">
-                  <span>{lt("Progressions")}: <span className="font-semibold text-[color:var(--text-primary)]">{summary.totalExercises}</span></span>
-                  <span>{lt("Logged once")}: <span className="font-semibold text-[color:var(--forest)]">{summary.loggedExercises}</span></span>
-                  <span>{lt("Untouched")}: <span className="font-semibold text-[color:var(--text-primary)]">{summary.untouched}</span></span>
-                  <span>{lt("Sessions")}: <span className="font-semibold text-[color:var(--forest)]">{summary.totalSessions}</span></span>
+              <div className="space-y-3.5">
+                <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+                  <div className="rounded-xl border px-2.5 py-2" style={{ borderColor: "color-mix(in srgb, var(--ink-light) 48%, transparent)", backgroundColor: "color-mix(in srgb, var(--ink-deep) 86%, var(--ink-mid))" }}>
+                    <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Progressions")}</p>
+                    <p className="mt-1 text-lg font-semibold text-[color:var(--text-primary)]">{summary.totalExercises}</p>
+                  </div>
+                  <div className="rounded-xl border px-2.5 py-2" style={{ borderColor: "color-mix(in srgb, var(--forest) 34%, transparent)", backgroundColor: "color-mix(in srgb, var(--forest) 10%, transparent)" }}>
+                    <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Logged once")}</p>
+                    <p className="mt-1 text-lg font-semibold text-[color:var(--forest)]">{summary.loggedExercises}</p>
+                  </div>
+                  <div className="rounded-xl border px-2.5 py-2" style={{ borderColor: "color-mix(in srgb, var(--warning) 36%, transparent)", backgroundColor: "color-mix(in srgb, var(--warning) 10%, transparent)" }}>
+                    <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Untouched")}</p>
+                    <p className="mt-1 text-lg font-semibold" style={{ color: "var(--warning)" }}>{summary.untouched}</p>
+                  </div>
+                  <div className="rounded-xl border px-2.5 py-2" style={{ borderColor: "color-mix(in srgb, var(--accent) 38%, transparent)", backgroundColor: "color-mix(in srgb, var(--accent) 11%, transparent)" }}>
+                    <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--text-muted)]">{lt("Sessions")}</p>
+                    <p className="mt-1 text-lg font-semibold" style={{ color: "var(--accent)" }}>{summary.totalSessions}</p>
+                  </div>
                 </div>
 
-                <div className="space-y-2">
+                <div className="grid gap-2.5 sm:grid-cols-2">
                   {categoryProgress.map((item) => {
                     const tint = getCategoryTint(item.category);
 
                     return (
-                      <div key={item.category} className="space-y-1">
+                      <div
+                        key={item.category}
+                        className="rounded-xl border px-2.5 py-2"
+                        style={{
+                          borderColor: "color-mix(in srgb, var(--ink-light) 42%, transparent)",
+                          backgroundColor: "color-mix(in srgb, var(--ink-deep) 87%, var(--ink-mid))",
+                        }}
+                      >
                         <div className="flex items-center justify-between gap-3 text-[11px]">
                           <span className="font-medium text-[color:var(--text-primary)]">{item.category}</span>
                           <span className="text-[color:var(--text-secondary)]">{item.logged}/{item.total} • {item.pct}%</span>
                         </div>
-                        <div className="h-2 overflow-hidden rounded-full" style={{ backgroundColor: "color-mix(in srgb, var(--surface) 82%, black)" }}>
+                        <div className="mt-1.5 h-2 overflow-hidden rounded-full" style={{ backgroundColor: "color-mix(in srgb, var(--surface) 82%, black)" }}>
                           <div
                             className="h-full rounded-full transition-all duration-300"
                             style={{
                               width: `${item.pct}%`,
-                              backgroundColor: tint,
-                              background: `linear-gradient(90deg, ${tint}, color-mix(in srgb, ${tint} 65%, white 35%))`,
+                              background: `linear-gradient(90deg, ${tint}, color-mix(in srgb, ${tint} 66%, white 34%))`,
                             }}
                           />
                         </div>
@@ -427,14 +512,14 @@ export default function ProgressPage() {
               </div>
             </div>
           </div>
-        </section>
+        </motion.section>
 
         {errorMessage ? (
           <section
-            className="rounded-xl border px-3 py-2.5"
+            className="rounded-2xl border px-3 py-3"
             style={{
               borderColor: "color-mix(in srgb, var(--danger) 40%, transparent)",
-              backgroundColor: "color-mix(in srgb, var(--danger) 10%, transparent)",
+              background: "linear-gradient(135deg, color-mix(in srgb, var(--danger) 14%, transparent) 0%, color-mix(in srgb, var(--ink-deep) 90%, var(--ink-mid)) 100%)",
             }}
           >
             <p className="text-sm" style={{ color: "color-mix(in srgb, var(--danger) 78%, white)" }}>{errorMessage}</p>
@@ -442,35 +527,40 @@ export default function ProgressPage() {
         ) : null}
 
         {loading ? (
-          <section className="rounded-xl border px-3 py-3" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 92%, black)" }}>
+          <section className="rounded-2xl border px-3 py-3" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", background: "linear-gradient(180deg, color-mix(in srgb, var(--surface) 94%, black) 0%, color-mix(in srgb, var(--ink-mid) 86%, black) 100%)" }}>
             <p className="text-sm text-[color:var(--text-secondary)]">{lt("Loading progress...")}</p>
           </section>
         ) : null}
 
         {!loading && visibleSkills.length === 0 ? (
-          <section className="rounded-xl border px-3 py-3" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", backgroundColor: "color-mix(in srgb, var(--surface) 92%, black)" }}>
+          <section className="rounded-2xl border px-3 py-3" style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", background: "linear-gradient(180deg, color-mix(in srgb, var(--surface) 94%, black) 0%, color-mix(in srgb, var(--ink-mid) 86%, black) 100%)" }}>
             <p className="text-sm text-[color:var(--text-secondary)]">{lt("No exercises match the current filters.")}</p>
           </section>
         ) : null}
 
         {!loading ? (
           <>
-            <section
-              className="completionist-modern-filters overflow-hidden rounded-xl border"
+            <motion.section
+              initial={sectionReveal.initial}
+              animate={sectionReveal.animate}
+              transition={prefersReducedMotion ? sectionReveal.transition : { ...sectionReveal.transition, delay: 0.04 }}
+              className="completionist-modern-filters overflow-hidden rounded-2xl border"
               style={{
-                borderColor: "color-mix(in srgb, var(--ink-light) 52%, transparent)",
-                backgroundColor: "color-mix(in srgb, var(--ink-deep) 95%, var(--ink-mid))",
+                borderColor: "color-mix(in srgb, var(--ink-light) 60%, transparent)",
+                background: "linear-gradient(180deg, color-mix(in srgb, var(--ink-deep) 95%, var(--ink-mid)) 0%, color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep)) 100%)",
               }}
             >
               <div
                 className="px-3 py-2.5 sm:px-4"
                 style={{
-                  backgroundColor: "color-mix(in srgb, var(--ink-deep) 92%, var(--ink-mid))",
+                  backgroundColor: "color-mix(in srgb, var(--ink-deep) 90%, var(--ink-mid))",
+                  borderBottom: "1px solid color-mix(in srgb, var(--ink-light) 42%, transparent)",
                 }}
               >
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <h2 className="text-base font-semibold text-[color:var(--text-primary)]">{lt("Skills")}</h2>
+                    <p className="mt-0.5 text-xs text-[color:var(--text-secondary)]">{visibleSkills.length} {lt("results")}</p>
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -487,10 +577,14 @@ export default function ProgressPage() {
                     </button>
 
                     <button
+                      ref={filterDrawerTriggerRef}
                       type="button"
                       onClick={() => setFilterDrawerOpen(true)}
                       className="theme-control-btn relative inline-flex h-8 w-8 items-center justify-center rounded-md border"
                       aria-label={lt("Open filters")}
+                      aria-haspopup="dialog"
+                      aria-expanded={filterDrawerOpen}
+                      aria-controls="progress-filter-drawer"
                     >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} aria-hidden>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 5h18M6 12h12m-9 7h6" />
@@ -507,7 +601,7 @@ export default function ProgressPage() {
                     initial={{ height: 0, opacity: 0, y: -6 }}
                     animate={{ height: "auto", opacity: 1, y: 0 }}
                     exit={{ height: 0, opacity: 0, y: -6 }}
-                    transition={{ duration: 0.2, ease: "easeOut" }}
+                    transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.2, ease: "easeOut" }}
                     className="overflow-hidden px-3 py-2.5 sm:px-4"
                   >
                     <input
@@ -517,16 +611,21 @@ export default function ProgressPage() {
                       placeholder={lt("Search exercise...")}
                       className="w-full rounded-lg border px-3 py-2 text-sm outline-none"
                       style={{
-                        borderColor: "color-mix(in srgb, var(--border) 72%, transparent)",
-                        backgroundColor: "color-mix(in srgb, var(--surface) 90%, black)",
+                        borderColor: "color-mix(in srgb, var(--accent) 30%, transparent)",
+                        backgroundColor: "color-mix(in srgb, var(--surface) 88%, black)",
                         color: "var(--text-primary)",
+                        boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--cloud-white) 3%, transparent)",
                       }}
                     />
                   </motion.div>
                 ) : null}
               </AnimatePresence>
 
-              <div className="space-y-2.5 p-1.5 sm:p-2 md:space-y-3 md:p-2.5">
+              <motion.div
+                className="space-y-2.5 p-2 sm:p-2.5 md:space-y-3 md:p-3"
+                initial={listReveal.initial}
+                animate={listReveal.animate}
+              >
                 {visibleSkills.map((skill) => {
                   const displayName = getExerciseDisplayName(
                     {
@@ -545,28 +644,44 @@ export default function ProgressPage() {
                   const isExpanded = Boolean(expandedIds[skill.id]);
 
                   return (
-                    <section
+                    <motion.section
                       key={skill.id}
-                      className="completionist-modern-skill-mobile overflow-hidden rounded-xl border"
+                      layout
+                      initial={cardReveal.initial}
+                      animate={cardReveal.animate}
+                      transition={prefersReducedMotion ? { duration: 0 } : { layout: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } }}
+                      className="completionist-modern-skill-mobile overflow-hidden rounded-2xl border"
                       style={{
-                        borderColor: "color-mix(in srgb, var(--ink-light) 52%, transparent)",
-                        backgroundColor: "color-mix(in srgb, var(--ink-deep) 95%, var(--ink-mid))",
+                        borderColor: isExpanded
+                          ? "color-mix(in srgb, var(--accent) 36%, transparent)"
+                          : "color-mix(in srgb, var(--ink-light) 52%, transparent)",
+                        background: isExpanded
+                          ? "linear-gradient(180deg, color-mix(in srgb, var(--ink-mid) 74%, var(--ink-deep)) 0%, color-mix(in srgb, var(--ink-deep) 94%, var(--ink-mid)) 100%)"
+                          : "linear-gradient(180deg, color-mix(in srgb, var(--ink-deep) 95%, var(--ink-mid)) 0%, color-mix(in srgb, var(--ink-mid) 90%, var(--ink-deep)) 100%)",
+                        boxShadow: isExpanded
+                          ? "0 14px 30px color-mix(in srgb, var(--void-black) 26%, transparent)"
+                          : "none",
                       }}
                     >
                       <button
                         type="button"
                         onClick={() => toggleExpanded(skill.id)}
                         className="flex w-full items-start justify-between gap-3 px-3 py-3 text-left"
-                        style={{ backgroundColor: isExpanded ? "color-mix(in srgb, var(--ink-mid) 62%, var(--ink-deep))" : "transparent" }}
+                        style={{
+                          backgroundColor: isExpanded ? "color-mix(in srgb, var(--ink-mid) 58%, var(--ink-deep))" : "transparent",
+                          borderBottom: isExpanded ? "1px solid color-mix(in srgb, var(--ink-light) 38%, transparent)" : "none",
+                        }}
                       >
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
-                            <span
+                            <motion.span
                               className="inline-flex h-5 w-5 items-center justify-center rounded-full border text-[10px]"
+                              animate={prefersReducedMotion ? { rotate: 0 } : { rotate: isExpanded ? 90 : 0 }}
+                              transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.2, ease: "easeOut" }}
                               style={{ borderColor: "color-mix(in srgb, var(--border) 78%, transparent)", color: "var(--text-secondary)" }}
                             >
                               {isExpanded ? "−" : "+"}
-                            </span>
+                            </motion.span>
                             <div className="min-w-0">
                               <p className="text-[10px] uppercase tracking-[0.12em] text-[color:var(--text-muted)]">{skill.category}</p>
                               <h3 className="truncate text-sm font-semibold text-[color:var(--text-primary)]">{displayName}</h3>
@@ -577,6 +692,17 @@ export default function ProgressPage() {
                               ? `${skill.performed} ${lt("logs")} • ${skill.loggedCombos}/${skill.catalogCombos} ${lt("workouts")} • ${skill.coveragePct}% • ${formatDaysAgo(skill.lastLogAt, lt)}`
                               : `${skill.catalogCombos} ${lt("workouts available")} • ${lt("no sessions logged yet")}`}
                           </p>
+                          <div className="mt-2 pl-7">
+                            <div className="h-1.5 overflow-hidden rounded-full" style={{ backgroundColor: "color-mix(in srgb, var(--surface) 84%, black)" }}>
+                              <div
+                                className="h-full rounded-full transition-all duration-300"
+                                style={{
+                                  width: `${skill.coveragePct}%`,
+                                  background: "linear-gradient(90deg, var(--forest), color-mix(in srgb, var(--forest) 62%, white 38%))",
+                                }}
+                              />
+                            </div>
+                          </div>
                         </div>
 
                         <span
@@ -591,11 +717,20 @@ export default function ProgressPage() {
                         </span>
                       </button>
 
-                      {isExpanded ? (
+                      <AnimatePresence initial={false}>
+                        {isExpanded ? (
+                        <motion.div
+                          key="expanded-details"
+                          initial={prefersReducedMotion ? { opacity: 1, height: "auto" } : { opacity: 0, height: 0 }}
+                          animate={prefersReducedMotion ? { opacity: 1, height: "auto" } : { opacity: 1, height: "auto" }}
+                          exit={prefersReducedMotion ? { opacity: 0, height: 0 } : { opacity: 0, height: 0 }}
+                          transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                          className="overflow-hidden"
+                        >
                         <div
                           className="px-3 py-3"
                           style={{
-                            backgroundColor: "color-mix(in srgb, var(--ink-mid) 50%, var(--ink-deep))",
+                            backgroundColor: "color-mix(in srgb, var(--ink-mid) 46%, var(--ink-deep))",
                           }}
                         >
                           <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-[color:var(--text-secondary)]">
@@ -612,7 +747,11 @@ export default function ProgressPage() {
                                 const subParts = [row.variantName, row.machineName].filter(Boolean);
                                 const subLabel = subParts.length > 0 ? subParts.join(" • ") : lt("Base");
                                 return (
-                                  <div key={skill.id + "-" + row.key} className="flex items-center justify-between gap-3 py-2">
+                                  <div
+                                    key={skill.id + "-" + row.key}
+                                    className="flex items-center justify-between gap-3 rounded-lg px-2 py-2"
+                                    style={{ backgroundColor: "color-mix(in srgb, var(--ink-deep) 78%, var(--ink-mid))" }}
+                                  >
                                     <div className="min-w-0">
                                       <p className="truncate text-[11px] font-medium text-[color:var(--text-primary)]">{row.progressionName}</p>
                                       <p className="mt-0.5 truncate text-[10px] text-[color:var(--text-secondary)]">{subLabel}</p>
@@ -640,12 +779,14 @@ export default function ProgressPage() {
                             </Link>
                           </div>
                         </div>
-                      ) : null}
-                    </section>
+                        </motion.div>
+                        ) : null}
+                      </AnimatePresence>
+                    </motion.section>
                   );
                 })}
-              </div>
-            </section>
+              </motion.div>
+            </motion.section>
 
             {typeof document !== "undefined" && createPortal(
               <AnimatePresence>
@@ -658,11 +799,14 @@ export default function ProgressPage() {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
+                      transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.16 }}
                       onClick={() => setFilterDrawerOpen(false)}
                     />
 
                     <div className="fixed inset-0 z-[260] pointer-events-none">
                       <motion.aside
+                        ref={filterDrawerRef}
+                        id="progress-filter-drawer"
                         role="dialog"
                         aria-modal="true"
                         aria-label={lt("Progress filters")}
@@ -670,7 +814,7 @@ export default function ProgressPage() {
                         initial={{ x: "100%", opacity: 0.98 }}
                         animate={{ x: 0, opacity: 1 }}
                         exit={{ x: "100%", opacity: 0.98 }}
-                        transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+                        transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
                         style={{
                           borderColor: "color-mix(in srgb, var(--jade-glow) 18%, var(--ink-light))",
                           background: "linear-gradient(180deg, color-mix(in srgb, var(--ink-dark) 98%, transparent) 0%, color-mix(in srgb, var(--ink-mid) 92%, transparent) 100%)",
@@ -685,6 +829,7 @@ export default function ProgressPage() {
                             <div>
                               <p className="text-[10px] uppercase tracking-[0.14em] text-[color:var(--text-muted)]">{lt("Filters")}</p>
                               <h3 className="mt-1 text-base font-semibold text-[color:var(--text-primary)]">{lt("Filter")}</h3>
+                              <p className="mt-1 text-xs text-[color:var(--text-secondary)]">{lt("Narrow the skill list by activity and focus.")}</p>
                             </div>
                             <button
                               type="button"
@@ -705,6 +850,7 @@ export default function ProgressPage() {
                             <div>
                               <label className="mb-1.5 block text-[10px] uppercase tracking-[0.12em] text-[color:var(--text-muted)]">{lt("Category")}</label>
                               <select
+                                ref={filterDrawerFirstFieldRef}
                                 value={categoryFilter}
                                 onChange={(event) => setCategoryFilter(event.target.value as CategoryFilter)}
                                 className="h-11 w-full rounded-xl border px-3 text-sm outline-none"

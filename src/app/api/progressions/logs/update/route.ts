@@ -25,6 +25,46 @@ interface LogUpdate {
   variant: string | null;
   setupOption: string | null;
   notes: string | null;
+  sets?: Array<{
+    value: number | null;
+    reps: number | null;
+    metric?: "weight" | "time";
+  }>;
+}
+
+function extractBaseNotes(value: string | null | undefined): string {
+  if (!value) return "";
+  const normalized = String(value).trim();
+  if (!normalized) return "";
+
+  const markerIndex = normalized.indexOf("\n\nExtra sets:");
+  if (markerIndex >= 0) {
+    return normalized.slice(0, markerIndex).trim();
+  }
+
+  if (normalized.startsWith("Extra sets:")) {
+    return "";
+  }
+
+  return normalized;
+}
+
+function buildDynamicSetSummary(sets: LogUpdate["sets"]): string {
+  if (!Array.isArray(sets)) return "";
+
+  return sets
+    .slice(3)
+    .map((entry, index) => {
+      const rawValue = entry?.value;
+      const rawReps = entry?.reps;
+      const hasValue = typeof rawValue === "number" && Number.isFinite(rawValue);
+      const hasReps = typeof rawReps === "number" && Number.isFinite(rawReps);
+      const unit = entry?.metric === "time" ? "s" : "kg";
+      const valueLabel = hasValue ? `${rawValue}${unit}` : "-";
+      const repsLabel = hasReps ? `${Math.trunc(rawReps)} reps` : "-";
+      return `Set ${index + 4}: ${valueLabel} / ${repsLabel}`;
+    })
+    .join(" | ");
 }
 
 export const POST = withAuth(async (request, { auth }) => {
@@ -62,6 +102,33 @@ export const POST = withAuth(async (request, { auth }) => {
         const val = update[field];
         if (val !== null && val !== undefined && (val < 0 || val > 9999)) {
           return ApiErrors.badRequest(`${field} must be between 0 and 9999`);
+        }
+      }
+
+      if (update.sets != null && !Array.isArray(update.sets)) {
+        return ApiErrors.badRequest("sets must be an array when provided");
+      }
+
+      if (Array.isArray(update.sets)) {
+        for (const set of update.sets) {
+          if (set == null || typeof set !== "object") {
+            return ApiErrors.badRequest("each set must be an object");
+          }
+
+          const value = set.value;
+          const reps = set.reps;
+
+          if (value !== null && value !== undefined && (!Number.isFinite(value) || value < 0 || value > 10000)) {
+            return ApiErrors.badRequest("set value must be between 0 and 10000");
+          }
+
+          if (reps !== null && reps !== undefined && (!Number.isFinite(reps) || reps < 0 || reps > 500)) {
+            return ApiErrors.badRequest("set reps must be between 0 and 500");
+          }
+
+          if (set.metric != null && set.metric !== "weight" && set.metric !== "time") {
+            return ApiErrors.badRequest("set metric must be either 'weight' or 'time'");
+          }
         }
       }
 
@@ -115,6 +182,15 @@ export const POST = withAuth(async (request, { auth }) => {
         }
       }
 
+      const dynamicSetSummary = buildDynamicSetSummary(update.sets);
+      const baseNotes = extractBaseNotes(update.notes);
+      const notesWithDynamicSets = [
+        baseNotes,
+        dynamicSetSummary ? `Extra sets: ${dynamicSetSummary}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+
       await updateProgressionLogById(update.id, {
         userProgressionId: nextUserProgressionId,
         level: update.level != null ? Math.floor(update.level) : undefined,
@@ -130,7 +206,7 @@ export const POST = withAuth(async (request, { auth }) => {
         modifier: update.modifier ? String(update.modifier).trim().slice(0, 100) : null,
         variant: update.variant ? String(update.variant).trim().slice(0, 200) : null,
         setupOption: update.setupOption ? String(update.setupOption).trim().slice(0, 100) : null,
-        notes: update.notes ? String(update.notes).trim().slice(0, 1000) : null,
+        notes: notesWithDynamicSets ? notesWithDynamicSets.slice(0, 1000) : null,
       });
     }
 

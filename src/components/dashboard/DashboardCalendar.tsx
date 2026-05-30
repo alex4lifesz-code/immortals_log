@@ -163,37 +163,38 @@ function CalendarDay({ dayNumber, checkedInUsers, hasCurrentUserWeight, isToday,
   const extraCount = friendDots.length - visibleDots.length;
   const neutralDayBackground = "color-mix(in srgb, var(--surface-hover) 62%, var(--surface))";
   const isTodayAndLogged = isToday && hasCurrentUserCheckIn;
+  const isDisabled = Boolean(isOutsideMonth || !onClick);
 
   // Prioritize meaningful status over time-based dimming.
   const baseDayStyle = isTodayAndLogged
     ? {
-        borderColor: "color-mix(in srgb, var(--cultivator-self) 74%, var(--border))",
-        backgroundColor: "color-mix(in srgb, var(--forest) 52%, var(--cloud-white) 48%)",
+        borderColor: "var(--calendar-day-today-logged-border, color-mix(in srgb, var(--mountain-blue-glow) 78%, var(--border)))",
+        backgroundColor: "var(--calendar-day-today-logged-bg, color-mix(in srgb, var(--mountain-blue-glow) 22%, var(--surface)))",
         backgroundImage: "repeating-linear-gradient(-45deg, color-mix(in srgb, var(--cloud-white) 24%, transparent) 0px, color-mix(in srgb, var(--cloud-white) 24%, transparent) 4px, transparent 4px, transparent 8px)",
-        boxShadow: "inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 28%, transparent), 0 0 0 1px color-mix(in srgb, var(--forest) 14%, transparent)",
+        boxShadow: "inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 24%, transparent), 0 0 0 1px color-mix(in srgb, var(--mountain-blue-glow) 24%, transparent)",
       }
     : isToday
     ? {
-        borderColor: "color-mix(in srgb, var(--cultivator-self) 64%, var(--border))",
-        backgroundColor: "color-mix(in srgb, var(--cultivator-self) 14%, var(--surface))",
+        borderColor: "var(--calendar-day-today-border, color-mix(in srgb, var(--mountain-blue-glow) 64%, var(--border)))",
+        backgroundColor: "var(--calendar-day-today-bg, color-mix(in srgb, var(--mountain-blue-glow) 14%, var(--surface)))",
       }
     : hasCurrentUserCheckIn
       ? {
-          borderColor: "color-mix(in srgb, var(--accent) 56%, var(--border))",
-          backgroundColor: "color-mix(in srgb, var(--accent) 14%, var(--surface))",
+          borderColor: "var(--calendar-day-you-border, color-mix(in srgb, var(--cultivator-self) 62%, var(--border)))",
+          backgroundColor: "var(--calendar-day-you-bg, color-mix(in srgb, var(--cultivator-self) 12%, var(--surface)) )",
         }
       : hasCheckIns
         ? {
-            borderColor: "color-mix(in srgb, var(--border) 88%, transparent)",
+            borderColor: "var(--calendar-day-default-border, color-mix(in srgb, var(--border) 88%, transparent))",
             backgroundColor: neutralDayBackground,
           }
         : hasFutureNote
           ? {
-              borderColor: "color-mix(in srgb, var(--gold) 38%, var(--border))",
-              backgroundColor: "color-mix(in srgb, var(--gold) 10%, var(--surface))",
+              borderColor: "var(--calendar-day-future-note-border, color-mix(in srgb, var(--gold) 42%, var(--border)))",
+              backgroundColor: "var(--calendar-day-future-note-bg, color-mix(in srgb, var(--gold) 12%, var(--surface)))",
             }
           : {
-              borderColor: "color-mix(in srgb, var(--border) 94%, transparent)",
+              borderColor: "var(--calendar-day-default-border, color-mix(in srgb, var(--border) 94%, transparent))",
               backgroundColor: neutralDayBackground,
             };
 
@@ -215,10 +216,10 @@ function CalendarDay({ dayNumber, checkedInUsers, hasCurrentUserWeight, isToday,
   const resolvedDayStyle = isOutsideMonth
     ? {
         ...dayStyle,
-        borderColor: "color-mix(in srgb, var(--border) 84%, transparent)",
-        backgroundColor: "color-mix(in srgb, var(--surface) 92%, transparent)",
+        borderColor: "var(--calendar-day-outside-border, color-mix(in srgb, var(--border) 84%, transparent))",
+        backgroundColor: "var(--calendar-day-outside-bg, color-mix(in srgb, var(--surface) 92%, transparent))",
         boxShadow: "none",
-        opacity: 0.62,
+        opacity: "var(--calendar-day-outside-opacity, 0.62)",
       }
     : dayStyle;
 
@@ -236,7 +237,9 @@ function CalendarDay({ dayNumber, checkedInUsers, hasCurrentUserWeight, isToday,
       whileHover={compact ? undefined : { scale: 1.01 }}
       whileTap={{ scale: 0.985 }}
       onClick={onClick}
-      className="dao-modern-calendar-day relative aspect-square w-full overflow-hidden rounded-[10px] border text-left transition-all duration-150"
+      disabled={isDisabled}
+      aria-disabled={isDisabled}
+      className={`dao-modern-calendar-day relative aspect-square w-full overflow-hidden rounded-[10px] border text-left transition-all duration-150 ${isDisabled ? "cursor-default" : "cursor-pointer"}`}
       style={resolvedDayStyle}
     >
       <div className="flex h-full flex-col justify-between p-1.5">
@@ -274,7 +277,7 @@ function CalendarDay({ dayNumber, checkedInUsers, hasCurrentUserWeight, isToday,
 
           {(hasNote || hasFutureNote) ? (
             hasFutureNote ? (
-              <span className="text-[9px]" style={{ color: "var(--gold)" }}>✦</span>
+              <span className="text-[11px]" style={{ color: "var(--gold)" }}>✦</span>
             ) : (
               <svg
                 viewBox="0 0 16 16"
@@ -457,17 +460,32 @@ export function Calendar({
     <div
       className={`dao-modern-calendar ${compactMode ? "p-2.5" : "p-4"} min-w-0 space-y-3 overflow-hidden rounded-xl border`}
       style={{
+        "--calendar-shell-border": "color-mix(in srgb, var(--border) 94%, transparent)",
+        "--calendar-shell-bg": "color-mix(in srgb, var(--surface) 96%, transparent)",
+        "--calendar-shell-shadow": "0 1px 0 color-mix(in srgb, var(--text-primary) 3%, transparent) inset",
+        "--calendar-day-today-border": "color-mix(in srgb, var(--mountain-blue-glow) 64%, var(--border))",
+        "--calendar-day-today-bg": "color-mix(in srgb, var(--mountain-blue-glow) 14%, var(--surface))",
+        "--calendar-day-today-logged-border": "color-mix(in srgb, var(--mountain-blue-glow) 76%, var(--border))",
+        "--calendar-day-today-logged-bg": "color-mix(in srgb, var(--mountain-blue-glow) 24%, var(--surface))",
+        "--calendar-day-you-border": "color-mix(in srgb, var(--cultivator-self) 62%, var(--border))",
+        "--calendar-day-you-bg": "color-mix(in srgb, var(--cultivator-self) 12%, var(--surface))",
+        "--calendar-day-default-border": "color-mix(in srgb, var(--border) 90%, transparent)",
+        "--calendar-day-future-note-border": "color-mix(in srgb, var(--gold) 42%, var(--border))",
+        "--calendar-day-future-note-bg": "color-mix(in srgb, var(--gold) 12%, var(--surface))",
+        "--calendar-day-outside-border": "color-mix(in srgb, var(--border) 82%, transparent)",
+        "--calendar-day-outside-bg": "color-mix(in srgb, var(--surface) 94%, transparent)",
+        "--calendar-day-outside-opacity": "0.58",
         borderColor: "color-mix(in srgb, var(--border) 94%, transparent)",
         backgroundColor: "color-mix(in srgb, var(--surface) 96%, transparent)",
         boxShadow: "0 1px 0 color-mix(in srgb, var(--text-primary) 3%, transparent) inset",
-      }}
+      } as React.CSSProperties}
       onTouchStart={onCalendarTouchStart}
       onTouchMove={onCalendarTouchMove}
       onTouchEnd={onCalendarTouchEnd}
     >
       <div className={`flex items-center justify-between gap-3 border-b ${compactMode ? "pb-2" : "pb-3"}`} style={{ borderBottomColor: "color-mix(in srgb, var(--border) 94%, transparent)" }}>
         <div className="min-w-0">
-          <p className="text-[9px] uppercase tracking-[0.1em]" style={{ color: "var(--text-muted)" }}>Check-In Calendar</p>
+          <p className="text-[11px] uppercase tracking-[0.1em]" style={{ color: "var(--text-muted)" }}>Check-In Calendar</p>
           <div className="relative mt-0.5 h-[1.35rem] overflow-hidden">
             <AnimatePresence mode="wait" initial={false} custom={monthTransitionDirection}>
               <motion.h3
@@ -512,7 +530,7 @@ export function Calendar({
       <div className={`grid grid-cols-7 ${compactMode ? "gap-1 mb-1" : "gap-2 mb-2"}`}>
         {weekdayHeaders.map((day) => (
           <div key={day} className={`text-center ${compactMode ? "text-[10px]" : "text-xs"} font-semibold uppercase tracking-wider`} style={{ color: "var(--text-secondary)" }}>
-            {compactMode ? day[0] : day}
+            {compactMode ? day.slice(0, 2) : day}
           </div>
         ))}
       </div>
@@ -556,7 +574,7 @@ export function Calendar({
                   hasFutureNote={futureNoteDates?.has(date.dateStr)}
                   isOutsideMonth={date.isOutsideMonth}
                   compact={compactMode}
-                  onClick={() => onDayClick?.(date.dateStr)}
+                  onClick={date.isOutsideMonth ? undefined : () => onDayClick?.(date.dateStr)}
                 />
               </div>
             ))}
@@ -569,7 +587,7 @@ export function Calendar({
           <div className="flex items-center gap-2">
             <h4 className={`${compactMode ? "text-[11px]" : "text-xs"} text-gold-glow uppercase tracking-wide font-semibold`}>Upcoming Notes</h4>
             {!!upcomingNotes?.length && (
-              <span className="text-[9px] text-gold-glow bg-gold-dim/20 px-2 py-0.5 rounded-full font-medium">{upcomingNotes.length}</span>
+              <span className="text-[11px] text-gold-glow bg-gold-dim/20 px-2 py-0.5 rounded-full font-medium">{upcomingNotes.length}</span>
             )}
             {onManageNotes && (
               <button
@@ -600,7 +618,7 @@ export function Calendar({
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5 mb-0.5">
                         <span className="text-[11px] font-semibold truncate" style={{ color: noteColor }}>{note.user.name}</span>
-                        <span className="text-[9px] text-mist-mid bg-ink-mid/40 px-1.5 py-0.5 rounded">
+                        <span className="text-[11px] text-mist-mid bg-ink-mid/40 px-1.5 py-0.5 rounded">
                           {formatDateWithPreference(note.date, dateFormat)}
                         </span>
                       </div>
@@ -616,7 +634,7 @@ export function Calendar({
 
       <div className={`flex flex-wrap border-t pt-3 ${compactMode ? "gap-2 text-[10px]" : "gap-3 text-xs"}`} style={{ borderTopColor: "color-mix(in srgb, var(--border) 94%, transparent)" }}>
         <div className="flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
-          <div className="h-2.5 w-2.5 rounded-sm border" style={{ borderColor: "color-mix(in srgb, var(--cultivator-self) 62%, var(--border))", backgroundColor: "color-mix(in srgb, var(--cultivator-self) 12%, var(--surface))" }} />
+          <div className="h-2.5 w-2.5 rounded-sm border" style={{ borderColor: "color-mix(in srgb, var(--mountain-blue-glow) 62%, var(--border))", backgroundColor: "color-mix(in srgb, var(--mountain-blue-glow) 14%, var(--surface))" }} />
           <span>{t("Today", "normal")}</span>
         </div>
         <div className="flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>

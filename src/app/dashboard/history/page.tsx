@@ -3901,16 +3901,32 @@ export default function HistoryPage() {
             borderColor: themeStyle === "ying-yang"
               ? `color-mix(in srgb, var(--void-black) 42%, ${trainMode === "combo" ? "var(--forest)" : "var(--accent)"})`
               : `color-mix(in srgb, ${trainMode === "combo" ? "var(--forest)" : "var(--accent)"} 48%, transparent)`,
-            backgroundColor: trainMode === "combo" ? "var(--forest)" : "var(--accent)",
+            background: `linear-gradient(160deg, color-mix(in srgb, ${trainMode === "combo" ? "var(--forest)" : "var(--accent)"} 82%, var(--ink-deep) 18%) 0%, color-mix(in srgb, ${trainMode === "combo" ? "var(--forest)" : "var(--accent)"} 68%, var(--ink-deep) 32%) 100%)`,
             color: themeStyle === "ying-yang" ? "var(--void-black)" : "var(--cloud-white)",
-            boxShadow: `0 10px 28px color-mix(in srgb, ${trainMode === "combo" ? "var(--forest)" : "var(--accent)"} 35%, transparent)`,
+            boxShadow: `0 12px 34px color-mix(in srgb, ${trainMode === "combo" ? "var(--forest)" : "var(--accent)"} 35%, transparent), inset 0 1px 0 color-mix(in srgb, var(--cloud-white) 26%, transparent)`,
           }}
-          aria-label={trainMode === "combo" ? lt("Open combo logger chooser") : lt("Slide up for workout log or left for quick weight and note")}
+          aria-label={trainMode === "combo" ? lt("Open combo logger chooser") : lt("Open workout logger")}
           aria-haspopup="dialog"
           aria-expanded={mobileLogFabOpen}
           aria-controls="mobile-log-fab-sheet"
-          title={trainMode === "combo" ? lt("Slide up: combo logger") : lt("Slide up: workout log, slide left: quick weight/note")}
+          title={trainMode === "combo" ? lt("Slide up: combo logger") : lt("Open workout logger. Swipe up for workout log or left for quick weight/note")}
         >
+          <motion.span
+            aria-hidden="true"
+            className="pointer-events-none absolute -inset-[5px] rounded-full"
+            animate={{ opacity: [0.18, 0.34, 0.18], scale: [0.98, 1.03, 0.98] }}
+            transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+            style={{
+              border: `1px solid color-mix(in srgb, ${trainMode === "combo" ? "var(--forest)" : "var(--accent)"} 42%, transparent)`,
+            }}
+          />
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-[3px] rounded-full"
+            style={{
+              background: "linear-gradient(180deg, color-mix(in srgb, var(--cloud-white) 16%, transparent) 0%, transparent 46%)",
+            }}
+          />
           {trainMode === "train" && (shouldShowWeightSwipeHint || shouldShowWeightThankYou) ? (
             <motion.span
               className="pointer-events-none absolute right-[calc(100%+0.45rem)] top-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border px-2 py-1 text-[10px] font-medium"
@@ -3930,6 +3946,7 @@ export default function HistoryPage() {
             aria-hidden="true"
             animate={trainMode === "train" && shouldShowWeightSwipeHint ? { x: [0, -8, 0] } : { x: 0 }}
             transition={trainMode === "train" && shouldShowWeightSwipeHint ? { duration: 1.05, repeat: Infinity, ease: "easeInOut" } : undefined}
+            className="relative z-[1]"
           >
             {trainMode === "combo" ? "C" : "+"}
           </motion.span>
