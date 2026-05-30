@@ -42,8 +42,6 @@ function getThemeModeStorageKey(userId: string | null | undefined): string {
 }
 
 function resolveAppearance(mode: ThemeModePreference, style: ThemeStyle): ThemeMode {
-  // Discord palette has no light variant — always dark.
-  if (style === "discord") return "dark";
   if (mode === "auto") {
     if (typeof window !== "undefined" && window.matchMedia) {
       return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
@@ -326,32 +324,51 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
         const remoteTheme = appPrefs.theme;
         const remoteThemeStyle = appPrefs.themeStyle;
+        const remoteThemeMode = appPrefs.themeMode;
 
-        if (remoteTheme === "dark" || remoteTheme === "light") {
-          setThemeState(remoteTheme);
-          document.documentElement.classList.remove("dark", "light");
-          document.documentElement.classList.add(remoteTheme);
-          // Mirror to shared key for first-paint script
-          localStorage.setItem("cultivation-theme", remoteTheme);
-          if (user?.id) {
-            localStorage.setItem(getThemeStorageKey(user.id), remoteTheme);
-          }
-        }
-
+        let resolvedStyle = themeStyle;
         if (typeof remoteThemeStyle === "string") {
           const normalizedStyle: ThemeStyle = (THEME_CLASS_NAMES as readonly string[]).includes(remoteThemeStyle)
             ? (remoteThemeStyle as ThemeStyle)
             : "discord";
+          resolvedStyle = normalizedStyle;
           setThemeStyleState(normalizedStyle);
-          const root = document.documentElement;
-          root.classList.remove(...THEME_CLASS_NAMES);
-          root.classList.add(normalizedStyle);
-          root.setAttribute("data-theme", normalizedStyle);
           // Mirror to shared key for login page & first-paint script
           localStorage.setItem("cultivation-theme-style", normalizedStyle);
           if (user?.id) {
             localStorage.setItem(getThemeStyleStorageKey(user.id), normalizedStyle);
           }
+        }
+
+        let resolvedMode = themeMode;
+        if (remoteThemeMode === "dark" || remoteThemeMode === "light" || remoteThemeMode === "auto") {
+          resolvedMode = remoteThemeMode;
+          setThemeModeState(remoteThemeMode);
+          localStorage.setItem("cultivation-theme-mode", remoteThemeMode);
+          if (user?.id) {
+            localStorage.setItem(getThemeModeStorageKey(user.id), remoteThemeMode);
+          }
+        }
+
+        const resolvedAppearanceFromMode = resolveAppearance(resolvedMode, resolvedStyle);
+        const nextTheme = remoteTheme === "dark" || remoteTheme === "light"
+          ? remoteTheme
+          : resolvedAppearanceFromMode;
+
+        setThemeState(nextTheme);
+
+        const root = document.documentElement;
+        root.classList.remove("dark", "light");
+        root.classList.add(nextTheme);
+        const appliedStyle = resolveThemeStyleForMode(resolvedStyle, nextTheme);
+        root.classList.remove(...THEME_CLASS_NAMES);
+        root.classList.add(appliedStyle);
+        root.setAttribute("data-theme", appliedStyle);
+
+        // Mirror to shared key for first-paint script
+        localStorage.setItem("cultivation-theme", nextTheme);
+        if (user?.id) {
+          localStorage.setItem(getThemeStorageKey(user.id), nextTheme);
         }
       } catch {
         // Ignore remote sync errors; local settings remain usable.
@@ -378,6 +395,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       api.put("/api/users/preferences", {
         appPrefs: {
           theme,
+          themeMode,
           themeStyle,
         },
       }).catch(() => {
@@ -386,7 +404,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }, 300);
 
     return () => window.clearTimeout(timer);
-  }, [theme, themeStyle, remotePrefsReady, user?.id]);
+  }, [theme, themeMode, themeStyle, remotePrefsReady, user?.id]);
 
   // Unified shell mode: the app now keeps the mobile-first structure on every screen size.
   // Screen width can still influence spacing through CSS, but it no longer swaps the UI architecture.

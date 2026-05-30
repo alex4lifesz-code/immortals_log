@@ -62,7 +62,7 @@ export default function SettingsPage() {
               {(["light", "dark", "auto"] as const).map((mode) => {
                 const active = themeMode === mode;
                 const disabled = mode === "light" || mode === "auto";
-                const label = mode === "light" ? lt("Light") : mode === "dark" ? lt("Dark") : lt("Auto");
+                const label = mode === "light" ? lt("Light") : mode === "dark" ? lt("Dark") : lt("System");
                 return (
                   <button
                     key={mode}

@@ -2789,6 +2789,200 @@ html.heavenly-sword.light {
   --label-variant: #2c7068;
 }
 
+html.discord.light {
+  --void-black: #eef2fb;
+  --ink-deep: #e3e8f7;
+  --ink-dark: #d3dcf1;
+  --ink-mid: #bcc8e6;
+  --ink-light: #91a3cf;
+  --mist-dark: #637398;
+  --mist-mid: #4f5e82;
+  --mist-light: #354468;
+  --mist-pale: #223150;
+  --cloud-white: #111f3a;
+  --pure-white: #050c1e;
+  --jade: #3f53cf;
+  --jade-glow: #2f45be;
+  --jade-light: #21378f;
+  --crimson: #be2f36;
+  --crimson-glow: #9f2027;
+  --crimson-light: #86151c;
+  --mountain-blue: #0f67b7;
+  --mountain-blue-glow: #0d4f8f;
+  --forest: #1d8b50;
+  --gold: #9b7809;
+  --gold-glow: #7a5c00;
+  --accent: var(--jade-glow);
+  --accent-hover: var(--jade-light);
+  --danger: var(--crimson);
+  --danger-hover: var(--crimson-glow);
+  --chart-grid: color-mix(in srgb, var(--cloud-white) 10%, transparent);
+  --chart-bg: color-mix(in srgb, var(--void-black) 55%, transparent);
+  --glow-jade: 0 0 12px color-mix(in srgb, var(--jade-glow) 24%, transparent), 0 0 24px color-mix(in srgb, var(--jade-glow) 10%, transparent);
+  --glow-crimson: 0 0 12px color-mix(in srgb, var(--crimson) 24%, transparent), 0 0 24px color-mix(in srgb, var(--crimson) 10%, transparent);
+  --glow-gold: 0 0 12px color-mix(in srgb, var(--gold) 22%, transparent), 0 0 24px color-mix(in srgb, var(--gold) 10%, transparent);
+  --glow-modal: 0 0 30px color-mix(in srgb, var(--jade-glow) 24%, transparent), 0 0 56px color-mix(in srgb, var(--mountain-blue-glow) 12%, transparent), inset 0 0 20px color-mix(in srgb, var(--cloud-white) 4%, transparent);
+  --system-bar-fallback: var(--void-black);
+  --category-cali: #3f53cf;
+  --category-gym: #9b7809;
+  --category-yoga: #1d8b50;
+  --category-cardio: #be2f36;
+  --label-progression: #6a3ab8;
+  --label-variant: #0f6f8a;
+}
+
+html.phoenix-bloom.light {
+  --void-black: #f8eef4;
+  --ink-deep: #f0e2ec;
+  --ink-dark: #e3cddd;
+  --ink-mid: #c9adc3;
+  --ink-light: #a3849e;
+  --mist-dark: #756277;
+  --mist-mid: #5f4b63;
+  --mist-light: #4a3550;
+  --mist-pale: #2f2034;
+  --cloud-white: #1b101f;
+  --pure-white: #09040c;
+  --jade-glow: #b93278;
+  --jade: #91255f;
+  --jade-light: #6f1d4a;
+  --gold-glow: #5f6270;
+  --gold: #4a4f5a;
+  --crimson-glow: #8a4bc0;
+  --crimson: #6c379c;
+  --accent: var(--jade-glow);
+  --accent-hover: var(--jade);
+  --danger: var(--crimson);
+  --danger-hover: var(--crimson-glow);
+  --chart-grid: color-mix(in srgb, var(--cloud-white) 10%, transparent);
+  --chart-bg: color-mix(in srgb, var(--void-black) 55%, transparent);
+  --glow-jade: 0 0 12px color-mix(in srgb, var(--jade-glow) 26%, transparent), 0 0 24px color-mix(in srgb, var(--jade-glow) 10%, transparent);
+  --glow-crimson: 0 0 12px color-mix(in srgb, var(--crimson) 24%, transparent), 0 0 24px color-mix(in srgb, var(--crimson) 10%, transparent);
+  --glow-gold: 0 0 12px color-mix(in srgb, var(--gold) 22%, transparent), 0 0 24px color-mix(in srgb, var(--gold) 10%, transparent);
+  --glow-modal: 0 0 28px color-mix(in srgb, var(--jade-glow) 22%, transparent), 0 0 56px color-mix(in srgb, var(--crimson) 12%, transparent), inset 0 0 20px color-mix(in srgb, var(--cloud-white) 4%, transparent);
+  --system-bar-fallback: var(--void-black);
+  --category-cali: #b93278;
+  --category-gym: #5f6270;
+  --category-yoga: #2f6f8a;
+  --category-cardio: #6c379c;
+  --label-progression: #8a3c84;
+  --label-variant: #2e7a6a;
+}
+
+html.storm-chains.light {
+  --void-black: #eef4fa;
+  --ink-deep: #e2ebf5;
+  --ink-dark: #cfdceb;
+  --ink-mid: #b3c4d9;
+  --ink-light: #8b9fb7;
+  --mist-dark: #607188;
+  --mist-mid: #4a5a70;
+  --mist-light: #33445a;
+  --mist-pale: #1f3046;
+  --cloud-white: #0f2034;
+  --pure-white: #041221;
+  --jade-glow: #2578b8;
+  --jade: #1b5f95;
+  --jade-light: #144872;
+  --gold-glow: #5a6270;
+  --gold: #464f5c;
+  --crimson-glow: #9f3438;
+  --crimson: #82272c;
+  --accent: var(--jade-glow);
+  --accent-hover: var(--jade);
+  --danger: var(--crimson);
+  --danger-hover: var(--crimson-glow);
+  --chart-grid: color-mix(in srgb, var(--cloud-white) 10%, transparent);
+  --chart-bg: color-mix(in srgb, var(--void-black) 55%, transparent);
+  --glow-jade: 0 0 12px color-mix(in srgb, var(--jade-glow) 24%, transparent), 0 0 24px color-mix(in srgb, var(--jade-glow) 10%, transparent);
+  --glow-crimson: 0 0 12px color-mix(in srgb, var(--crimson) 22%, transparent), 0 0 24px color-mix(in srgb, var(--crimson) 10%, transparent);
+  --glow-gold: 0 0 12px color-mix(in srgb, var(--gold) 22%, transparent), 0 0 24px color-mix(in srgb, var(--gold) 10%, transparent);
+  --glow-modal: 0 0 28px color-mix(in srgb, var(--jade-glow) 24%, transparent), 0 0 56px color-mix(in srgb, var(--crimson) 10%, transparent), inset 0 0 20px color-mix(in srgb, var(--cloud-white) 4%, transparent);
+  --system-bar-fallback: var(--void-black);
+  --category-cali: #2578b8;
+  --category-gym: #5a6270;
+  --category-yoga: #2f748a;
+  --category-cardio: #82272c;
+  --label-progression: #5e58a0;
+  --label-variant: #2f7088;
+}
+
+html.obsidian-ember.light {
+  --void-black: #f5f5f7;
+  --ink-deep: #e9e9ed;
+  --ink-dark: #d9d9df;
+  --ink-mid: #bdbdc6;
+  --ink-light: #9595a2;
+  --mist-dark: #62626d;
+  --mist-mid: #4e4e59;
+  --mist-light: #363641;
+  --mist-pale: #1f1f28;
+  --cloud-white: #11111a;
+  --pure-white: #06060d;
+  --jade-glow: #ba1c24;
+  --jade: #91141b;
+  --jade-light: #6f0f15;
+  --gold-glow: #8a6714;
+  --gold: #6b510f;
+  --crimson-glow: #ba1c24;
+  --crimson: #91141b;
+  --accent: var(--jade-glow);
+  --accent-hover: var(--jade);
+  --danger: var(--crimson);
+  --danger-hover: var(--crimson-glow);
+  --chart-grid: color-mix(in srgb, var(--cloud-white) 10%, transparent);
+  --chart-bg: color-mix(in srgb, var(--void-black) 55%, transparent);
+  --glow-jade: 0 0 12px color-mix(in srgb, var(--jade-glow) 24%, transparent), 0 0 24px color-mix(in srgb, var(--jade-glow) 10%, transparent);
+  --glow-crimson: 0 0 12px color-mix(in srgb, var(--crimson) 24%, transparent), 0 0 24px color-mix(in srgb, var(--crimson) 10%, transparent);
+  --glow-gold: 0 0 12px color-mix(in srgb, var(--gold) 22%, transparent), 0 0 24px color-mix(in srgb, var(--gold) 10%, transparent);
+  --glow-modal: 0 0 30px color-mix(in srgb, var(--jade-glow) 20%, transparent), 0 0 56px color-mix(in srgb, var(--cloud-white) 8%, transparent), inset 0 0 20px color-mix(in srgb, var(--cloud-white) 3%, transparent);
+  --system-bar-fallback: var(--void-black);
+  --category-cali: #91141b;
+  --category-gym: #6b510f;
+  --category-yoga: #2f6388;
+  --category-cardio: #aa2a33;
+  --label-progression: #6c52a8;
+  --label-variant: #2e6f7f;
+}
+
+html.mist-cultivator.light {
+  --void-black: #f2f3f8;
+  --ink-deep: #e7e9f0;
+  --ink-dark: #d8dbe6;
+  --ink-mid: #bcc2d2;
+  --ink-light: #959db2;
+  --mist-dark: #667087;
+  --mist-mid: #505a72;
+  --mist-light: #39445d;
+  --mist-pale: #233049;
+  --cloud-white: #101c33;
+  --pure-white: #040c1f;
+  --jade-glow: #6f56a2;
+  --jade: #554083;
+  --jade-light: #433268;
+  --gold-glow: #5a6270;
+  --gold: #464f5a;
+  --crimson-glow: #9a4c66;
+  --crimson: #7a394f;
+  --accent: var(--jade-glow);
+  --accent-hover: var(--jade);
+  --danger: var(--crimson);
+  --danger-hover: var(--crimson-glow);
+  --chart-grid: color-mix(in srgb, var(--cloud-white) 10%, transparent);
+  --chart-bg: color-mix(in srgb, var(--void-black) 55%, transparent);
+  --glow-jade: 0 0 12px color-mix(in srgb, var(--jade-glow) 24%, transparent), 0 0 24px color-mix(in srgb, var(--jade-glow) 10%, transparent);
+  --glow-crimson: 0 0 12px color-mix(in srgb, var(--crimson) 22%, transparent), 0 0 24px color-mix(in srgb, var(--crimson) 10%, transparent);
+  --glow-gold: 0 0 12px color-mix(in srgb, var(--gold) 22%, transparent), 0 0 24px color-mix(in srgb, var(--gold) 10%, transparent);
+  --glow-modal: 0 0 30px color-mix(in srgb, var(--jade-glow) 24%, transparent), 0 0 56px color-mix(in srgb, var(--crimson) 8%, transparent), inset 0 0 20px color-mix(in srgb, var(--cloud-white) 4%, transparent);
+  --system-bar-fallback: var(--void-black);
+  --category-cali: #6f56a2;
+  --category-gym: #5a6270;
+  --category-yoga: #2f6a82;
+  --category-cardio: #7a394f;
+  --label-progression: #80519c;
+  --label-variant: #2e6f70;
+}
+
 /* =====================================================================
  * THEME — EVOLVED INK DRAGON (墨龙·进化)
  * Inspired by the Kuronami Vandal: regal royal-violet body, ornate
