@@ -1052,6 +1052,10 @@ function TrainingLogTable({
       const target = event.target as HTMLElement | null;
       if (!target) return;
       const selectedRowSelector = `tr[data-log-row='true'][data-log-id='${selectedEditLogId}']`;
+      const activeElement = document.activeElement as HTMLElement | null;
+      if (activeElement?.closest(selectedRowSelector)) {
+        return;
+      }
       if (!target.closest(selectedRowSelector)) {
         revertRowEdits(selectedEditLogId);
         setSelectedEditLogId(null);
@@ -3812,7 +3816,12 @@ function TrainingLogTable({
               }
               if (!isEditMode || !selectedEditLogId) return;
               const target = event.target as HTMLElement;
-              if (!target.closest("tr[data-log-row='true']")) {
+              const selectedRowSelector = `tr[data-log-row='true'][data-log-id='${selectedEditLogId}']`;
+              const activeElement = document.activeElement as HTMLElement | null;
+              if (activeElement?.closest(selectedRowSelector)) {
+                return;
+              }
+              if (!target.closest(selectedRowSelector)) {
                 revertRowEdits(selectedEditLogId);
                 setSelectedEditLogId(null);
                 setHoveredEditLogId(null);

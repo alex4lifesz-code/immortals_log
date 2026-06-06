@@ -293,6 +293,8 @@ export default function TrainInputCanvasPage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const previousTimedUnitRef = useRef<TimedUnit>(timedUnit);
   const prefillStepperInitializedRef = useRef(false);
+  const stepParam = searchParams.get("step");
+  const fieldParam = searchParams.get("field");
 
   useEffect(() => {
     setWeightUnit(settings.defaultWeightUnit === "lbs" ? "lbs" : "kg");
@@ -490,15 +492,14 @@ export default function TrainInputCanvasPage() {
   }, [expandedSetId, sets]);
 
   useEffect(() => {
-    const step = searchParams.get("step");
-    if (!step) return;
-    if (SESSION_PANEL_IDS.some((panelId) => panelId === step)) {
-      setActivePanel(step as SessionPanelId);
+    if (!stepParam) return;
+    if (SESSION_PANEL_IDS.some((panelId) => panelId === stepParam)) {
+      setActivePanel(stepParam as SessionPanelId);
     }
-  }, [searchParams]);
+  }, [stepParam]);
 
   useEffect(() => {
-    const field = searchParams.get("field");
+    const field = fieldParam;
     if (!field) {
       setHighlightedField(null);
       return;
@@ -536,7 +537,7 @@ export default function TrainInputCanvasPage() {
       window.cancelAnimationFrame(frame);
       window.clearTimeout(timeout);
     };
-  }, [searchParams, sets]);
+  }, [fieldParam, sets.length]);
 
   useEffect(() => {
     if (!editLogId) {
