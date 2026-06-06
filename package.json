@@ -14,7 +14,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "scripts": "tsx scripts/cli.ts",
-    "add-friends": "tsx scripts/cli.ts data add-friends"
+    "add-friends": "tsx scripts/cli.ts data add-friends",
+    "import:dewina-logs": "tsx scripts/import-dewina-training-logs.ts",
+    "import:nhat-logs": "tsx scripts/import-nhat-training-logs.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.17.0",

@@ -37,6 +37,7 @@ interface FeedLog {
   holdTime2?: number | null;
   holdTime3?: number | null;
   dynamicSetRows?: Array<{ weight: string; reps: string }> | null;
+  notes?: string | null;
   completed: boolean;
 }
 
@@ -274,6 +275,7 @@ function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendD
           holdTime2?: number | null;
           holdTime3?: number | null;
           dynamicSetRows?: Array<{ weight: string; reps: string }> | null;
+          notes?: string | null;
           completed?: boolean;
         }>;
       }>;
@@ -329,6 +331,7 @@ function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendD
                 holdTime2: log.holdTime2,
                 holdTime3: log.holdTime3,
                 dynamicSetRows: log.dynamicSetRows,
+                notes: log.notes,
                 completed: log.completed || false,
               });
             }
@@ -420,6 +423,7 @@ function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendD
                 {groupEntries.map(([groupKey, group]) => {
                   const scopedGroupKey = `${day}::${groupKey}`;
                   const hasMultiple = group.logs.length > 1;
+                  const hasNotesInGroup = group.logs.some((entry) => Boolean(entry.notes?.trim()));
                   const isExpanded = expandedKeys.has(scopedGroupKey);
                   const visibleLogs = isExpanded ? group.logs : [];
                   const latestLog = group.logs[0];
@@ -514,14 +518,32 @@ function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendD
                         }}
                       >
                         <div className="flex items-start justify-between gap-2">
-                          <p className="min-w-0 text-sm font-semibold leading-tight" style={{ color: "var(--text-primary)" }}>
-                            {group.exerciseName}
-                            {hasMultiple ? (
-                              <sup className="ml-0.5 text-[12px] font-bold leading-none" style={{ color: "var(--accent)" }}>
-                                {group.logs.length}
-                              </sup>
+                          <div className="flex min-w-0 items-start gap-1.5">
+                            <p className="min-w-0 text-sm font-semibold leading-tight" style={{ color: "var(--text-primary)" }}>
+                              {group.exerciseName}
+                              {hasMultiple ? (
+                                <sup className="ml-0.5 text-[12px] font-bold leading-none" style={{ color: "var(--accent)" }}>
+                                  {group.logs.length}
+                                </sup>
+                              ) : null}
+                            </p>
+                            {hasNotesInGroup ? (
+                              <span
+                                className="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-sm"
+                                style={{
+                                  border: "1px solid color-mix(in srgb, var(--ink-light) 38%, transparent)",
+                                  backgroundColor: "color-mix(in srgb, var(--ink-light) 12%, transparent)",
+                                  color: "var(--text-secondary)",
+                                }}
+                                title={lt("Has note")}
+                                aria-label={lt("Has note")}
+                              >
+                                <svg viewBox="0 0 24 24" fill="none" className="h-2.5 w-2.5" aria-hidden="true">
+                                  <path d="M7 4.75h10a1.25 1.25 0 0 1 1.25 1.25v12.5L12 15.25 5.75 18.5V6A1.25 1.25 0 0 1 7 4.75Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                              </span>
                             ) : null}
-                          </p>
+                          </div>
                           <button
                             type="button"
                             className="shrink-0 text-[11px]"
@@ -584,6 +606,21 @@ function FeedTab({ userId, onOpenFriendDrawer }: { userId: string; onOpenFriendD
                                       <span className="text-[10px]" style={{ color: "var(--mist-light)" }}>{lt("No sets recorded")}</span>
                                     )}
                                   </div>
+                                  {log.notes?.trim() ? (
+                                    <div
+                                      className="mt-0.5 rounded-md px-2 py-1 text-[10px] leading-snug"
+                                      style={{
+                                        border: "1px solid color-mix(in srgb, var(--ink-light) 28%, transparent)",
+                                        backgroundColor: "color-mix(in srgb, var(--ink-light) 10%, transparent)",
+                                        color: "var(--text-secondary)",
+                                      }}
+                                    >
+                                      <span className="mr-1 font-semibold uppercase tracking-[0.06em]" style={{ color: "var(--text-muted)" }}>
+                                        {lt("Notes")}:
+                                      </span>
+                                      <span>{log.notes.trim()}</span>
+                                    </div>
+                                  ) : null}
                                 </div>
                               );
                             })}

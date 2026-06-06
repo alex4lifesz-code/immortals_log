@@ -2165,6 +2165,7 @@ export default function TrainInputCanvasPage() {
                                           </span>
                                           <input
                                             type="number"
+                                            inputMode={valueMode === "timed" ? "numeric" : "decimal"}
                                             min="0"
                                             step={valueMode === "timed" ? "1" : "0.5"}
                                             value={set.value}
@@ -2180,6 +2181,7 @@ export default function TrainInputCanvasPage() {
                                           <span className="mb-1 block text-[10px] uppercase tracking-[0.08em] text-[color:var(--text-muted)]">{lt("Reps")}</span>
                                           <input
                                             type="number"
+                                            inputMode="numeric"
                                             min="0"
                                             step="1"
                                             value={set.reps}
